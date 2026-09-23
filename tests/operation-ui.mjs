@@ -1,0 +1,128 @@
+import { spawn } from 'node:child_process';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join, resolve, sep } from 'node:path';
+
+const edgePath = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
+const profile = await mkdtemp(join(tmpdir(), 'trameli-operation-'));
+const pageUrl = new URL('../index.html#operacao', import.meta.url).href;
+const shot = new URL('../assets/crops/operation-first-slice-390x844.png', import.meta.url);
+const desktopShot = new URL('../assets/crops/operation-first-slice-1350x900.png', import.meta.url);
+const catalogShot = new URL('../assets/crops/catalog-first-item-390x844.png', import.meta.url);
+const port = 9341;
+const browser = spawn(edgePath, ['--headless=new', '--disable-gpu', '--no-sandbox', '--no-first-run', `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, pageUrl], { windowsHide: true, stdio: 'ignore' });
+const pause = ms => new Promise(done => setTimeout(done, ms));
+let socket;
+
+try {
+  let page;
+  for (let attempt = 0; attempt < 60; attempt++) {
+    try {
+      const tabs = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
+      page = tabs.find(tab => tab.type === 'page' && tab.url.includes('index.html'));
+      if (page) break;
+    } catch { /* Starting. */ }
+    await pause(100);
+  }
+  if (!page) throw new Error('Navegador de teste não abriu a operação.');
+  socket = new WebSocket(page.webSocketDebuggerUrl);
+  await new Promise((done, fail) => { socket.addEventListener('open', done, { once: true }); socket.addEventListener('error', fail, { once: true }); });
+  let id = 1;
+  const tasks = new Map();
+  socket.addEventListener('message', event => {
+    const message = JSON.parse(event.data);
+    if (!message.id || !tasks.has(message.id)) return;
+    const task = tasks.get(message.id);
+    tasks.delete(message.id);
+    message.error ? task.reject(new Error(message.error.message)) : task.resolve(message.result);
+  });
+  const send = (method, params = {}) => new Promise((done, fail) => { const current = id++; tasks.set(current, { resolve: done, reject: fail }); socket.send(JSON.stringify({ id: current, method, params })); });
+  const evaluate = async expression => {
+    const result = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true });
+    if (result.exceptionDetails) throw new Error(JSON.stringify(result.exceptionDetails));
+    return result.result.value;
+  };
+  const assert = (condition, message) => { if (!condition) throw new Error(message); };
+
+  await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+  for (let attempt = 0; attempt < 40 && !(await evaluate('!!document.querySelector("#total-orders")')); attempt++) await pause(100);
+  assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'), 'Rolagem horizontal no celular.');
+  assert(await evaluate('document.querySelector("#total-orders").textContent === "0"'), 'O dia não começou vazio.');
+  await evaluate('location.hash = "#produtos"');
+  await pause(350);
+  await evaluate('document.querySelector("[data-catalog-action=new]").click()');
+  assert(await evaluate('document.querySelector(".catalog-dialog").open'), 'Cadastro de produto não abriu.');
+  await evaluate(`(() => { const f = document.querySelector('#catalog-form'); f.elements.name.value='Pão'; f.elements.price.value='4,50'; f.elements.unit.value='unidade'; f.requestSubmit(); })()`);
+  assert(await evaluate('document.querySelectorAll(".catalog-card").length === 1'), 'Produto não apareceu no catálogo.');
+  await mkdir(new URL('../assets/crops/', import.meta.url), { recursive: true });
+  const catalogImage = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+  await writeFile(catalogShot, Buffer.from(catalogImage.data, 'base64'));
+  await evaluate('location.hash = "#clientes"');
+  await pause(350);
+  await evaluate('document.querySelector("[data-client-action=new]").click()');
+  assert(await evaluate('document.querySelector("#client-form").closest("dialog").open'), 'Cadastro de cliente não abriu.');
+  await evaluate(`(() => { const f = document.querySelector('#client-form'); f.elements.name.value='Cliente Teste'; f.elements.address.value='Bloco A, ap. 10'; f.requestSubmit(); })()`);
+  assert(await evaluate('document.querySelector(".catalog-card").textContent.includes("Cliente Teste")'), 'Cliente não apareceu no cadastro.');
+  await evaluate('location.hash = "#operacao"');
+  await pause(350);
+  await evaluate('document.querySelector("#new-order").click()');
+  assert(await evaluate('document.querySelector("#operation-dialog").open'), 'Formulário não abriu.');
+  assert(await evaluate('document.querySelector("#catalog-products option").value === "Pão"'), 'Produto não ficou disponível no pedido.');
+  await evaluate(`(() => { const f = document.querySelector('#order-form'); f.elements.customer.value='Cliente Teste'; f.elements.customer.dispatchEvent(new Event('change', { bubbles: true })); const name = document.querySelector('.item-name'); name.value='Pão'; name.dispatchEvent(new Event('change', { bubbles: true })); document.querySelector('.item-quantity').value='3'; f.requestSubmit(); })()`);
+  assert(await evaluate('document.querySelector("#orders-list").textContent.includes("Bloco A, ap. 10")'), 'Endereço do cliente não foi reaproveitado.');
+  assert(await evaluate('document.querySelector("#total-orders").textContent === "1"'), 'Pedido não foi salvo.');
+  assert(await evaluate('document.querySelector("#grand-total").textContent.includes("15,50")'), 'Soma com taxa incorreta.');
+  assert(await evaluate('document.querySelector("#pending-orders").textContent === "1"'), 'Conferência inicial incorreta.');
+  await evaluate('document.querySelector("[data-action=toggle]").click()');
+  assert(await evaluate('document.querySelector("#pending-orders").textContent === "0"'), 'Conferência não atualizou.');
+  await evaluate('document.querySelector("[data-action=edit]").click()');
+  await evaluate(`(() => { document.querySelector('.item-quantity').value='4'; document.querySelector('#order-form').requestSubmit(); })()`);
+  assert(await evaluate('document.querySelector("#grand-total").textContent.includes("20,00")'), 'Edição não recalculou.');
+  assert(await evaluate('window.TrameliOperation.preparePrint() && document.querySelectorAll(".print-label").length === 1'), 'Ficha de impressão não foi criada.');
+  await send('Emulation.setEmulatedMedia', { media: 'print' });
+  assert(await evaluate('getComputedStyle(document.querySelector(".nav")).display === "none" && getComputedStyle(document.querySelector("#print-document")).display === "block"'), 'Layout de impressão integrado não isolou as fichas.');
+  await send('Emulation.setEmulatedMedia', { media: 'screen' });
+  const image = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+  await writeFile(shot, Buffer.from(image.data, 'base64'));
+  await send('Emulation.setDeviceMetricsOverride', { width: 1350, height: 900, deviceScaleFactor: 1, mobile: false });
+  await pause(100);
+  assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'), 'Rolagem horizontal no desktop.');
+  const desktopImage = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+  await writeFile(desktopShot, Buffer.from(desktopImage.data, 'base64'));
+  await send('Page.reload');
+  for (let attempt = 0; attempt < 40 && !(await evaluate('document.readyState === "complete" && !!document.querySelector("#total-orders")')); attempt++) await pause(100);
+  assert(await evaluate('document.querySelector("#total-orders").textContent === "1"'), 'Pedido não persistiu após recarga.');
+  await evaluate('localStorage.setItem("trameli-operation-draft-v1", "dados-antigos")');
+  await send('Page.reload');
+  for (let attempt = 0; attempt < 40 && !(await evaluate('document.readyState === "complete" && !!document.querySelector("#total-orders")')); attempt++) await pause(100);
+  assert(await evaluate('localStorage.getItem("trameli-operation-draft-v1") === null'), 'Dados antigos não foram apagados.');
+  await evaluate('location.hash = "#inicio"');
+  await pause(350);
+  assert(await evaluate('document.querySelector("#home-order-count").textContent === "1"'), 'Visão geral não refletiu o pedido lançado.');
+  await evaluate('location.hash = "#clientes"');
+  await pause(350);
+  assert(await evaluate('document.querySelector("#operation-view").hidden && !document.querySelector("#screen-view").hidden'), 'CRM não abriu no mesmo painel.');
+  assert(await evaluate('document.querySelector(".catalog-card").textContent.includes("Cliente Teste")'), 'Cliente do pedido não apareceu.');
+  await evaluate('location.hash = "#agenda"');
+  await pause(350);
+  assert(await evaluate('document.querySelector(".agenda-day").textContent.includes("Cliente Teste")'), 'Agenda não refletiu o pedido.');
+  await evaluate('location.hash = "#financeiro"');
+  await pause(350);
+  assert(await evaluate('document.querySelector("#screen-view").textContent.includes("20,00")'), 'Financeiro não refletiu o valor lançado.');
+  await evaluate('location.hash = "#relatorios"');
+  await pause(350);
+  assert(await evaluate('document.querySelector("#report-results").textContent.includes("20,00")'), 'Relatório não refletiu o pedido.');
+  await evaluate('location.hash = "#operacao"');
+  await pause(350);
+  assert(await evaluate('!document.querySelector("#operation-view").hidden && document.querySelector("#total-orders").textContent === "1"'), 'Retorno à operação perdeu o pedido.');
+  await send('Page.navigate', { url: new URL('../index.html', import.meta.url).href });
+  await pause(250);
+  assert(await evaluate('!document.querySelector("#operation-view").hidden'), 'A entrada principal não mostrou a operação.');
+  process.stdout.write('OK: lançamento, soma, edição, conferência, impressão, persistência e viewport móvel.\n');
+} finally {
+  socket?.close();
+  browser.kill();
+  await pause(200);
+  const root = resolve(tmpdir()) + sep;
+  if (resolve(profile).startsWith(root)) await rm(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+}

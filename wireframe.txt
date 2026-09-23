@@ -1,0 +1,40 @@
++--------------------------------+  +--------------------------------------------------------------------------------------------------------------------+
+| nav                            |  | section                                                                                                            |
+| [h1:Trameli] [ico:brand]       |  | +----------------------------------------------------------------------------------------------------------------+ |
+| [t3:CENTRAL DE PEDIDOS]        |  | | nav2                                                                                                           | |
+|                                |  | | [in:Buscar clientes, pedidos ou produtos...]                 [ico:notification] [av:EU] [btn2:Minha conta [ico:chevron-down]] | |
+| [btn:[ico:home] Início]        |  | +----------------------------------------------------------------------------------------------------------------+ |
+| [lnk:[ico:orders] Pedidos]     |  |                                                                                                                    |
+| [lnk:[ico:users] Clientes]     |  | +----------------------------------------------------------------------------------------------------------------+ |
+| [lnk:[ico:box] Produtos]       |  | | hero                                                                                                           | |
+| [lnk:[ico:calendar] Agenda]    |  | | [h1:Bom dia!]                                                                 [t2:Segunda-feira, 22 de setembro de 2025] | |
+| [lnk:[ico:finance] Financeiro] |  | | [t1:Tudo em ordem, do pedido à entrega.]                                                                            | |
+| [lnk:[ico:report] Relatórios]  |  | +----------------------------------------------------------------------------------------------------------------+ |
+| [lnk:[ico:gear] Configurações] |  |                                                                                                                    |
+|                                |  | +--------------------------+ +--------------------------+ +--------------------------+ +--------------------------+ |
+|                                |  | | card                     | | card2                    | | card                     | | card3                    | |
+|                                |  | | [ico:cart] [h2:12]       | | [ico:clock] [h2:7]      | | [ico:truck] [h2:5]      | | [ico:currency] [h2:R$ 4.350] | |
+|                                |  | | [t2:Pedidos hoje]         | | [t2:Em produção]         | | [t2:Entregas hoje]       | | [t2:A receber]           | |
+|                                |  | +--------------------------+ +--------------------------+ +--------------------------+ +--------------------------+ |
+|                                |  |                                                                                                                    |
+|                                |  | +--------------------------------------------------------------------------+ +-----------------------------------------+ |
+|                                |  | | card4                                                                    | | card5                                   | |
+|                                |  | | [h3:Pedidos recentes]                                      [lnk:Ver todos [ico:arrow-right]] | | [h3:Próximas entregas] [lnk:Ver agenda [ico:arrow-right]] | |
+|                                |  | | [t3:#] [t3:Cliente] [t3:Entrega] [t3:Status] [t3:Valor]                   | | [ico:timeline-dot] [t1:14:00] [t1:Maria Silva] | |
+|                                |  | | [t1:#0248] [t1:Maria Silva] [t1:22/09 às 14h] [btn3:Em produção] [t1:R$ 320,00] | | [t2:Pedido #0248]                      | |
+|                                |  | | [t1:#0247] [t1:Padaria Nova Era] [t1:23/09 às 10h] [btn3:Confirmado] [t1:R$ 560,00] | | [ico:timeline-dot] [t1:16:00] [t1:Juliana Santos] | |
+|                                |  | | [t1:#0246] [t1:Juliana Santos] [t1:22/09 às 16h] [btn3:Pronto] [t1:R$ 250,00] | | [t2:Pedido #0246]                      | |
+|                                |  | | [t1:#0245] [t1:Carlos Mendes] [t1:24/09 às 09h] [btn3:Aguardando] [t1:R$ 180,00] | | [ico:timeline-dot] [t1:17:30] [t1:Padaria Nova Era] | |
+|                                |  | | [t1:#0244] [t1:Ana Paula] [t1:22/09 às 15h] [btn3:Entregue] [t1:R$ 420,00] | | [t2:Pedido #0247]                      | |
+|                                |  | |                                                                          | | [ico:timeline-dot] [t1:19:00] [t1:Ana Paula] | |
+|                                |  | |                                                                          | | [t2:Pedido #0244]                      | |
+|                                |  | +--------------------------------------------------------------------------+ +-----------------------------------------+ |
+|                                |  |                                                                                                                    |
+| [ico:leaf]                     |  | +---------------------------------------------------------------+ +--------------------------------------------------+ |
+| [t2:Mais que pedidos,]         |  | | card6                                                         | | card7                                            | |
+| [t2:histórias doces.]          |  | | [h3:Clientes em destaque]               [lnk:Ver todos [ico:arrow-right]] | | [h2:Organização]                                 | |
+|                                |  | | [av:MS] [t1:Maria Silva] [t2:12 pedidos] [t3:Último em 22/09] | | [h2:também é um]                                 | |
+|                                |  | | [av:PN] [t1:Padaria Nova Era] [t2:38 pedidos] [t3:Último em 15/09] | | [h2:ingrediente do sucesso.]                      | |
+|                                |  | | [av:JS] [t1:Juliana Santos] [t2:7 pedidos] [t3:Último em 20/09] | | [ico:leaf] [img:chocolate truffles and foliage] | |
+|                                |  | +---------------------------------------------------------------+ +--------------------------------------------------+ |
++--------------------------------+  +--------------------------------------------------------------------------------------------------------------------+

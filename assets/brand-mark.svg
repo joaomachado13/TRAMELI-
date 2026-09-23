@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none" role="img" aria-label="Símbolo Trameli">
+  <path d="M6 30V17.5C6 11.1 10.9 6 17.3 6c6.3 0 11 4.2 11 9.7 0 5.4-3.8 9-8.4 9-3.6 0-6.2-2.1-6.2-5.1 0-2.5 1.8-4.4 4.4-4.4" stroke="#C7D69B" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M12 31c4.6-3.4 9.7-4.3 15.5-2.6" stroke="#C7D69B" stroke-width="2.4" stroke-linecap="round"/>
+  <circle cx="31.5" cy="29.5" r="3.2" fill="#D7AD70"/>
+</svg>

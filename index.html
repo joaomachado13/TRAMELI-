@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Visão e CRM — Trameli</title>
+    <link rel="icon" href="assets/brand-mark.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="assets/styles.css">
+    <link rel="stylesheet" href="assets/operacao.css">
+    <link rel="stylesheet" href="assets/catalogo.css">
+  </head>
+  <body>
+    <div class="ambient-field" aria-hidden="true"></div>
+    <button class="menu-overlay" type="button" aria-label="Fechar menu" hidden></button>
+    <div class="app-shell">
+      <aside class="nav" aria-label="Navegação principal">
+        <div>
+          <a class="brand" href="#operacao" aria-label="Trameli, voltar à operação diária">
+            <span class="brand__name h1">Trameli</span>
+            <span class="ico ico--brand" aria-hidden="true"></span>
+            <span class="brand__tagline t3">CENTRAL DE PEDIDOS</span>
+          </a>
+
+          <nav class="nav__links" id="main-navigation">
+            <a class="btn nav__item nav__item--operation" href="#operacao" aria-current="page"><span class="ico ico--nav ico--orders" aria-hidden="true"></span><span class="nav__label">Operação diária</span></a>
+            <a class="lnk nav__item" href="#inicio"><span class="ico ico--nav ico--home" aria-hidden="true"></span><span class="nav__label">Visão geral</span></a>
+            <a class="lnk nav__item" href="#pedidos"><span class="ico ico--nav ico--orders" aria-hidden="true"></span><span class="nav__label">Pedidos</span><span class="nav__count" id="nav-pending-count" aria-label="0 pedidos precisam de atenção">0</span></a>
+            <a class="lnk nav__item" href="#clientes"><span class="ico ico--nav ico--users" aria-hidden="true"></span><span class="nav__label">Clientes</span></a>
+            <a class="lnk nav__item" href="#produtos"><span class="ico ico--nav ico--box" aria-hidden="true"></span><span class="nav__label">Produtos</span></a>
+            <a class="lnk nav__item" href="#agenda"><span class="ico ico--nav ico--calendar" aria-hidden="true"></span><span class="nav__label">Agenda</span></a>
+            <a class="lnk nav__item" href="#financeiro"><span class="ico ico--nav ico--finance" aria-hidden="true"></span><span class="nav__label">Financeiro</span></a>
+            <a class="lnk nav__item" href="#relatorios"><span class="ico ico--nav ico--report" aria-hidden="true"></span><span class="nav__label">Relatórios</span></a>
+            <a class="lnk nav__item" href="#configuracoes"><span class="ico ico--nav ico--gear" aria-hidden="true"></span><span class="nav__label">Configurações</span></a>
+          </nav>
+        </div>
+
+        <div class="nav__footer">
+          <span class="ico ico--brand" aria-hidden="true"></span>
+          <p class="t2">Cada pedido no<br>seu caminho.</p>
+        </div>
+      </aside>
+
+      <main class="section" id="inicio">
+        <header class="nav2">
+          <button class="mobile-menu-button" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="main-navigation"><span></span><span></span><span></span></button>
+          <label class="search">
+            <span class="ico ico--search" aria-hidden="true"></span>
+            <input class="in" type="search" placeholder="Buscar clientes, pedidos ou produtos..." aria-label="Busca global">
+          </label>
+
+          <div class="account-actions">
+            <button class="notification-button" type="button" aria-label="0 pedidos precisam de atenção" title="Ver pedidos que precisam de atenção">
+              <span class="ico ico--notification" aria-hidden="true"></span>
+              <span class="notification-dot" aria-hidden="true"></span>
+            </button>
+            <a class="btn2 profile-button" href="#configuracoes" aria-label="Minha conta">
+              <span class="av">EU</span>
+              <span>Minha conta</span>
+              <span class="ico ico--chevron" aria-hidden="true"></span>
+            </a>
+          </div>
+        </header>
+
+        <div id="operation-view" class="view">
+          <div class="workspace">
+            <section class="intro">
+              <div><p class="eyebrow">CENTRAL DE PEDIDOS · ÁREA PRINCIPAL</p><h1>Uma manhã inteira,<br><em>em ordem.</em></h1><p>Lance os pedidos recebidos, confira os valores e prepare as fichas de separação em uma única tela.</p></div>
+              <div class="intro__actions"><button class="button button--primary" id="new-order" type="button">+ Novo pedido</button><button class="button button--quiet" id="print-orders" type="button">Imprimir fichas</button></div>
+            </section>
+            <p class="prototype-note" role="note"><strong>Protótipo local.</strong> Os pedidos ficam somente neste navegador. Não use como registro definitivo nem insira dados reais de clientes antes de termos armazenamento e acesso seguros. Os preços devem ser informados manualmente até recebermos o catálogo.</p>
+            <section class="day-tools" aria-label="Seleção do dia"><div><label for="delivery-date">Entregas de</label><input id="delivery-date" type="date"></div><div class="day-tools__hint">Pedidos recebidos na noite anterior para entrega de manhã.</div></section>
+            <section class="summary" aria-label="Resumo do dia"><div class="summary-card"><span>Pedidos</span><strong id="total-orders">0</strong><small>na data selecionada</small></div><div class="summary-card summary-card--warm"><span>A conferir</span><strong id="pending-orders">0</strong><small>antes de fechar a lista</small></div><div class="summary-card"><span>Produtos</span><strong id="products-total">R$ 0,00</strong><small>soma dos itens</small></div><div class="summary-card"><span>Total cobrado</span><strong id="grand-total">R$ 0,00</strong><small>produtos + taxas</small></div></section>
+            <section class="ledger-note"><span class="ledger-note__mark">i</span><div><strong>Repasse à padaria ainda não calculado</strong><p>Este resumo mostra o valor dos pedidos dos clientes. A regra do acerto com a fornecedora será definida separadamente.</p></div></section>
+            <section class="orders-section" aria-labelledby="orders-title"><div class="section-heading"><div><p class="eyebrow">FILA DO DIA</p><h2 id="orders-title">Pedidos para separar</h2></div><label class="search-box">Buscar nesta data<input id="order-search" type="search" placeholder="Nome, endereço ou item"></label></div><div class="orders-list" id="orders-list" aria-live="polite"></div></section>
+            <section class="print-info"><div><p class="eyebrow">IMPRESSÃO</p><h2>Um quadrinho por pedido.</h2><p>O botão “Imprimir fichas” gera um rascunho A4 com os pedidos da data selecionada. Ainda não corresponde à folha serrilhada usada na operação; precisamos de uma amostra para acertar medidas e posição.</p></div><button class="button button--quiet" id="print-orders-bottom" type="button">Ver impressão</button></section>
+          </div>
+          <dialog id="operation-dialog" aria-labelledby="dialog-title"><form id="order-form" novalidate>
+            <div class="dialog-heading"><div><p class="eyebrow">LANÇAMENTO MANUAL</p><h2 id="dialog-title">Novo pedido</h2></div><button class="icon-button" id="close-dialog" type="button" aria-label="Fechar">×</button></div>
+            <p class="dialog-help">Anote aqui o pedido que chegou pelo grupo. Depois, o portal do cliente alimentará esta mesma fila.</p>
+            <div class="form-grid"><label>Nome do cliente <input name="customer" list="known-clients" maxlength="90" autocomplete="name" required></label><label>Telefone <span>(opcional)</span><input name="phone" type="tel" maxlength="25" autocomplete="tel"></label><label class="form-grid__wide">Endereço / referência <input name="address" maxlength="180" autocomplete="street-address" required></label><label>Data da entrega <input name="date" type="date" required></label><label>Taxa de entrega (R$) <input name="fee" inputmode="decimal" value="2,00" required></label></div>
+            <div class="items-heading"><strong>Itens do pedido</strong><button class="text-button" id="add-item" type="button">+ Adicionar item</button></div><div id="form-items"></div>
+            <label class="notes-label">Observação <span>(opcional)</span><textarea name="notes" rows="2" maxlength="280"></textarea></label>
+            <div class="form-total"><span>Total deste pedido</span><strong id="form-total">R$ 2,00</strong></div><p class="form-error" id="form-error" role="alert" hidden></p>
+            <div class="dialog-actions"><button class="button button--quiet" id="cancel-dialog" type="button">Cancelar</button><button class="button button--primary" type="submit">Salvar pedido</button></div>
+          </form></dialog>
+          <div class="print-document" id="print-document" aria-hidden="true"></div>
+        </div>
+        <div id="home-view" class="view" hidden>
+        <section class="hero">
+          <div>
+            <h1 class="h1">Bom dia!</h1>
+            <p class="t1" id="operational-message">Carregando o resumo do dia...</p>
+          </div>
+          <p class="t2 hero__date" id="today-date">22 de setembro</p>
+        </section>
+
+        <section class="kpi-grid" aria-label="Resumo do dia">
+          <article class="card kpi-card">
+            <span class="ico ico--kpi ico--cart" aria-hidden="true"></span>
+            <div><strong class="h2" id="home-order-count">0</strong><p class="t2">Pedidos para amanhã</p><small class="kpi-card__context">Nenhum registrado</small></div>
+          </article>
+          <article class="card2 kpi-card">
+            <span class="ico ico--kpi ico--clock" aria-hidden="true"></span>
+            <div><strong class="h2" id="home-pending-count">0</strong><p class="t2">A conferir</p><small class="kpi-card__context">Nenhum pendente</small></div>
+          </article>
+          <article class="card kpi-card">
+            <span class="ico ico--kpi ico--truck" aria-hidden="true"></span>
+            <div><strong class="h2">0</strong><p class="t2">Entregas hoje</p><small class="kpi-card__context">Agenda vazia</small></div>
+          </article>
+          <article class="card3 kpi-card">
+            <span class="ico ico--kpi ico--currency" aria-hidden="true"></span>
+            <div><strong class="h2" id="home-order-total">R$ 0,00</strong><p class="t2">Total dos pedidos</p><small class="kpi-card__context">Na data de amanhã</small></div>
+          </article>
+        </section>
+
+        <section class="attention-strip" aria-labelledby="attention-title">
+          <div class="attention-strip__heading"><span class="attention-strip__symbol" aria-hidden="true">!</span><h2 id="attention-title">Precisa de ação</h2></div>
+          <a href="#operacao"><strong id="attention-pending-orders">0 pedidos</strong> pedem análise <span aria-hidden="true">↗</span></a>
+          <a href="#financeiro"><strong>Financeiro</strong> aguardando dados reais <span aria-hidden="true">↗</span></a>
+          <a href="#agenda"><strong id="attention-deliveries">0 compromissos</strong> na agenda de hoje <span aria-hidden="true">↗</span></a>
+        </section>
+
+        <section class="content-grid">
+          <article class="card4 panel orders-panel">
+            <div class="panel__heading">
+              <h2 class="h3">Pedidos recentes</h2>
+              <a class="lnk panel__link" href="#operacao">Ver operação <span class="ico ico--arrow" aria-hidden="true"></span></a>
+            </div>
+            <div class="orders-table-wrap">
+              <table class="orders-table">
+                <thead>
+                  <tr class="t3"><th>#</th><th>Cliente</th><th>Entrega</th><th>Status</th><th>Valor</th></tr>
+                </thead>
+                <tbody class="t1" id="home-recent-orders"></tbody>
+              </table>
+            </div>
+            <p class="data-empty" id="home-orders-empty">Nenhum pedido cadastrado. Comece pela Operação diária.</p>
+          </article>
+
+          <article class="card5 panel deliveries-panel">
+            <div class="panel__heading">
+              <h2 class="h3">Próximas entregas</h2>
+              <a class="lnk panel__link" href="#agenda">Ver agenda <span class="ico ico--arrow" aria-hidden="true"></span></a>
+            </div>
+            <ol class="delivery-list"></ol>
+            <p class="data-empty">Nenhuma entrega agendada.</p>
+          </article>
+        </section>
+
+        <section class="bottom-grid">
+          <article class="card6 panel clients-panel">
+            <div class="panel__heading">
+              <h2 class="h3">Clientes em destaque</h2>
+              <a class="lnk panel__link" href="#clientes">Ver todos <span class="ico ico--arrow" aria-hidden="true"></span></a>
+            </div>
+            <div class="client-list"><p class="data-empty">Nenhum cliente cadastrado.</p></div>
+          </article>
+
+          <article class="card7 panel"><div class="panel__heading"><h2 class="h3">Próxima etapa</h2></div><p class="data-empty">As análises vão aparecer aqui quando conectarmos os pedidos e o catálogo reais.</p></article>
+        </section>
+        </div>
+        <div id="screen-view" class="view" hidden aria-live="polite"></div>
+      </main>
+    </div>
+    <script src="assets/vendor/gsap.min.js" defer></script>
+    <script src="assets/catalogo.js" defer></script>
+    <script src="assets/clientes.js" defer></script>
+    <script src="assets/operacao.js" defer></script>
+    <script src="assets/screens.js" defer></script>
+  </body>
+</html>
