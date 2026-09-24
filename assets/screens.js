@@ -1,8 +1,10 @@
 const homeView = document.getElementById('home-view');
 const operationView = document.getElementById('operation-view');
 const screenView = document.getElementById('screen-view');
+const portalView = document.getElementById('portal-view');
+const appShell = document.querySelector('.app-shell');
 const navigation = [...document.querySelectorAll('.nav__item')];
-const routes = new Set(['operacao', 'inicio', 'pedidos', 'clientes', 'produtos', 'agenda', 'financeiro', 'relatorios', 'configuracoes']);
+const routes = new Set(['operacao', 'inicio', 'pedidos', 'clientes', 'produtos', 'agenda', 'financeiro', 'relatorios', 'configuracoes', 'loja']);
 const systemReducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 let userReducedMotion = false;
 try { userReducedMotion = localStorage.getItem('trameli-reduced-motion') === 'true'; } catch { /* Storage may be unavailable on file URLs. */ }
@@ -136,6 +138,18 @@ function setMenu(open) {
 }
 
 function renderRoute(route) {
+  const isPortal = route === 'loja';
+  portalView.hidden = !isPortal;
+  appShell.hidden = isPortal;
+  document.body.classList.toggle('portal-mode', isPortal);
+  if (isPortal) {
+    document.title = 'Peça para amanhã — Trameli';
+    setMenu(false);
+    scrollTo(0, 0);
+    activeRoute = route;
+    window.dispatchEvent(new Event('trameli:portal-open'));
+    return;
+  }
   const isHome = route === 'inicio';
   const isOperation = route === 'operacao';
   homeView.hidden = !isHome;
@@ -174,7 +188,7 @@ function showRoute(force = false) {
   const revision = ++routeRevision;
   const previous = activeRoute;
   const finish = () => { if (revision !== routeRevision) return; renderRoute(route); if (previous !== null && !force) animateRouteIn(route); };
-  if (previous !== null && !force && window.gsap && !motionDisabled()) {
+  if (previous !== null && previous !== 'loja' && route !== 'loja' && !force && window.gsap && !motionDisabled()) {
     const outgoing = previous === 'inicio' ? homeView : previous === 'operacao' ? operationView : screenView;
     const children = outgoing.querySelectorAll('.hero, .kpi-card, .attention-strip, .content-grid .panel, .bottom-grid > *, .screen-hero, .screen-metric, .screen-panel, .intro, .summary-card, .ledger-note, .orders-section');
     window.gsap.killTweensOf(children);

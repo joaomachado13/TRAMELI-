@@ -53,7 +53,7 @@ try {
   await evaluate('document.querySelector("[data-catalog-action=new]").click()');
   assert(await evaluate('document.querySelector(".catalog-dialog").open'), 'Cadastro de produto não abriu.');
   await evaluate(`(() => { const f = document.querySelector('#catalog-form'); f.elements.name.value='Pão'; f.elements.price.value='4,50'; f.elements.unit.value='unidade'; f.requestSubmit(); })()`);
-  assert(await evaluate('document.querySelectorAll(".catalog-card").length === 1'), 'Produto não apareceu no catálogo.');
+  assert(await evaluate('document.querySelectorAll(".catalog-card").length === 21'), 'Produto não apareceu no catálogo com os 20 itens de demonstração.');
   await mkdir(new URL('../assets/crops/', import.meta.url), { recursive: true });
   const catalogImage = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
   await writeFile(catalogShot, Buffer.from(catalogImage.data, 'base64'));
@@ -67,7 +67,7 @@ try {
   await pause(350);
   await evaluate('document.querySelector("#new-order").click()');
   assert(await evaluate('document.querySelector("#operation-dialog").open'), 'Formulário não abriu.');
-  assert(await evaluate('document.querySelector("#catalog-products option").value === "Pão"'), 'Produto não ficou disponível no pedido.');
+  assert(await evaluate('!!document.querySelector("#catalog-products option[value=Pão]")'), 'Produto não ficou disponível no pedido.');
   await evaluate(`(() => { const f = document.querySelector('#order-form'); f.elements.customer.value='Cliente Teste'; f.elements.customer.dispatchEvent(new Event('change', { bubbles: true })); const name = document.querySelector('.item-name'); name.value='Pão'; name.dispatchEvent(new Event('change', { bubbles: true })); document.querySelector('.item-quantity').value='3'; f.requestSubmit(); })()`);
   assert(await evaluate('document.querySelector("#orders-list").textContent.includes("Bloco A, ap. 10")'), 'Endereço do cliente não foi reaproveitado.');
   assert(await evaluate('document.querySelector("#total-orders").textContent === "1"'), 'Pedido não foi salvo.');
@@ -118,7 +118,20 @@ try {
   await send('Page.navigate', { url: new URL('../index.html', import.meta.url).href });
   await pause(250);
   assert(await evaluate('!document.querySelector("#operation-view").hidden'), 'A entrada principal não mostrou a operação.');
-  process.stdout.write('OK: lançamento, soma, edição, conferência, impressão, persistência e viewport móvel.\n');
+  await evaluate('location.hash = "#loja"');
+  await pause(300);
+  assert(await evaluate('document.querySelectorAll(".portal-product").length === 21 && !document.querySelector("#portal-view").hidden'), 'Portal não mostrou o catálogo completo.');
+  assert(await evaluate('document.querySelector(".portal-product__photo img").complete'), 'Foto do produto não carregou.');
+  await evaluate('document.querySelectorAll("[data-id=demo-pao-frances][data-qty]")[1].click()');
+  await evaluate('document.querySelector("[data-view=cart]").click()');
+  assert(await evaluate('document.querySelector(".portal-cart-line").textContent.includes("Pão francês")'), 'Sacola não recebeu o produto.');
+  await evaluate('document.querySelector("[data-view=checkout]").click()');
+  await evaluate(`(() => { const f = document.querySelector('#portal-checkout-form'); f.elements.customer.value='Pessoa Teste'; f.elements.address.value='Bloco B, ap. 20'; f.requestSubmit(); })()`);
+  assert(await evaluate('document.querySelector(".portal-success")?.textContent.includes("Até amanhã")'), 'Confirmação do pedido não apareceu.');
+  await evaluate('location.hash = "#operacao"');
+  await pause(300);
+  assert(await evaluate('document.querySelector("#orders-list").textContent.includes("Pessoa Teste")'), 'Pedido do portal não entrou na operação.');
+  process.stdout.write('OK: operação, catálogo, fotos e pedido completo do portal até a fila.\n');
 } finally {
   socket?.close();
   browser.kill();

@@ -1,5 +1,28 @@
 (() => {
   const key = 'trameli-catalog-v1';
+  const seedKey = 'trameli-catalog-demo-seeded-v1';
+  const demoProducts = [
+    ['pao-frances', 'Pão francês', 120, 'unidade', 'Pães'],
+    ['pao-queijo', 'Pão de queijo', 250, 'unidade', 'Pães'],
+    ['croissant', 'Croissant', 690, 'unidade', 'Pães'],
+    ['pao-integral', 'Pão integral', 1490, 'unidade', 'Pães'],
+    ['bisnaguinha', 'Bisnaguinha', 890, 'pacote', 'Pães'],
+    ['pao-forma', 'Pão de forma', 1090, 'pacote', 'Pães'],
+    ['baguete', 'Baguete', 790, 'unidade', 'Pães'],
+    ['bolo-cenoura', 'Bolo de cenoura', 890, 'fatia', 'Bolos e doces'],
+    ['bolo-chocolate', 'Bolo de chocolate', 950, 'fatia', 'Bolos e doces'],
+    ['bolo-fuba', 'Bolo de fubá', 690, 'fatia', 'Bolos e doces'],
+    ['broa-milho', 'Broa de milho', 390, 'unidade', 'Bolos e doces'],
+    ['sonho', 'Sonho de creme', 650, 'unidade', 'Bolos e doces'],
+    ['rosquinha', 'Rosquinha doce', 390, 'unidade', 'Bolos e doces'],
+    ['presunto', 'Presunto fatiado', 890, '100 g', 'Frios'],
+    ['mussarela', 'Muçarela fatiada', 990, '100 g', 'Frios'],
+    ['requeijao', 'Requeijão', 1190, 'pote', 'Frios'],
+    ['manteiga', 'Manteiga', 1290, 'pote', 'Frios'],
+    ['suco-laranja', 'Suco de laranja', 890, 'copo', 'Bebidas'],
+    ['suco-uva', 'Suco de uva', 790, 'copo', 'Bebidas'],
+    ['cafe', 'Café coado', 450, 'copo', 'Bebidas'],
+  ].map(([slug, name, priceCents, unit, category]) => ({ id: `demo-${slug}`, name, priceCents, unit, category, active: true, image: `assets/products/${slug}.webp`, demo: true }));
   const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
   const money = cents => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100);
   const parseMoney = value => {
@@ -16,6 +39,15 @@
     } catch { return []; }
   };
   let products = read();
+  try {
+    if (!localStorage.getItem(seedKey)) {
+      if (!products.length) {
+        products = demoProducts;
+        localStorage.setItem(key, JSON.stringify(products));
+      }
+      localStorage.setItem(seedKey, 'true');
+    }
+  } catch { /* The catalog can still be viewed without persistent storage. */ }
   let editingId = null;
 
   const dialog = document.createElement('dialog');
@@ -64,7 +96,7 @@
 
   function render() {
     const sorted = products.slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
-    return `<div class="catalog-toolbar"><p>${sorted.length} ${sorted.length === 1 ? 'produto cadastrado' : 'produtos cadastrados'}</p><button type="button" data-catalog-action="new">+ Adicionar produto</button></div>${sorted.length ? `<div class="catalog-grid">${sorted.map(item => `<article class="catalog-card"><div><span>${escapeHtml(item.category || 'Sem categoria')}</span><span class="catalog-card__state ${item.active ? '' : 'catalog-card__state--off'}">${item.active ? 'Disponível' : 'Indisponível'}</span></div><h3>${escapeHtml(item.name)}</h3><p><strong>${money(item.priceCents)}</strong> / ${escapeHtml(item.unit)}</p><div class="catalog-card__actions"><button type="button" data-catalog-action="edit" data-id="${item.id}">Editar</button><button type="button" data-catalog-action="delete" data-id="${item.id}">Excluir</button></div></article>`).join('')}</div>` : `<div class="screen-empty"><p>Nenhum produto cadastrado ainda. Comece pela lista real de produtos e preços.</p><button type="button" data-catalog-action="new">+ Cadastrar primeiro produto</button></div>`}`;
+    return `<div class="catalog-toolbar"><div><p>${sorted.length} ${sorted.length === 1 ? 'produto cadastrado' : 'produtos cadastrados'}</p><small>Itens e preços de demonstração. Confirme os valores reais antes de atender clientes.</small></div><div class="catalog-toolbar__actions"><a href="#loja">Ver portal do cliente ↗</a><button type="button" data-catalog-action="new">+ Adicionar produto</button></div></div>${sorted.length ? `<div class="catalog-grid">${sorted.map(item => `<article class="catalog-card">${item.image ? `<img class="catalog-card__image" src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy">` : ''}<div><span>${escapeHtml(item.category || 'Sem categoria')}</span><span class="catalog-card__state ${item.active ? '' : 'catalog-card__state--off'}">${item.active ? 'Disponível' : 'Indisponível'}</span></div><h3>${escapeHtml(item.name)}</h3><p><strong>${money(item.priceCents)}</strong> / ${escapeHtml(item.unit)}</p><div class="catalog-card__actions"><button type="button" data-catalog-action="edit" data-id="${escapeHtml(item.id)}">Editar</button><button type="button" data-catalog-action="delete" data-id="${escapeHtml(item.id)}">Excluir</button></div></article>`).join('')}</div>` : `<div class="screen-empty"><p>Nenhum produto cadastrado ainda.</p><button type="button" data-catalog-action="new">+ Cadastrar primeiro produto</button></div>`}`;
   }
 
   document.addEventListener('click', event => {
@@ -95,7 +127,8 @@
       error.hidden = false;
       return;
     }
-    const product = { id: editingId || crypto.randomUUID(), name, priceCents, unit, category: form.elements.category.value.trim(), active: form.elements.active.checked };
+    const previous = products.find(item => item.id === editingId);
+    const product = { id: editingId || crypto.randomUUID(), name, priceCents, unit, category: form.elements.category.value.trim(), active: form.elements.active.checked, ...(previous?.image ? { image: previous.image } : {}), ...(previous?.demo ? { demo: true } : {}) };
     const next = editingId ? products.map(item => item.id === editingId ? product : item) : [...products, product];
     if (save(next)) dialog.close();
   });

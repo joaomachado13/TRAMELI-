@@ -10,10 +10,14 @@ Abra `index.html` no navegador. Não há etapa de instalação nem servidor obri
 
 - Lançar, editar, conferir e excluir pedidos.
 - Cadastrar produtos e clientes para reaproveitar dados nos pedidos.
+- Explorar o portal mobile em `index.html#loja`, montar a sacola, informar a entrega e confirmar um pedido que entra na fila da operação.
+- Ver, alterar ou cancelar no mesmo navegador pedidos do portal que ainda não foram conferidos.
 - Ver pedidos por data, totais, agenda e extrato simples por período.
 - Preparar um rascunho A4 de fichas para impressão.
 
-Os registros ficam apenas no armazenamento local do navegador. **Não use dados pessoais reais nem esta versão como sistema definitivo**: não há contas, banco de dados compartilhado, backup, cobrança Pix ou cálculo de repasse. A folha impressa ainda não foi calibrada para o papel pré-cortado usado na operação.
+O catálogo inicial tem 20 produtos de padaria, fotos geradas para esta demonstração e **preços ilustrativos**, que devem ser substituídos pelos valores confirmados. A carga inicial só acontece uma vez e não sobrescreve um catálogo existente.
+
+Os registros ficam apenas no armazenamento local do navegador. **Não compartilhe o portal com clientes reais nem use dados pessoais reais nesta versão**: não há contas, banco de dados compartilhado, sincronização entre aparelhos, backup, cobrança Pix ou cálculo de repasse. O retorno sem redigitar dados só funciona no mesmo navegador. A folha impressa ainda não foi calibrada para o papel pré-cortado usado na operação.
 
 ## Verificações
 

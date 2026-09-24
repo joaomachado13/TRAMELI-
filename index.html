@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="assets/styles.css">
     <link rel="stylesheet" href="assets/operacao.css">
     <link rel="stylesheet" href="assets/catalogo.css">
+    <link rel="stylesheet" href="assets/portal.css">
   </head>
   <body>
     <div class="ambient-field" aria-hidden="true"></div>
@@ -66,9 +67,9 @@
           <div class="workspace">
             <section class="intro">
               <div><p class="eyebrow">CENTRAL DE PEDIDOS · ÁREA PRINCIPAL</p><h1>Uma manhã inteira,<br><em>em ordem.</em></h1><p>Lance os pedidos recebidos, confira os valores e prepare as fichas de separação em uma única tela.</p></div>
-              <div class="intro__actions"><button class="button button--primary" id="new-order" type="button">+ Novo pedido</button><button class="button button--quiet" id="print-orders" type="button">Imprimir fichas</button></div>
+              <div class="intro__actions"><button class="button button--primary" id="new-order" type="button">+ Novo pedido</button><button class="button button--quiet" id="print-orders" type="button">Imprimir fichas</button><a class="button button--quiet" href="#loja">Ver portal do cliente ↗</a></div>
             </section>
-            <p class="prototype-note" role="note"><strong>Protótipo local.</strong> Os pedidos ficam somente neste navegador. Não use como registro definitivo nem insira dados reais de clientes antes de termos armazenamento e acesso seguros. Os preços devem ser informados manualmente até recebermos o catálogo.</p>
+            <p class="prototype-note" role="note"><strong>Protótipo local.</strong> Pedidos e cadastro ficam somente neste navegador. Não compartilhe este link com clientes reais antes de termos banco de dados, acesso seguro e preços confirmados. Os 20 itens do catálogo usam valores de demonstração.</p>
             <section class="day-tools" aria-label="Seleção do dia"><div><label for="delivery-date">Entregas de</label><input id="delivery-date" type="date"></div><div class="day-tools__hint">Pedidos recebidos na noite anterior para entrega de manhã.</div></section>
             <section class="summary" aria-label="Resumo do dia"><div class="summary-card"><span>Pedidos</span><strong id="total-orders">0</strong><small>na data selecionada</small></div><div class="summary-card summary-card--warm"><span>A conferir</span><strong id="pending-orders">0</strong><small>antes de fechar a lista</small></div><div class="summary-card"><span>Produtos</span><strong id="products-total">R$ 0,00</strong><small>soma dos itens</small></div><div class="summary-card"><span>Total cobrado</span><strong id="grand-total">R$ 0,00</strong><small>produtos + taxas</small></div></section>
             <section class="ledger-note"><span class="ledger-note__mark">i</span><div><strong>Repasse à padaria ainda não calculado</strong><p>Este resumo mostra o valor dos pedidos dos clientes. A regra do acerto com a fornecedora será definida separadamente.</p></div></section>
@@ -163,10 +164,17 @@
         <div id="screen-view" class="view" hidden aria-live="polite"></div>
       </main>
     </div>
+    <main id="portal-view" class="portal" hidden>
+      <header class="portal-header"><a class="portal-brand" href="#loja" aria-label="Trameli, início da loja">Trameli<span class="portal-brand__dot">.</span><small>PADARIA NO SEU TEMPO</small></a><div class="portal-header__actions"><button type="button" id="portal-orders-link">Meus pedidos</button><button type="button" id="portal-cart-link" aria-label="Abrir carrinho">Sacola <span id="portal-cart-count">0</span></button></div></header>
+      <div class="portal-prototype" role="note">Protótipo de demonstração · preços ilustrativos · pedidos só neste navegador. Não use dados pessoais reais.</div>
+      <div id="portal-content" aria-live="polite"></div>
+      <nav class="portal-bottom-nav" aria-label="Navegação da loja"><button type="button" data-portal-nav="catalog">Explorar</button><button type="button" data-portal-nav="orders">Pedidos</button><button type="button" data-portal-nav="cart">Sacola <span id="portal-bottom-count">0</span></button></nav>
+    </main>
     <script src="assets/vendor/gsap.min.js" defer></script>
     <script src="assets/catalogo.js" defer></script>
     <script src="assets/clientes.js" defer></script>
     <script src="assets/operacao.js" defer></script>
     <script src="assets/screens.js" defer></script>
+    <script src="assets/portal.js" defer></script>
   </body>
 </html>

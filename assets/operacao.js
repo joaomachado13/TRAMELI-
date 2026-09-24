@@ -207,5 +207,9 @@ for (const id of ['print-orders', 'print-orders-bottom']) {
 }
 
 render();
+window.addEventListener('trameli:orders-changed', () => { orders = readOrders(); render(); });
+window.addEventListener('storage', event => {
+  if (event.key === storageKey) { orders = readOrders(); render(); }
+});
 window.TrameliOperation = { preparePrint };
 })();
