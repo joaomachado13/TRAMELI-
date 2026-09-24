@@ -6,17 +6,17 @@
     <meta name="color-scheme" content="dark">
     <title>Visão e CRM — Trameli</title>
     <link rel="icon" href="assets/brand-mark.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="assets/styles.css">
+    <link rel="stylesheet" href="assets/styles.css?v=4">
     <link rel="stylesheet" href="assets/operacao.css">
     <link rel="stylesheet" href="assets/catalogo.css">
-    <link rel="stylesheet" href="assets/portal.css?v=3">
+    <link rel="stylesheet" href="assets/portal.css?v=4">
   </head>
   <body>
     <div class="ambient-field" aria-hidden="true"></div>
     <button class="menu-overlay" type="button" aria-label="Fechar menu" hidden></button>
-    <div class="app-shell">
-      <aside class="nav" aria-label="Navegação principal">
+    <aside class="nav" aria-label="Navegação principal" id="main-navigation-panel" aria-hidden="true" inert>
         <div>
+          <button class="nav__close" type="button" aria-label="Fechar menu">×</button>
           <a class="brand" href="#operacao" aria-label="Trameli, voltar à operação diária">
             <span class="brand__name h1">Trameli</span>
             <span class="ico ico--brand" aria-hidden="true"></span>
@@ -33,6 +33,7 @@
             <a class="lnk nav__item" href="#financeiro"><span class="ico ico--nav ico--finance" aria-hidden="true"></span><span class="nav__label">Financeiro</span></a>
             <a class="lnk nav__item" href="#relatorios"><span class="ico ico--nav ico--report" aria-hidden="true"></span><span class="nav__label">Relatórios</span></a>
             <a class="lnk nav__item" href="#configuracoes"><span class="ico ico--nav ico--gear" aria-hidden="true"></span><span class="nav__label">Configurações</span></a>
+            <a class="lnk nav__item" href="#loja"><span class="ico ico--nav ico--cart" aria-hidden="true"></span><span class="nav__label">Portal do cliente</span></a>
           </nav>
         </div>
 
@@ -40,11 +41,12 @@
           <span class="ico ico--brand" aria-hidden="true"></span>
           <p class="t2">Cada pedido no<br>seu caminho.</p>
         </div>
-      </aside>
+    </aside>
 
+    <div class="app-shell">
       <main class="section" id="inicio">
         <header class="nav2">
-          <button class="mobile-menu-button" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="main-navigation"><span></span><span></span><span></span></button>
+          <button class="mobile-menu-button" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="main-navigation-panel"><span></span><span></span><span></span></button>
           <label class="search">
             <span class="ico ico--search" aria-hidden="true"></span>
             <input class="in" type="search" placeholder="Buscar clientes, pedidos ou produtos..." aria-label="Busca global">
@@ -166,7 +168,7 @@
     </div>
     <span id="loja" aria-hidden="true"></span>
     <main id="portal-view" class="portal" hidden>
-      <header class="portal-header"><a class="portal-brand" href="#loja" aria-label="Trameli, início da loja">Trameli<span class="portal-brand__dot">.</span><small>PADARIA NO SEU TEMPO</small></a><div class="portal-header__actions"><button type="button" id="portal-orders-link">Meus pedidos</button><button type="button" id="portal-cart-link" aria-label="Abrir carrinho">Sacola <span id="portal-cart-count">0</span></button></div></header>
+      <header class="portal-header"><button class="portal-menu-button" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="main-navigation-panel"><span></span><span></span><span></span></button><a class="portal-brand" href="#loja" aria-label="Trameli, início da loja">Trameli<span class="portal-brand__dot">.</span><small>PADARIA NO SEU TEMPO</small></a><div class="portal-header__actions"><button type="button" id="portal-orders-link">Meus pedidos</button><button type="button" id="portal-cart-link" aria-label="Abrir carrinho">Sacola <span id="portal-cart-count">0</span></button></div></header>
       <div class="portal-prototype" role="note">Protótipo de demonstração · preços ilustrativos · pedidos só neste navegador. Não use dados pessoais reais.</div>
       <div id="portal-content" aria-live="polite"></div>
       <nav class="portal-bottom-nav" aria-label="Navegação da loja"><button type="button" data-portal-nav="catalog">Explorar</button><button type="button" data-portal-nav="orders">Pedidos</button><button type="button" data-portal-nav="cart">Sacola <span id="portal-bottom-count">0</span></button></nav>
@@ -175,7 +177,7 @@
     <script src="assets/catalogo.js" defer></script>
     <script src="assets/clientes.js" defer></script>
     <script src="assets/operacao.js" defer></script>
-    <script src="assets/screens.js?v=2" defer></script>
-    <script src="assets/portal.js?v=2" defer></script>
+    <script src="assets/screens.js?v=4" defer></script>
+    <script src="assets/portal.js?v=4" defer></script>
   </body>
 </html>

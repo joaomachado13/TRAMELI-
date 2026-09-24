@@ -127,15 +127,21 @@ function renderReportResults() {
 
 let activeRoute = null;
 let routeRevision = 0;
-const menuButton = document.querySelector('.mobile-menu-button');
+const menuButtons = [...document.querySelectorAll('.mobile-menu-button, .portal-menu-button')];
 const menuOverlay = document.querySelector('.menu-overlay');
+const menuPanel = document.getElementById('main-navigation-panel');
 
 function setMenu(open) {
   document.body.classList.toggle('menu-open', open);
   menuOverlay.hidden = !open;
-  menuButton.setAttribute('aria-expanded', String(open));
-  menuButton.setAttribute('aria-label', open ? 'Fechar menu' : 'Abrir menu');
+  menuPanel.inert = !open;
+  menuPanel.setAttribute('aria-hidden', String(!open));
+  menuButtons.forEach(button => {
+    button.setAttribute('aria-expanded', String(open));
+    button.setAttribute('aria-label', open ? 'Fechar menu' : 'Abrir menu');
+  });
 }
+window.TrameliMenu = { close: () => setMenu(false) };
 
 function renderRoute(route) {
   const isPortal = route === 'loja';
@@ -144,6 +150,12 @@ function renderRoute(route) {
   document.body.classList.toggle('portal-mode', isPortal);
   if (isPortal) {
     document.title = 'Peça para amanhã — Trameli';
+    navigation.forEach(link => {
+      const active = link.getAttribute('href') === '#loja';
+      link.classList.toggle('btn', active);
+      link.classList.toggle('lnk', !active);
+      if (active) link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current');
+    });
     setMenu(false);
     scrollTo(0, 0);
     activeRoute = route;
@@ -198,10 +210,10 @@ function showRoute(force = false) {
   } else finish();
 }
 
-menuButton.addEventListener('click', () => setMenu(!document.body.classList.contains('menu-open')));
+menuButtons.forEach(button => button.addEventListener('click', () => setMenu(!document.body.classList.contains('menu-open'))));
+document.querySelector('.nav__close').addEventListener('click', () => setMenu(false));
 menuOverlay.addEventListener('click', () => setMenu(false));
 navigation.forEach(link => link.addEventListener('click', () => setMenu(false)));
-window.addEventListener('resize', () => { if (innerWidth > 760) setMenu(false); });
 window.addEventListener('hashchange', () => showRoute());
 document.querySelector('.notification-button').addEventListener('click', () => { location.hash = 'operacao'; });
 document.addEventListener('click', event => {

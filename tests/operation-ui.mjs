@@ -121,7 +121,12 @@ try {
   await evaluate('location.hash = "#loja"');
   await pause(300);
   assert(await evaluate('document.querySelectorAll(".portal-product").length === 21 && !document.querySelector("#portal-view").hidden'), 'Portal não mostrou o catálogo completo.');
-  assert(await evaluate('document.querySelector(".app-shell").hidden && getComputedStyle(document.querySelector(".app-shell")).display === "none" && document.querySelector(".nav").getClientRects().length === 0 && document.querySelector(".menu-overlay").hidden'), 'A barra lateral ficou sobre o portal.');
+  assert(await evaluate('document.querySelector(".app-shell").hidden && getComputedStyle(document.querySelector(".app-shell")).display === "none" && document.querySelector(".nav").getBoundingClientRect().right <= 0 && document.querySelector(".menu-overlay").hidden'), 'A barra lateral ficou sobre o portal.');
+  await evaluate('document.querySelector(".portal-menu-button").click()');
+  await pause(250);
+  assert(await evaluate('document.body.classList.contains("menu-open") && document.querySelector(".nav").getBoundingClientRect().right > 0'), 'Botão da loja não abriu o menu.');
+  await evaluate('document.querySelector(".nav__close").click()');
+  assert(await evaluate('!document.body.classList.contains("menu-open")'), 'Botão do menu não fechou a navegação.');
   assert(await evaluate('document.querySelector(".portal-product__photo img").complete'), 'Foto do produto não carregou.');
   await evaluate('document.querySelectorAll("[data-id=demo-pao-frances][data-qty]")[1].click()');
   await evaluate('document.querySelector("[data-view=cart]").click()');

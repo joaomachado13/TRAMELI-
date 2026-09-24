@@ -158,8 +158,7 @@
     document.querySelector('.app-shell').hidden = isPortal;
     document.getElementById('portal-view').hidden = !isPortal;
     if (isPortal) {
-      document.body.classList.remove('menu-open');
-      document.querySelector('.menu-overlay').hidden = true;
+      window.TrameliMenu?.close();
       render();
     }
   }
