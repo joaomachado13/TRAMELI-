@@ -1,4 +1,5 @@
 .app-shell[hidden],#portal-view[hidden]{display:none!important}
+body.portal-mode .app-shell,body.portal-mode .menu-overlay{display:none!important}
 body.portal-mode{background:#f5f0e7;color:#203d29}body.portal-mode .ambient-field{display:none}
 .portal{min-height:100vh;padding-bottom:90px;background:#f5f0e7;color:#203d29;font-family:var(--font-ui,'DM Sans',sans-serif)}
 .portal button,.portal input,.portal textarea{font:inherit}.portal button{cursor:pointer}

@@ -152,8 +152,20 @@
   document.getElementById('portal-orders-link').addEventListener('click', () => { view = 'orders'; render(); });
   document.getElementById('portal-cart-link').addEventListener('click', () => { view = 'cart'; render(); });
   document.querySelectorAll('[data-portal-nav]').forEach(button => button.addEventListener('click', () => { view = button.dataset.portalNav; render(); }));
-  window.addEventListener('trameli:portal-open', () => render());
+  function syncPortalFrame() {
+    const isPortal = location.hash === '#loja';
+    document.body.classList.toggle('portal-mode', isPortal);
+    document.querySelector('.app-shell').hidden = isPortal;
+    document.getElementById('portal-view').hidden = !isPortal;
+    if (isPortal) {
+      document.body.classList.remove('menu-open');
+      document.querySelector('.menu-overlay').hidden = true;
+      render();
+    }
+  }
+  window.addEventListener('trameli:portal-open', syncPortalFrame);
   window.addEventListener('trameli:catalog-changed', () => render(true));
   window.addEventListener('storage', event => { if ([orderKey, cartKey].includes(event.key)) { if (event.key === cartKey) cart = readJson(cartKey, {}); render(true); } });
-  if (location.hash === '#loja') render();
+  window.addEventListener('hashchange', syncPortalFrame);
+  syncPortalFrame();
 })();

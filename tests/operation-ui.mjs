@@ -121,6 +121,7 @@ try {
   await evaluate('location.hash = "#loja"');
   await pause(300);
   assert(await evaluate('document.querySelectorAll(".portal-product").length === 21 && !document.querySelector("#portal-view").hidden'), 'Portal não mostrou o catálogo completo.');
+  assert(await evaluate('document.querySelector(".app-shell").hidden && getComputedStyle(document.querySelector(".app-shell")).display === "none" && document.querySelector(".menu-overlay").hidden'), 'A barra lateral ficou sobre o portal.');
   assert(await evaluate('document.querySelector(".portal-product__photo img").complete'), 'Foto do produto não carregou.');
   await evaluate('document.querySelectorAll("[data-id=demo-pao-frances][data-qty]")[1].click()');
   await evaluate('document.querySelector("[data-view=cart]").click()');
