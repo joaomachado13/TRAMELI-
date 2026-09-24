@@ -1,0 +1,19 @@
+{
+  "name": "trameli-dashboard",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --configLoader runner --host 127.0.0.1",
+    "build": "vite build --configLoader runner",
+    "preview": "vite preview --configLoader runner --host 127.0.0.1",
+    "check": "node --check assets/operacao.js && node --check assets/portal.js && node --check assets/screens.js && node tests/catalog.test.mjs && node tests/order-math.test.mjs && node tests/migration.test.mjs && vite build --configLoader runner --mode test"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.57.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "vite": "^7.1.0"
+  }
+}

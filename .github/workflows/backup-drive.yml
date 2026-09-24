@@ -1,0 +1,70 @@
+name: Backup criptografado para Google Drive
+
+# Ativação manual até a primeira restauração de teste ser aprovada.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: trameli-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      BACKUP_AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
+      RCLONE_CONFIG_B64: ${{ secrets.RCLONE_CONFIG_B64 }}
+    steps:
+      - name: Conferir configuração
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_DB_URL"
+          test -n "$BACKUP_AGE_RECIPIENT"
+          test -n "$RCLONE_CONFIG_B64"
+          [[ "$BACKUP_AGE_RECIPIENT" == age1* ]]
+
+      - name: Instalar ferramentas
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y age rclone
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Exportar, criptografar e copiar
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          work="$(mktemp -d "${RUNNER_TEMP}/trameli-backup.XXXXXXXX")"
+          out="$work/encrypted"
+          mkdir "$out"
+          trap 'rm -f "$work/roles.sql" "$work/schema.sql" "$work/data.sql" "$work/auth-data.sql" "$work/rclone.conf"' EXIT
+          printf '%s' "$RCLONE_CONFIG_B64" | base64 -d > "$work/rclone.conf"
+          chmod 600 "$work/rclone.conf"
+
+          supabase db dump --db-url "$SUPABASE_DB_URL" --role-only --file "$work/roles.sql"
+          supabase db dump --db-url "$SUPABASE_DB_URL" --file "$work/schema.sql"
+          supabase db dump --db-url "$SUPABASE_DB_URL" --data-only --use-copy --file "$work/data.sql"
+          supabase db dump --db-url "$SUPABASE_DB_URL" --data-only --use-copy --schema auth --file "$work/auth-data.sql"
+
+          for name in roles schema data auth-data; do
+            test -s "$work/$name.sql"
+            age -r "$BACKUP_AGE_RECIPIENT" -o "$out/$name.sql.age" "$work/$name.sql"
+            test -s "$out/$name.sql.age"
+            rm -f "$work/$name.sql"
+          done
+
+          (cd "$out" && sha256sum *.age > SHA256SUMS)
+          stamp="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+          remote="gdrive:Trameli/Backups/$stamp"
+          rclone --config "$work/rclone.conf" copy "$out" "$remote" --checksum
+          rclone --config "$work/rclone.conf" check "$out" "$remote" --checksum --one-way
+          echo "Backup criptografado conferido no destino: $remote"

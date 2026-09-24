@@ -56,13 +56,13 @@ Hoje os pedidos chegam em um grupo do WhatsApp. Os clientes enviam à noite o qu
 - Taxa habitual de entrega de R$ 2,00 por cliente/pedido. Confirmar exceções, retirada, vários pedidos no mesmo endereço e destino da taxa.
 - Catálogo deve refletir pães e produtos reais de padaria, além de bolos e outros itens efetivamente vendidos.
 - O volume informado é de aproximadamente 60 pedidos por dia, com recebimento à noite e entrega na manhã seguinte; confirmar apenas a variação entre dias comuns e dias de pico.
-- A lista real de produtos e preços será enviada posteriormente.
-- Nenhum dado financeiro do protótipo atual representa ainda a operação real.
+- A planilha de preços de venda e compra foi recebida em 24/09/2026. Os 81 itens precificados para clientes foram transcritos; 9 permanecem indisponíveis por preço ou unidade ambígua. As fotos ainda não foram recebidas.
+- O catálogo local agora usa os preços da planilha, mas pedidos em modo local são apenas de teste. Custos da padaria não são publicados no portal e o valor cobrado não equivale a pagamento recebido nem a repasse definido.
 
 ## Decisões para a conversa com a operadora
 
 1. Pedidos: horário limite à noite, mudanças após o fechamento, cancelamentos e tratamento de falta de produto.
-2. Catálogo: lista real, unidades (unidade, pacote, peso), preços e quem pode alterá-los.
+2. Catálogo: confirmar os dois preços de “Pão de forma”, os dois de “Mini pão”, a manteiga Italac 200g, a unidade dos frios e os itens sem correspondência segura de custo. Definir quem pode alterar preços.
 3. Fornecedor: confirmar se o total comunicado corresponde aos preços cobrados dos clientes ou a uma tabela própria da padaria; definir quando e como ocorre o acerto financeiro, além do tratamento de perdas, devoluções e taxa de entrega.
 4. Cobrança: quando o cliente paga, para qual conta vai o Pix e como o pagamento é conferido; decidir depois se haverá Pix integrado ou apenas instruções/registro manual.
 5. Entrega: endereços fora do condomínio, taxa por pedido ou endereço, agrupamento de pedidos e quem realiza a entrega.

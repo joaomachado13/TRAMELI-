@@ -1,5 +1,7 @@
 (() => {
+const live = window.TrameliLive;
 const storageKey = 'trameli-operation-draft-v2';
+const printSettingsKey = 'trameli-print-settings-v1';
 try { localStorage.removeItem('trameli-operation-draft-v1'); } catch { /* Storage may be unavailable. */ }
 const money = value => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value / 100);
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
@@ -20,6 +22,7 @@ function parseMoney(value) {
 }
 
 function readOrders() {
+  if (live) return live.orders.slice();
   try {
     const parsed = JSON.parse(localStorage.getItem(storageKey) || '[]');
     return Array.isArray(parsed) ? parsed.filter(order => order && typeof order.id === 'string' && Array.isArray(order.items)) : [];
@@ -28,13 +31,32 @@ function readOrders() {
 
 let orders = readOrders();
 let editingId = null;
+let submitting = false;
+let requestId = null;
 const dateInput = document.getElementById('delivery-date');
 const searchInput = document.getElementById('order-search');
 const list = document.getElementById('orders-list');
+const supplierList = document.getElementById('supplier-list-items');
+const supplierCopy = document.getElementById('copy-supplier-list');
+const supplierFeedback = document.getElementById('supplier-list-feedback');
 const dialog = document.getElementById('operation-dialog');
 const form = document.getElementById('order-form');
 const itemsHost = document.getElementById('form-items');
 const formError = document.getElementById('form-error');
+const printSettingsHost = document.getElementById('print-settings');
+const historyDialog = live ? document.createElement('dialog') : null;
+if (historyDialog) { historyDialog.className = 'history-dialog'; document.body.append(historyDialog); }
+const printDefaults = { columns: 2, rows: 4, top: 10, side: 10, gap: 2 };
+let printSettings = { ...printDefaults };
+try {
+  const saved = JSON.parse(localStorage.getItem(printSettingsKey) || '{}');
+  for (const [key, fallback] of Object.entries(printDefaults)) {
+    const value = Number(saved[key]);
+    const minimum = ['columns', 'rows'].includes(key) ? 1 : 0;
+    if (Number.isInteger(value) && value >= minimum && value <= ({ columns: 4, rows: 10, top: 30, side: 30, gap: 10 })[key]) printSettings[key] = value;
+    printSettingsHost?.querySelector(`[name="${key}"]`)?.setAttribute('value', printSettings[key]);
+  }
+} catch { /* Use safe print defaults. */ }
 
 dateInput.value = tomorrow();
 
@@ -50,8 +72,12 @@ function saveOrders() {
 }
 
 const itemTotal = item => item.quantity * item.priceCents;
-const orderSubtotal = order => order.items.reduce((sum, item) => sum + itemTotal(item), 0);
-const orderTotal = order => orderSubtotal(order) + order.feeCents;
+const orderSubtotal = order => window.TrameliOrderMath.subtotalCents(order);
+const orderTotal = order => window.TrameliOrderMath.totalCents(order);
+const statusLabels = { received: 'A conferir', confirmed: 'Conferido', packing: 'Em separação', ready: 'Pronto', delivered: 'Entregue', cancelled: 'Cancelado' };
+const nextStatus = { received: 'confirmed', confirmed: 'packing', packing: 'ready', ready: 'delivered' };
+const previousStatus = { confirmed: 'received', packing: 'confirmed', ready: 'packing' };
+const orderStatus = order => order.status || (order.checked ? 'confirmed' : 'received');
 
 function addItem(item = {}) {
   const row = document.createElement('div');
@@ -91,6 +117,7 @@ function updateFormTotal() {
 
 function openForm(order = null) {
   editingId = order?.id || null;
+  requestId = order ? null : crypto.randomUUID();
   form.reset();
   formError.hidden = true;
   itemsHost.replaceChildren();
@@ -108,36 +135,53 @@ function openForm(order = null) {
 }
 
 function selectedOrders() {
-  return orders.filter(order => order.date === dateInput.value).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  return orders.filter(order => order.date === dateInput.value && orderStatus(order) !== 'cancelled').sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
 function render() {
   const dayOrders = selectedOrders();
-  const filtered = dayOrders.filter(order => {
+  const displayOrders = orders.filter(order => order.date === dateInput.value).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const filtered = displayOrders.filter(order => {
     const query = searchInput.value.trim().toLocaleLowerCase('pt-BR');
     return !query || [order.customer, order.address, ...order.items.map(item => item.name)].some(value => value.toLocaleLowerCase('pt-BR').includes(query));
   });
-  document.getElementById('total-orders').textContent = dayOrders.length;
-  document.getElementById('pending-orders').textContent = dayOrders.filter(order => !order.checked).length;
-  document.getElementById('products-total').textContent = money(dayOrders.reduce((sum, order) => sum + orderSubtotal(order), 0));
-  document.getElementById('grand-total').textContent = money(dayOrders.reduce((sum, order) => sum + orderTotal(order), 0));
+  const summary = window.TrameliOrderMath.summarizeDay(orders, dateInput.value);
+  document.getElementById('total-orders').textContent = summary.count;
+  document.getElementById('pending-orders').textContent = summary.pending;
+  document.getElementById('products-total').textContent = money(summary.productsCents);
+  document.getElementById('grand-total').textContent = money(summary.totalCents);
+  const products = window.TrameliOrderMath.summarizeProducts(orders, dateInput.value);
+  supplierList.innerHTML = products.length
+    ? `<ul>${products.map(item => `<li><strong>${item.quantity}×</strong><span>${escapeHtml(item.name)}</span></li>`).join('')}</ul>`
+    : '<p class="supplier-list__empty">Nenhum produto nesta data.</p>';
+  supplierCopy.disabled = !products.length;
+  supplierFeedback.textContent = '';
 
   if (!filtered.length) {
-    list.innerHTML = `<div class="empty-state"><span aria-hidden="true">✳</span><h3>${dayOrders.length ? 'Nenhum pedido encontrado' : 'O dia ainda está em branco'}</h3><p>${dayOrders.length ? 'Tente outro nome, endereço ou produto.' : 'Quando os pedidos chegarem, lance o primeiro aqui. A soma e as fichas serão preparadas automaticamente.'}</p>${dayOrders.length ? '' : '<button class="button button--primary" type="button" data-action="new">+ Lançar primeiro pedido</button>'}</div>`;
+    list.innerHTML = `<div class="empty-state"><span aria-hidden="true">✳</span><h3>${displayOrders.length ? 'Nenhum pedido encontrado' : 'O dia ainda está em branco'}</h3><p>${displayOrders.length ? 'Tente outro nome, endereço ou produto.' : 'Quando os pedidos chegarem, lance o primeiro aqui. A soma e as fichas serão preparadas automaticamente.'}</p>${displayOrders.length ? '' : '<button class="button button--primary" type="button" data-action="new">+ Lançar primeiro pedido</button>'}</div>`;
     return;
   }
 
-  list.innerHTML = filtered.map((order, index) => `<article class="order-card ${order.checked ? 'order-card--checked' : ''}"><div class="order-card__number">${String(index + 1).padStart(2, '0')}</div><div class="order-card__main"><div class="order-card__title"><div><h3>${escapeHtml(order.customer)}</h3><p>${escapeHtml(order.address)}${order.phone ? ` · ${escapeHtml(order.phone)}` : ''}</p></div><span class="status ${order.checked ? 'status--checked' : ''}">${order.checked ? 'Conferido' : 'A conferir'}</span></div><ul>${order.items.map(item => `<li><strong>${item.quantity}× ${escapeHtml(item.name)}</strong><span>${money(itemTotal(item))}</span></li>`).join('')}</ul>${order.notes ? `<p class="order-card__notes">Obs.: ${escapeHtml(order.notes)}</p>` : ''}<div class="order-card__footer"><span>Produtos ${money(orderSubtotal(order))} · Entrega ${money(order.feeCents)}</span><strong>${money(orderTotal(order))}</strong></div><div class="order-card__actions"><button type="button" data-action="toggle" data-id="${order.id}">${order.checked ? 'Voltar a conferir' : 'Marcar conferido'}</button><button type="button" data-action="edit" data-id="${order.id}">Editar</button><button type="button" data-action="delete" data-id="${order.id}">Excluir</button></div></div></article>`).join('');
+  list.innerHTML = filtered.map((order, index) => {
+    const state = orderStatus(order);
+    return `<article class="order-card ${state !== 'received' ? 'order-card--checked' : ''}"><div class="order-card__number">${String(index + 1).padStart(2, '0')}</div><div class="order-card__main"><div class="order-card__title"><div><h3>${escapeHtml(order.customer)}</h3><p>${escapeHtml(order.address)}${order.phone ? ` · ${escapeHtml(order.phone)}` : ''}</p></div><span class="status ${state !== 'received' ? 'status--checked' : ''}">${statusLabels[state] || 'A conferir'}</span></div><ul>${order.items.map(item => `<li><strong>${item.quantity}× ${escapeHtml(item.name)}</strong><span>${money(itemTotal(item))}</span></li>`).join('')}</ul>${order.notes ? `<p class="order-card__notes">Obs.: ${escapeHtml(order.notes)}</p>` : ''}<div class="order-card__footer"><span>Produtos ${money(orderSubtotal(order))} · Entrega ${money(order.feeCents)}</span><strong>${money(orderTotal(order))}</strong></div><div class="order-card__actions">${nextStatus[state] ? `<button type="button" data-action="toggle" data-id="${order.id}">Avançar para ${statusLabels[nextStatus[state]].toLowerCase()}</button>` : ''}${previousStatus[state] ? `<button type="button" data-action="back" data-id="${order.id}">Voltar para ${statusLabels[previousStatus[state]].toLowerCase()}</button>` : ''}${live ? `<button type="button" data-action="history" data-id="${order.id}">Histórico</button>` : ''}${!['delivered','cancelled'].includes(state) ? `<button type="button" data-action="edit" data-id="${order.id}">Editar</button><button type="button" data-action="delete" data-id="${order.id}">Cancelar</button>` : ''}</div></div></article>`;
+  }).join('');
 }
 
 function preparePrint() {
   const dayOrders = selectedOrders();
   if (!dayOrders.length) { alert('Não há pedidos para imprimir na data selecionada.'); return false; }
+  const slots = printSettings.columns * printSettings.rows;
   const printHost = document.getElementById('print-document');
+  printHost.style.setProperty('--print-columns', printSettings.columns);
+  printHost.style.setProperty('--print-rows', printSettings.rows);
+  printHost.style.setProperty('--print-top', `${printSettings.top}mm`);
+  printHost.style.setProperty('--print-side', `${printSettings.side}mm`);
+  printHost.style.setProperty('--print-gap', `${printSettings.gap}mm`);
   const pages = [];
-  for (let index = 0; index < dayOrders.length; index += 8) {
-    const pageOrders = dayOrders.slice(index, index + 8);
-    pages.push(`<section class="print-page"><header><strong>Trameli · fichas de separação</strong><span>Entrega: ${new Date(`${dateInput.value}T12:00:00`).toLocaleDateString('pt-BR')} · Página ${pages.length + 1}</span></header><div class="print-grid">${pageOrders.map((order, slot) => `<article class="print-label"><div class="print-label__top"><strong>${escapeHtml(order.customer)}</strong><span>${String(index + slot + 1).padStart(2, '0')}</span></div><p>${escapeHtml(order.address)}</p><ul>${order.items.map(item => `<li>${item.quantity}× ${escapeHtml(item.name)}</li>`).join('')}</ul>${order.notes ? `<small>Obs.: ${escapeHtml(order.notes)}</small>` : ''}<footer>Total: ${money(orderTotal(order))}</footer></article>`).join('')}</div></section>`);
+  for (let index = 0; index < dayOrders.length; index += slots) {
+    const pageOrders = dayOrders.slice(index, index + slots);
+    pages.push(`<section class="print-page"><div class="print-grid">${pageOrders.map((order, slot) => `<article class="print-label"><div class="print-label__top"><strong>${escapeHtml(order.customer)}</strong><span>${String(index + slot + 1).padStart(2, '0')}</span></div><p>${escapeHtml(order.address)}</p><ul>${order.items.map(item => `<li>${item.quantity}× ${escapeHtml(item.name)}</li>`).join('')}</ul>${order.notes ? `<small>Obs.: ${escapeHtml(order.notes)}</small>` : ''}<footer>Total: ${money(orderTotal(order))}</footer></article>`).join('')}</div></section>`);
   }
   printHost.innerHTML = pages.join('');
   return true;
@@ -156,9 +200,21 @@ form.elements.customer.addEventListener('change', event => {
 form.elements.fee.addEventListener('input', updateFormTotal);
 dateInput.addEventListener('change', render);
 searchInput.addEventListener('input', render);
+supplierCopy.addEventListener('click', async () => {
+  const products = window.TrameliOrderMath.summarizeProducts(orders, dateInput.value);
+  if (!products.length) return;
+  const content = `Produtos para ${dateInput.value}\n${products.map(item => `${item.quantity}× ${item.name}`).join('\n')}`;
+  try {
+    await navigator.clipboard.writeText(content);
+    supplierFeedback.textContent = 'Lista copiada. Confira as quantidades antes de enviar.';
+  } catch {
+    supplierFeedback.textContent = 'Não foi possível copiar automaticamente neste navegador.';
+  }
+});
 
-form.addEventListener('submit', event => {
+form.addEventListener('submit', async event => {
   event.preventDefault();
+  if (submitting) return;
   const items = formItems();
   const feeCents = parseMoney(form.elements.fee.value);
   const customer = form.elements.customer.value.trim();
@@ -170,12 +226,29 @@ form.addEventListener('submit', event => {
   }
   const previous = orders.find(order => order.id === editingId);
   const order = {
-    id: editingId || (crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`),
+    id: editingId || (live ? null : (crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`)),
+    version: previous?.version || null,
     createdAt: previous?.createdAt || new Date().toISOString(),
     checked: previous?.checked || false,
+    status: previous ? orderStatus(previous) : 'received',
     customer, address, phone: form.elements.phone.value.trim(),
     date: form.elements.date.value, feeCents, items, notes: form.elements.notes.value.trim(),
   };
+  if (live) {
+    submitting = true;
+    const submitButton = form.querySelector('[type="submit"]');
+    submitButton.disabled = true;
+    try {
+      await live.saveOperatorOrder(order, requestId);
+      orders = readOrders();
+      dateInput.value = order.date;
+      searchInput.value = '';
+      dialog.close();
+      render();
+    } catch (cause) { formError.textContent = `Não foi possível salvar: ${cause.message}`; formError.hidden = false; }
+    finally { submitting = false; submitButton.disabled = false; }
+    return;
+  }
   const next = editingId ? orders.map(item => item.id === editingId ? order : item) : [...orders, order];
   const old = orders;
   orders = next;
@@ -186,18 +259,37 @@ form.addEventListener('submit', event => {
   render();
 });
 
-list.addEventListener('click', event => {
+list.addEventListener('click', async event => {
   const button = event.target.closest('button[data-action]');
   if (!button) return;
   if (button.dataset.action === 'new') { openForm(); return; }
   const order = orders.find(item => item.id === button.dataset.id);
   if (!order) return;
+  if (button.dataset.action === 'history' && live) {
+    try {
+      const events = await live.orderEvents(order.id);
+      historyDialog.innerHTML = `<div class="history-dialog__content"><button type="button" class="history-dialog__close" aria-label="Fechar">×</button><h2>Histórico do pedido</h2><p>${escapeHtml(order.customer)} · #${escapeHtml(order.id.slice(0, 8))}</p><ol>${events.map(entry => {
+        const before = entry.before_state;
+        const after = entry.after_state;
+        const change = !before ? 'Pedido criado' : before.status !== after.status ? `Estado: ${statusLabels[before.status] || before.status} → ${statusLabels[after.status] || after.status}` : 'Dados ou valores ajustados';
+        return `<li><time>${new Date(entry.happened_at).toLocaleString('pt-BR')}</time><strong>${escapeHtml(change)}</strong><small>Conta: ${escapeHtml(entry.actor_id?.slice(0, 8) || 'sistema')}</small></li>`;
+      }).join('')}</ol></div>`;
+      historyDialog.querySelector('button').addEventListener('click', () => historyDialog.close());
+      historyDialog.showModal();
+    } catch (cause) { alert(`Não foi possível carregar o histórico: ${cause.message}`); }
+    return;
+  }
   if (button.dataset.action === 'edit') { openForm(order); return; }
-  if (button.dataset.action === 'delete' && !confirm(`Excluir o pedido de ${order.customer}?`)) return;
+  if (button.dataset.action === 'delete' && !confirm(`Cancelar o pedido de ${order.customer}? O registro ficará no histórico.`)) return;
   const previous = orders;
-  orders = button.dataset.action === 'delete'
-    ? orders.filter(item => item.id !== order.id)
-    : orders.map(item => item.id === order.id ? { ...item, checked: !item.checked } : item);
+  const state = button.dataset.action === 'delete' ? 'cancelled' : button.dataset.action === 'back' ? previousStatus[orderStatus(order)] : nextStatus[orderStatus(order)];
+  if (!state || ['cancelled', 'delivered'].includes(orderStatus(order))) return;
+  if (live) {
+    try { await live.setStatus(order, state); orders = readOrders(); render(); }
+    catch (cause) { alert(`O pedido não foi alterado: ${cause.message}`); }
+    return;
+  }
+  orders = orders.map(item => item.id === order.id ? { ...item, status: state, checked: state !== 'received' } : item);
   if (!saveOrders()) { orders = previous; return; }
   render();
 });
@@ -205,6 +297,16 @@ list.addEventListener('click', event => {
 for (const id of ['print-orders', 'print-orders-bottom']) {
   document.getElementById(id).addEventListener('click', () => { if (preparePrint()) window.print(); });
 }
+printSettingsHost?.addEventListener('change', event => {
+  const input = event.target.closest('input[name]');
+  if (!input) return;
+  const limit = ({ columns: 4, rows: 10, top: 30, side: 30, gap: 10 })[input.name];
+  const minimum = ['columns', 'rows'].includes(input.name) ? 1 : 0;
+  const value = Number(input.value);
+  if (!Number.isInteger(value) || value < minimum || value > limit) { input.value = printSettings[input.name]; return; }
+  printSettings[input.name] = value;
+  try { localStorage.setItem(printSettingsKey, JSON.stringify(printSettings)); } catch { /* Printing still works. */ }
+});
 
 render();
 window.addEventListener('trameli:orders-changed', () => { orders = readOrders(); render(); });

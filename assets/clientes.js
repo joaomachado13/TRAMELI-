@@ -1,7 +1,9 @@
 (() => {
+  const live = window.TrameliLive;
   const key = 'trameli-clients-v1';
   const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
   const read = () => {
+    if (live) return [];
     try {
       const value = JSON.parse(localStorage.getItem(key) || '[]');
       return Array.isArray(value) ? value.filter(item => item && typeof item.name === 'string') : [];
@@ -64,12 +66,13 @@
       if (!cards.some(saved => saved.name.toLocaleLowerCase('pt-BR') === client.name.toLocaleLowerCase('pt-BR') && saved.address.toLocaleLowerCase('pt-BR') === client.address.toLocaleLowerCase('pt-BR'))) cards.push({ ...client, source: 'Via pedido' });
     });
     cards.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
-    return `<div class="catalog-toolbar"><p>${cards.length} ${cards.length === 1 ? 'cliente identificado' : 'clientes identificados'}</p><button type="button" data-client-action="new">+ Adicionar cliente</button></div>${cards.length ? `<div class="catalog-grid">${cards.map(client => `<article class="catalog-card"><div><span>${client.source}</span><span>${client.count} ${client.count === 1 ? 'pedido' : 'pedidos'}</span></div><h3>${escapeHtml(client.name)}</h3><p>${escapeHtml(client.address)}</p>${client.phone ? `<p>${escapeHtml(client.phone)}</p>` : ''}${client.id ? `<div class="catalog-card__actions"><button type="button" data-client-action="edit" data-id="${client.id}">Editar</button><button type="button" data-client-action="delete" data-id="${client.id}">Excluir</button></div>` : '<p class="client-card__note">Identificado em pedido. Cadastre para reutilizar os dados.</p>'}</article>`).join('')}</div>` : `<div class="screen-empty"><p>Nenhum cliente ainda. Cadastre um para preencher nome e endereço mais rápido nos próximos pedidos.</p><button type="button" data-client-action="new">+ Cadastrar primeiro cliente</button></div>`}`;
+    return `<div class="catalog-toolbar"><p>${cards.length} ${cards.length === 1 ? 'cliente identificado' : 'clientes identificados'}</p>${live ? '' : '<button type="button" data-client-action="new">+ Adicionar cliente</button>'}</div>${cards.length ? `<div class="catalog-grid">${cards.map(client => `<article class="catalog-card"><div><span>${client.source}</span><span>${client.count} ${client.count === 1 ? 'pedido' : 'pedidos'}</span></div><h3>${escapeHtml(client.name)}</h3><p>${escapeHtml(client.address)}</p>${client.phone ? `<p>${escapeHtml(client.phone)}</p>` : ''}${client.id ? `<div class="catalog-card__actions"><button type="button" data-client-action="edit" data-id="${client.id}">Editar</button><button type="button" data-client-action="delete" data-id="${client.id}">Excluir</button></div>` : live ? '' : '<p class="client-card__note">Identificado em pedido. Cadastre para reutilizar os dados.</p>'}</article>`).join('')}</div>` : `<div class="screen-empty"><p>Nenhum cliente ainda. Os clientes aparecerão conforme os pedidos forem registrados.</p>${live ? '' : '<button type="button" data-client-action="new">+ Cadastrar primeiro cliente</button>'}</div>`}`;
   }
 
   document.addEventListener('click', event => {
     const button = event.target.closest('[data-client-action]');
     if (!button) return;
+    if (live) return;
     if (button.dataset.clientAction === 'new') open();
     if (button.dataset.clientAction === 'edit') open(button.dataset.id);
     if (button.dataset.clientAction === 'delete') {
@@ -81,6 +84,7 @@
   dialog.querySelector('.client-cancel').addEventListener('click', () => dialog.close());
   form.addEventListener('submit', event => {
     event.preventDefault();
+    if (live) return;
     const name = form.elements.name.value.trim();
     const address = form.elements.address.value.trim();
     if (!name || !address) { error.textContent = 'Informe nome e endereço.'; error.hidden = false; return; }

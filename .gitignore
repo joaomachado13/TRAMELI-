@@ -1,5 +1,12 @@
 .env
 .env.*
+!.env.example
 node_modules/
+dist/
 assets/crops/
 reference.png
+backups/
+*.sql.age
+*.sql.partial
+supabase/.temp/
+private/
