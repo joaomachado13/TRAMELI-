@@ -1,5 +1,5 @@
 {
-  "source": "DADOS PADARIA.xlsx / Valores cliente",
+  "source": "DADOS PADARIA.xlsx / Valores cliente + confirmações de 25/09/2026",
   "products": [
     {
       "id": "20260924-0000-4000-8000-000000000002",
@@ -203,33 +203,33 @@
       "id": "20260924-0000-4000-8000-000000000014",
       "sourceRow": 20,
       "name": "Mussarela",
-      "priceCents": 1078,
-      "unit": "a confirmar",
+      "priceCents": 6999,
+      "unit": "kg",
       "category": "Frios e laticínios",
-      "active": false,
-      "reviewReason": "Unidade de venda não informada",
+      "active": true,
+      "reviewReason": null,
       "image": null
     },
     {
       "id": "20260924-0000-4000-8000-000000000015",
       "sourceRow": 21,
       "name": "Presunto",
-      "priceCents": 616,
-      "unit": "a confirmar",
+      "priceCents": 4000,
+      "unit": "kg",
       "category": "Frios e laticínios",
-      "active": false,
-      "reviewReason": "Unidade de venda não informada",
+      "active": true,
+      "reviewReason": null,
       "image": null
     },
     {
       "id": "20260924-0000-4000-8000-000000000016",
       "sourceRow": 22,
-      "name": "Mortadela",
-      "priceCents": 864,
-      "unit": "a confirmar",
+      "name": "Mortadela defumada",
+      "priceCents": 4000,
+      "unit": "kg",
       "category": "Frios e laticínios",
-      "active": false,
-      "reviewReason": "Unidade de venda não informada",
+      "active": true,
+      "reviewReason": null,
       "image": null
     },
     {
@@ -368,11 +368,11 @@
       "id": "20260924-0000-4000-8000-000000000024",
       "sourceRow": 36,
       "name": "Manteiga Italac 200g",
-      "priceCents": 500,
+      "priceCents": 1700,
       "unit": "unidade",
       "category": "Frios e laticínios",
-      "active": false,
-      "reviewReason": "Preço de venda menor que o custo informado",
+      "active": true,
+      "reviewReason": null,
       "image": null
     },
     {
@@ -448,8 +448,8 @@
       "priceCents": 1200,
       "unit": "unidade",
       "category": "Pães",
-      "active": false,
-      "reviewReason": "Nome repetido com preço diferente na planilha",
+      "active": true,
+      "reviewReason": null,
       "image": null
     },
     {
@@ -499,12 +499,12 @@
     {
       "id": "20260924-0000-4000-8000-000000000030",
       "sourceRow": 48,
-      "name": "Peito de Peru",
-      "priceCents": 1134,
-      "unit": "a confirmar",
+      "name": "Peito de peru",
+      "priceCents": 5999,
+      "unit": "kg",
       "category": "Frios e laticínios",
-      "active": false,
-      "reviewReason": "Unidade de venda não informada",
+      "active": true,
+      "reviewReason": null,
       "image": null
     },
     {
@@ -785,12 +785,12 @@
     {
       "id": "20260924-0000-4000-8000-00000000004a",
       "sourceRow": 74,
-      "name": "Mini pão",
+      "name": "Mini pão francês",
       "priceCents": 70,
       "unit": "unidade",
       "category": "Pães",
-      "active": false,
-      "reviewReason": "Nome repetido com preço diferente na planilha",
+      "active": true,
+      "reviewReason": null,
       "image": null
     },
     {

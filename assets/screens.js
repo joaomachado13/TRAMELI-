@@ -10,6 +10,7 @@ const systemReducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 let userReducedMotion = false;
 try { userReducedMotion = localStorage.getItem('trameli-reduced-motion') === 'true'; } catch { /* Storage may be unavailable on file URLs. */ }
 const motionDisabled = () => systemReducedMotion.matches || userReducedMotion;
+const motion = window.TrameliMotion;
 
 function syncMotionPreference() {
   document.body.classList.toggle('motion-off', motionDisabled());
@@ -30,6 +31,10 @@ const orderTotal = order => window.TrameliOrderMath.totalCents(order);
 const orderState = order => order.status || (order.checked ? 'confirmed' : 'received');
 const orderStateLabel = order => ({ received: 'A conferir', confirmed: 'Conferido', packing: 'Em separação', ready: 'Pronto', delivered: 'Entregue', cancelled: 'Cancelado' })[orderState(order)] || 'A conferir';
 const activeOrders = () => storedOrders().filter(order => orderState(order) !== 'cancelled');
+const financeMath = window.TrameliFinanceMath;
+const financeRange = { from: '', to: '' };
+const reportRange = { from: '', to: '' };
+const inRange = (orders, from, to) => orders.filter(order => (!from || order.date >= from) && (!to || order.date <= to));
 
 function storedOrders() {
   if (live) return live.orders.slice();
@@ -104,24 +109,19 @@ const pages = {
       <div class="screen-metrics">${metric('Datas com pedidos', days.length, 'No navegador')}${metric('Pedidos', activeOrders().length, 'Ativos')}</div>
       ${panel('Entregas por dia', days.length ? `<div class="agenda-days">${days.map(([date, orders]) => `<section class="agenda-day"><h3>${new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</h3><span>${orders.length} ${orders.length === 1 ? 'pedido' : 'pedidos'}</span><ul>${orders.map(order => `<li><strong>${escapeHtml(order.customer)}</strong><small>${escapeHtml(order.address)}</small><span>${orderStateLabel(order)}</span></li>`).join('')}</ul></section>`).join('')}</div>` : empty('Nenhuma data com pedidos. Ao lançar um pedido, ele aparecerá no dia escolhido.', 'Lançar pedido'))}`;
   },
-  financeiro: () => {
-    const orders = activeOrders();
-    const products = orders.reduce((sum, order) => sum + order.items.reduce((subtotal, item) => subtotal + item.quantity * item.priceCents, 0), 0);
-    const fees = orders.reduce((sum, order) => sum + order.feeCents, 0);
-    return `${intro('Valores', 'Financeiro', 'Preço ao cliente, custo da padaria e taxa de entrega aparecem separadamente. Pagamento ainda não é registrado.')}
-      <div class="screen-metrics">${metric('Produtos', currency(products), 'Valor lançado')}${metric('Taxas de entrega', currency(fees), 'Valor lançado')}${metric('Total dos pedidos', currency(products + fees), 'Não é valor recebido')}</div>
-      ${panel('Conferência financeira', `<div class="screen-callout">Valores cobrados não significam valores pagos. O custo da padaria é uma estimativa da tabela fornecida, não um repasse liquidado.</div>${live?.operator ? '<div id="finance-cost-summary" class="finance-cost-summary" aria-live="polite">Carregando custos da padaria…</div>' : '<p class="report-note">Custos da padaria aparecem somente na conta da operação conectada.</p>'}${orders.length ? '<a class="screen-action" href="#pedidos">Ver pedidos →</a>' : empty('Nenhum valor para conferir. Lance um pedido para começar.', 'Lançar pedido')}`)}`;
-  },
-  relatorios: () => `${intro('Análise', 'Relatórios', 'Escolha um intervalo para resumir pedidos cadastrados neste navegador.')}
-    ${panel('Extrato de pedidos', `<div class="report-filters"><label>De<input id="report-from" type="date"></label><label>Até<input id="report-to" type="date"></label></div><div id="report-results" aria-live="polite"></div><div id="report-cost-summary" aria-live="polite"></div><p class="report-note">Este extrato não comprova pagamento. Custos e margens só ficam completos quando todos os itens tiverem custo confirmado.</p>`)}`,
+  financeiro: () => `${intro('Resultado da operação', 'Financeiro', 'Acompanhe venda dos produtos, custo da padaria e lucro bruto no período escolhido.')}
+    <div class="report-filters"><label>De<input id="finance-from" type="date" value="${financeRange.from}"></label><label>Até<input id="finance-to" type="date" value="${financeRange.to}"></label></div>
+    <div id="finance-cost-summary" aria-live="polite"></div>
+    ${panel('Como ler os valores', '<p class="report-note">Lucro bruto dos produtos = valor cobrado pelos produtos − custo da padaria. A taxa de entrega fica fora desta conta. Estes números não confirmam pagamentos recebidos nem descontam outras despesas.</p>')}`,
+  relatorios: () => `${intro('Análise', 'Relatórios', 'Escolha um intervalo para resumir os pedidos da operação.')}
+    ${panel('Extrato de pedidos', `<div class="report-filters"><label>De<input id="report-from" type="date" value="${reportRange.from}"></label><label>Até<input id="report-to" type="date" value="${reportRange.to}"></label></div><div id="report-results" aria-live="polite"></div><div id="report-cost-summary" aria-live="polite"></div><p class="report-note">Este extrato não comprova pagamento. Lucro bruto só aparece quando todos os itens tiverem custo conhecido.</p>`)}`,
   configuracoes: () => `${intro('Preferências', 'Configurações', 'Ajustes da interface e futuras regras da operação.')}<div class="settings-grid">${panel('Movimento', `<div class="settings-row settings-row--motion"><span>Movimento da interface</span><button type="button" class="motion-toggle" aria-pressed="${!motionDisabled()}" ${systemReducedMotion.matches ? 'disabled' : ''}>${systemReducedMotion.matches ? 'Reduzido pelo sistema' : motionDisabled() ? 'Desativado' : 'Ativado'}</button></div>`)}${panel('Dados da operação', empty('Catálogo, entregas, pagamentos e acessos serão configurados por partes. Nenhuma regra fictícia será aplicada.'))}</div>`,
 };
 
 function renderReportResults() {
   const host = document.getElementById('report-results');
   if (!host) return;
-  const from = document.getElementById('report-from').value;
-  const to = document.getElementById('report-to').value;
+  const { from, to } = reportRange;
   if (from && to && from > to) {
     host.innerHTML = '<p class="report-note">A data inicial precisa ser anterior à data final.</p>';
     const costHost = document.getElementById('report-cost-summary');
@@ -129,7 +129,7 @@ function renderReportResults() {
     costRequest++;
     return;
   }
-  const orders = activeOrders().filter(order => (!from || order.date >= from) && (!to || order.date <= to));
+  const orders = inRange(activeOrders(), from, to);
   const total = orders.reduce((sum, order) => sum + orderTotal(order), 0);
   const days = new Map();
   orders.forEach(order => { const day = days.get(order.date) || { count: 0, total: 0 }; day.count++; day.total += orderTotal(order); days.set(order.date, day); });
@@ -140,19 +140,39 @@ function renderReportResults() {
 let costRequest = 0;
 async function renderCostSummary(hostId, from = null, to = null) {
   const host = document.getElementById(hostId);
-  if (!host || !live?.operator) return;
+  if (!host) return;
+  const orders = inRange(activeOrders(), from, to);
+  const initial = financeMath.summarizeFinancials(orders, null);
+  const trio = (summary, note) => `<div class="screen-metrics financial-trio">
+    ${metric('Valor dos clientes', currency(summary.customerCents), 'Somente produtos')}
+    ${metric('Valor da padaria', summary.supplierCents === null ? '—' : currency(summary.supplierCents),
+      summary.missingItems ? 'Custo parcial' : summary.estimatedItems ? 'Inclui custo estimado' : 'Custo dos produtos')}
+    ${metric(summary.estimatedItems ? 'Lucro provisório' : 'Lucro bruto', summary.profitCents === null ? 'Pendente' : currency(summary.profitCents),
+      summary.profitCents === null ? 'Faltam custos' : summary.estimatedItems ? 'Depende de confirmação' : 'Sem taxa de entrega e outras despesas')}
+    </div><p class="financial-detail">Taxas de entrega no período: ${currency(summary.deliveryCents)}. Não entram no lucro acima.</p>
+    <p class="report-note">${note}</p>`;
   const request = ++costRequest;
-  host.textContent = 'Calculando custo da padaria…';
+  if (from && to && from > to) {
+    host.innerHTML = '<p class="report-note">A data inicial precisa ser anterior à data final.</p>';
+    return;
+  }
+  if (!live?.operator) {
+    host.innerHTML = trio(initial, 'Custos e lucro ficam disponíveis somente na conta da operação conectada. No modo local, não há custo confiável sincronizado.');
+    return;
+  }
+  host.innerHTML = trio(initial, 'Calculando custo da padaria…');
   try {
     const rows = await live.costSummary(from, to);
     if (request !== costRequest || !document.getElementById(hostId)) return;
-    const known = rows.reduce((sum, row) => sum + Number(row.supplier_total_cents || 0), 0);
-    const missing = rows.reduce((sum, row) => sum + Number(row.missing_count || 0), 0);
-    const orders = activeOrders().filter(order => (!from || order.date >= from) && (!to || order.date <= to));
-    const sales = orders.reduce((sum, order) => sum + order.items.reduce((lineSum, item) => lineSum + item.quantity * item.priceCents, 0), 0);
-    host.innerHTML = `<div class="report-summary"><div><span>Custo conhecido da padaria</span><strong>${currency(known)}</strong></div><div><span>Cobertura dos custos</span><strong>${missing ? `${missing} ${missing === 1 ? 'item pendente' : 'itens pendentes'}` : 'Completa'}</strong></div>${missing ? '' : `<div><span>Margem bruta dos produtos</span><strong>${currency(sales - known)}</strong></div>`}</div>${missing ? '<p class="report-note">O custo mostrado é parcial. Não use como valor final de repasse até preencher os custos pendentes.</p>' : '<p class="report-note">Margem bruta = venda dos produtos − custo da padaria; não inclui taxas de entrega nem outras despesas.</p>'}`;
+    const summary = financeMath.summarizeFinancials(orders, rows);
+    const note = summary.missingItems
+      ? `${summary.missingItems} ${summary.missingItems === 1 ? 'item está sem custo' : 'itens estão sem custo'}${summary.estimatedItems ? ` e ${summary.estimatedItems} com custo estimado` : ''}. O valor da padaria é parcial; não feche o lucro nem o repasse com este total.`
+      : summary.estimatedItems
+        ? `${summary.estimatedItems} ${summary.estimatedItems === 1 ? 'item usa custo estimado' : 'itens usam custo estimado'}. Confirme o preço de compra com a padaria antes de fechar lucro ou repasse.`
+        : 'Lucro bruto dos produtos = valor dos clientes − valor da padaria. Não representa dinheiro já recebido nem lucro líquido.';
+    host.innerHTML = trio(summary, note);
   } catch (cause) {
-    if (request === costRequest && document.getElementById(hostId)) host.textContent = `Custos indisponíveis: ${cause.message}`;
+    if (request === costRequest && document.getElementById(hostId)) host.innerHTML = trio(initial, `Custos indisponíveis: ${escapeHtml(cause.message)}`);
   }
 }
 
@@ -171,10 +191,11 @@ function setMenu(open) {
     button.setAttribute('aria-expanded', String(open));
     button.setAttribute('aria-label', open ? 'Fechar menu' : 'Abrir menu');
   });
+  motion?.menu(open);
 }
 window.TrameliMenu = { close: () => setMenu(false) };
 
-function renderRoute(route) {
+function renderRoute(route, preserveScroll = false) {
   const isPortal = route === 'loja';
   portalView.hidden = !isPortal;
   appShell.hidden = isPortal;
@@ -188,7 +209,7 @@ function renderRoute(route) {
       if (active) link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current');
     });
     setMenu(false);
-    scrollTo(0, 0);
+    if (!preserveScroll) motion.scrollTo(0, false);
     activeRoute = route;
     window.dispatchEvent(new Event('trameli:portal-open'));
     return;
@@ -198,9 +219,9 @@ function renderRoute(route) {
   homeView.hidden = !isHome;
   operationView.hidden = !isOperation;
   screenView.hidden = isHome || isOperation;
-  if (!isHome && !isOperation) screenView.innerHTML = pages[route]();
+  if (!isHome && !isOperation) { motion.reset(screenView); screenView.innerHTML = pages[route](); }
   if (route === 'relatorios') renderReportResults();
-  if (route === 'financeiro') renderCostSummary('finance-cost-summary');
+  if (route === 'financeiro') renderCostSummary('finance-cost-summary', financeRange.from || null, financeRange.to || null);
   const operationDialog = document.getElementById('operation-dialog');
   if (!isOperation && operationDialog.open) operationDialog.close();
   navigation.forEach(link => {
@@ -212,17 +233,13 @@ function renderRoute(route) {
   const current = navigation.find(link => link.getAttribute('href') === `#${route}`);
   document.title = `${current?.querySelector('.nav__label')?.textContent.trim() || 'Operação diária'} — Trameli`;
   setMenu(false);
-  scrollTo(0, 0);
+  if (!preserveScroll) motion.scrollTo(0, false);
   activeRoute = route;
 }
 
 function animateRouteIn(route) {
-  if (!window.gsap || motionDisabled()) return;
-  const view = route === 'inicio' ? homeView : route === 'operacao' ? operationView : screenView;
-  const targets = view.querySelectorAll(route === 'inicio'
-    ? '.hero, .kpi-card, .attention-strip, .content-grid .panel, .bottom-grid > *'
-    : route === 'operacao' ? '.intro, .summary-card, .ledger-note, .orders-section' : '.screen-hero, .screen-metric, .screen-panel');
-  window.gsap.fromTo(targets, { autoAlpha: 0, y: 9 }, { autoAlpha: 1, y: 0, duration: 0.28, stagger: 0.025, ease: 'power2.out', clearProps: 'opacity,visibility,transform' });
+  if (motionDisabled()) return;
+  motion.enter(route === 'inicio' ? homeView : route === 'operacao' ? operationView : screenView);
 }
 
 function showRoute(force = false) {
@@ -231,14 +248,10 @@ function showRoute(force = false) {
   if (route === activeRoute && !force) { setMenu(false); return; }
   const revision = ++routeRevision;
   const previous = activeRoute;
-  const finish = () => { if (revision !== routeRevision) return; renderRoute(route); if (previous !== null && !force) animateRouteIn(route); };
-  if (previous !== null && previous !== 'loja' && route !== 'loja' && !force && window.gsap && !motionDisabled()) {
+  const finish = () => { if (revision !== routeRevision) return; renderRoute(route, force && previous === route); if (previous !== null && !force && route !== 'loja') animateRouteIn(route); else motion.refresh(); };
+  if (previous !== null && previous !== 'loja' && route !== 'loja' && !force && !motionDisabled()) {
     const outgoing = previous === 'inicio' ? homeView : previous === 'operacao' ? operationView : screenView;
-    const children = outgoing.querySelectorAll('.hero, .kpi-card, .attention-strip, .content-grid .panel, .bottom-grid > *, .screen-hero, .screen-metric, .screen-panel, .intro, .summary-card, .ledger-note, .orders-section');
-    window.gsap.killTweensOf(children);
-    window.gsap.set(children, { clearProps: 'opacity,visibility,transform' });
-    window.gsap.killTweensOf(outgoing);
-    window.gsap.to(outgoing, { autoAlpha: 0, y: -6, duration: 0.12, ease: 'power1.in', onComplete: () => { window.gsap.set(outgoing, { clearProps: 'opacity,visibility,transform' }); finish(); } });
+    motion.leave(outgoing, finish);
   } else finish();
 }
 
@@ -254,9 +267,17 @@ document.addEventListener('click', event => {
   userReducedMotion = !userReducedMotion;
   try { localStorage.setItem('trameli-reduced-motion', String(userReducedMotion)); } catch { /* Applies this session. */ }
   syncMotionPreference();
+  motion.setReduced(userReducedMotion);
 });
 document.addEventListener('change', event => {
-  if (event.target.id === 'report-from' || event.target.id === 'report-to') renderReportResults();
+  if (event.target.id === 'report-from' || event.target.id === 'report-to') {
+    reportRange[event.target.id === 'report-from' ? 'from' : 'to'] = event.target.value;
+    renderReportResults();
+  }
+  if (event.target.id === 'finance-from' || event.target.id === 'finance-to') {
+    financeRange[event.target.id === 'finance-from' ? 'from' : 'to'] = event.target.value;
+    renderCostSummary('finance-cost-summary', financeRange.from || null, financeRange.to || null);
+  }
 });
 document.addEventListener('keydown', event => { if (event.key === 'Escape') setMenu(false); });
 showRoute();

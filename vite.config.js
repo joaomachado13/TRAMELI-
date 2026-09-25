@@ -12,12 +12,12 @@ export default defineConfig(({ command, mode }) => {
     }
   }
   return {
+    optimizeDeps: { noDiscovery: true, include: [] },
     build: { rollupOptions: { input: { main: resolve('index.html'), operationRedirect: resolve('operacao.html') } } },
     plugins: [{
       name: 'copy-static-product-media',
       closeBundle() {
         cpSync('assets/products', 'dist/assets/products', { recursive: true });
-        cpSync('assets/vendor', 'dist/assets/vendor', { recursive: true });
       },
     }],
   };

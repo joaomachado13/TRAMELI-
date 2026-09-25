@@ -1,8 +1,11 @@
 import { enabled, LiveData } from './live-data.js';
 import * as orderMath from './order-math.js';
+import * as financeMath from './finance-math.js';
+import { init as initMotion } from './motion.js';
 import clientCatalog from '../data/client-products.json';
 import './live.css';
 window.TrameliOrderMath = orderMath;
+window.TrameliFinanceMath = financeMath;
 window.TrameliSourceCatalog = clientCatalog.products;
 
 let live = null;
@@ -66,3 +69,4 @@ await import('../assets/clientes.js');
 await import('../assets/operacao.js');
 await import('../assets/screens.js');
 await import('../assets/portal.js');
+initMotion();

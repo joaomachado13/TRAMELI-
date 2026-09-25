@@ -1246,6 +1246,10 @@ body.menu-open { overflow: hidden; }
 .report-summary > div { display: grid; gap: 5px; padding: 17px; border: 1px solid rgba(185,200,151,.16); border-radius: 10px; background: rgba(21,45,26,.42); }
 .report-summary span { color: #b4c1ac; font-size: .73rem; }
 .report-summary strong { color: #f4eedf; font-size: 1.2rem; }
+.screen-metrics.financial-trio { grid-template-columns: repeat(3,minmax(0,1fr)); margin-top: 10px; }
+.financial-trio .screen-metric:last-child { background: linear-gradient(140deg,rgba(64,91,45,.8),rgba(29,61,35,.8)); }
+.financial-detail { color: #c0cdb8; font-size: .78rem; margin: 0 0 5px; }
+@media (max-width: 760px) { .screen-metrics.financial-trio { grid-template-columns: 1fr; } }
 .report-days { margin-top: 16px; }
 .report-days > div { display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; padding: 12px 2px; border-bottom: 1px solid rgba(185,200,151,.13); font-size: .79rem; }
 .report-days > div span { color: #bac8b1; }

@@ -17,6 +17,7 @@ const mapProduct = (row, cost) => ({
   image: row.image_url, priceCents: row.price_cents, active: row.active,
   sourceRow: row.source_row, reviewReason: row.review_reason,
   costCents: cost?.unit_cost_cents ?? null, supplierName: cost?.supplier_name || '',
+  costEstimated: Boolean(cost?.estimated),
 });
 
 export class LiveData {
@@ -111,6 +112,15 @@ export class LiveData {
     const { error } = await this.client.rpc(this.catalogUpgradeReady ? 'trameli_save_product_full' : 'trameli_save_product',
       this.catalogUpgradeReady ? { ...args, p_cost_cents: product.costCents ?? null, p_supplier_name: product.supplierName || '' } : args);
     if (error) throw error;
+    this.costSummaryCache.clear();
+    await this.load(true);
+  }
+
+  async confirmProductCost(productId) {
+    if (!this.operator) throw new Error('Acesso restrito à operação.');
+    const { error } = await this.client.rpc('trameli_confirm_product_cost', { p_product_id: productId });
+    if (error) throw error;
+    this.costSummaryCache.clear();
     await this.load(true);
   }
 

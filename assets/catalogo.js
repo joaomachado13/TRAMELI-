@@ -1,7 +1,7 @@
 (() => {
   const live = window.TrameliLive;
   const key = 'trameli-catalog-v1';
-  const seedKey = 'trameli-catalog-client-sheet-seeded-v1';
+  const seedKey = 'trameli-catalog-client-sheet-seeded-v2';
   const sourceProducts = (window.TrameliSourceCatalog || []).map(item => ({ ...item, demo: true }));
   const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
   const money = cents => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100);
@@ -35,7 +35,7 @@
 
   const dialog = document.createElement('dialog');
   dialog.className = 'catalog-dialog';
-  dialog.innerHTML = `<form id="catalog-form" novalidate><div class="catalog-dialog__heading"><div><p class="screen-eyebrow">CATÁLOGO</p><h2 id="catalog-dialog-title">Novo produto</h2></div><button type="button" class="catalog-close" aria-label="Fechar">×</button></div><p>Preços cobrados do cliente e custos da padaria são campos separados.</p><label>Nome do produto<input name="name" maxlength="90" required></label><div class="catalog-form-grid"><label>Preço ao cliente (R$)<input name="price" inputmode="decimal" placeholder="0,00" required></label><label>Unidade<input name="unit" maxlength="30" placeholder="unidade, pacote, kg..." required></label></div>${live?.operator ? '<div class="catalog-form-grid"><label>Custo da padaria (R$) <span>(opcional)</span><input name="cost" inputmode="decimal" placeholder="A confirmar"></label><label>Nome no fornecedor <span>(opcional)</span><input name="supplierName" maxlength="90"></label></div><p class="catalog-cost-note">Custo e repasse ficam visíveis somente para a operação. Em branco significa custo não confirmado.</p>' : ''}<label>Categoria <span>(opcional)</span><input name="category" maxlength="50"></label><label class="catalog-check"><input name="active" type="checkbox" checked> Disponível para pedidos</label><p class="catalog-error" role="alert" hidden></p><div class="catalog-actions"><button type="button" class="catalog-cancel">Cancelar</button><button type="submit">Salvar produto</button></div></form>`;
+  dialog.innerHTML = `<form id="catalog-form" novalidate><div class="catalog-dialog__heading"><div><p class="screen-eyebrow">CATÁLOGO</p><h2 id="catalog-dialog-title">Novo produto</h2></div><button type="button" class="catalog-close" aria-label="Fechar">×</button></div><p>Preços cobrados do cliente e custos da padaria são campos separados.</p><label>Nome do produto<input name="name" maxlength="90" required></label><div class="catalog-form-grid"><label>Preço ao cliente (R$)<input name="price" inputmode="decimal" placeholder="0,00" required></label><label>Unidade<input name="unit" maxlength="30" placeholder="unidade, pacote, kg..." required></label></div>${live?.operator ? '<div class="catalog-form-grid"><label>Custo da padaria (R$) <span>(opcional)</span><input name="cost" inputmode="decimal" placeholder="A confirmar"></label><label>Nome no fornecedor <span>(opcional)</span><input name="supplierName" maxlength="90"></label></div><p class="catalog-cost-note">Custo e repasse ficam visíveis somente para a operação. Para frios em kg, informe o custo de 1 kg. Em branco significa custo não confirmado.</p>' : ''}<label>Categoria <span>(opcional)</span><input name="category" maxlength="50"></label><label class="catalog-check"><input name="active" type="checkbox" checked> Disponível para pedidos</label><p class="catalog-error" role="alert" hidden></p><div class="catalog-actions"><button type="button" class="catalog-cancel">Cancelar</button><button type="submit">Salvar produto</button></div></form>`;
   document.body.append(dialog);
   const form = dialog.querySelector('form');
   const error = dialog.querySelector('.catalog-error');
@@ -87,7 +87,7 @@
 
   function render() {
     const sorted = products.slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
-    return `<div class="catalog-toolbar"><div><p>${sorted.length} ${sorted.length === 1 ? 'produto cadastrado' : 'produtos cadastrados'}</p><small>${live ? 'Confira os itens pendentes e as fotos antes de liberar o link aos clientes.' : 'Preços da planilha real em modo local de teste. Pedidos deste modo não são sincronizados.'}</small></div><div class="catalog-toolbar__actions"><a href="#loja">Ver portal do cliente ↗</a><button type="button" data-catalog-action="new">+ Adicionar produto</button></div></div>${sorted.length ? `<div class="catalog-grid">${sorted.map(item => `<article class="catalog-card">${item.image ? `<img class="catalog-card__image" src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy">` : '<div class="catalog-card__image catalog-card__image--pending" aria-label="Foto pendente">Foto pendente</div>'}<div><span>${escapeHtml(item.category || 'Sem categoria')}</span><span class="catalog-card__state ${item.active ? '' : 'catalog-card__state--off'}">${item.active ? 'Disponível' : 'Indisponível'}</span></div><h3>${escapeHtml(item.name)}</h3><p><strong>${money(item.priceCents)}</strong> / ${escapeHtml(item.unit)}</p>${item.reviewReason ? `<p class="catalog-card__review">Revisar: ${escapeHtml(item.reviewReason)}</p>` : ''}${live?.operator ? `<p class="catalog-card__cost">Padaria: ${item.costCents == null ? 'custo pendente' : money(item.costCents)}</p>` : ''}<div class="catalog-card__actions"><button type="button" data-catalog-action="edit" data-id="${escapeHtml(item.id)}">Editar</button><button type="button" data-catalog-action="delete" data-id="${escapeHtml(item.id)}">${live ? 'Desativar' : 'Excluir'}</button></div></article>`).join('')}</div>` : `<div class="screen-empty"><p>Nenhum produto cadastrado ainda.</p><button type="button" data-catalog-action="new">+ Cadastrar primeiro produto</button></div>`}`;
+    return `<div class="catalog-toolbar"><div><p>${sorted.length} ${sorted.length === 1 ? 'produto cadastrado' : 'produtos cadastrados'}</p><small>${live ? 'Confira os itens pendentes e as fotos antes de liberar o link aos clientes.' : 'Preços da planilha real em modo local de teste. Pedidos deste modo não são sincronizados.'}</small></div><div class="catalog-toolbar__actions"><a href="#loja">Ver portal do cliente ↗</a><button type="button" data-catalog-action="new">+ Adicionar produto</button></div></div>${sorted.length ? `<div class="catalog-grid">${sorted.map(item => `<article class="catalog-card">${item.image ? `<img class="catalog-card__image" src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy">` : '<div class="catalog-card__image catalog-card__image--pending" aria-label="Foto pendente">Foto pendente</div>'}<div><span>${escapeHtml(item.category || 'Sem categoria')}</span><span class="catalog-card__state ${item.active ? '' : 'catalog-card__state--off'}">${item.active ? 'Disponível' : 'Indisponível'}</span></div><h3>${escapeHtml(item.name)}</h3><p><strong>${money(item.priceCents)}</strong> / ${escapeHtml(item.unit)}</p>${item.reviewReason ? `<p class="catalog-card__review">Revisar: ${escapeHtml(item.reviewReason)}</p>` : ''}${live?.operator ? `<p class="catalog-card__cost">Padaria: ${item.costCents == null ? 'custo pendente' : money(item.costCents)}${item.costEstimated ? ' · estimado' : ''}</p>` : ''}<div class="catalog-card__actions"><button type="button" data-catalog-action="edit" data-id="${escapeHtml(item.id)}">Editar</button>${live?.operator && item.costEstimated ? `<button type="button" data-catalog-action="confirm-cost" data-id="${escapeHtml(item.id)}">Confirmar custo</button>` : ''}<button type="button" data-catalog-action="delete" data-id="${escapeHtml(item.id)}">${live ? 'Desativar' : 'Excluir'}</button></div></article>`).join('')}</div>` : `<div class="screen-empty"><p>Nenhum produto cadastrado ainda.</p><button type="button" data-catalog-action="new">+ Cadastrar primeiro produto</button></div>`}`;
   }
 
   document.addEventListener('click', event => {
@@ -96,6 +96,12 @@
     const action = button.dataset.catalogAction;
     if (action === 'new') open();
     if (action === 'edit') open(button.dataset.id);
+    if (action === 'confirm-cost') {
+      const product = products.find(item => item.id === button.dataset.id);
+      if (product?.costEstimated && confirm(`Você conferiu com a padaria que o custo de ${product.name} é ${money(product.costCents)} por ${product.unit}?`)) {
+        live.confirmProductCost(product.id).catch(cause => alert(`Não foi possível confirmar o custo: ${cause.message}`));
+      }
+    }
     if (action === 'delete') {
       const product = products.find(item => item.id === button.dataset.id);
       if (product && confirm(`${live ? 'Desativar' : 'Excluir'} ${product.name} do catálogo? Os pedidos já salvos não serão alterados.`)) {
@@ -117,8 +123,8 @@
       error.hidden = false;
       return;
     }
-    if (products.some(item => item.name.toLocaleLowerCase('pt-BR') === name.toLocaleLowerCase('pt-BR') && item.id !== editingId)) {
-      error.textContent = 'Já existe um produto com esse nome.';
+    if (form.elements.active.checked && products.some(item => item.active && item.name.toLocaleLowerCase('pt-BR') === name.toLocaleLowerCase('pt-BR') && item.id !== editingId)) {
+      error.textContent = 'Já existe um produto disponível com esse nome.';
       error.hidden = false;
       return;
     }

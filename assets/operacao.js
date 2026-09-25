@@ -1,7 +1,7 @@
 (() => {
 const live = window.TrameliLive;
 const storageKey = 'trameli-operation-draft-v2';
-const printSettingsKey = 'trameli-print-settings-v1';
+const printSettingsKey = 'trameli-print-settings-70x33-v1';
 try { localStorage.removeItem('trameli-operation-draft-v1'); } catch { /* Storage may be unavailable. */ }
 const money = value => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value / 100);
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
@@ -33,6 +33,7 @@ let orders = readOrders();
 let editingId = null;
 let submitting = false;
 let requestId = null;
+let dayFinanceRequest = 0;
 const dateInput = document.getElementById('delivery-date');
 const searchInput = document.getElementById('order-search');
 const list = document.getElementById('orders-list');
@@ -46,14 +47,13 @@ const formError = document.getElementById('form-error');
 const printSettingsHost = document.getElementById('print-settings');
 const historyDialog = live ? document.createElement('dialog') : null;
 if (historyDialog) { historyDialog.className = 'history-dialog'; document.body.append(historyDialog); }
-const printDefaults = { columns: 2, rows: 4, top: 10, side: 10, gap: 2 };
+const printDefaults = { offsetX: 0, offsetY: 0 };
 let printSettings = { ...printDefaults };
 try {
   const saved = JSON.parse(localStorage.getItem(printSettingsKey) || '{}');
-  for (const [key, fallback] of Object.entries(printDefaults)) {
+  for (const key of Object.keys(printDefaults)) {
     const value = Number(saved[key]);
-    const minimum = ['columns', 'rows'].includes(key) ? 1 : 0;
-    if (Number.isInteger(value) && value >= minimum && value <= ({ columns: 4, rows: 10, top: 30, side: 30, gap: 10 })[key]) printSettings[key] = value;
+    if (Number.isFinite(value) && value >= -3 && value <= 3 && value * 2 === Math.trunc(value * 2)) printSettings[key] = value;
     printSettingsHost?.querySelector(`[name="${key}"]`)?.setAttribute('value', printSettings[key]);
   }
 } catch { /* Use safe print defaults. */ }
@@ -72,6 +72,7 @@ function saveOrders() {
 }
 
 const itemTotal = item => item.quantity * item.priceCents;
+const itemLabel = item => window.TrameliOrderMath.itemLabel(item);
 const orderSubtotal = order => window.TrameliOrderMath.subtotalCents(order);
 const orderTotal = order => window.TrameliOrderMath.totalCents(order);
 const statusLabels = { received: 'A conferir', confirmed: 'Conferido', packing: 'Em separação', ready: 'Pronto', delivered: 'Entregue', cancelled: 'Cancelado' };
@@ -82,14 +83,26 @@ const orderStatus = order => order.status || (order.checked ? 'confirmed' : 'rec
 function addItem(item = {}) {
   const row = document.createElement('div');
   row.className = 'item-row';
-  row.innerHTML = '<label>Produto <input class="item-name" list="catalog-products" maxlength="90" placeholder="Nome do item" required></label><label>Qtd. <input class="item-quantity" type="number" inputmode="numeric" min="1" max="999" step="1" value="1" required></label><label>Preço unit. (R$) <input class="item-price" inputmode="decimal" placeholder="0,00" required></label><button class="remove-item" type="button" aria-label="Remover item">×</button>';
+  row.innerHTML = '<label>Produto <input class="item-name" list="catalog-products" maxlength="90" placeholder="Nome do item" required></label><label class="item-quantity-label">Qtd. <input class="item-quantity" type="number" inputmode="numeric" min="1" max="999" step="1" value="1" required></label><label class="item-weight-label" hidden>Peso (g) <input class="item-weight" type="number" inputmode="numeric" min="50" max="4950" step="50" value="50"></label><label><span class="item-price-label">Preço unit. (R$)</span> <input class="item-price" inputmode="decimal" placeholder="0,00" required></label><button class="remove-item" type="button" aria-label="Remover item">×</button>';
   row.querySelector('.item-name').value = item.name || '';
   row.querySelector('.item-quantity').value = item.quantity || 1;
-  row.querySelector('.item-price').value = item.priceCents == null ? '' : (item.priceCents / 100).toFixed(2).replace('.', ',');
-  row.querySelector('.item-name').addEventListener('change', event => {
-    const product = window.TrameliCatalog?.findByName(event.target.value);
-    if (product) row.querySelector('.item-price').value = (product.priceCents / 100).toFixed(2).replace('.', ',');
+  row.querySelector('.item-weight').value = item.weightGrams || 50;
+  row.querySelector('.item-price').value = item.priceCents == null ? '' : ((item.kgPriceCents ?? item.priceCents) / 100).toFixed(2).replace('.', ',');
+  function syncItemMode(resetPrice = false) {
+    const product = window.TrameliCatalog?.findByName(row.querySelector('.item-name').value);
+    const isWeighted = product?.unit === 'kg';
+    row.dataset.productId = isWeighted ? product.id : '';
+    row.dataset.weighted = String(isWeighted);
+    row.querySelector('.item-weight-label').hidden = !isWeighted;
+    row.querySelector('.item-quantity-label').hidden = isWeighted;
+    row.querySelector('.item-quantity').disabled = isWeighted;
+    row.querySelector('.item-weight').disabled = !isWeighted;
+    row.querySelector('.item-price-label').textContent = isWeighted ? 'Preço/kg (R$)' : 'Preço unit. (R$)';
+    if (resetPrice && product) row.querySelector('.item-price').value = (product.priceCents / 100).toFixed(2).replace('.', ',');
     updateFormTotal();
+  }
+  row.querySelector('.item-name').addEventListener('change', event => {
+    syncItemMode(true);
   });
   row.querySelector('.remove-item').addEventListener('click', () => {
     if (itemsHost.children.length === 1) return;
@@ -98,20 +111,29 @@ function addItem(item = {}) {
   });
   row.addEventListener('input', updateFormTotal);
   itemsHost.append(row);
+  syncItemMode();
 }
 
 function formItems() {
-  return [...itemsHost.children].map(row => ({
-    name: row.querySelector('.item-name').value.trim(),
-    quantity: Number(row.querySelector('.item-quantity').value),
-    priceCents: parseMoney(row.querySelector('.item-price').value),
-  }));
+  return [...itemsHost.children].map(row => {
+    const name = row.querySelector('.item-name').value.trim();
+    const enteredPrice = parseMoney(row.querySelector('.item-price').value);
+    if (row.dataset.weighted === 'true') {
+      const weightGrams = Number(row.querySelector('.item-weight').value);
+      return { productId: row.dataset.productId, name, quantity: 1, weightGrams,
+        kgPriceCents: enteredPrice, priceCents: enteredPrice === null ? null
+          : window.TrameliOrderMath.weightPriceCents(enteredPrice, weightGrams) };
+    }
+    return { name, quantity: Number(row.querySelector('.item-quantity').value), priceCents: enteredPrice };
+  });
 }
 
 function updateFormTotal() {
   const fee = parseMoney(form.elements.fee.value);
   const items = formItems();
-  const valid = fee !== null && items.every(item => Number.isInteger(item.quantity) && item.quantity > 0 && item.priceCents !== null);
+  const valid = fee !== null && items.every(item => Number.isInteger(item.quantity) && item.quantity > 0
+    && item.priceCents !== null && (item.weightGrams === undefined || (Number.isInteger(item.weightGrams)
+      && item.weightGrams >= 50 && item.weightGrams <= 4950 && item.weightGrams % 50 === 0)));
   document.getElementById('form-total').textContent = valid ? money(items.reduce((sum, item) => sum + itemTotal(item), fee)) : '—';
 }
 
@@ -138,8 +160,37 @@ function selectedOrders() {
   return orders.filter(order => order.date === dateInput.value && orderStatus(order) !== 'cancelled').sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
+async function renderDailyFinance(dayOrders) {
+  const request = ++dayFinanceRequest;
+  const initial = window.TrameliFinanceMath.summarizeFinancials(dayOrders, null);
+  document.getElementById('day-customer-value').textContent = money(initial.customerCents);
+  document.getElementById('day-supplier-value').textContent = '—';
+  document.getElementById('day-profit-value').textContent = 'Pendente';
+  const note = document.getElementById('day-finance-note');
+  if (!live?.operator) {
+    note.textContent = 'Custos e lucro exigem a conta da operação conectada. A taxa de entrega fica fora desta conta.';
+    return;
+  }
+  note.textContent = 'Calculando custos da padaria…';
+  try {
+    const rows = await live.costSummary(dateInput.value, dateInput.value);
+    if (request !== dayFinanceRequest) return;
+    const result = window.TrameliFinanceMath.summarizeFinancials(dayOrders, rows);
+    document.getElementById('day-supplier-value').textContent = money(result.supplierCents);
+    document.getElementById('day-profit-value').textContent = result.profitCents === null ? 'Pendente' : `${money(result.profitCents)}${result.estimatedItems ? ' *' : ''}`;
+    note.textContent = result.missingItems
+      ? `${result.missingItems} ${result.missingItems === 1 ? 'item sem custo' : 'itens sem custo'}${result.estimatedItems ? `; ${result.estimatedItems} com custo estimado` : ''}. O valor da padaria é parcial; não feche o lucro ainda.`
+      : result.estimatedItems
+        ? `* Lucro provisório: ${result.estimatedItems} ${result.estimatedItems === 1 ? 'item usa custo estimado' : 'itens usam custo estimado'}. Confirme com a padaria. Taxa de entrega fora da conta.`
+        : 'Lucro bruto dos produtos; taxa de entrega e outras despesas não entram nesta conta.';
+  } catch (cause) {
+    if (request === dayFinanceRequest) note.textContent = `Custos indisponíveis: ${cause.message}`;
+  }
+}
+
 function render() {
   const dayOrders = selectedOrders();
+  renderDailyFinance(dayOrders);
   const displayOrders = orders.filter(order => order.date === dateInput.value).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   const filtered = displayOrders.filter(order => {
     const query = searchInput.value.trim().toLocaleLowerCase('pt-BR');
@@ -152,7 +203,7 @@ function render() {
   document.getElementById('grand-total').textContent = money(summary.totalCents);
   const products = window.TrameliOrderMath.summarizeProducts(orders, dateInput.value);
   supplierList.innerHTML = products.length
-    ? `<ul>${products.map(item => `<li><strong>${item.quantity}×</strong><span>${escapeHtml(item.name)}</span></li>`).join('')}</ul>`
+    ? `<ul>${products.map(item => `<li><strong>${item.grams ? `${item.grams} g` : `${item.quantity}×`}</strong><span>${escapeHtml(item.name)}</span></li>`).join('')}</ul>`
     : '<p class="supplier-list__empty">Nenhum produto nesta data.</p>';
   supplierCopy.disabled = !products.length;
   supplierFeedback.textContent = '';
@@ -164,24 +215,22 @@ function render() {
 
   list.innerHTML = filtered.map((order, index) => {
     const state = orderStatus(order);
-    return `<article class="order-card ${state !== 'received' ? 'order-card--checked' : ''}"><div class="order-card__number">${String(index + 1).padStart(2, '0')}</div><div class="order-card__main"><div class="order-card__title"><div><h3>${escapeHtml(order.customer)}</h3><p>${escapeHtml(order.address)}${order.phone ? ` · ${escapeHtml(order.phone)}` : ''}</p></div><span class="status ${state !== 'received' ? 'status--checked' : ''}">${statusLabels[state] || 'A conferir'}</span></div><ul>${order.items.map(item => `<li><strong>${item.quantity}× ${escapeHtml(item.name)}</strong><span>${money(itemTotal(item))}</span></li>`).join('')}</ul>${order.notes ? `<p class="order-card__notes">Obs.: ${escapeHtml(order.notes)}</p>` : ''}<div class="order-card__footer"><span>Produtos ${money(orderSubtotal(order))} · Entrega ${money(order.feeCents)}</span><strong>${money(orderTotal(order))}</strong></div><div class="order-card__actions">${nextStatus[state] ? `<button type="button" data-action="toggle" data-id="${order.id}">Avançar para ${statusLabels[nextStatus[state]].toLowerCase()}</button>` : ''}${previousStatus[state] ? `<button type="button" data-action="back" data-id="${order.id}">Voltar para ${statusLabels[previousStatus[state]].toLowerCase()}</button>` : ''}${live ? `<button type="button" data-action="history" data-id="${order.id}">Histórico</button>` : ''}${!['delivered','cancelled'].includes(state) ? `<button type="button" data-action="edit" data-id="${order.id}">Editar</button><button type="button" data-action="delete" data-id="${order.id}">Cancelar</button>` : ''}</div></div></article>`;
+    return `<article class="order-card ${state !== 'received' ? 'order-card--checked' : ''}"><div class="order-card__number">${String(index + 1).padStart(2, '0')}</div><div class="order-card__main"><div class="order-card__title"><div><h3>${escapeHtml(order.customer)}</h3><p>${escapeHtml(order.address)}${order.phone ? ` · ${escapeHtml(order.phone)}` : ''}</p></div><span class="status ${state !== 'received' ? 'status--checked' : ''}">${statusLabels[state] || 'A conferir'}</span></div><ul>${order.items.map(item => `<li><strong>${escapeHtml(itemLabel(item))}</strong><span>${money(itemTotal(item))}</span></li>`).join('')}</ul>${order.notes ? `<p class="order-card__notes">Obs.: ${escapeHtml(order.notes)}</p>` : ''}<div class="order-card__footer"><span>Produtos ${money(orderSubtotal(order))} · Entrega ${money(order.feeCents)}</span><strong>${money(orderTotal(order))}</strong></div><div class="order-card__actions">${nextStatus[state] ? `<button type="button" data-action="toggle" data-id="${order.id}">Avançar para ${statusLabels[nextStatus[state]].toLowerCase()}</button>` : ''}${previousStatus[state] ? `<button type="button" data-action="back" data-id="${order.id}">Voltar para ${statusLabels[previousStatus[state]].toLowerCase()}</button>` : ''}${live ? `<button type="button" data-action="history" data-id="${order.id}">Histórico</button>` : ''}${!['delivered','cancelled'].includes(state) ? `<button type="button" data-action="edit" data-id="${order.id}">Editar</button><button type="button" data-action="delete" data-id="${order.id}">Cancelar</button>` : ''}</div></div></article>`;
   }).join('');
 }
 
 function preparePrint() {
   const dayOrders = selectedOrders();
   if (!dayOrders.length) { alert('Não há pedidos para imprimir na data selecionada.'); return false; }
-  const slots = printSettings.columns * printSettings.rows;
+  const labels = window.TrameliOrderMath.labelsForPrint(dayOrders);
+  const slots = 27;
   const printHost = document.getElementById('print-document');
-  printHost.style.setProperty('--print-columns', printSettings.columns);
-  printHost.style.setProperty('--print-rows', printSettings.rows);
-  printHost.style.setProperty('--print-top', `${printSettings.top}mm`);
-  printHost.style.setProperty('--print-side', `${printSettings.side}mm`);
-  printHost.style.setProperty('--print-gap', `${printSettings.gap}mm`);
+  printHost.style.setProperty('--print-offset-x', `${printSettings.offsetX}mm`);
+  printHost.style.setProperty('--print-offset-y', `${printSettings.offsetY}mm`);
   const pages = [];
-  for (let index = 0; index < dayOrders.length; index += slots) {
-    const pageOrders = dayOrders.slice(index, index + slots);
-    pages.push(`<section class="print-page"><div class="print-grid">${pageOrders.map((order, slot) => `<article class="print-label"><div class="print-label__top"><strong>${escapeHtml(order.customer)}</strong><span>${String(index + slot + 1).padStart(2, '0')}</span></div><p>${escapeHtml(order.address)}</p><ul>${order.items.map(item => `<li>${item.quantity}× ${escapeHtml(item.name)}</li>`).join('')}</ul>${order.notes ? `<small>Obs.: ${escapeHtml(order.notes)}</small>` : ''}<footer>Total: ${money(orderTotal(order))}</footer></article>`).join('')}</div></section>`);
+  for (let index = 0; index < labels.length; index += slots) {
+    const pageLabels = labels.slice(index, index + slots);
+    pages.push(`<section class="print-page"><div class="print-grid">${pageLabels.map(({ order, items, part, totalParts }, slot) => `<article class="print-label"><div class="print-label__content"><div class="print-label__top"><strong>${escapeHtml(order.customer)}</strong><span>${totalParts > 1 ? `${part}/${totalParts}` : String(index + slot + 1).padStart(2, '0')}</span></div><p>${escapeHtml(order.address)}</p><ul>${items.map(item => `<li>${escapeHtml(itemLabel(item))}</li>`).join('')}</ul>${order.notes && part === totalParts ? `<small>Obs.: ${escapeHtml(order.notes)}</small>` : ''}<footer>Total: ${money(orderTotal(order))}</footer></div></article>`).join('')}</div></section>`);
   }
   printHost.innerHTML = pages.join('');
   return true;
@@ -203,7 +252,7 @@ searchInput.addEventListener('input', render);
 supplierCopy.addEventListener('click', async () => {
   const products = window.TrameliOrderMath.summarizeProducts(orders, dateInput.value);
   if (!products.length) return;
-  const content = `Produtos para ${dateInput.value}\n${products.map(item => `${item.quantity}× ${item.name}`).join('\n')}`;
+  const content = `Produtos para ${dateInput.value}\n${products.map(item => `${item.grams ? `${item.grams} g` : `${item.quantity}×`} ${item.name}`).join('\n')}`;
   try {
     await navigator.clipboard.writeText(content);
     supplierFeedback.textContent = 'Lista copiada. Confira as quantidades antes de enviar.';
@@ -219,7 +268,7 @@ form.addEventListener('submit', async event => {
   const feeCents = parseMoney(form.elements.fee.value);
   const customer = form.elements.customer.value.trim();
   const address = form.elements.address.value.trim();
-  if (!customer || !address || !form.elements.date.value || feeCents === null || !items.length || items.some(item => !item.name || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 999 || item.priceCents === null)) {
+  if (!customer || !address || !form.elements.date.value || feeCents === null || !items.length || items.some(item => !item.name || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 999 || item.priceCents === null || (item.weightGrams !== undefined && (!Number.isInteger(item.weightGrams) || item.weightGrams < 50 || item.weightGrams > 4950 || item.weightGrams % 50 !== 0)))) {
     formError.textContent = 'Confira nome, endereço, data, taxa e os itens com quantidade e preço válidos.';
     formError.hidden = false;
     return;
@@ -300,10 +349,9 @@ for (const id of ['print-orders', 'print-orders-bottom']) {
 printSettingsHost?.addEventListener('change', event => {
   const input = event.target.closest('input[name]');
   if (!input) return;
-  const limit = ({ columns: 4, rows: 10, top: 30, side: 30, gap: 10 })[input.name];
-  const minimum = ['columns', 'rows'].includes(input.name) ? 1 : 0;
+  if (!(input.name in printDefaults)) return;
   const value = Number(input.value);
-  if (!Number.isInteger(value) || value < minimum || value > limit) { input.value = printSettings[input.name]; return; }
+  if (!Number.isFinite(value) || value < -3 || value > 3 || value * 2 !== Math.trunc(value * 2)) { input.value = printSettings[input.name]; return; }
   printSettings[input.name] = value;
   try { localStorage.setItem(printSettingsKey, JSON.stringify(printSettings)); } catch { /* Printing still works. */ }
 });

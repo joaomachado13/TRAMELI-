@@ -47,7 +47,7 @@ Hoje os pedidos chegam em um grupo do WhatsApp. Os clientes enviam à noite o qu
 2. Confere cada pedido, corrige itens ou quantidades quando necessário e registra sua situação. Mudanças de preço e disponibilidade precisam de um fluxo de confirmação definido.
 3. Visualiza totais calculados automaticamente por cliente e por dia, com discriminação de produtos, entrega, ajustes e pagamentos.
 4. Visualiza separadamente o total a pagar à padaria fornecedora. O repasse não deve ser confundido com o valor cobrado dos clientes; sua fórmula ainda precisa ser definida.
-5. Gera, em lote, uma folha A4 compatível com o papel pré-cortado que ela já utiliza, com um quadrinho por pedido: nome, endereço, itens, quantidades e demais dados que ela confirmar. O tamanho exato, a quantidade de quadrinhos e a necessidade de exibir telefone ou valor no impresso dependem de uma amostra da folha atual.
+5. Gera, em lote, uma folha A4 com 27 etiquetas de 70 × 33 mm (3 colunas × 9 linhas), com nome, endereço, itens, quantidades e total. Pedidos com mais de três itens recebem etiquetas adicionais para não omitir produtos. O alinhamento e a legibilidade ainda dependem de uma prova na impressora e na folha reais.
 6. Consulta extratos e relatórios com datas inicial e final livres, além de atalhos como dia específico, semana, quinzena, mês, últimos 30 dias e ano. Pode ver toda a operação ou filtrar um cliente específico.
 
 ## Regras relatadas, ainda não fechadas
@@ -56,13 +56,13 @@ Hoje os pedidos chegam em um grupo do WhatsApp. Os clientes enviam à noite o qu
 - Taxa habitual de entrega de R$ 2,00 por cliente/pedido. Confirmar exceções, retirada, vários pedidos no mesmo endereço e destino da taxa.
 - Catálogo deve refletir pães e produtos reais de padaria, além de bolos e outros itens efetivamente vendidos.
 - O volume informado é de aproximadamente 60 pedidos por dia, com recebimento à noite e entrega na manhã seguinte; confirmar apenas a variação entre dias comuns e dias de pico.
-- A planilha de preços de venda e compra foi recebida em 24/09/2026. Os 81 itens precificados para clientes foram transcritos; 9 permanecem indisponíveis por preço ou unidade ambígua. As fotos ainda não foram recebidas.
+- A planilha de preços de venda e compra foi recebida em 24/09/2026. Em 25/09/2026, foram informados novos preços para os quatro frios (todos por kg), Pão de forma, Mini pão francês e manteigas. Dos 81 itens, 79 estão disponíveis; permanecem inativas somente as linhas antigas duplicadas de Pão de forma (R$ 9,50) e Mini pão (R$ 0,65). As fotos ainda não foram recebidas.
 - O catálogo local agora usa os preços da planilha, mas pedidos em modo local são apenas de teste. Custos da padaria não são publicados no portal e o valor cobrado não equivale a pagamento recebido nem a repasse definido.
 
 ## Decisões para a conversa com a operadora
 
 1. Pedidos: horário limite à noite, mudanças após o fechamento, cancelamentos e tratamento de falta de produto.
-2. Catálogo: confirmar os dois preços de “Pão de forma”, os dois de “Mini pão”, a manteiga Italac 200g, a unidade dos frios e os itens sem correspondência segura de custo. Definir quem pode alterar preços.
+2. Catálogo: confirmar custos da padaria sem correspondência segura e fotos dos itens. Definir quem pode alterar preços e revisar unidades dos demais produtos ainda não validados em operação.
 3. Fornecedor: confirmar se o total comunicado corresponde aos preços cobrados dos clientes ou a uma tabela própria da padaria; definir quando e como ocorre o acerto financeiro, além do tratamento de perdas, devoluções e taxa de entrega.
 4. Cobrança: quando o cliente paga, para qual conta vai o Pix e como o pagamento é conferido; decidir depois se haverá Pix integrado ou apenas instruções/registro manual.
 5. Entrega: endereços fora do condomínio, taxa por pedido ou endereço, agrupamento de pedidos e quem realiza a entrega.

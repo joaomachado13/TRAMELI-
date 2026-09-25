@@ -5,12 +5,13 @@ Estado atual: projeto Supabase conectado e migração inicial aplicada. Os preç
 ## Catálogo recebido em 24/09/2026
 
 - `DADOS PADARIA.xlsx` trouxe 81 linhas de produtos com preço ao cliente e a taxa de entrega de R$ 2,00 em linha separada. A aba do fornecedor contém os custos; eles **não estão no Git**.
-- O catálogo público preparado tem 72 itens disponíveis e 9 indisponíveis para revisão: frios sem unidade confirmada, dois pares com nomes repetidos e a Manteiga Italac 200g com venda de R$ 5,00 abaixo do custo informado de R$ 14,50. A operadora confirmou que devem ficar indisponíveis até esclarecer.
+- Após as confirmações de 25/09/2026, o catálogo preparado tem 79 itens disponíveis e 2 linhas antigas duplicadas indisponíveis. Mussarela (R$ 69,99/kg), Presunto (R$ 40,00/kg), Mortadela defumada (R$ 40,00/kg) e Peito de peru (R$ 59,99/kg) são vendidos em passos de 50 g. Pão de forma de R$ 12,00, Mini pão francês de R$ 0,70 e Manteiga Italac 200g de R$ 17,00 foram liberados; Manteiga Canto de Minas 200g permanece em R$ 17,00 e Calu 200g em R$ 19,49.
 - Não usamos as 20 fotos antigas de demonstração para representar esses produtos. O portal mostra um espaço neutro até chegarem fotos correspondentes.
 - `supabase/migrations/202609240002_catalog_finance.sql` cria custos privados, histórico de custo por item no pedido e consulta de cobertura. `supabase/migrations/202609240003_catalog_seed.sql` cadastra apenas preços de venda. `private/supplier-cost-import.sql` contém 43 correspondências únicas por nome normalizado da aba da padaria, está ignorado pelo Git e **deve ser revisado antes de aplicar**. Itens sem associação ficam com custo pendente, nunca com custo presumido de zero. Em outro computador, gere esse arquivo novamente com `python scripts/build-supplier-import.py "CAMINHO/DADOS PADARIA.xlsx"` (requer `openpyxl`).
-- A margem bruta só aparece quando todos os itens do intervalo possuem custo conhecido. Ela não é lucro líquido nem comprovante de pagamento/repasse.
+- A tela financeira mostra três valores: produtos cobrados dos clientes, custo da padaria e lucro bruto dos produtos (diferença). A taxa de entrega de R$ 2,00 é informada à parte e não entra no lucro. Custo parcial impede fechar o lucro; custo estimado gera somente **lucro provisório**. Não é lucro líquido nem comprovante de pagamento/repasse.
+- A aba `Meu lucro` de `DADOS PADARIA (1).xlsx` é referência histórica, não fonte automática de custos: há diferenças em relação aos preços confirmados atuais. Para Mussarela, `Meu lucro!B24` sugere R$ 26,25 de margem; supondo margem por kg, R$ 69,99 − R$ 26,25 = **R$ 43,74/kg de custo estimado**. O SQL privado `private/mussarela-provisional.sql` prepara apenas essa estimativa, sem sobrescrever custo existente; revise antes de aplicar. Presunto, mortadela defumada e peito de peru continuam sem custo de compra. A operadora pode confirmar um custo estimado no catálogo após conferir com a padaria; pedidos antigos preservam o caráter estimado do registro original.
 
-Para ativar no projeto de teste: faça uma cópia/restore verificável do banco primeiro; depois execute as migrações `...0002...` e `...0003...` nessa ordem no SQL Editor. Verifique o catálogo com conta de operadora e uma conta de cliente distinta. Revise o arquivo privado de custos e só então aplique seu SQL; não o cole em issue, commit ou conversa pública. Se um pedido foi criado antes da carga de custos, seu custo histórico permanece pendente; não recalculamos retroativamente de modo silencioso.
+Para ativar no projeto de teste: faça uma cópia/restore verificável do banco primeiro; depois execute as migrações `...0002...`, `...0003...`, `202609250004_weighted_frios.sql` e `202609250005_provisional_costs.sql` nessa ordem no SQL Editor. Verifique o catálogo com conta de operadora e uma conta de cliente distinta. Revise os arquivos privados de custos e só então aplique seu SQL; não os cole em issue, commit ou conversa pública. Para frios, qualquer custo cadastrado deve ser o valor **por kg**. Se um pedido foi criado antes da carga de custos, seu custo histórico permanece pendente; não recalculamos retroativamente de modo silencioso.
 
 ## Verificações de segurança já automatizadas
 
@@ -82,12 +83,12 @@ Para ativar o fluxo remoto:
 1. Em **staging**, com catálogo real de teste, crie 60 pedidos para a mesma manhã, incluindo nomes parecidos, endereços longos, dois pedidos da mesma pessoa, ajustes, cancelamentos e tentativa de edição simultânea.
 2. Compare item a item os 60 totais, as taxas, o resumo diário e o extrato com uma conferência independente. Cancelados devem continuar no histórico e ficar fora das somas e da impressão.
 3. Faça a operadora abrir a fila em outro dispositivo; confirme atualização em até 15 segundos, correção de conflito de versão e fluxo de conferência → separação → entrega.
-4. Imprima em A4 comum, em 100%, sem cabeçalho/rodapé. Quando a folha serrilhada chegar, anote colunas, linhas, margens e vão, ajuste na tela e valide pelo menos duas impressoras antes de usar folhas reais.
+4. A folha informada é de 27 etiquetas de 70 × 33 mm em A4 (grade 3 × 9). Imprima primeiro em A4 comum, em 100%, sem cabeçalho/rodapé; sobreponha à folha adesiva e ajuste o deslocamento horizontal/vertical. Confira as etiquetas das bordas e pedidos com endereço/observação longos. Valide na impressora usada pela operadora antes de usar folhas reais; outra impressora exige nova conferência.
 5. Faça um piloto acompanhado pela operadora em dias reais, mantendo o WhatsApp como contingência; só desligue a rotina antiga após ela aprovar o lançamento manual, a impressão, as somas, a recuperação de acesso e a restauração de backup.
 
 ## Ainda dependemos de
 
 - Domínio/hospedagem; provedor de e-mail; destino externo e teste de restauração para o backup.
-- Revisão dos 9 produtos indisponíveis, unidade dos frios e custos sem correspondência; confirmação de exceções para a taxa de entrega.
-- Foto/medidas da folha serrilhada e impressora usada.
+- Custos sem correspondência e fotos dos produtos; confirmação de exceções para a taxa de entrega. As duas linhas duplicadas antigas continuam inativas.
+- Impressora usada, amostra física da folha de etiquetas 70 × 33 mm e prova de alinhamento impressa.
 - Regras de horário de corte, cancelamento após conferência, pagamento Pix e repasse à padaria.
