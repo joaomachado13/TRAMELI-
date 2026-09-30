@@ -23,7 +23,7 @@ Os quatro frios confirmados são vendidos por kg; o portal e o lançamento manua
 
 ## Modo com Supabase
 
-Após criar um projeto de teste, aplique as migrações em `supabase/migrations/` na ordem numérica, configure autenticação por link de e-mail e copie `.env.example` para `.env.local` com a Project URL e a publishable key. Jamais use uma `service_role` key no navegador. A aplicação passa a exigir login, não importa nem lê pedidos antigos do `localStorage` e mantém apenas a sacola/preferências e a sessão de autenticação no dispositivo. Pedidos, perfis e catálogo passam pelo banco. O SQL com custos da padaria fica em `private/`, ignorado pelo Git.
+Após criar um projeto de teste, aplique as migrações em `supabase/migrations/` na ordem numérica e copie `.env.example` para `.env.local` com a Project URL e a publishable key. O login principal usa e-mail e senha, com sessão persistente; Google e telefone são oferecidos conforme a configuração dos provedores. Consulte [ACESSO.md](ACESSO.md) para migrar contas que usavam link e ativar master/operadora. Jamais use uma `service_role` key no navegador. A aplicação não importa nem lê pedidos antigos do `localStorage` e mantém apenas a sacola/preferências e a sessão de autenticação no dispositivo. Pedidos, perfis e catálogo passam pelo banco. O SQL com custos da padaria fica em `private/`, ignorado pelo Git.
 
 O modo com Supabase ainda **não está homologado com um projeto real**. Consulte [PRODUCAO.md](PRODUCAO.md) para ativação, segurança, backup, testes e pendências do piloto.
 

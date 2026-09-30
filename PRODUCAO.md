@@ -2,7 +2,11 @@
 
 Estado atual: projeto Supabase conectado e migração inicial aplicada. Os preços reais da planilha estão preparados no código, mas **as novas migrações e os custos ainda não foram aplicados ao projeto Supabase**. Não há domínio, backup validado nem piloto concluído. Nenhuma implantação pública foi feita.
 
+Atualização de acesso em 30/09/2026: login por senha implementado, com sessão persistente, recuperação, Google e telefone condicionados aos provedores, além de master/operadora no banco. O projeto estava pausado e voltou a responder após a restauração. E-mail está habilitado com confirmação inicial; Google e telefone ainda estão desabilitados. O titular confirmou a execução de `202609300006_access_roles.sql`, a primeira atribuição master pelo SQL Editor e a entrada no painel com a identificação Master. Essa confirmação não distingue senha de restauração da sessão anterior; cadastro/recuperação por e-mail, Google e SMS ainda exigem validação com seus provedores. As migrações 002–005 e os custos seguem pendentes. Consulte [ACESSO.md](ACESSO.md). As instruções antigas de login por link abaixo são substituídas por esse fluxo.
+
 ## Catálogo recebido em 24/09/2026
+
+Pacote único preparado em 30/09/2026: `supabase/activate-catalog.sql` reúne 002–005 e as 16 fotos oficiais em uma única transação. Destinado exclusivamente à base inicial com catálogo vazio e sem a estrutura de custos; bloqueia reaplicação ou catálogo preexistente. Testado também na ordem 001 → 006 (Master) → pacote. Não importa os custos privados. **Ainda aguarda execução e conferência no Supabase real.** Resultado esperado: 81 cadastrados, 79 disponíveis, 2 indisponíveis e 16 com foto. Usar este pacote OU as migrações individuais, nunca ambos.
 
 - `DADOS PADARIA.xlsx` trouxe 81 linhas de produtos com preço ao cliente e a taxa de entrega de R$ 2,00 em linha separada. A aba do fornecedor contém os custos; eles **não estão no Git**.
 - Após as confirmações de 25/09/2026, o catálogo preparado tem 79 itens disponíveis e 2 linhas antigas duplicadas indisponíveis. Mussarela (R$ 69,99/kg), Presunto (R$ 40,00/kg), Mortadela defumada (R$ 40,00/kg) e Peito de peru (R$ 59,99/kg) são vendidos em passos de 50 g. Pão de forma de R$ 12,00, Mini pão francês de R$ 0,70 e Manteiga Italac 200g de R$ 17,00 foram liberados; Manteiga Canto de Minas 200g permanece em R$ 17,00 e Calu 200g em R$ 19,49.
@@ -14,6 +18,8 @@ Estado atual: projeto Supabase conectado e migração inicial aplicada. Os preç
 Para ativar no projeto de teste: faça uma cópia/restore verificável do banco primeiro; depois execute as migrações `...0002...`, `...0003...`, `202609250004_weighted_frios.sql` e `202609250005_provisional_costs.sql` nessa ordem no SQL Editor. Verifique o catálogo com conta de operadora e uma conta de cliente distinta. Revise os arquivos privados de custos e só então aplique seu SQL; não os cole em issue, commit ou conversa pública. Para frios, qualquer custo cadastrado deve ser o valor **por kg**. Se um pedido foi criado antes da carga de custos, seu custo histórico permanece pendente; não recalculamos retroativamente de modo silencioso.
 
 ## Verificações de segurança já automatizadas
+
+Recebimentos/conta corrente/fechamento diário: migração `202609300007_payment_ledger.sql` e telas preparados e testados localmente, **ainda não ativados no banco real**. Consultar `PAGAMENTOS.md`. Pix permanece manual, sem provedor contratado nem cobrança automática. Não interpretar o build aprovado como ativação no Supabase.
 
 - A migração roda em PostgreSQL local no teste `tests/migration.test.mjs`.
 - O teste confirma que um cliente não vê pedido/perfil de outro, não pode gravar diretamente nas tabelas nem se tornar operador; preços enviados pelo navegador são ignorados e o banco calcula o total.

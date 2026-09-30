@@ -25,7 +25,7 @@
         kgPriceCents: product.priceCents, priceCents: linePrice(product, quantity) }
     : { productId: product.id, name: product.name, quantity, priceCents: product.priceCents };
   const readOrders = () => { const value = live ? live.orders : readJson(orderKey, []); return Array.isArray(value) ? value : []; };
-  const profile = live ? { name: live.profile?.name || '', phone: live.profile?.phone || '', address: live.profile?.address || '' } : readJson(profileKey, {});
+  const profile = live ? { name: live.profile?.name || live.user.user_metadata?.full_name || live.user.user_metadata?.name || '', phone: live.profile?.phone || live.user.phone || '', address: live.profile?.address || '' } : readJson(profileKey, {});
   let token = live ? null : localStorage.getItem(tokenKey);
   if (!live && !token) { token = crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`; try { localStorage.setItem(tokenKey, token); } catch { /* Demo continues without persistence. */ } }
   const owns = order => live ? order.customerId === live.user.id : order.customerToken === token;
@@ -37,6 +37,9 @@
   let portalVisible = false;
   let category = 'Todos';
   let query = '';
+  let personalFilter = 'all';
+  let reorderNotices = [];
+  let reordering = false;
   let editingOrderId = null;
   let lastOrder = null;
   let error = '';
@@ -62,7 +65,7 @@
     if (!floatingHost) return;
     const visible = location.hash === '#loja' && view === 'catalog' && count() > 0;
     floatingHost.hidden = !visible;
-    floatingHost.innerHTML = visible ? `<div class="portal-floating"><div><small>${count()} ${count() === 1 ? 'item' : 'itens'} na sacola</small><strong>${money(subtotal() + 200)}</strong></div><button type="button" data-view="cart">Ver sacola →</button></div>` : '';
+    floatingHost.innerHTML = visible ? `<div class="portal-floating"><div><small>${count()} ${count() === 1 ? 'item' : 'itens'} · só produtos</small><strong>${money(subtotal())}</strong></div><button type="button" data-view="cart">Ver sacola →</button></div>` : '';
   }
   function rememberFocus() {
     const element = document.activeElement;
@@ -84,24 +87,41 @@
     const quantity = cart[product.id] || 0;
     return `<div class="portal-stepper" aria-label="${weighted(product) ? 'Peso' : 'Quantidade'} de ${escapeHtml(product.name)}"><button type="button" data-qty="-1" data-id="${escapeHtml(product.id)}" aria-label="Diminuir ${escapeHtml(product.name)} em ${weighted(product) ? '50 gramas' : 'uma unidade'}" ${quantity ? '' : 'disabled'}>−</button><span>${weighted(product) ? `${quantity * 50} g` : quantity}</span><button type="button" data-qty="1" data-id="${escapeHtml(product.id)}" aria-label="Adicionar ${escapeHtml(product.name)} em ${weighted(product) ? '50 gramas' : 'uma unidade'}" ${quantity >= 99 ? 'disabled' : ''}>+</button></div>`;
   }
+  const shopping = () => window.TrameliShopping;
+  const reviewNotice = () => reorderNotices.length ? `<aside class="portal-review-notice" role="status"><strong>Confira sua nova sacola</strong><ul>${reorderNotices.map(note => `<li>${escapeHtml(note)}</li>`).join('')}</ul></aside>` : '';
+  function favoriteButton(product) {
+    if (!shopping()?.ready) return '';
+    const selected = shopping().favorites.has(product.id);
+    return `<button class="portal-favorite" type="button" data-favorite="${escapeHtml(product.id)}" aria-pressed="${selected}" aria-label="${selected ? 'Remover dos' : 'Adicionar aos'} favoritos: ${escapeHtml(product.name)}" ${shopping().pending.has(product.id) ? 'disabled' : ''}>${selected ? '♥ Favorito' : '♡ Favoritar'}</button>`;
+  }
+  function filteredProducts() {
+    const frequent = new Set(shopping()?.frequentProductIds(readOrders().filter(owns), products()) || []);
+    return products().filter(product => (personalFilter === 'all' || (personalFilter === 'favorites' ? shopping()?.favorites.has(product.id) : frequent.has(product.id)))
+      && (category === 'Todos' || (product.category || 'Outros') === category)
+      && (!query || product.name.toLocaleLowerCase('pt-BR').includes(query.toLocaleLowerCase('pt-BR'))));
+  }
+  function personalFilters() {
+    if (!shopping()) return '';
+    return `<div class="portal-personal-filters" aria-label="Seleção pessoal">${[['all','Todos os produtos'],['favorites','Meus favoritos'],['frequent','Comprados com frequência']].map(([id,label]) => `<button type="button" data-personal-filter="${id}" aria-pressed="${personalFilter === id}" ${id === 'favorites' && !shopping().ready ? 'disabled' : ''}>${label}</button>`).join('')}</div><p class="portal-filter-note">${escapeHtml(shopping().message || (personalFilter === 'frequent' ? 'Produtos presentes em pelo menos dois dos seus pedidos não cancelados.' : personalFilter === 'favorites' ? 'Seus favoritos disponíveis no catálogo atual.' : ''))}</p>`;
+  }
   function card(product) {
-    return `<article class="portal-product"><div class="portal-product__photo">${photo(product)}</div><div class="portal-product__body"><span class="portal-product__category">${escapeHtml(product.category || 'Padaria')}</span><h3>${escapeHtml(product.name)}</h3><p>${money(product.priceCents)} <small>/ ${escapeHtml(product.unit)}</small>${weighted(product) ? `<small class="portal-weight-hint">50 g = ${money(linePrice(product, 1))}</small>` : ''}</p>${stepper(product)}</div></article>`;
+    return `<article class="portal-product"><div class="portal-product__photo">${photo(product)}</div><div class="portal-product__body"><span class="portal-product__category">${escapeHtml(product.category || 'Padaria')}</span>${favoriteButton(product)}<h3>${escapeHtml(product.name)}</h3><p>${money(product.priceCents)} <small>/ ${escapeHtml(product.unit)}</small>${weighted(product) ? `<small class="portal-weight-hint">50 g = ${money(linePrice(product, 1))}</small>` : ''}</p>${stepper(product)}</div></article>`;
   }
   function catalog() {
     const all = products();
     const categories = ['Todos', ...new Set(all.map(product => product.category || 'Outros'))];
-    const visible = all.filter(product => (category === 'Todos' || (product.category || 'Outros') === category) && (!query || product.name.toLocaleLowerCase('pt-BR').includes(query.toLocaleLowerCase('pt-BR'))));
-    return `<section class="portal-hero"><div><span class="portal-eyebrow">SEU CAFÉ DA MANHÃ, SEM COMPLICAÇÃO</span><h1>O que vai para a sua mesa <em>amanhã?</em></h1><p>Escolha seus favoritos em poucos toques. Entrega de amanhã: ${formatDate(tomorrow())}.</p><a href="#portal-products">Escolher produtos ↓</a></div><div class="portal-hero__accent" aria-hidden="true"><span>☀</span><strong>Bom dia<br>começa aqui.</strong></div></section><section id="portal-products" class="portal-section"><div class="portal-section__head"><div><span class="portal-eyebrow">FEITO PARA O SEU DIA</span><h2>Produtos da padaria</h2></div><span>${all.length} opções</span></div><label class="portal-search">Buscar produto<input id="portal-search" type="search" value="${escapeHtml(query)}" placeholder="Pão, bolo, suco..."></label><div class="portal-categories" aria-label="Categorias">${categories.map(item => `<button type="button" data-category="${escapeHtml(item)}" aria-pressed="${String(item === category)}">${escapeHtml(item)}</button>`).join('')}</div><div class="portal-grid" id="portal-grid">${visible.length ? visible.map(card).join('') : '<p class="portal-empty">Não encontramos produtos nessa busca.</p>'}</div></section>`;
+    const visible = filteredProducts();
+    return `<section class="portal-hero"><div><span class="portal-eyebrow">SEU CAFÉ DA MANHÃ, SEM COMPLICAÇÃO</span><h1>O que vai para a sua mesa <em>amanhã?</em></h1><p>Escolha seus favoritos em poucos toques. Entrega de amanhã: ${formatDate(tomorrow())}.</p><a href="#portal-products">Escolher produtos ↓</a></div><div class="portal-hero__accent" aria-hidden="true"><span>☀</span><strong>Bom dia<br>começa aqui.</strong></div></section><section id="portal-products" class="portal-section"><div class="portal-section__head"><div><span class="portal-eyebrow">FEITO PARA O SEU DIA</span><h2>Produtos da padaria</h2></div><span>${all.length} opções</span></div><label class="portal-search">Buscar produto<input id="portal-search" type="search" value="${escapeHtml(query)}" placeholder="Pão, bolo, suco..."></label><div class="portal-categories" aria-label="Categorias">${categories.map(item => `<button type="button" data-category="${escapeHtml(item)}" aria-pressed="${String(item === category)}">${escapeHtml(item)}</button>`).join('')}</div>${personalFilters()}<div class="portal-grid" id="portal-grid">${visible.length ? visible.map(card).join('') : '<p class="portal-empty">Não encontramos produtos nessa busca.</p>'}</div></section>`;
   }
   function cartView() {
     const lines = cartLines();
-    return `<section class="portal-page"><button class="portal-back" type="button" data-view="catalog">← Continuar escolhendo</button><span class="portal-eyebrow">QUASE LÁ</span><h1>Sua sacola</h1><p>Confira quantidades e valores antes de seguir.</p>${lines.length ? `<div class="portal-cart-lines">${lines.map(({ product, quantity }) => `<article class="portal-cart-line"><div class="portal-cart-line__photo">${photo(product)}</div><div><h2>${escapeHtml(product.name)}</h2><p>${money(product.priceCents)} / ${escapeHtml(product.unit)}</p>${stepper(product)}</div><strong>${money(linePrice(product, quantity))}</strong></article>`).join('')}</div><div class="portal-totals"><div><span>Produtos</span><strong>${money(subtotal())}</strong></div><div><span>Taxa de entrega</span><strong>${money(200)}</strong></div><div class="portal-totals__final"><span>Total</span><strong>${money(subtotal() + 200)}</strong></div></div><button class="portal-primary" type="button" data-view="checkout">Continuar para entrega →</button>` : `<div class="portal-empty"><h2>Sua sacola está vazia</h2><p>Escolha algo gostoso para amanhã.</p><button type="button" data-view="catalog">Ver produtos</button></div>`}</section>`;
+    return `<section class="portal-page"><button class="portal-back" type="button" data-view="catalog">← Continuar escolhendo</button><span class="portal-eyebrow">QUASE LÁ</span><h1>Sua sacola</h1>${reviewNotice()}<p>Confira quantidades e valores antes de seguir.</p>${lines.length ? `<div class="portal-cart-lines">${lines.map(({ product, quantity }) => `<article class="portal-cart-line"><div class="portal-cart-line__photo">${photo(product)}</div><div><h2>${escapeHtml(product.name)}</h2><p>${money(product.priceCents)} / ${escapeHtml(product.unit)}</p>${stepper(product)}</div><strong>${money(linePrice(product, quantity))}</strong></article>`).join('')}</div><div class="portal-totals"><div class="portal-totals__final"><span>Subtotal dos produtos</span><strong>${money(subtotal())}</strong></div></div><p class="portal-payment-note">A entrega de ${money(200)} será somada na próxima etapa, antes de confirmar.</p><button class="portal-primary" type="button" data-view="checkout">Continuar para entrega →</button>` : `<div class="portal-empty"><h2>Sua sacola está vazia</h2><p>Escolha algo gostoso para amanhã.</p><button type="button" data-view="catalog">Ver produtos</button></div>`}</section>`;
   }
   function checkout() {
     if (!count()) { view = 'cart'; return cartView(); }
     const previous = readOrders().find(order => order.id === editingOrderId && owns(order) && editable(order));
     const deliveryDate = previous?.date || tomorrow();
-    return `<section class="portal-page"><button class="portal-back" type="button" data-view="cart">← Voltar à sacola</button><span class="portal-eyebrow">ENTREGA EM ${escapeHtml(formatDate(deliveryDate).toLocaleUpperCase('pt-BR'))}</span><h1>Onde entregamos?</h1><p>${live ? 'Seus dados ficam vinculados à sua conta para o próximo pedido.' : 'Se você já pediu neste navegador, seus dados aparecem preenchidos para poupar tempo.'}</p><form id="portal-checkout-form"><label>Seu nome<input name="customer" autocomplete="name" maxlength="90" value="${escapeHtml(previous?.customer || profile.name || '')}" required></label><label>Telefone <span>(opcional)</span><input name="phone" type="tel" autocomplete="tel" maxlength="25" value="${escapeHtml(previous?.phone || profile.phone || '')}"></label><label>Endereço e referência<input name="address" autocomplete="street-address" maxlength="180" value="${escapeHtml(previous?.address || profile.address || '')}" placeholder="Bloco, apartamento ou ponto de encontro" required></label><label>Observação <span>(opcional)</span><textarea name="notes" maxlength="280" rows="3" placeholder="Ex.: deixar na portaria">${escapeHtml(previous?.notes || '')}</textarea></label><div class="portal-order-summary"><h2>Resumo do pedido</h2>${cartLines().map(({ product, quantity }) => `<div><span>${escapeHtml(lineLabel(product, quantity))}</span><strong>${money(linePrice(product, quantity))}</strong></div>`).join('')}<div><span>Entrega</span><strong>${money(200)}</strong></div><div class="portal-order-summary__total"><span>Total para ${formatDate(deliveryDate)}</span><strong>${money(subtotal() + 200)}</strong></div></div><p class="portal-payment-note">Pagamento Pix ainda não está integrado. O pedido não representa pagamento confirmado.</p>${error ? `<p class="portal-error" role="alert">${escapeHtml(error)}</p>` : ''}<button class="portal-primary" type="submit">${previous ? 'Salvar alterações' : 'Confirmar pedido'} · ${money(subtotal() + 200)}</button></form></section>`;
+    return `<section class="portal-page"><button class="portal-back" type="button" data-view="cart">← Voltar à sacola</button><span class="portal-eyebrow">ENTREGA EM ${escapeHtml(formatDate(deliveryDate).toLocaleUpperCase('pt-BR'))}</span><h1>Onde entregamos?</h1>${reviewNotice()}<p>${live ? 'Seus dados ficam vinculados à sua conta para o próximo pedido.' : 'Se você já pediu neste navegador, seus dados aparecem preenchidos para poupar tempo.'}</p><form id="portal-checkout-form"><label>Seu nome<input name="customer" autocomplete="name" maxlength="90" value="${escapeHtml(previous?.customer || profile.name || '')}" required></label><label>Telefone <span>(opcional)</span><input name="phone" type="tel" autocomplete="tel" maxlength="25" value="${escapeHtml(previous?.phone || profile.phone || '')}"></label><label>Endereço e referência<input name="address" autocomplete="street-address" maxlength="180" value="${escapeHtml(previous?.address || profile.address || '')}" placeholder="Bloco, apartamento ou ponto de encontro" required></label><label>Observação <span>(opcional)</span><textarea name="notes" maxlength="280" rows="3" placeholder="Ex.: deixar na portaria">${escapeHtml(previous?.notes || '')}</textarea></label><div class="portal-order-summary"><h2>Resumo do pedido</h2>${cartLines().map(({ product, quantity }) => `<div><span>${escapeHtml(lineLabel(product, quantity))}</span><strong>${money(linePrice(product, quantity))}</strong></div>`).join('')}<div><span>Subtotal dos produtos</span><strong>${money(subtotal())}</strong></div><div><span>Taxa de entrega</span><strong>${money(200)}</strong></div><div class="portal-order-summary__total"><span>Total para ${formatDate(deliveryDate)}</span><strong>${money(subtotal() + 200)}</strong></div></div><p class="portal-payment-note">Depois de registrar o pedido, consulte “Meus pedidos” para ver o saldo e pagar com Pix, quando habilitado pela loja. O recebimento será conferido manualmente.</p>${error ? `<p class="portal-error" role="alert">${escapeHtml(error)}</p>` : ''}<button class="portal-primary" type="submit">${previous ? 'Salvar alterações' : 'Confirmar pedido'} · ${money(subtotal() + 200)}</button></form></section>`;
   }
   function success() {
     return `<section class="portal-page portal-success"><span class="portal-success__icon" aria-hidden="true">✓</span><span class="portal-eyebrow">PEDIDO REGISTRADO</span><h1>Até amanhã!</h1><p>Seu pedido entrou na fila de conferência para ${lastOrder ? formatDate(lastOrder.date) : 'amanhã'}. Ele aparece em “Meus pedidos” ${live ? 'na sua conta' : 'neste navegador'}.</p><div class="portal-success__receipt"><span>Pedido</span><strong>#${escapeHtml(lastOrder?.id.slice(0, 8) || '—')}</strong><span>Total</span><strong>${lastOrder ? money(lastOrder.items.reduce((sum, item) => sum + item.quantity * item.priceCents, lastOrder.feeCents)) : '—'}</strong></div><p class="portal-payment-note">O pedido ainda não representa pagamento confirmado.</p><button class="portal-primary" type="button" data-view="orders">Ver meus pedidos</button><button class="portal-link" type="button" data-view="catalog">Voltar aos produtos</button></section>`;
@@ -109,7 +129,7 @@
   function ordersView() {
     const orders = readOrders().filter(owns).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     const labels = { received: 'A conferir', confirmed: 'Conferido', packing: 'Em separação', ready: 'Pronto', delivered: 'Entregue', cancelled: 'Cancelado' };
-    return `<section class="portal-page"><button class="portal-back" type="button" data-view="catalog">← Voltar aos produtos</button><span class="portal-eyebrow">NO SEU RITMO</span><h1>Meus pedidos</h1><p>${live ? 'Pedidos vinculados à sua conta.' : 'Pedidos feitos neste navegador.'} Você pode ajustar ou cancelar enquanto não forem conferidos.</p>${orders.length ? `<div class="portal-history">${orders.map(order => { const state = order.status || (order.checked ? 'confirmed' : 'received'); return `<article><div><span>${formatDate(order.date)}</span><strong>${labels[state] || 'A conferir'}</strong></div><h2>${order.items.map(item => escapeHtml(window.TrameliOrderMath.itemLabel(item))).join(' · ')}</h2><p>${escapeHtml(order.address)}</p><footer><strong>${money(order.items.reduce((sum, item) => sum + item.quantity * item.priceCents, order.feeCents))}</strong>${state === 'received' && order.date >= dateKey(new Date()) ? `<span><button type="button" data-edit-order="${escapeHtml(order.id)}">Alterar</button><button type="button" data-cancel-order="${escapeHtml(order.id)}">Cancelar</button></span>` : ''}</footer></article>`; }).join('')}</div>` : `<div class="portal-empty"><h2>Nenhum pedido por aqui</h2><p>Quando você confirmar um pedido, ele aparecerá nesta lista.</p><button type="button" data-view="catalog">Escolher produtos</button></div>`}</section>`;
+    return `<section class="portal-page"><button class="portal-back" type="button" data-view="catalog">← Voltar aos produtos</button><span class="portal-eyebrow">NO SEU RITMO</span><h1>Meus pedidos</h1>${error ? `<p class="portal-error" role="alert">${escapeHtml(error)}</p>` : ''}${reviewNotice()}<p>${live ? 'Pedidos vinculados à sua conta.' : 'Pedidos feitos neste navegador.'} Você pode ajustar ou cancelar enquanto não forem conferidos.</p>${orders.length ? `<div class="portal-history">${orders.map(order => { const state = order.status || (order.checked ? 'confirmed' : 'received'); return `<article><div><span>${formatDate(order.date)}</span><strong>${labels[state] || 'A conferir'}</strong></div><h2>${order.items.map(item => escapeHtml(window.TrameliOrderMath.itemLabel(item))).join(' · ')}</h2><p>${escapeHtml(order.address)}</p><footer><strong>${money(order.items.reduce((sum, item) => sum + item.quantity * item.priceCents, order.feeCents))}</strong>${shopping() ? `<button type="button" data-reorder="${escapeHtml(order.id)}">Pedir novamente</button>` : ''}${state === 'received' && order.date >= dateKey(new Date()) ? `<span><button type="button" data-edit-order="${escapeHtml(order.id)}">Alterar</button><button type="button" data-cancel-order="${escapeHtml(order.id)}">Cancelar</button></span>` : ''}</footer></article>`; }).join('')}</div>` : `<div class="portal-empty"><h2>Nenhum pedido por aqui</h2><p>Quando você confirmar um pedido, ele aparecerá nesta lista.</p><button type="button" data-view="catalog">Escolher produtos</button></div>`}</section>`;
   }
   function render(preserveScroll = false) {
     if (location.hash !== '#loja') return;
@@ -120,6 +140,10 @@
       ? Object.fromEntries(new FormData(host.querySelector('#portal-checkout-form'))) : null;
     motion()?.reset(host);
     host.innerHTML = ({ catalog, cart: cartView, checkout, success, orders: ordersView })[view]();
+    if (view === 'orders' && window.TrameliPayments) {
+      host.querySelector('.portal-page').insertAdjacentHTML('beforeend', window.TrameliPayments.customerRender());
+      window.TrameliPayments.refresh();
+    }
     if (draft && view === 'checkout') for (const [name, value] of Object.entries(draft)) {
       if (host.querySelector('#portal-checkout-form')?.elements[name]) host.querySelector('#portal-checkout-form').elements[name].value = value;
     }
@@ -176,6 +200,7 @@
         const saved = await live.saveCustomerOrder({ ...nextOrder, id: previous?.id || null, version: previous?.version || null }, lines.map(({ product, quantity }) => weighted(product) ? { product_id: product.id, grams: quantity * 50 } : { product_id: product.id, quantity }), checkoutRequestId);
         Object.assign(profile, { name: customer, phone: nextOrder.phone, address });
         lastOrder = saved;
+        reorderNotices = [];
         checkoutRequestId = crypto.randomUUID();
         try { sessionStorage.setItem(requestKey, checkoutRequestId); } catch { /* A new request still works in this tab. */ }
         cart = {};
@@ -195,6 +220,7 @@
     } catch { error = 'Não foi possível salvar o pedido neste navegador. Tente novamente.'; render(true); return; }
     Object.assign(profile, { name: customer, phone: nextOrder.phone, address });
     lastOrder = nextOrder;
+    reorderNotices = [];
     cart = {};
     editingOrderId = null;
     persistCart();
@@ -204,7 +230,37 @@
     render();
   }
 
-  host.addEventListener('click', event => {
+  host.addEventListener('click', async event => {
+    const favorite = event.target.closest('[data-favorite]');
+    if (favorite) { await shopping()?.toggle(favorite.dataset.favorite); return; }
+    const filter = event.target.closest('[data-personal-filter]');
+    if (filter) { personalFilter = filter.dataset.personalFilter; render(true); return; }
+    const reorder = event.target.closest('[data-reorder]');
+    if (reorder) {
+      if (reordering || submitting) return;
+      const id = reorder.dataset.reorder;
+      reordering = true;
+      try {
+        if (live) await live.load(true);
+        const order = readOrders().find(item => item.id === id && owns(item));
+        if (!order) throw new Error('O pedido não está mais disponível.');
+        const result = shopping().rebuildCart(order, products());
+        if (!Object.keys(result.cart).length) {
+          reorderNotices = result.notices; error = 'Nenhum item deste pedido está disponível para recompra.';
+          view = 'orders'; render(); return;
+        }
+        if ((cartLines().length || editingOrderId) && !confirm('Substituir a sacola atual por uma nova cópia deste pedido?')) return;
+        cart = result.cart; editingOrderId = null; error = '';
+        reorderNotices = ['Nova compra com os preços atuais e entrega para amanhã. O pedido anterior não foi alterado.', ...result.notices];
+        if (live) {
+          checkoutRequestId = crypto.randomUUID();
+          try { sessionStorage.setItem(requestKey, checkoutRequestId); } catch { /* Current tab keeps the new request ID. */ }
+        }
+        persistCart(); view = 'cart'; render();
+      } catch (cause) { error = `Não foi possível preparar a recompra: ${cause.message}`; view = 'orders'; render(true); }
+      finally { reordering = false; }
+      return;
+    }
     const catalogJump = event.target.closest('a[href="#portal-products"]');
     if (catalogJump) { event.preventDefault(); motion()?.scrollTo('#portal-products', true, 16); return; }
     const quantity = event.target.closest('[data-qty]');
@@ -220,6 +276,7 @@
       cart = {};
       order.items.forEach(item => { const product = products().find(entry => entry.id === item.productId) || products().find(entry => entry.name === item.name); if (product) cart[product.id] = item.weightGrams ? item.weightGrams / 50 : item.quantity; });
       editingOrderId = order.id;
+      reorderNotices = [];
       persistCart();
       view = 'cart';
       render();
@@ -243,7 +300,7 @@
   host.addEventListener('input', event => {
     if (event.target.id !== 'portal-search') return;
     query = event.target.value;
-    const visible = products().filter(product => (category === 'Todos' || (product.category || 'Outros') === category) && product.name.toLocaleLowerCase('pt-BR').includes(query.toLocaleLowerCase('pt-BR')));
+    const visible = filteredProducts();
     motion()?.reset(host);
     document.getElementById('portal-grid').innerHTML = visible.length ? visible.map(card).join('') : '<p class="portal-empty">Não encontramos produtos nessa busca.</p>';
     motion()?.refresh();
@@ -267,8 +324,9 @@
     } else if (!isPortal) { portalVisible = false; renderFloating(); }
   }
   window.addEventListener('trameli:portal-open', syncPortalFrame);
+  window.addEventListener('trameli:shopping-changed', () => { if (view === 'catalog') render(true); });
   window.addEventListener('trameli:catalog-changed', () => render(true));
-  if (live) window.addEventListener('trameli:orders-changed', () => { if (view === 'orders') render(true); });
+  if (live) window.addEventListener('trameli:orders-changed', () => { if (view === 'orders' || (view === 'catalog' && personalFilter === 'frequent')) render(true); });
   window.addEventListener('storage', event => { if ([orderKey, cartKey].includes(event.key)) { if (event.key === cartKey) cart = readJson(cartKey, {}); render(true); } });
   window.addEventListener('hashchange', syncPortalFrame);
   syncPortalFrame();

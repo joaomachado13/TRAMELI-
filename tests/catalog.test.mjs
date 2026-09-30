@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import './product-photos.test.mjs';
 
 const { products } = JSON.parse(await readFile(new URL('../data/client-products.json', import.meta.url), 'utf8'));
 assert.equal(products.length, 81);

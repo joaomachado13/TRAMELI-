@@ -84,10 +84,11 @@
           <dialog id="operation-dialog" aria-labelledby="dialog-title"><form id="order-form" novalidate>
             <div class="dialog-heading"><div><p class="eyebrow">LANÇAMENTO MANUAL</p><h2 id="dialog-title">Novo pedido</h2></div><button class="icon-button" id="close-dialog" type="button" aria-label="Fechar">×</button></div>
             <p class="dialog-help">Anote aqui o pedido que chegou pelo grupo. Depois, o portal do cliente alimentará esta mesma fila.</p>
-            <div class="form-grid"><label>Nome do cliente <input name="customer" list="known-clients" maxlength="90" autocomplete="name" required></label><label>Telefone <span>(opcional)</span><input name="phone" type="tel" maxlength="25" autocomplete="tel"></label><label class="form-grid__wide">Endereço / referência <input name="address" maxlength="180" autocomplete="street-address" required></label><label>Data da entrega <input name="date" type="date" required></label><label>Taxa de entrega (R$) <input name="fee" inputmode="decimal" value="2,00" required></label></div>
+            <div class="form-grid"><label>Nome do cliente <input name="customer" list="known-clients" maxlength="90" autocomplete="name" required></label><label>Telefone <span>(opcional)</span><input name="phone" type="tel" maxlength="25" autocomplete="tel"></label><label class="form-grid__wide">Endereço / referência <input name="address" maxlength="180" autocomplete="street-address" required></label><label>Data da entrega <input name="date" type="date" required></label></div>
             <div class="items-heading"><strong>Itens do pedido</strong><button class="text-button" id="add-item" type="button">+ Adicionar item</button></div><div id="form-items"></div>
             <label class="notes-label">Observação <span>(opcional)</span><textarea name="notes" rows="2" maxlength="280"></textarea></label>
-            <div class="form-total"><span>Total deste pedido</span><strong id="form-total">R$ 2,00</strong></div><p class="form-error" id="form-error" role="alert" hidden></p>
+            <div class="form-total"><span>Subtotal dos produtos</span><strong id="form-subtotal">R$ 0,00</strong></div>
+            <div id="form-delivery-summary" hidden><div class="form-grid"><label>Taxa de entrega (R$) <input name="fee" inputmode="decimal" value="2,00" required></label></div><div class="form-total"><span>Total final com entrega</span><strong id="form-total">R$ 0,00</strong></div></div><p class="form-error" id="form-error" role="alert" hidden></p>
             <div class="dialog-actions"><button class="button button--quiet" id="cancel-dialog" type="button">Cancelar</button><button class="button button--primary" type="submit">Salvar pedido</button></div>
           </form></dialog>
           <div class="print-document" id="print-document" aria-hidden="true"></div>
@@ -112,7 +113,7 @@
           </article>
           <article class="card kpi-card">
             <span class="ico ico--kpi ico--truck" aria-hidden="true"></span>
-            <div><strong class="h2">0</strong><p class="t2">Entregas hoje</p><small class="kpi-card__context">Agenda vazia</small></div>
+            <div><strong class="h2" id="home-delivery-count">0</strong><p class="t2">Entregas hoje</p><small class="kpi-card__context" id="home-delivery-context">Agenda vazia</small></div>
           </article>
           <article class="card3 kpi-card">
             <span class="ico ico--kpi ico--currency" aria-hidden="true"></span>
@@ -123,14 +124,14 @@
         <section class="attention-strip" aria-labelledby="attention-title">
           <div class="attention-strip__heading"><span class="attention-strip__symbol" aria-hidden="true">!</span><h2 id="attention-title">Precisa de ação</h2></div>
           <a href="#operacao"><strong id="attention-pending-orders">0 pedidos</strong> pedem análise <span aria-hidden="true">↗</span></a>
-          <a href="#financeiro"><strong>Financeiro</strong> aguardando dados reais <span aria-hidden="true">↗</span></a>
+          <a href="#financeiro"><strong>Financeiro</strong> <span id="attention-finance">Carregando saldos…</span> <span aria-hidden="true">↗</span></a>
           <a href="#agenda"><strong id="attention-deliveries">0 compromissos</strong> na agenda de hoje <span aria-hidden="true">↗</span></a>
         </section>
 
         <section class="content-grid">
           <article class="card4 panel orders-panel">
             <div class="panel__heading">
-              <h2 class="h3">Pedidos recentes</h2>
+              <h2 class="h3">Pedidos para amanhã</h2>
               <a class="lnk panel__link" href="#operacao">Ver operação <span class="ico ico--arrow" aria-hidden="true"></span></a>
             </div>
             <div class="orders-table-wrap">
@@ -149,21 +150,21 @@
               <h2 class="h3">Próximas entregas</h2>
               <a class="lnk panel__link" href="#agenda">Ver agenda <span class="ico ico--arrow" aria-hidden="true"></span></a>
             </div>
-            <ol class="delivery-list"></ol>
-            <p class="data-empty">Nenhuma entrega agendada.</p>
+            <ol class="delivery-list" id="home-deliveries"></ol>
+            <p class="data-empty" id="home-deliveries-empty">Nenhuma entrega agendada.</p>
           </article>
         </section>
 
         <section class="bottom-grid">
           <article class="card6 panel clients-panel">
             <div class="panel__heading">
-              <h2 class="h3">Clientes em destaque</h2>
+              <h2 class="h3">Clientes dos pedidos</h2>
               <a class="lnk panel__link" href="#clientes">Ver todos <span class="ico ico--arrow" aria-hidden="true"></span></a>
             </div>
-            <div class="client-list"><p class="data-empty">Nenhum cliente cadastrado.</p></div>
+            <div class="client-list" id="home-clients"><p class="data-empty">Nenhum cliente nos pedidos.</p></div>
           </article>
 
-          <article class="card7 panel"><div class="panel__heading"><h2 class="h3">Próxima etapa</h2></div><p class="data-empty">As análises vão aparecer aqui quando conectarmos os pedidos e o catálogo reais.</p></article>
+          <article class="card7 panel"><div class="panel__heading"><h2 class="h3">Precisa de atenção</h2></div><div id="home-next-actions" aria-live="polite"></div></article>
         </section>
         </div>
         <div id="screen-view" class="view" hidden aria-live="polite"></div>

@@ -1,0 +1,8 @@
+.pix-dialog { max-width:620px; }
+.pix-dialog label { display:grid; gap:6px; margin:14px 0; }
+.pix-dialog textarea, .pix-dialog input:not([type=checkbox]) { width:100%; box-sizing:border-box; padding:10px; border-radius:8px; border:1px solid #90a183; font:inherit; }
+.pix-dialog textarea { overflow-wrap:anywhere; }
+.pix-dialog .payment-check { display:flex; align-items:flex-start; gap:10px; }
+.pix-qr { display:block; max-width:100%; height:auto; margin:20px auto; background:white; }
+.pix-amount { display:block; font-size:30px; }
+.pix-dialog [role=alert] { color:#a43426; }

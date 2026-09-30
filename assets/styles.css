@@ -768,17 +768,20 @@ body.menu-open { overflow: hidden; }
 
 .orders-table {
   width: 100%;
+  min-width: 650px;
   border-collapse: collapse;
   table-layout: fixed;
 }
 
 .orders-table th,
 .orders-table td {
-  height: 40px;
-  padding: 0 8px;
+  box-sizing: border-box;
+  padding: 10px 8px;
   border-bottom: 1px solid rgba(181, 197, 148, 0.08);
   text-align: left;
-  white-space: nowrap;
+  vertical-align: top;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .orders-table th {
@@ -789,25 +792,40 @@ body.menu-open { overflow: hidden; }
 
 .orders-table th:first-child,
 .orders-table td:first-child {
-  width: 13%;
+  width: 7%;
   padding-left: 2px;
 }
 
 .orders-table th:nth-child(2) {
-  width: 26%;
+  width: 30%;
+}
+
+.orders-table td:nth-child(2) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.orders-table td small {
+  display: block;
+  font-size: .65rem;
+  font-weight: 400;
+  color: #aeb5a6;
+  white-space: normal;
 }
 
 .orders-table th:nth-child(3) {
-  width: 23%;
+  width: 17%;
 }
 
 .orders-table th:nth-child(4) {
-  width: 24%;
+  width: 17%;
 }
 
 .orders-table th:last-child,
 .orders-table td:last-child {
-  width: 14%;
+  width: 29%;
   padding-right: 2px;
 }
 
@@ -959,6 +977,14 @@ body.menu-open { overflow: hidden; }
   gap: 18px;
   padding: 13px 4px 0;
 }
+
+.home-client { min-width: 0; padding: 8px 0; }
+.home-client strong { display: block; overflow-wrap: anywhere; line-height: 1.35; }
+.home-client small { display: block; color: #b9c8ae; margin-top: 4px; }
+.home-next-list { list-style: none; padding: 4px 20px 18px; margin: 0; display: grid; gap: 10px; }
+.home-next-list a { display: block; color: inherit; overflow-wrap: anywhere; }
+.home-next-list a:hover { text-decoration: underline; }
+.home-next-list p { margin: 0; color: #b9c8ae; }
 
 .client {
   display: grid;

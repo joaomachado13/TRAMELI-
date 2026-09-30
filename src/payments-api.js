@@ -1,0 +1,41 @@
+export class PaymentsApi {
+  constructor(live) {
+    this.live = live; this.ready = null; this.error = ''; this.pending = null;
+    this.balances = []; this.statement = []; this.payments = []; this.allocations = [];
+  }
+  async rows(factory, sort) {
+    const rows = [];
+    for (let from = 0; ; from += 500) {
+      let query = factory();
+      for (const column of sort) query = query.order(column);
+      const { data, error } = await query.range(from, from + 499);
+      if (error) throw error;
+      rows.push(...data);
+      if (data.length < 500) return rows;
+    }
+  }
+  async load(force = false) {
+    if (this.pending) { await this.pending; if (!force) return; }
+    this.pending = (async () => {
+      try {
+        const c = this.live.client;
+        const balances = await this.rows(() => c.rpc('trameli_payment_balances'), ['order_id']);
+        const statement = await this.rows(() => c.rpc('trameli_payment_statement'), ['payment_id', 'order_id']);
+        const payments = this.live.operator ? await this.rows(() => c.from('trameli_payments').select('id,kind,amount_cents,method,reference,note,reverses_id,recorded_at'), ['id']) : [];
+        const allocations = this.live.operator ? await this.rows(() => c.from('trameli_payment_allocations').select('payment_id,order_id,amount_cents'), ['payment_id', 'order_id']) : [];
+        Object.assign(this, { balances, statement, payments, allocations, ready: true, error: '' });
+        window.dispatchEvent(new Event('trameli:payments-changed'));
+      } catch (error) {
+        this.ready = ['PGRST202', 'PGRST205'].includes(error.code) ? false : this.ready;
+        this.error = this.ready === false ? 'Falta ativar a migração 007 de pagamentos no Supabase.' : 'Não foi possível atualizar os pagamentos. Tente novamente antes de registrar valores.';
+        window.dispatchEvent(new Event('trameli:payments-changed'));
+      }
+    })();
+    try { await this.pending; } finally { this.pending = null; }
+  }
+  async call(name, args) {
+    const { data, error } = await this.live.client.rpc(name, args);
+    if (error) throw error;
+    return data;
+  }
+}

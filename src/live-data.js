@@ -1,4 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
+import { AuthService } from './auth-service.js';
+import { resolveProductPhoto } from './product-photos.js';
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -14,7 +16,7 @@ const mapOrder = row => ({
 });
 const mapProduct = (row, cost) => ({
   id: row.id, name: row.name, category: row.category, unit: row.unit,
-  image: row.image_url, priceCents: row.price_cents, active: row.active,
+  image: resolveProductPhoto(row.id, row.image_url), priceCents: row.price_cents, active: row.active,
   sourceRow: row.source_row, reviewReason: row.review_reason,
   costCents: cost?.unit_cost_cents ?? null, supplierName: cost?.supplier_name || '',
   costEstimated: Boolean(cost?.estimated),
@@ -23,11 +25,19 @@ const mapProduct = (row, cost) => ({
 export class LiveData {
   constructor() {
     this.client = createClient(url, key, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
+    this.auth = new AuthService(this.client, url, key);
+    this.recovery = new URLSearchParams(location.search).get('auth') === 'recovery'
+      || new URLSearchParams(location.hash.slice(1)).get('type') === 'recovery';
+    this.client.auth.onAuthStateChange(event => {
+      if (event === 'PASSWORD_RECOVERY') this.recovery = true;
+    });
     this.orders = [];
     this.products = [];
     this.profile = null;
     this.user = null;
     this.operator = false;
+    this.role = 'customer';
+    this.rolesReady = false;
     this.loadingPromise = null;
     this.lastOrderSync = null;
     this.costSummaryCache = new Map();
@@ -46,16 +56,17 @@ export class LiveData {
     if (error && error.name !== 'AuthSessionMissingError') throw error;
     this.user = data?.user || null;
     if (!this.user) return false;
-    const role = await this.client.rpc('trameli_is_operator');
-    if (role.error) throw role.error;
-    this.operator = Boolean(role.data);
+    const role = await this.client.rpc('trameli_access_role');
+    if (role.error && role.error.code !== 'PGRST202') throw role.error;
+    this.rolesReady = !role.error;
+    if (this.rolesReady) this.role = role.data;
+    else {
+      const legacy = await this.client.rpc('trameli_is_operator');
+      if (legacy.error) throw legacy.error;
+      this.role = legacy.data ? 'operator' : 'customer';
+    }
+    this.operator = ['operator', 'master'].includes(this.role);
     return true;
-  }
-
-  async requestLink(email) {
-    const redirect = `${location.origin}${location.pathname}`;
-    const { error } = await this.client.auth.signInWithOtp({ email, options: { emailRedirectTo: redirect } });
-    if (error) throw error;
   }
 
   async load(force = false) {

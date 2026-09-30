@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/assets/styles.css"><title>Teste isolado de autenticação</title></head><body>
+<script type="module">
+import { requireAccess } from '/src/auth-ui.js';
+import '/src/live.css';
+window.fixture = async (options = {}) => {
+  document.querySelector('.live-gate')?.remove();
+  let authenticated = Boolean(options.session);
+  let providerResolve;
+  const log = [];
+  const live = {
+    recovery: Boolean(options.recovery),
+    client: { auth: { signOut: async () => { authenticated = false; return { error: null }; } } },
+    authenticate: async () => authenticated,
+    preflight: async () => ({ ready: true }),
+    load: async () => { if (options.loadError) throw new Error('Falha de conexão'); log.push('loaded'); },
+    auth: {
+      providers: () => options.deferred ? new Promise(resolve => { providerResolve = resolve; }) : Promise.resolve({ external: { google: Boolean(options.google), phone: Boolean(options.phone) } }),
+      signIn: async (method, identity, password) => {
+        log.push({ action: 'signin', method, identity });
+        if (password !== 'correct-password') throw { code: 'invalid_credentials' };
+        authenticated = true;
+      },
+      signUp: async () => ({ session: null }),
+      google: async () => log.push('google'),
+      recover: async () => log.push('recovery'),
+      resend: async () => log.push('resend'),
+      verifyPhone: async () => { authenticated = true; log.push('phone-verified'); },
+      setPassword: async () => log.push('password-updated'),
+    },
+  };
+  window.authResult = 'pending';
+  requireAccess(live).then(() => { window.authResult = 'entered'; });
+  window.authFixture = { log, live, options, resolveProviders: value => providerResolve?.(value) };
+};
+</script></body></html>

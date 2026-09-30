@@ -1,0 +1,35 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pagamentos — teste isolado</title><link rel="stylesheet" href="/assets/styles.css"></head><body><main class="workspace" id="payment-fixture-host"></main><script type="module">
+import { initPayments } from '/src/payments.js';
+import { initManualPix } from '/src/manual-pix.js';
+const account='11111111-1111-4111-8111-111111111111', order='22222222-2222-4222-8222-222222222222';
+const day=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+const state={missing:false,fail:false,calls:[],closings:[],pix:{enabled:true,receiver_label:'Titular fictício do teste',version:0,payload:'00020126580014br.gov.bcb.pix0136123e4567-e12b-12d1-a456-4266554400005204000053039865802BR5913Fulano de Tal6008BRASILIA62070503***63041D3D'},
+ balances:[{order_id:order,customer_id:account,customer_name:'Cliente de teste',delivery_date:day,order_status:'delivered',total_cents:1200,received_cents:0,refunded_cents:0,paid_cents:0,due_cents:1200,refund_due_cents:0,payment_status:'open'}],payments:[],allocations:[],statement:[]};
+const snapshot=()=>({day,orders:1,delivered:1,cancelled:0,pending:0,products_cents:1000,delivery_cents:200,total_cents:1200,supplier_cents:0,missing_cost_items:1,estimated_cost_items:0,profit_cents:null,due_cents:state.balances[0].due_cents,refund_due_cents:0,paid_for_orders_cents:state.balances[0].paid_cents,received_on_day_cents:400,pix_manual_on_day_cents:400,refunded_on_day_cents:0,net_received_on_day_cents:400});
+const query=(callback)=>({maybeSingle(){return this;},order(){return this;},eq(){return this;},select(){return this;},range(){return this;},then(resolve,reject){return Promise.resolve().then(callback).then(resolve,reject);}});
+const live={operator:true,role:'master',user:{id:account},client:{
+ from(table){return query(()=>({data:table==='trameli_pix_settings'?state.pix:table==='trameli_payments'?state.payments:table==='trameli_payment_allocations'?state.allocations:state.closings,error:null}));},
+ rpc(name,args){return query(()=>{
+  if(state.fail)return {data:null,error:{code:'FETCH',message:'offline'}};
+  if(state.missing)return {data:null,error:{code:'PGRST202',message:'not installed'}};
+  if(name==='trameli_payment_balances')return {data:state.balances,error:null};
+  if(name==='trameli_payment_statement')return {data:state.statement,error:null};
+  if(name==='trameli_day_snapshot')return {data:snapshot(),error:null};
+  state.calls.push({name,args});
+  if(name==='trameli_save_pix_settings'){Object.assign(state.pix,{enabled:args.p_enabled,payload:args.p_payload,receiver_label:args.p_receiver_label,version:state.pix.version+1});return {error:null};}
+  const id=crypto.randomUUID();
+  if(name==='trameli_record_payment'){
+    state.payments.push({id,kind:'receipt',amount_cents:args.p_amount_cents,method:args.p_method,reference:args.p_reference,note:args.p_note,recorded_at:new Date().toISOString()});
+    for(const line of args.p_lines){state.allocations.push({payment_id:id,...line});state.balances[0].paid_cents+=line.amount_cents;state.balances[0].due_cents-=line.amount_cents;state.balances[0].payment_status=state.balances[0].due_cents?'partial':'paid';state.statement.push({payment_id:id,order_id:order,kind:'receipt',method:args.p_method,amount_cents:line.amount_cents,recorded_at:new Date().toISOString()});}
+  }
+  if(name==='trameli_close_day')state.closings.push({id,revision:state.closings.length+1,closed_at:new Date().toISOString(),snapshot:snapshot()});
+  return {data:id,error:null};
+ });}
+}};
+initPayments(live);
+initManualPix(live);
+const host=document.getElementById('payment-fixture-host');
+async function render(customer=false){host.innerHTML=customer?TrameliPayments.customerRender():TrameliPayments.render();await TrameliPayments.refresh();if(!customer)await TrameliPayments.previewDay();}
+window.paymentFixture={state,render,live,account,order};
+await render();window.paymentFixtureReady=true;
+</script></body></html>

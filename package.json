@@ -7,11 +7,12 @@
     "dev": "vite --configLoader runner --host 127.0.0.1",
     "build": "vite build --configLoader runner",
     "preview": "vite preview --configLoader runner --host 127.0.0.1",
-    "check": "node --check assets/operacao.js && node --check assets/portal.js && node --check assets/screens.js && node tests/catalog.test.mjs && node tests/order-math.test.mjs && node tests/finance-math.test.mjs && node tests/migration.test.mjs && vite build --configLoader runner --mode test"
+    "check": "node --check assets/operacao.js && node --check assets/portal.js && node --check assets/screens.js && node --check src/payments.js && node tests/auth.test.mjs && node tests/access-roles.test.mjs && node tests/catalog.test.mjs && node tests/order-math.test.mjs && node tests/finance-math.test.mjs && node tests/migration.test.mjs && node tests/activate-catalog.test.mjs && node tests/payments.test.mjs && node tests/shopping.test.mjs && node tests/pix.test.mjs && vite build --configLoader runner --mode test"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.0",
-    "gsap": "3.15.0"
+    "gsap": "3.15.0",
+    "qrcode": "1.5.4"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",

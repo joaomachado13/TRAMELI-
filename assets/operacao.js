@@ -134,7 +134,11 @@ function updateFormTotal() {
   const valid = fee !== null && items.every(item => Number.isInteger(item.quantity) && item.quantity > 0
     && item.priceCents !== null && (item.weightGrams === undefined || (Number.isInteger(item.weightGrams)
       && item.weightGrams >= 50 && item.weightGrams <= 4950 && item.weightGrams % 50 === 0)));
-  document.getElementById('form-total').textContent = valid ? money(items.reduce((sum, item) => sum + itemTotal(item), fee)) : '—';
+  const productsTotal = items.reduce((sum, item) => sum + itemTotal(item), 0);
+  const hasItems = items.some(item => item.name && item.priceCents !== null && item.quantity > 0);
+  document.getElementById('form-subtotal').textContent = !hasItems ? money(0) : valid ? money(productsTotal) : '—';
+  document.getElementById('form-delivery-summary').hidden = !hasItems;
+  document.getElementById('form-total').textContent = !hasItems ? money(0) : valid ? money(productsTotal + fee) : '—';
 }
 
 function openForm(order = null) {

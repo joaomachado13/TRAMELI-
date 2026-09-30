@@ -16,7 +16,7 @@
     if (live) return live.products.slice();
     try {
       const value = JSON.parse(localStorage.getItem(key) || '[]');
-      return Array.isArray(value) ? value.filter(item => item && typeof item.name === 'string') : [];
+      return Array.isArray(value) ? value.filter(item => item && typeof item.name === 'string').map(item => window.TrameliProductPhoto ? window.TrameliProductPhoto(item) : item) : [];
     } catch { return []; }
   };
   let products = read();

@@ -48,32 +48,71 @@ document.getElementById('today-date').textContent = new Intl.DateTimeFormat('pt-
 
 function updateOverview() {
   const orders = activeOrders();
+  const today = dateKey(new Date());
   const nextDay = orders.filter(order => order.date === tomorrow());
   const pending = nextDay.filter(order => orderState(order) === 'received').length;
   const total = nextDay.reduce((sum, order) => sum + orderTotal(order), 0);
+  const todayDeliveries = orders.filter(order => order.date === today && orderState(order) !== 'delivered');
+  const upcoming = orders.filter(order => order.date >= today && orderState(order) !== 'delivered')
+    .sort((a, b) => a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt));
+  const api = window.TrameliPayments?.api;
+  const balances = api?.ready && !api.error ? api.balances : null;
+  const due = balances?.reduce((sum, row) => sum + Number(row.due_cents || 0), 0) || 0;
+  const dueOrders = balances?.filter(row => Number(row.due_cents) > 0).length || 0;
+  const allocations = new Set(api?.allocations.map(row => row.payment_id) || []);
+  const unknownReceipts = api?.ready ? api.payments.filter(row => row.kind === 'receipt' && !allocations.has(row.id) && !api.payments.some(refund => refund.reverses_id === row.id)).length : 0;
   document.getElementById('operational-message').textContent = nextDay.length
     ? `${nextDay.length} ${nextDay.length === 1 ? 'pedido registrado' : 'pedidos registrados'} para amanhã.`
     : 'Ainda não há pedidos registrados para amanhã.';
   document.getElementById('home-order-count').textContent = nextDay.length;
+  document.getElementById('home-order-count').parentElement.querySelector('.kpi-card__context').textContent = nextDay.length ? `${nextDay.length} ${nextDay.length === 1 ? 'pedido registrado' : 'pedidos registrados'}` : 'Nenhum registrado';
   document.getElementById('home-pending-count').textContent = pending;
+  document.getElementById('home-pending-count').parentElement.querySelector('.kpi-card__context').textContent = pending ? `${pending} ${pending === 1 ? 'pedido pendente' : 'pedidos pendentes'}` : 'Nenhum pendente';
+  document.getElementById('home-delivery-count').textContent = todayDeliveries.length;
+  document.getElementById('home-delivery-context').textContent = todayDeliveries.length ? 'Ainda previstas para hoje' : 'Nenhuma pendente hoje';
   document.getElementById('home-order-total').textContent = currency(total);
+  document.getElementById('home-order-total').parentElement.querySelector('.kpi-card__context').textContent = 'Total final, incluindo entregas';
   document.getElementById('attention-pending-orders').textContent = `${pending} ${pending === 1 ? 'pedido' : 'pedidos'}`;
+  document.getElementById('attention-finance').textContent = balances ? `${currency(due)} em aberto` : api?.error || 'Saldos indisponíveis';
+  document.getElementById('attention-deliveries').textContent = `${todayDeliveries.length} ${todayDeliveries.length === 1 ? 'entrega' : 'entregas'}`;
   const count = document.getElementById('nav-pending-count');
   count.textContent = pending;
   count.hidden = pending === 0;
   count.setAttribute('aria-label', `${pending} pedidos precisam de atenção`);
   document.querySelector('.notification-button').setAttribute('aria-label', pending ? `${pending} pedidos precisam de atenção` : 'Nenhum pedido pendente');
   document.querySelector('.notification-dot').hidden = pending === 0;
-  document.querySelector('.attention-strip').hidden = pending === 0;
+  document.querySelector('.attention-strip').hidden = pending === 0 && !todayDeliveries.length && !dueOrders && !unknownReceipts && !!balances;
   const rows = document.getElementById('home-recent-orders');
-  rows.innerHTML = nextDay.slice(-5).reverse().map(order => `<tr><td>—</td><td>${escapeHtml(order.customer)}</td><td>${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR')}</td><td>${orderStateLabel(order)}</td><td>${currency(orderTotal(order))}</td></tr>`).join('');
+  rows.innerHTML = nextDay.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5).map(order => `<tr><td>#${escapeHtml(order.id.slice(0, 8))}</td><td>${escapeHtml(order.customer)}</td><td>${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR')}</td><td>${orderStateLabel(order)}</td><td>${currency(orderTotal(order))}<small>Inclui ${currency(order.feeCents || 0)} de entrega</small></td></tr>`).join('');
   document.getElementById('home-orders-empty').hidden = nextDay.length > 0;
+  document.getElementById('home-deliveries').innerHTML = upcoming.slice(0, 4).map(order => `<li><span class="delivery-list__dot" aria-hidden="true"></span><time datetime="${escapeHtml(order.date)}">${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</time><div><strong>${escapeHtml(order.customer)}</strong><small>${escapeHtml(orderStateLabel(order))} · #${escapeHtml(order.id.slice(0, 8))}</small></div></li>`).join('');
+  document.getElementById('home-deliveries-empty').hidden = upcoming.length > 0;
+  const customers = new Map();
+  storedOrders().forEach(order => {
+    const key = order.customerId || order.customerToken || order.id;
+    const record = customers.get(key) || { name: order.customer, count: 0, recent: '' };
+    record.count++;
+    if (order.createdAt > record.recent) { record.recent = order.createdAt; record.name = order.customer; }
+    customers.set(key, record);
+  });
+  const featured = [...customers.values()].sort((a, b) => b.recent.localeCompare(a.recent)).slice(0, 3);
+  document.getElementById('home-clients').innerHTML = featured.length
+    ? featured.map(customer => `<div class="home-client"><strong>${escapeHtml(customer.name)}</strong><small>${customer.count} ${customer.count === 1 ? 'pedido' : 'pedidos'}</small></div>`).join('')
+    : '<p class="data-empty">Nenhum cliente nos pedidos.</p>';
+  const actions = [];
+  if (pending) actions.push(`<li><a href="#operacao">${pending} ${pending === 1 ? 'pedido para conferir' : 'pedidos para conferir'} →</a></li>`);
+  if (todayDeliveries.length) actions.push(`<li><a href="#agenda">${todayDeliveries.length} ${todayDeliveries.length === 1 ? 'entrega prevista' : 'entregas previstas'} para hoje →</a></li>`);
+  if (dueOrders) actions.push(`<li><a href="#financeiro">${dueOrders} ${dueOrders === 1 ? 'pedido em aberto' : 'pedidos em aberto'} · ${currency(due)} →</a></li>`);
+  if (unknownReceipts) actions.push(`<li><a href="#financeiro">${unknownReceipts} ${unknownReceipts === 1 ? 'recebimento sem identificação' : 'recebimentos sem identificação'} →</a></li>`);
+  if (!balances) actions.push('<li><a href="#financeiro">Conferir disponibilidade dos saldos no Financeiro →</a></li>');
+  document.getElementById('home-next-actions').innerHTML = actions.length ? `<ul class="home-next-list">${actions.join('')}</ul>` : '<div class="home-next-list"><p>Nenhuma pendência nos pedidos e recebimentos atuais.</p></div>';
 }
 updateOverview();
 window.addEventListener('trameli:orders-changed', () => {
   updateOverview();
   if (['#pedidos', '#clientes', '#agenda', '#financeiro', '#relatorios'].includes(location.hash)) showRoute(true);
 });
+window.addEventListener('trameli:payments-changed', updateOverview);
 window.addEventListener('trameli:catalog-changed', () => { if (location.hash === '#produtos') showRoute(true); });
 window.addEventListener('trameli:clients-changed', () => { if (location.hash === '#clientes') showRoute(true); });
 
@@ -222,6 +261,14 @@ function renderRoute(route, preserveScroll = false) {
   if (!isHome && !isOperation) { motion.reset(screenView); screenView.innerHTML = pages[route](); }
   if (route === 'relatorios') renderReportResults();
   if (route === 'financeiro') renderCostSummary('finance-cost-summary', financeRange.from || null, financeRange.to || null);
+  if (route === 'financeiro' && window.TrameliPayments) {
+    screenView.insertAdjacentHTML('beforeend', window.TrameliPayments.render());
+    window.TrameliPayments.refresh().then(() => window.TrameliPayments.previewDay());
+  }
+  if (route === 'configuracoes' && window.TrameliAccount) {
+    screenView.insertAdjacentHTML('beforeend', window.TrameliAccount.render());
+    window.TrameliAccount.refreshTeam();
+  }
   const operationDialog = document.getElementById('operation-dialog');
   if (!isOperation && operationDialog.open) operationDialog.close();
   navigation.forEach(link => {
@@ -244,7 +291,7 @@ function animateRouteIn(route) {
 
 function showRoute(force = false) {
   const requested = decodeURIComponent(location.hash.slice(1)) || 'operacao';
-  const route = routes.has(requested) ? requested : 'operacao';
+  const route = live && !live.operator ? 'loja' : routes.has(requested) ? requested : 'operacao';
   if (route === activeRoute && !force) { setMenu(false); return; }
   const revision = ++routeRevision;
   const previous = activeRoute;

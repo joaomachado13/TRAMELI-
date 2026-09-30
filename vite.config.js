@@ -12,7 +12,7 @@ export default defineConfig(({ command, mode }) => {
     }
   }
   return {
-    optimizeDeps: { noDiscovery: true, include: [] },
+    optimizeDeps: { noDiscovery: true, include: ['qrcode'] },
     build: { rollupOptions: { input: { main: resolve('index.html'), operationRedirect: resolve('operacao.html') } } },
     plugins: [{
       name: 'copy-static-product-media',
