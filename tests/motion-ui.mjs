@@ -49,11 +49,20 @@ try {
   await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
   for (let i = 0; i < 60 && !(await evaluate('!!window.TrameliMotion && !!document.querySelector("#delivery-date").value')); i++) await pause(100);
   assert.equal(await evaluate('matchMedia("(prefers-reduced-motion: reduce)").matches'), false);
-  assert.equal(await evaluate('window.TrameliMotion.active()'), true, 'Desktop smooth scroll did not start');
-  assert.equal(await evaluate('getComputedStyle(document.querySelector("#smooth-wrapper")).position'), 'fixed');
+  assert.equal(await evaluate('window.TrameliMotion.active()'), false, 'Native scroll should not use a transformed smoother');
+  assert.notEqual(await evaluate('getComputedStyle(document.querySelector("#smooth-wrapper")).position'), 'fixed');
   await evaluate('window.scrollTo(0,600)');
-  await pause(750);
-  assert.notEqual(await evaluate('getComputedStyle(document.querySelector("#smooth-content")).transform'), 'none');
+  await pause(100);
+  assert.equal(await evaluate('getComputedStyle(document.querySelector("#smooth-content")).transform'), 'none');
+
+  await send('Emulation.setDeviceMetricsOverride', { width: 1366, height: 900, deviceScaleFactor: 1, mobile: false });
+  await evaluate('location.hash="#inicio"');
+  await pause(250);
+  assert.equal(await evaluate('document.querySelector("#home-view").hidden'), false);
+  assert.equal(await evaluate('getComputedStyle(document.querySelector("#home-view")).transform'), 'none');
+  assert.ok(await evaluate('document.querySelector(".orders-panel").getBoundingClientRect().width >= 650'), 'Orders panel is too narrow for its table');
+  await evaluate(`document.querySelector('#home-recent-orders').innerHTML='<tr><td>—</td><td>Rosilena Benedita Alves Machado</td><td>01/10/2026</td><td>A conferir</td><td>R$ 69,48</td></tr>'`);
+  assert.ok(await evaluate(`(() => { const cell = document.querySelector('#home-recent-orders td:nth-child(2)'); const range = document.createRange(); range.selectNodeContents(cell); return [...range.getClientRects()].every(rect => rect.right <= cell.getBoundingClientRect().right + 1); })()`), 'Customer name overlaps the delivery column');
 
   await evaluate('location.hash="#loja"');
   for (let i = 0; i < 40 && !(await evaluate('!!document.querySelector(".portal-hero a")')); i++) await pause(100);
@@ -74,13 +83,13 @@ try {
   await evaluate('location.hash="#configuracoes"');
   await pause(400);
   await evaluate('document.querySelector(".motion-toggle").click()');
-  assert.equal(await evaluate('window.TrameliMotion.active()'), false, 'Reduced motion did not stop smoother');
+  assert.equal(await evaluate('document.body.classList.contains("motion-off")'), true, 'Reduced motion was not enabled');
   await evaluate('document.querySelector(".motion-toggle").click()');
-  assert.equal(await evaluate('window.TrameliMotion.active()'), true, 'Smoother did not resume');
+  assert.equal(await evaluate('document.body.classList.contains("motion-off")'), false, 'Motion did not resume');
   await evaluate('window.dispatchEvent(new Event("beforeprint"))');
-  assert.equal(await evaluate('window.TrameliMotion.active()'), false, 'Print did not pause smoother');
+  assert.equal(await evaluate('window.TrameliMotion.active()'), false, 'Print should retain native scroll');
   await evaluate('window.dispatchEvent(new Event("afterprint"))');
-  assert.equal(await evaluate('window.TrameliMotion.active()'), true, 'Scroll did not resume after print');
+  assert.equal(await evaluate('window.TrameliMotion.active()'), false, 'Print restored a transformed smoother');
 
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
   await pause(400);
@@ -92,6 +101,7 @@ try {
   await evaluate('document.querySelector(".portal-menu-button").click()');
   assert.equal(await evaluate('document.body.classList.contains("menu-open")'), true, 'Portal menu did not open');
   assert.equal(await evaluate('document.querySelector("#smooth-content").contains(document.querySelector(".nav"))'), false);
+  assert.equal(await evaluate('getComputedStyle(document.querySelector(".nav")).touchAction'), 'pan-y', 'Menu should only pan vertically on touch');
   await evaluate('document.querySelector(".menu-overlay").click()');
   assert.equal(await evaluate('document.body.classList.contains("menu-open")'), false, 'Portal menu did not close');
   console.log('Rolagem, transições, portal, redução de movimento e mobile: OK');

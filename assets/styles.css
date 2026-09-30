@@ -63,6 +63,8 @@
 html {
   min-height: 100%;
   background: var(--color-forest-950);
+  scrollbar-gutter: stable;
+  overscroll-behavior-x: none;
 }
 
 body {
@@ -71,6 +73,7 @@ body {
   min-height: 100vh;
   margin: 0;
   overflow-x: hidden;
+  overscroll-behavior-x: none;
   color: var(--color-cream-100);
   font-family: var(--font-ui);
   isolation: isolate;
@@ -222,9 +225,12 @@ body::after {
   flex-direction: column;
   justify-content: space-between;
   width: min(300px, 86vw);
-  height: 100vh;
+  height: 100dvh;
   padding: 36px 24px 32px;
   overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
   border-right: 1px solid rgba(185, 200, 151, 0.18);
   background: #102717;
   box-shadow: 22px 0 52px rgba(0, 0, 0, 0.27);
@@ -764,6 +770,7 @@ body.menu-open { overflow: hidden; }
 
 .orders-table-wrap {
   overflow-x: auto;
+  max-width: 100%;
 }
 
 .orders-table {
@@ -803,6 +810,7 @@ body.menu-open { overflow: hidden; }
 .orders-table td:nth-child(2) {
   white-space: normal;
   overflow-wrap: anywhere;
+  word-break: normal;
   padding-top: 10px;
   padding-bottom: 10px;
 }
@@ -841,6 +849,16 @@ body.menu-open { overflow: hidden; }
 .orders-table tbody tr:hover,
 .orders-table tbody tr:focus-within {
   background: rgba(151, 172, 115, 0.09);
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .nav__item.lnk:hover { transform: none; }
+}
+
+@media (max-width: 1550px) {
+  .content-grid,
+  .bottom-grid { grid-template-columns: minmax(0, 1fr); }
+  .content-grid .panel { min-width: 0; }
 }
 
 .priority-dot {
@@ -2225,6 +2243,7 @@ body.motion-off *, body.motion-off *::before, body.motion-off *::after {
   .orders-table,
   .orders-table tbody {
     display: block;
+    min-width: 0;
   }
 
   .orders-table thead {
