@@ -3,11 +3,12 @@ import { spawn } from 'node:child_process';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
+import { browserPath, headlessFlags } from './browser-path.mjs';
 const origin = process.env.TRAMELI_TEST_URL || 'http://127.0.0.1:4173/';
 if (!/^http:\/\/127\.0\.0\.1:\d+\/$/.test(origin)) throw new Error('Local Vite URL required');
 const profile = await mkdtemp(join(tmpdir(), 'trameli-photos-test-'));
 const port = 9372;
-const browser = spawn('C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe', ['--headless=new', '--disable-gpu', '--no-first-run', `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, `${origin}tests/photos-fixture.html`], { windowsHide: true, stdio: 'ignore' });
+const browser = spawn(browserPath(), [...headlessFlags, `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, `${origin}tests/photos-fixture.html`], { windowsHide: true, stdio: 'ignore' });
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 let socket;
 try {
@@ -86,7 +87,7 @@ try {
   assert.equal(await evaluate('document.querySelectorAll(".portal-product").length'),2);
   // Exercise asynchronous favorite persistence without any external account.
   await evaluate(`(async()=>{
-    const {initShopping}=await import('/src/shopping.js');
+    const {initShopping}=TrameliTestModules;
     const favorites=new Set(); window.testFavoriteWrites=0;
     const client={
       from(){const query={select(){return query},eq(){return query},order(){return query},range(){return Promise.resolve({data:[...favorites].map(product_id=>({product_id})),error:null})}};return query},
@@ -108,11 +109,7 @@ try {
   console.log('Recompra/frequentes/favoritos: fluxo real DOM, novo carrinho, peso 200g e persistência por conta OK.');
   // Operation uses the same real DOM and scripts, with synthetic local data only.
   await evaluate(`(async () => {
-    window.TrameliFinanceMath = await import('/src/finance-math.js');
-    await import('/src/motion.js');
-    localStorage.setItem('trameli-reduced-motion', 'true');
-    await import('/assets/operacao.js');
-    await import('/assets/screens.js');
+    await loadOperationTestModules();
     location.hash = '#operacao';
   })()`);
   await pause(150);

@@ -42,7 +42,13 @@ export function initManualPix(live) {
       if(problem)throw new Error(problem);
       if(!config?.enabled)throw new Error('O Pix ainda não foi habilitado pela loja. Combine o pagamento com a operadora.');
       if(api.error||!api.ready)throw new Error(api.error||'Saldo indisponível.');
-      const rows=api.balances.filter(row=>row.customer_id===live.user.id && (orderId==='all'||row.order_id===orderId) && Number(row.due_cents)>0);
+      const selected=orderId==='selected'
+        ? new Set([...document.querySelectorAll('[data-pix-select]:checked')].map(input=>input.dataset.pixSelect))
+        : null;
+      if(selected && !selected.size)throw new Error('Selecione ao menos um pedido em aberto.');
+      const rows=api.balances.filter(row=>row.customer_id===live.user.id
+        && (orderId==='all'||row.order_id===orderId||selected?.has(row.order_id))
+        && Number(row.due_cents)>0);
       const amount=rows.reduce((total,row)=>total+Number(row.due_cents),0);
       if(!rows.length)throw new Error('Não há saldo em aberto para esses pedidos.');
       const payload=pixForAmount(config.payload,amount);

@@ -1,32 +1,34 @@
 # Preparação da versão oficial
 
-Estado atual: projeto Supabase conectado e migração inicial aplicada. Os preços reais da planilha estão preparados no código, mas **as novas migrações e os custos ainda não foram aplicados ao projeto Supabase**. Não há domínio, backup validado nem piloto concluído. Nenhuma implantação pública foi feita.
+Estado verificado em 01/10/2026 por auditoria somente leitura: o Supabase remoto contém a estrutura funcional das migrations 001–009, 81 produtos, custos, pagamentos, favoritos e Pix manual. Todas as 14 tabelas Trameli estão com RLS. **O histórico remoto de migrations, porém, está vazio**, pois as SQLs foram aplicadas fora da CLI. Não há domínio, backup restaurado nem piloto concluído. Nenhuma implantação pública foi confirmada.
 
-Atualização de acesso em 30/09/2026: login por senha implementado, com sessão persistente, recuperação, Google e telefone condicionados aos provedores, além de master/operadora no banco. O projeto estava pausado e voltou a responder após a restauração. E-mail está habilitado com confirmação inicial; Google e telefone ainda estão desabilitados. O titular confirmou a execução de `202609300006_access_roles.sql`, a primeira atribuição master pelo SQL Editor e a entrada no painel com a identificação Master. Essa confirmação não distingue senha de restauração da sessão anterior; cadastro/recuperação por e-mail, Google e SMS ainda exigem validação com seus provedores. As migrações 002–005 e os custos seguem pendentes. Consulte [ACESSO.md](ACESSO.md). As instruções antigas de login por link abaixo são substituídas por esse fluxo.
+Antes de qualquer nova migration no projeto atual: gere e restaure um backup; vincule a Supabase CLI; confira `supabase migration list`; e marque 001–009 como aplicadas com `supabase migration repair <versões> --status applied`. Esse comando altera somente a tabela de histórico, por isso deve ser usado apenas após a conferência já documentada. Depois, aplique `202610010010_security_hardening.sql` e `20261001130152_approved_business_rules.sql` pelo fluxo de migrations e rode novamente os advisors de segurança. Não reaplique 001–009.
+
+Atualização de acesso em 30/09/2026: login por senha implementado, com sessão persistente, recuperação, Google e telefone condicionados aos provedores, além de master/operadora no banco. O projeto estava pausado e voltou a responder após a restauração. E-mail está habilitado com confirmação inicial; Google e telefone ainda estão desabilitados. Cadastro/recuperação por e-mail, Google e SMS ainda exigem validação com seus provedores. Consulte [ACESSO.md](ACESSO.md).
 
 ## Catálogo recebido em 24/09/2026
 
-Pacote único preparado em 30/09/2026: `supabase/activate-catalog.sql` reúne 002–005 e as 16 fotos oficiais em uma única transação. Destinado exclusivamente à base inicial com catálogo vazio e sem a estrutura de custos; bloqueia reaplicação ou catálogo preexistente. Testado também na ordem 001 → 006 (Master) → pacote. Não importa os custos privados. **Ainda aguarda execução e conferência no Supabase real.** Resultado esperado: 81 cadastrados, 79 disponíveis, 2 indisponíveis e 16 com foto. Usar este pacote OU as migrações individuais, nunca ambos.
+Pacote único preparado em 30/09/2026: `supabase/activate-catalog.sql` reúne 002–005 e as 16 fotos oficiais em uma única transação. Ele permanece somente para uma base nova com catálogo vazio; **não executar no projeto atual**, que já possui o catálogo. Resultado esperado em base nova: 81 cadastrados, 79 disponíveis, 2 indisponíveis e 16 com foto. Usar este pacote OU as migrations individuais, nunca ambos.
 
 - `DADOS PADARIA.xlsx` trouxe 81 linhas de produtos com preço ao cliente e a taxa de entrega de R$ 2,00 em linha separada. A aba do fornecedor contém os custos; eles **não estão no Git**.
 - Após as confirmações de 25/09/2026, o catálogo preparado tem 79 itens disponíveis e 2 linhas antigas duplicadas indisponíveis. Mussarela (R$ 69,99/kg), Presunto (R$ 40,00/kg), Mortadela defumada (R$ 40,00/kg) e Peito de peru (R$ 59,99/kg) são vendidos em passos de 50 g. Pão de forma de R$ 12,00, Mini pão francês de R$ 0,70 e Manteiga Italac 200g de R$ 17,00 foram liberados; Manteiga Canto de Minas 200g permanece em R$ 17,00 e Calu 200g em R$ 19,49.
-- Não usamos as 20 fotos antigas de demonstração para representar esses produtos. O portal mostra um espaço neutro até chegarem fotos correspondentes.
+- Não usamos as 20 fotos antigas de demonstração. Há 16 associações oficiais; os demais produtos mantêm espaço neutro.
 - `supabase/migrations/202609240002_catalog_finance.sql` cria custos privados, histórico de custo por item no pedido e consulta de cobertura. `supabase/migrations/202609240003_catalog_seed.sql` cadastra apenas preços de venda. `private/supplier-cost-import.sql` contém 43 correspondências únicas por nome normalizado da aba da padaria, está ignorado pelo Git e **deve ser revisado antes de aplicar**. Itens sem associação ficam com custo pendente, nunca com custo presumido de zero. Em outro computador, gere esse arquivo novamente com `python scripts/build-supplier-import.py "CAMINHO/DADOS PADARIA.xlsx"` (requer `openpyxl`).
 - A tela financeira mostra três valores: produtos cobrados dos clientes, custo da padaria e lucro bruto dos produtos (diferença). A taxa de entrega de R$ 2,00 é informada à parte e não entra no lucro. Custo parcial impede fechar o lucro; custo estimado gera somente **lucro provisório**. Não é lucro líquido nem comprovante de pagamento/repasse.
 - A aba `Meu lucro` de `DADOS PADARIA (1).xlsx` é referência histórica, não fonte automática de custos: há diferenças em relação aos preços confirmados atuais. Para Mussarela, `Meu lucro!B24` sugere R$ 26,25 de margem; supondo margem por kg, R$ 69,99 − R$ 26,25 = **R$ 43,74/kg de custo estimado**. O SQL privado `private/mussarela-provisional.sql` prepara apenas essa estimativa, sem sobrescrever custo existente; revise antes de aplicar. Presunto, mortadela defumada e peito de peru continuam sem custo de compra. A operadora pode confirmar um custo estimado no catálogo após conferir com a padaria; pedidos antigos preservam o caráter estimado do registro original.
 
-Para ativar no projeto de teste: faça uma cópia/restore verificável do banco primeiro; depois execute as migrações `...0002...`, `...0003...`, `202609250004_weighted_frios.sql` e `202609250005_provisional_costs.sql` nessa ordem no SQL Editor. Verifique o catálogo com conta de operadora e uma conta de cliente distinta. Revise os arquivos privados de custos e só então aplique seu SQL; não os cole em issue, commit ou conversa pública. Para frios, qualquer custo cadastrado deve ser o valor **por kg**. Se um pedido foi criado antes da carga de custos, seu custo histórico permanece pendente; não recalculamos retroativamente de modo silencioso.
+Para uma base nova: faça uma cópia/restore verificável primeiro e aplique as migrations na ordem. No projeto atual, não reaplique o catálogo; apenas reconcilie o histórico conforme o início deste documento. Para frios, qualquer custo cadastrado deve ser o valor **por kg**. Custos históricos não são recalculados silenciosamente.
 
 ## Verificações de segurança já automatizadas
 
-Recebimentos/conta corrente/fechamento diário: migração `202609300007_payment_ledger.sql` e telas preparados e testados localmente, **ainda não ativados no banco real**. Consultar `PAGAMENTOS.md`. Pix permanece manual, sem provedor contratado nem cobrança automática. Não interpretar o build aprovado como ativação no Supabase.
+Recebimentos/conta corrente/fechamento diário e Pix manual estão presentes no banco real. Permanecem sem provedor, webhook ou cobrança automática. Consultar `PAGAMENTOS.md` e `PIX-MANUAL.md`.
 
 - A migração roda em PostgreSQL local no teste `tests/migration.test.mjs`.
 - O teste confirma que um cliente não vê pedido/perfil de outro, não pode gravar diretamente nas tabelas nem se tornar operador; preços enviados pelo navegador são ignorados e o banco calcula o total.
 - O teste cobre idempotência do pedido, rejeição de mudança indevida de estado e registro de auditoria.
 - O build de publicação falha sem URL HTTPS e publishable key configuradas. A `service_role` key nunca deve estar no front-end.
 - O workflow `.github/workflows/verify.yml` roda os testes e a auditoria de dependências em pushes e pull requests, sem credenciais do banco.
-- A API do projeto já confirmou leitura pública apenas do catálogo vazio e negou leitura anônima dos pedidos. Falta testar as mesmas regras **com contas reais distintas** no projeto conectado.
+- A auditoria confirmou RLS em todas as tabelas e catálogo público ativo. Falta testar as regras **com contas reais distintas** no projeto conectado.
 
 ## 1. Ativação da base
 
@@ -70,8 +72,8 @@ on conflict do nothing;
 ./scripts/backup-supabase.ps1 -Destination 'D:\Trameli\Backups' -AgeRecipient 'age1SUA_CHAVE_PUBLICA'
 ```
 
-4. Copie os quatro arquivos `.age` e o `manifest.json` do mesmo identificador para outro local protegido. Compare os SHA-256 do manifesto depois da cópia. Se qualquer etapa falhar, descarte o conjunto incompleto e investigue: **manifesto ausente significa backup inválido**.
-5. Antes de automatizar, decripte com `age -d -i CAMINHO_DA_CHAVE_PRIVADA -o arquivo.sql arquivo.sql.age` em uma pasta temporária protegida e restaure em **outro projeto Supabase de teste**, seguindo o guia oficial de restauração. Teste login, leitura de pedidos e integridade das referências entre `auth.users`, perfis e pedidos. Apague os SQL temporários ao fim. A restauração de autenticação pode exigir ajustes manuais no projeto de destino; não trate uma exportação bem-sucedida como recuperação comprovada.
+4. Copie os seis arquivos `.age` e o `manifest.json` do mesmo identificador para outro local protegido. O conjunto inclui papéis, esquema, dados, autenticação e histórico de migrations. Compare os SHA-256 do manifesto depois da cópia. Se qualquer etapa falhar, descarte o conjunto incompleto e investigue: **manifesto ausente significa backup inválido**.
+5. Antes de automatizar, decripte em uma pasta temporária protegida e restaure em **outro projeto Supabase de teste**, seguindo [RESTAURACAO.md](RESTAURACAO.md). Teste login, leitura de pedidos e integridade das referências entre `auth.users`, perfis e pedidos. Apague os SQL temporários ao fim. A restauração de autenticação pode exigir ajustes manuais no projeto de destino; não trate uma exportação bem-sucedida como recuperação comprovada.
 6. Só depois defina destino off-site, periodicidade diária, retenção e alerta para falha. O arquivo local não é backup contra falha, roubo ou perda do próprio computador.
 
 Destino escolhido: **Google Drive, sem instalar o Drive para computador no PC da empresa**. O script PowerShell acima fica apenas como alternativa manual em um computador confiável. O fluxo principal preparado é `.github/workflows/backup-drive.yml`: uma execução manual do GitHub Actions exporta o banco em um runner temporário, criptografa antes de enviar, confere os arquivos no Drive e nunca adiciona dados ao Git. **Ainda não foi ativado nem testado com credenciais reais.**
@@ -81,7 +83,7 @@ Para ativar o fluxo remoto:
 1. Em um ambiente pessoal/confiável, crie a chave age e guarde a chave privada fora do GitHub e do Drive usado para o backup. O workflow recebe apenas a chave pública.
 2. Configure um OAuth client próprio para o Google Drive e um remote `gdrive` no `rclone`. O client compartilhado do rclone está sendo descontinuado em 2026. Use uma pasta/conta com acesso restrito; proteja o arquivo de configuração do rclone, que contém token de acesso.
 3. Em **GitHub → repositório → Settings → Secrets and variables → Actions**, cadastre `SUPABASE_DB_URL` (conexão de banco, nunca a publishable key), `BACKUP_AGE_RECIPIENT` (chave pública `age1...`) e `RCLONE_CONFIG_B64` (configuração do rclone codificada em base64). Base64 **não é criptografia**; a proteção vem do secret do GitHub. Não mande nenhum desses valores no chat. Restrinja quem pode editar workflows/branches, pois código com acesso a secrets pode exfiltrá-los.
-4. Execute **Actions → Backup criptografado para Google Drive → Run workflow**. O destino é `Trameli/Backups/<data UTC>` no remote `gdrive`. Confirme no Drive pela web os quatro `.age` e o `SHA256SUMS`.
+4. Execute **Actions → Backup criptografado para Google Drive → Run workflow**. O destino é `Trameli/Backups/<data UTC>` no remote `gdrive`. Confirme no Drive pela web os seis `.age` e o `SHA256SUMS`.
 5. Restaure em um projeto Supabase descartável e confira autenticação, pedidos, totais e permissões. Só após isso adicione uma agenda diária ao workflow e um alerta de falha. Um job bem-sucedido e um hash conferido não substituem a restauração de teste.
 
 ## 4. Aceite do piloto (aproximadamente 60 pedidos/dia)
@@ -98,3 +100,5 @@ Para ativar o fluxo remoto:
 - Custos sem correspondência e fotos dos produtos; confirmação de exceções para a taxa de entrega. As duas linhas duplicadas antigas continuam inativas.
 - Impressora usada, amostra física da folha de etiquetas 70 × 33 mm e prova de alinhamento impressa.
 - Regras de horário de corte, cancelamento após conferência, pagamento Pix e repasse à padaria.
+
+Os critérios executáveis estão em [HOMOLOGACAO.md](HOMOLOGACAO.md), e as decisões que precisam da operação estão em [REGRAS-NEGOCIO.md](REGRAS-NEGOCIO.md).

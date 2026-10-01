@@ -50,8 +50,10 @@ $outputs = @()
 $parts = @(
   @{ Name = 'roles'; Flags = @('--role-only') },
   @{ Name = 'schema'; Flags = @() },
-  @{ Name = 'data'; Flags = @('--data-only', '--use-copy') },
-  @{ Name = 'auth-data'; Flags = @('--data-only', '--use-copy', '--schema', 'auth') }
+  @{ Name = 'data'; Flags = @('--data-only', '--use-copy', '-x', 'storage.buckets_vectors', '-x', 'storage.vector_indexes') },
+  @{ Name = 'auth-data'; Flags = @('--data-only', '--use-copy', '--schema', 'auth') },
+  @{ Name = 'history-schema'; Flags = @('--schema', 'supabase_migrations') },
+  @{ Name = 'history-data'; Flags = @('--data-only', '--use-copy', '--schema', 'supabase_migrations') }
 )
 
 foreach ($part in $parts) {

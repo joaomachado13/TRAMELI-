@@ -88,7 +88,7 @@
             <div class="items-heading"><strong>Itens do pedido</strong><button class="text-button" id="add-item" type="button">+ Adicionar item</button></div><div id="form-items"></div>
             <label class="notes-label">Observação <span>(opcional)</span><textarea name="notes" rows="2" maxlength="280"></textarea></label>
             <div class="form-total"><span>Subtotal dos produtos</span><strong id="form-subtotal">R$ 0,00</strong></div>
-            <div id="form-delivery-summary" hidden><div class="form-grid"><label>Taxa de entrega (R$) <input name="fee" inputmode="decimal" value="2,00" required></label></div><div class="form-total"><span>Total final com entrega</span><strong id="form-total">R$ 0,00</strong></div></div><p class="form-error" id="form-error" role="alert" hidden></p>
+            <div id="form-delivery-summary" hidden><div class="form-grid"><label>Taxa de entrega (fixa) <input name="fee" inputmode="decimal" value="2,00" readonly required></label></div><div class="form-total"><span>Total final com entrega</span><strong id="form-total">R$ 0,00</strong></div></div><p class="form-error" id="form-error" role="alert" hidden></p>
             <div class="dialog-actions"><button class="button button--quiet" id="cancel-dialog" type="button">Cancelar</button><button class="button button--primary" type="submit">Salvar pedido</button></div>
           </form></dialog>
           <div class="print-document" id="print-document" aria-hidden="true"></div>

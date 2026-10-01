@@ -26,6 +26,8 @@ try {
   await db.exec(weightMigration);
   const provisionalMigration = await readFile(new URL('../supabase/migrations/202609250005_provisional_costs.sql', import.meta.url), 'utf8');
   await db.exec(provisionalMigration);
+  const hardeningMigration = await readFile(new URL('../supabase/migrations/202610010010_security_hardening.sql', import.meta.url), 'utf8');
+  await db.exec(hardeningMigration);
   const tables = await db.query(`select tablename from pg_tables where schemaname = 'public' and tablename like 'trameli_%' order by tablename`);
   assert.deepEqual(tables.rows.map(row => row.tablename), [
     'trameli_operators', 'trameli_order_costs', 'trameli_order_events', 'trameli_orders',
@@ -37,6 +39,8 @@ try {
   await assert.rejects(db.query('select count(*) from public.trameli_orders'), /permission denied/);
   await assert.rejects(db.query('select count(*) from public.trameli_product_costs'), /permission denied/);
   await assert.rejects(db.query('select public.trameli_is_operator()'), /permission denied/);
+  await assert.rejects(db.query('select public.trameli_audit_order()'), /permission denied/);
+  await assert.rejects(db.query('select public.trameli_snapshot_order_costs()'), /permission denied/);
   await db.exec('reset role');
   const customerA = '11111111-1111-4111-8111-111111111111';
   const customerB = '22222222-2222-4222-8222-222222222222';

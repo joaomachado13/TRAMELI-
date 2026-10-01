@@ -35,6 +35,17 @@ const financeMath = window.TrameliFinanceMath;
 const financeRange = { from: '', to: '' };
 const reportRange = { from: '', to: '' };
 const inRange = (orders, from, to) => orders.filter(order => (!from || order.date >= from) && (!to || order.date <= to));
+const saoPauloToday = () => {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date()).filter(part => part.type !== 'literal').map(part => [part.type, part.value]));
+  return `${parts.year}-${parts.month}-${parts.day}`;
+};
+const shiftDate = (value, days) => {
+  const [year, month, day] = value.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day + days));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+};
 
 function storedOrders() {
   if (live) return live.orders.slice();
@@ -149,6 +160,7 @@ const pages = {
       ${panel('Entregas por dia', days.length ? `<div class="agenda-days">${days.map(([date, orders]) => `<section class="agenda-day"><h3>${new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</h3><span>${orders.length} ${orders.length === 1 ? 'pedido' : 'pedidos'}</span><ul>${orders.map(order => `<li><strong>${escapeHtml(order.customer)}</strong><small>${escapeHtml(order.address)}</small><span>${orderStateLabel(order)}</span></li>`).join('')}</ul></section>`).join('')}</div>` : empty('Nenhuma data com pedidos. Ao lançar um pedido, ele aparecerá no dia escolhido.', 'Lançar pedido'))}`;
   },
   financeiro: () => `${intro('Resultado da operação', 'Financeiro', 'Acompanhe venda dos produtos, custo da padaria e lucro bruto no período escolhido.')}
+    <div class="finance-presets" aria-label="Períodos rápidos"><button type="button" data-finance-days="1">Hoje</button><button type="button" data-finance-days="7">Últimos 7 dias</button><button type="button" data-finance-days="15">Últimos 15 dias</button></div>
     <div class="report-filters"><label>De<input id="finance-from" type="date" value="${financeRange.from}"></label><label>Até<input id="finance-to" type="date" value="${financeRange.to}"></label></div>
     <div id="finance-cost-summary" aria-live="polite"></div>
     ${panel('Como ler os valores', '<p class="report-note">Lucro bruto dos produtos = valor cobrado pelos produtos − custo da padaria. A taxa de entrega fica fora desta conta. Estes números não confirmam pagamentos recebidos nem descontam outras despesas.</p>')}`,
@@ -309,6 +321,17 @@ navigation.forEach(link => link.addEventListener('click', () => setMenu(false)))
 window.addEventListener('hashchange', () => showRoute());
 document.querySelector('.notification-button').addEventListener('click', () => { location.hash = 'operacao'; });
 document.addEventListener('click', event => {
+  const financePreset = event.target.closest('[data-finance-days]');
+  if (financePreset) {
+    const days = Number(financePreset.dataset.financeDays);
+    const to = saoPauloToday();
+    financeRange.from = shiftDate(to, 1 - days);
+    financeRange.to = to;
+    const fromInput = document.getElementById('finance-from'), toInput = document.getElementById('finance-to');
+    if (fromInput && toInput) { fromInput.value = financeRange.from; toInput.value = financeRange.to; }
+    renderCostSummary('finance-cost-summary', financeRange.from, financeRange.to);
+    return;
+  }
   const toggle = event.target.closest('.motion-toggle');
   if (!toggle || systemReducedMotion.matches) return;
   userReducedMotion = !userReducedMotion;

@@ -12,6 +12,7 @@ const mapOrder = row => ({
   customerId: row.customer_id, source: row.source,
   customer: row.customer_name, phone: row.phone, address: row.address,
   date: row.delivery_date, notes: row.notes, items: row.items,
+  paymentMethod: row.payment_method_preference || 'unspecified',
   feeCents: row.fee_cents, subtotalCents: row.subtotal_cents, totalCents: row.total_cents,
 });
 const mapProduct = (row, cost) => ({
@@ -161,6 +162,7 @@ export class LiveData {
       p_request_id: requestId,
       p_delivery_date: order.date, p_name: order.customer,
       p_phone: order.phone, p_address: order.address, p_notes: order.notes,
+      p_payment_method: order.paymentMethod,
       p_lines: lines,
     });
     if (error) throw error;

@@ -8,6 +8,14 @@ import catalog from '/data/client-products.json';
 import { withOfficialProductPhoto } from '/src/product-photos.js';
 import * as orderMath from '/src/order-math.js';
 import { initShopping } from '/src/shopping.js';
+window.TrameliTestModules = { initShopping };
+window.loadOperationTestModules = async () => {
+  window.TrameliFinanceMath = await import('/src/finance-math.js');
+  localStorage.setItem('trameli-reduced-motion', 'true');
+  await import('/src/motion.js');
+  await import('/assets/operacao.js');
+  await import('/assets/screens.js');
+};
 const markup = new DOMParser().parseFromString(await (await fetch('/index.html')).text(), 'text/html');
 markup.querySelectorAll('script').forEach(script => script.remove());
 document.body.innerHTML = markup.body.innerHTML;

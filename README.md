@@ -13,13 +13,14 @@ Abra o endereço local exibido pelo Vite. O arquivo `index.html` não deve mais 
 
 ```powershell
 npm run check
+npm run test:ui
 npm run build
 npm run preview
 ```
 
 `dist/` é a saída para hospedagem estática. O catálogo local usa os preços transcritos da planilha recebida, mas pedidos desse modo continuam apenas no navegador e não devem conter dados pessoais reais. As fotos antigas de demonstração não são usadas no catálogo novo.
 Os quatro frios confirmados são vendidos por kg; o portal e o lançamento manual selecionam 50 g por toque, calculando o valor da porção sobre o peso total. Por exemplo, 50 g de mussarela custam R$ 3,50 e 1 kg custa R$ 69,99. O servidor refaz esse cálculo para pedidos de clientes.
-`npm run build` bloqueia a publicação se a URL HTTPS e a publishable key do Supabase não estiverem configuradas. `npm run check` executa os testes locais em modo de teste.
+`npm run build` bloqueia a publicação se a URL HTTPS e a publishable key do Supabase não estiverem configuradas. `npm run check` executa a suíte lógica e SQL; `npm run test:ui` compila fixtures isoladas e testa os fluxos principais em Chrome, Chromium ou Edge headless.
 
 ## Modo com Supabase
 
@@ -30,10 +31,10 @@ O modo com Supabase ainda **não está homologado com um projeto real**. Consult
 ## Implementado
 
 - Lançamento manual, ajuste, cancelamento com histórico, estados de conferência/separação/entrega, totais em centavos e lista diária consolidada de quantidades para conferência com a padaria.
-- Portal de pedido, edição e cancelamento antes da conferência.
+- Portal de pedido, edição e cancelamento até 22h30 do dia anterior à entrega, com forma de pagamento pretendida.
 - Banco com acesso por cliente/operadora, totais calculados no servidor, controle de versão para evitar sobrescrita e trilha de alterações.
 - Sincronização por consulta periódica a cada 15 segundos no modo com Supabase.
 - Rolagem suave com GSAP no desktop, entradas discretas das seções e transições entre telas. Em telas de toque, a rolagem permanece nativa; a opção de movimento reduzido desativa os efeitos. Menu, sacola e impressão preservam seu posicionamento.
 - Modelo A4 de 27 etiquetas de 70 × 33 mm (3 × 9), com deslocamento ajustável e divisão de pedidos longos em mais de uma etiqueta; **ainda não calibrado** na impressora e folha reais.
 
-Pix, confirmação de pagamento, prazo de corte, exceções de entrega e regras contratuais do repasse continuam pendentes. A tela financeira separa venda dos produtos, custo da padaria, lucro bruto e taxa de entrega; custo incompleto impede lucro fechado, e custo estimado produz apenas lucro provisório. Não publique como versão oficial antes do checklist do piloto.
+O Pix permanece manual: o cliente pode selecionar um ou mais pedidos inteiros, e a operação confirma o recebimento somente após conferência externa. A taxa é fixa em R$ 2,00 por pedido. A tela financeira oferece períodos diário, de 7 dias, de 15 dias e intervalo personalizado; separa venda dos produtos, custo da padaria, lucro bruto e taxa de entrega. Custo incompleto impede fechar repasse/lucro, e custo estimado produz apenas lucro provisório. Retenção de dados e uma eventual integração com provedor Pix continuam pendentes. Não publique como versão oficial antes do checklist do piloto.

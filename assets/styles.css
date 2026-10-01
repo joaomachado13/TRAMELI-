@@ -1286,6 +1286,9 @@ body.menu-open { overflow: hidden; }
 .report-filters { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
 .report-filters label { display: grid; gap: 6px; color: #bbc8b2; font-size: .75rem; }
 .report-filters input { min-height: 40px; padding: 8px 10px; border: 1px solid rgba(185,200,151,.22); border-radius: 8px; background: #14291a; color: #f4eedf; }
+.finance-presets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.finance-presets button { min-height: 38px; padding: 8px 12px; border: 1px solid rgba(185,200,151,.28); border-radius: 999px; background: #1b3421; color: #f4eedf; cursor: pointer; }
+.finance-presets button:hover, .finance-presets button:focus-visible { border-color: #b9c897; background: #28482e; }
 .report-summary { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
 .report-summary > div { display: grid; gap: 5px; padding: 17px; border: 1px solid rgba(185,200,151,.16); border-radius: 10px; background: rgba(21,45,26,.42); }
 .report-summary span { color: #b4c1ac; font-size: .73rem; }

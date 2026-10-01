@@ -4,13 +4,14 @@ import { spawn } from 'node:child_process';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
+import { browserPath, headlessFlags } from './browser-path.mjs';
 
 const url = process.env.TRAMELI_TEST_URL;
 if (!url?.startsWith('http://127.0.0.1:')) throw new Error('Provide a local Vite server in TRAMELI_TEST_URL.');
 const profile = await mkdtemp(join(tmpdir(), 'trameli-auth-test-'));
 const port = 9371;
-const browser = spawn('C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
-  ['--headless=new', '--disable-gpu', '--no-first-run', `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, `${url}tests/auth-fixture.html`],
+const browser = spawn(browserPath(),
+  [...headlessFlags, `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, `${url}tests/auth-fixture.html`],
   { windowsHide: true, stdio: 'ignore' });
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 let socket;

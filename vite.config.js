@@ -11,9 +11,20 @@ export default defineConfig(({ command, mode }) => {
       throw new Error('Build de publicação bloqueado: configure VITE_SUPABASE_URL e VITE_SUPABASE_PUBLISHABLE_KEY. Use npm run check para testar sem publicar.');
     }
   }
+  const input = {
+    main: resolve('index.html'),
+    operationRedirect: resolve('operacao.html'),
+  };
+  if (mode === 'test') {
+    Object.assign(input, {
+      authFixture: resolve('tests/auth-fixture.html'),
+      paymentsFixture: resolve('tests/payments-fixture.html'),
+      photosFixture: resolve('tests/photos-fixture.html'),
+    });
+  }
   return {
     optimizeDeps: { noDiscovery: true, include: ['qrcode'] },
-    build: { rollupOptions: { input: { main: resolve('index.html'), operationRedirect: resolve('operacao.html') } } },
+    build: { rollupOptions: { input } },
     plugins: [{
       name: 'copy-static-product-media',
       closeBundle() {

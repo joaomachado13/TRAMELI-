@@ -41,7 +41,7 @@ export function initPayments(live) {
     const t=totals(rows);
     return `<div class="payment-metrics">${metric('Compras (exclui cancelados)',t.total_cents)}${metric('Pago, descontadas devoluções',t.paid_cents)}${metric('Em aberto',t.due_cents)}${metric('A devolver',t.refund_due_cents)}</div>`;
   };
-  const orderTable = (rows, editable=false) => `<div class="payment-table-wrap"><table class="payment-table"><thead><tr><th>Pedido / entrega</th><th>Valor</th><th>Pago</th><th>Em aberto</th><th>Financeiro</th>${editable?'<th>Receber agora (R$)</th>':''}</tr></thead><tbody>${rows.map(row=>`<tr><td>#${short(row.order_id)}<small>${dateLabel(row.delivery_date)} · ${esc(orderLabels[row.order_status] || row.order_status)}</small></td><td>${money(row.total_cents)}</td><td>${money(row.paid_cents)}</td><td>${money(row.due_cents)}</td><td>${labels[row.payment_status]}${!editable && window.TrameliPix && row.customer_id===live.user.id && Number(row.due_cents)>0 ? `<button type="button" data-pix-order="${esc(row.order_id)}">Pagar com Pix</button>` : ''}${Number(row.refund_due_cents)>0?`<small>A devolver ${money(row.refund_due_cents)}</small>`:''}</td>${editable?`<td>${Number(row.due_cents)>0?`<input aria-label="Receber no pedido ${short(row.order_id)}" data-allocation="${esc(row.order_id)}" data-due="${row.due_cents}" inputmode="decimal" value="0,00">`:'—'}</td>`:''}</tr>`).join('')}</tbody></table></div>`;
+  const orderTable = (rows, editable=false, selectable=false) => `<div class="payment-table-wrap"><table class="payment-table"><thead><tr><th>Pedido / entrega</th><th>Valor</th><th>Pago</th><th>Em aberto</th><th>Financeiro</th>${editable?'<th>Quitar agora</th>':selectable?'<th>Selecionar</th>':''}</tr></thead><tbody>${rows.map(row=>`<tr><td>#${short(row.order_id)}<small>${dateLabel(row.delivery_date)} · ${esc(orderLabels[row.order_status] || row.order_status)}</small></td><td>${money(row.total_cents)}</td><td>${money(row.paid_cents)}</td><td>${money(row.due_cents)}</td><td>${labels[row.payment_status]}${!editable && window.TrameliPix && row.customer_id===live.user.id && Number(row.due_cents)>0 ? `<button type="button" data-pix-order="${esc(row.order_id)}">Pagar só este com Pix</button>` : ''}${Number(row.refund_due_cents)>0?`<small>A devolver ${money(row.refund_due_cents)}</small>`:''}</td>${editable?`<td>${Number(row.due_cents)>0?`<label class="payment-check"><input type="checkbox" data-allocation="${esc(row.order_id)}" data-due="${row.due_cents}"> ${money(row.due_cents)}</label>`:'—'}</td>`:selectable?`<td>${Number(row.due_cents)>0?`<input type="checkbox" data-pix-select="${esc(row.order_id)}" aria-label="Selecionar pedido ${short(row.order_id)} por ${money(row.due_cents)}">`:'—'}</td>`:''}</tr>`).join('')}</tbody></table></div>`;
   const statement = rows => {
     const ids=new Set(rows.map(row=>row.order_id));
     const entries=(api?.statement||[]).filter(entry=>ids.has(entry.order_id)).sort((a,b)=>b.recorded_at.localeCompare(a.recorded_at));
@@ -53,7 +53,7 @@ export function initPayments(live) {
   function customerContent() {
     // An operator opening the storefront must not see other customers in "Minha conta".
     const rows=api.balances.filter(row=>row.customer_id===live.user.id);
-    return rows.length?`${accountSummary(rows)}${window.TrameliPix && rows.some(row=>Number(row.due_cents)>0) ? '<button type="button" data-pix-order="all">Pagar todo o saldo com Pix</button>' : ''}${orderTable(rows)}${statement(rows)}`:'<p>Você ainda não tem pedidos vinculados a esta conta.</p>';
+    return rows.length?`${accountSummary(rows)}${window.TrameliPix && rows.some(row=>Number(row.due_cents)>0) ? '<div class="payment-actions"><button type="button" data-pix-order="selected">Pagar pedidos selecionados com Pix</button><button type="button" data-pix-order="all">Pagar todo o saldo com Pix</button></div>' : ''}${orderTable(rows,false,true)}${statement(rows)}`:'<p>Você ainda não tem pedidos vinculados a esta conta.</p>';
   }
   function operatorContent() {
     if (warning()) return `<p role="status">${esc(warning())}</p><button type="button" data-pay-refresh>Verificar novamente</button>`;
@@ -84,8 +84,8 @@ export function initPayments(live) {
     if(!rows.length) {notify('Selecione primeiro uma conta ou pedido manual.');return;}
     const existing=paymentId?api.payments.find(p=>p.id===paymentId):null;
     open(`<h2>${esc(groupLabel(rows[0]))}</h2>${accountSummary(rows)}<form data-payment-form="${existing?'identify':'receipt'}" data-payment-id="${existing?.id||''}">
-      <p>${existing?`Distribua exatamente ${money(existing.amount_cents)} entre os pedidos desta conta.`:'Informe quanto recebeu para cada pedido. Pode ser uma parte ou o saldo inteiro.'}</p>
-      ${orderTable(rows,true)}<button type="button" data-fill-balances>Preencher saldos em aberto</button><p>Total a registrar: <strong data-allocation-total>R$ 0,00</strong></p>
+      <p>${existing?`Selecione pedidos completos até totalizar exatamente ${money(existing.amount_cents)}.`:'Selecione um ou mais pedidos. Cada pedido será quitado pelo saldo integral atual.'}</p>
+      ${orderTable(rows,true)}<button type="button" data-fill-balances>Selecionar todos os saldos em aberto</button><p>Total a registrar: <strong data-allocation-total>R$ 0,00</strong></p>
       ${existing?'':`<label>Forma de recebimento<select name="method">${methodOptions}</select></label><label>Referência / comprovante (opcional)<input name="reference" maxlength="120"></label><label>Observação interna (opcional)<textarea name="note" maxlength="280"></textarea></label>`}
       <label class="payment-check"><input type="checkbox" required> Conferi o recebimento fora da Trameli.</label>${formFooter(existing?'Vincular recebimento':'Registrar pagamento')}</form>${statement(rows)}`);
   }
@@ -122,7 +122,7 @@ export function initPayments(live) {
       if(form.dataset.paymentForm==='refund') {
         name='trameli_refund_payment';args=requestArgs(form,{p_payment_id:form.dataset.paymentId,p_reason:form.elements.reason.value.trim()});
       } else {
-        const lines=[...form.querySelectorAll('[data-allocation]')].map(input=>({order_id:input.dataset.allocation,amount_cents:cents(input.value)})).filter(line=>line.amount_cents>0);
+        const lines=[...form.querySelectorAll('[data-allocation]:checked')].map(input=>({order_id:input.dataset.allocation,amount_cents:Number(input.dataset.due)}));
         if(form.dataset.paymentForm==='identify') {name='trameli_identify_payment';args={p_payment_id:form.dataset.paymentId,p_lines:lines};}
         else {
           const amount=form.dataset.paymentForm==='unknown'?cents(form.elements.amount.value):lines.reduce((s,l)=>s+l.amount_cents,0);
@@ -137,9 +137,9 @@ export function initPayments(live) {
     } catch(error){errorHost.textContent=error.message||'Não foi possível registrar. Verifique a conexão.';}
     finally{delete form.dataset.busy;button.disabled=false;}
   });
-  dialog.addEventListener('input',()=>{
+  dialog.addEventListener('change',()=>{
     const total=dialog.querySelector('[data-allocation-total]');if(!total)return;
-    try{total.textContent=money([...dialog.querySelectorAll('[data-allocation]')].reduce((s,input)=>s+cents(input.value),0));}catch{total.textContent='Confira os valores';}
+    total.textContent=money([...dialog.querySelectorAll('[data-allocation]:checked')].reduce((sum,input)=>sum+Number(input.dataset.due),0));
   });
   document.addEventListener('change',event=>{
     if(event.target.matches('[data-payment-group]'))selectedGroup=event.target.value;
@@ -148,7 +148,7 @@ export function initPayments(live) {
   document.addEventListener('click',async event=>{
     const button=event.target.closest('button');if(!button)return;
     if(button.matches('[data-payment-close]')){if(!dialog.querySelector('[data-busy]'))dialog.close();return;}
-    if(button.matches('[data-fill-balances]')){dialog.querySelectorAll('[data-allocation]').forEach(input=>input.value=(Number(input.dataset.due)/100).toFixed(2).replace('.',','));dialog.dispatchEvent(new Event('input'));return;}
+    if(button.matches('[data-fill-balances]')){dialog.querySelectorAll('[data-allocation]').forEach(input=>input.checked=true);dialog.dispatchEvent(new Event('change'));return;}
     if(button.matches('[data-pay-refresh]')){await refresh();await previewDay();return;}
     if(!button.matches('[data-pay-account],[data-pay-identify],[data-pay-unknown],[data-pay-refund],[data-day-preview],[data-day-close]'))return;
     if(warning()){notify(warning());return;}

@@ -148,7 +148,7 @@ function openForm(order = null) {
   formError.hidden = true;
   itemsHost.replaceChildren();
   form.elements.date.value = order?.date || dateInput.value;
-  form.elements.fee.value = order ? (order.feeCents / 100).toFixed(2).replace('.', ',') : '2,00';
+  form.elements.fee.value = '2,00';
   form.elements.customer.value = order?.customer || '';
   form.elements.phone.value = order?.phone || '';
   form.elements.address.value = order?.address || '';
@@ -219,7 +219,9 @@ function render() {
 
   list.innerHTML = filtered.map((order, index) => {
     const state = orderStatus(order);
-    return `<article class="order-card ${state !== 'received' ? 'order-card--checked' : ''}"><div class="order-card__number">${String(index + 1).padStart(2, '0')}</div><div class="order-card__main"><div class="order-card__title"><div><h3>${escapeHtml(order.customer)}</h3><p>${escapeHtml(order.address)}${order.phone ? ` · ${escapeHtml(order.phone)}` : ''}</p></div><span class="status ${state !== 'received' ? 'status--checked' : ''}">${statusLabels[state] || 'A conferir'}</span></div><ul>${order.items.map(item => `<li><strong>${escapeHtml(itemLabel(item))}</strong><span>${money(itemTotal(item))}</span></li>`).join('')}</ul>${order.notes ? `<p class="order-card__notes">Obs.: ${escapeHtml(order.notes)}</p>` : ''}<div class="order-card__footer"><span>Produtos ${money(orderSubtotal(order))} · Entrega ${money(order.feeCents)}</span><strong>${money(orderTotal(order))}</strong></div><div class="order-card__actions">${nextStatus[state] ? `<button type="button" data-action="toggle" data-id="${order.id}">Avançar para ${statusLabels[nextStatus[state]].toLowerCase()}</button>` : ''}${previousStatus[state] ? `<button type="button" data-action="back" data-id="${order.id}">Voltar para ${statusLabels[previousStatus[state]].toLowerCase()}</button>` : ''}${live ? `<button type="button" data-action="history" data-id="${order.id}">Histórico</button>` : ''}${!['delivered','cancelled'].includes(state) ? `<button type="button" data-action="edit" data-id="${order.id}">Editar</button><button type="button" data-action="delete" data-id="${order.id}">Cancelar</button>` : ''}</div></div></article>`;
+    const master = !live || live.role === 'master';
+    const canCorrect = state === 'received' || master;
+    return `<article class="order-card ${state !== 'received' ? 'order-card--checked' : ''}"><div class="order-card__number">${String(index + 1).padStart(2, '0')}</div><div class="order-card__main"><div class="order-card__title"><div><h3>${escapeHtml(order.customer)}</h3><p>${escapeHtml(order.address)}${order.phone ? ` · ${escapeHtml(order.phone)}` : ''}</p></div><span class="status ${state !== 'received' ? 'status--checked' : ''}">${statusLabels[state] || 'A conferir'}</span></div><ul>${order.items.map(item => `<li><strong>${escapeHtml(itemLabel(item))}</strong><span>${money(itemTotal(item))}</span></li>`).join('')}</ul>${order.paymentMethod && order.paymentMethod !== 'unspecified' ? `<p class="order-card__notes">Pagamento pretendido: ${escapeHtml({pix_manual:'Pix',cash:'Dinheiro',bank:'Transferência',other:'A combinar'}[order.paymentMethod] || order.paymentMethod)}</p>` : ''}${order.notes ? `<p class="order-card__notes">Obs.: ${escapeHtml(order.notes)}</p>` : ''}<div class="order-card__footer"><span>Produtos ${money(orderSubtotal(order))} · Entrega ${money(order.feeCents)}</span><strong>${money(orderTotal(order))}</strong></div><div class="order-card__actions">${nextStatus[state] ? `<button type="button" data-action="toggle" data-id="${order.id}">Avançar para ${statusLabels[nextStatus[state]].toLowerCase()}</button>` : ''}${previousStatus[state] && master ? `<button type="button" data-action="back" data-id="${order.id}">Voltar para ${statusLabels[previousStatus[state]].toLowerCase()}</button>` : ''}${live ? `<button type="button" data-action="history" data-id="${order.id}">Histórico</button>` : ''}${!['delivered','cancelled'].includes(state) && canCorrect ? `<button type="button" data-action="edit" data-id="${order.id}">Editar</button><button type="button" data-action="delete" data-id="${order.id}">Cancelar</button>` : ''}</div></div></article>`;
   }).join('');
 }
 
@@ -269,7 +271,7 @@ form.addEventListener('submit', async event => {
   event.preventDefault();
   if (submitting) return;
   const items = formItems();
-  const feeCents = parseMoney(form.elements.fee.value);
+  const feeCents = 200;
   const customer = form.elements.customer.value.trim();
   const address = form.elements.address.value.trim();
   if (!customer || !address || !form.elements.date.value || feeCents === null || !items.length || items.some(item => !item.name || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 999 || item.priceCents === null || (item.weightGrams !== undefined && (!Number.isInteger(item.weightGrams) || item.weightGrams < 50 || item.weightGrams > 4950 || item.weightGrams % 50 !== 0)))) {

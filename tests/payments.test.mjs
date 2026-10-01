@@ -13,12 +13,13 @@ try {
     grant usage on schema auth to authenticated; grant execute on function auth.uid() to authenticated;`);
   const dir = new URL('../supabase/migrations/', import.meta.url);
   for (const file of (await readdir(dir)).filter(f => /00[1-7]_.*\.sql$/.test(f)).sort()) await db.exec(await readFile(new URL(file, dir), 'utf8'));
+  await db.exec(await readFile(new URL('20261001130152_approved_business_rules.sql', dir), 'utf8'));
   await db.query('insert into auth.users(id) values($1),($2),($3)', [op,a,b]);
   await db.query("insert into public.trameli_operators(user_id,role) values($1,'master')", [op]);
   const today = (await db.query("select (now() at time zone 'America/Sao_Paulo')::date::text as day")).rows[0].day;
   const makeOrder = async customer => (await db.query(`insert into public.trameli_orders(customer_id,source,customer_name,address,delivery_date,items,subtotal_cents,fee_cents)
     values($1,'operator','Cliente teste','Endereço teste',$2,$3::jsonb,1000,200) returning id`, [customer,today,JSON.stringify([{name:'Teste',quantity:1,priceCents:1000}])])).rows[0].id;
-  const o1=await makeOrder(a), o2=await makeOrder(a), o3=await makeOrder(b), manual=await makeOrder(null), manual2=await makeOrder(null);
+  const o1=await makeOrder(a), o2=await makeOrder(a), o3=await makeOrder(b), cross=await makeOrder(a), manual=await makeOrder(null), manual2=await makeOrder(null);
   const user = async id => { await db.exec('reset role; set role authenticated'); await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]); };
   const balance = async id => (await db.query('select * from public.trameli_payment_balances() where order_id=$1',[id])).rows[0];
   const record = async (amount, lines, key=randomUUID()) => (await db.query("select public.trameli_record_payment($1,$2,'pix_manual','comprovante','nota interna',$3::jsonb) as id",[key,amount,JSON.stringify(lines)])).rows[0].id;
@@ -29,27 +30,24 @@ try {
   await assert.rejects(db.query('select public.trameli_day_snapshot($1)',[today]),/restrito/);
   await assert.rejects(db.query('select public.trameli_allocate_payment($1,$2)',[randomUUID(),'[]']),/permission denied/);
   await user(op);
-  const key=randomUUID(), lines=[{order_id:o1,amount_cents:500}];
-  const p1=await record(500,lines,key);
-  assert.equal(await record(500,lines,key),p1);
-  await assert.rejects(record(501,lines,key),/Identificador/);
-  assert.equal((await balance(o1)).payment_status,'partial');
-  assert.equal(Number((await balance(o1)).due_cents),700);
-  await assert.rejects(record(701,[{order_id:o1,amount_cents:701}]),/maior que/);
-  await assert.rejects(record(200,[{order_id:o1,amount_cents:100},{order_id:o3,amount_cents:100}]),/mesma conta/);
-  await assert.rejects(record(200,[{order_id:manual,amount_cents:100},{order_id:manual2,amount_cents:100}]),/mesma conta/);
-  await assert.rejects(record(200,[{order_id:o1,amount_cents:100}]),/distribuição/);
+  await assert.rejects(record(500,[{order_id:o1,amount_cents:500}]),/saldo integral/);
+  const key=randomUUID(), lines=[{order_id:o1,amount_cents:1200},{order_id:o2,amount_cents:1200}];
+  const p1=await record(2400,lines,key);
+  assert.equal(await record(2400,lines,key),p1);
+  await assert.rejects(record(2401,lines,key),/Identificador/);
+  await assert.rejects(record(2400,[{order_id:cross,amount_cents:1200},{order_id:o3,amount_cents:1200}]),/mesma conta/);
+  await assert.rejects(record(2400,[{order_id:manual,amount_cents:1200},{order_id:manual2,amount_cents:1200}]),/mesma conta/);
+  await assert.rejects(record(1300,[{order_id:o3,amount_cents:1200}]),/distribuição/);
   assert.equal((await db.query('select count(*)::int n from public.trameli_payments')).rows[0].n,1);
-  const p2=await record(1900,[{order_id:o1,amount_cents:700},{order_id:o2,amount_cents:1200}]);
   assert.equal((await balance(o1)).payment_status,'paid');
   assert.equal((await balance(o2)).payment_status,'paid');
-  const unknown=await record(300,[]);
-  await db.query('select public.trameli_identify_payment($1,$2::jsonb)',[unknown,JSON.stringify([{order_id:o3,amount_cents:300}])]);
-  await assert.rejects(db.query('select public.trameli_identify_payment($1,$2::jsonb)',[unknown,JSON.stringify([{order_id:o3,amount_cents:300}])]),/já vinculado/);
+  const unknown=await record(1200,[]);
+  await db.query('select public.trameli_identify_payment($1,$2::jsonb)',[unknown,JSON.stringify([{order_id:o3,amount_cents:1200}])]);
+  await assert.rejects(db.query('select public.trameli_identify_payment($1,$2::jsonb)',[unknown,JSON.stringify([{order_id:o3,amount_cents:1200}])]),/já vinculado/);
   await user(a);
   assert.equal((await db.query('select * from public.trameli_payments')).rows.length,0);
   const statement=(await db.query('select * from public.trameli_payment_statement()')).rows;
-  assert.equal(statement.length,3);
+  assert.equal(statement.length,2);
   assert.ok(statement.every(row=>[o1,o2].includes(row.order_id)));
   assert.ok(statement.every(row=>!('note' in row)&&!('reference' in row)));
   await assert.rejects(db.query('delete from public.trameli_payment_allocations'),/permission denied/);
@@ -59,9 +57,9 @@ try {
   const close1=(await db.query('select public.trameli_close_day($1,$2) id',[closeKey,today])).rows[0].id;
   assert.equal((await db.query('select public.trameli_close_day($1,$2) id',[closeKey,today])).rows[0].id,close1);
   const snapshot=(await db.query('select snapshot from public.trameli_daily_closings where id=$1',[close1])).rows[0].snapshot;
-  assert.equal(snapshot.received_on_day_cents,2700);
+  assert.equal(snapshot.received_on_day_cents,3600);
   assert.equal(snapshot.profit_cents,null);
-  assert.equal(snapshot.missing_cost_items,5);
+  assert.equal(snapshot.missing_cost_items,6);
   // Operational transitions do not create payments. Cancellation instead flags money to return.
   await db.exec('reset role');
   await db.query("update public.trameli_orders set status='delivered' where id=$1",[manual]);
@@ -74,7 +72,6 @@ try {
   const refund=(await db.query('select public.trameli_refund_payment($1,$2,$3) id',[refundKey,p1,'Devolvido fora do sistema'])).rows[0].id;
   assert.equal((await db.query('select public.trameli_refund_payment($1,$2,$3) id',[refundKey,p1,'Devolvido fora do sistema'])).rows[0].id,refund);
   await assert.rejects(db.query('select public.trameli_refund_payment($1,$2,$3)',[randomUUID(),p1,'Devolução repetida']),/já estornado/);
-  await db.query('select public.trameli_refund_payment($1,$2,$3)',[randomUUID(),p2,'Devolvido integralmente']);
   assert.equal((await balance(o1)).payment_status,'refunded');
   assert.equal((await balance(o2)).payment_status,'refunded');
   assert.equal(Number((await balance(o2)).due_cents),1200);
@@ -84,5 +81,5 @@ try {
   await assert.rejects(db.query('delete from public.trameli_daily_closings'),/permission denied/);
   await db.exec('reset role; set role anon');
   await assert.rejects(db.query('select public.trameli_payment_balances()'),/permission denied/);
-  console.log('Pagamentos: RLS, parcial, múltiplos pedidos, não identificado, idempotência, estorno, cancelamento e fechamento imutável OK.');
+  console.log('Pagamentos: RLS, quitação integral, múltiplos pedidos, não identificado, idempotência, estorno, cancelamento e fechamento imutável OK.');
 } finally { await db.close(); }

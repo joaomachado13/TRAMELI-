@@ -3,14 +3,14 @@ import { spawn } from 'node:child_process';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { browserPath, headlessFlags } from './browser-path.mjs';
 
 // Run against an isolated, local-mode preview build: TRAMELI_TEST_URL=http://127.0.0.1:4183/ node tests/motion-ui.mjs
 const url = process.env.TRAMELI_TEST_URL;
 if (!url?.startsWith('http://127.0.0.1:')) throw new Error('Provide a localhost preview URL in TRAMELI_TEST_URL.');
-const edge = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
 const profile = await mkdtemp(join(tmpdir(), 'trameli-motion-'));
 const port = 9367;
-const browser = spawn(edge, ['--headless=new', '--disable-gpu', '--no-sandbox', '--no-first-run', '--force-prefers-reduced-motion=no-preference',
+const browser = spawn(browserPath(), [...headlessFlags, '--force-prefers-reduced-motion=no-preference',
   `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, `${url}#operacao`], { windowsHide: true, stdio: 'ignore' });
 const pause = ms => new Promise(done => setTimeout(done, ms));
 let socket;
@@ -64,6 +64,14 @@ try {
   await evaluate(`document.querySelector('#home-recent-orders').innerHTML='<tr><td>—</td><td>Rosilena Benedita Alves Machado</td><td>01/10/2026</td><td>A conferir</td><td>R$ 69,48</td></tr>'`);
   assert.ok(await evaluate(`(() => { const cell = document.querySelector('#home-recent-orders td:nth-child(2)'); const range = document.createRange(); range.selectNodeContents(cell); return [...range.getClientRects()].every(rect => rect.right <= cell.getBoundingClientRect().right + 1); })()`), 'Customer name overlaps the delivery column');
 
+  await evaluate('location.hash="#financeiro"');
+  await pause(300);
+  assert.equal(await evaluate('document.querySelectorAll("[data-finance-days]").length'), 3);
+  await evaluate(`document.querySelector('[data-finance-days="7"]').click()`);
+  assert.equal(await evaluate('(Date.parse(document.querySelector("#finance-to").value)-Date.parse(document.querySelector("#finance-from").value))/86400000'), 6);
+  await evaluate(`document.querySelector('[data-finance-days="15"]').click()`);
+  assert.equal(await evaluate('(Date.parse(document.querySelector("#finance-to").value)-Date.parse(document.querySelector("#finance-from").value))/86400000'), 14);
+
   await evaluate('location.hash="#loja"');
   for (let i = 0; i < 40 && !(await evaluate('!!document.querySelector(".portal-hero a")')); i++) await pause(100);
   await evaluate('document.querySelector(".portal-hero a").click()');
@@ -104,7 +112,7 @@ try {
   assert.equal(await evaluate('getComputedStyle(document.querySelector(".nav")).touchAction'), 'pan-y', 'Menu should only pan vertically on touch');
   await evaluate('document.querySelector(".menu-overlay").click()');
   assert.equal(await evaluate('document.body.classList.contains("menu-open")'), false, 'Portal menu did not close');
-  console.log('Rolagem, transições, portal, redução de movimento e mobile: OK');
+  console.log('Rolagem, transições, períodos financeiros, portal, redução de movimento e mobile: OK');
 } finally {
   socket?.close();
   browser.kill();

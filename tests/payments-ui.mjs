@@ -3,11 +3,12 @@ import { spawn } from 'node:child_process';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
+import { browserPath, headlessFlags } from './browser-path.mjs';
 const origin = process.env.TRAMELI_TEST_URL || 'http://127.0.0.1:4173/';
 if (!/^http:\/\/127\.0\.0\.1:\d+\/$/.test(origin)) throw new Error('Local Vite URL required');
 const profile = await mkdtemp(join(tmpdir(), 'trameli-payments-test-'));
 const port = 9373;
-const browser = spawn('C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe', ['--headless=new', '--disable-gpu', '--no-first-run', `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, `${origin}tests/payments-fixture.html`], { windowsHide: true, stdio: 'ignore' });
+const browser = spawn(browserPath(), [...headlessFlags, `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, `${origin}tests/payments-fixture.html`], { windowsHide: true, stdio: 'ignore' });
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 let socket;
 try {
@@ -46,11 +47,11 @@ try {
   await evaluate(`const select=document.querySelector('[data-payment-group]');select.value=paymentFixture.account;select.dispatchEvent(new Event('change',{bubbles:true}));document.querySelector('[data-pay-account]').click()`);
   for(let i=0;i<40&&!await evaluate('document.querySelector(".payment-dialog").open');i++)await pause(100);
   assert.match(await evaluate('document.querySelector(".payment-dialog").textContent'),/Em aberto/);
-  await evaluate(`const f=document.querySelector('[data-payment-form]');f.querySelector('[data-allocation]').value='4,00';f.querySelector('[type=checkbox]').checked=true;f.requestSubmit();f.requestSubmit();`);
+  await evaluate(`const f=document.querySelector('[data-payment-form]');f.querySelector('[data-allocation]').checked=true;f.querySelector('input[type=checkbox][required]').checked=true;f.requestSubmit();f.requestSubmit();`);
   for(let i=0;i<40&&await evaluate('document.querySelector(".payment-dialog").open');i++)await pause(100);
   assert.equal(await evaluate('paymentFixture.state.calls.filter(c=>c.name==="trameli_record_payment").length'),1);
-  assert.equal(await evaluate('paymentFixture.state.calls.find(c=>c.name==="trameli_record_payment").args.p_amount_cents'),400);
-  assert.match(await evaluate('document.querySelector("[data-payment-content]").textContent'),/8,00/);
+  assert.equal(await evaluate('paymentFixture.state.calls.find(c=>c.name==="trameli_record_payment").args.p_amount_cents'),1200);
+  assert.match(await evaluate('document.querySelector("[data-payment-content]").textContent'),/Pago/);
   await evaluate('document.querySelector("[data-pay-unknown]").click()');
   await evaluate(`{const form=document.querySelector('[data-payment-form]');form.elements.amount.value='3,00';form.querySelector('[type=checkbox]').checked=true;form.requestSubmit();}`);
   for(let i=0;i<40&&await evaluate('document.querySelector(".payment-dialog").open');i++)await pause(100);
@@ -66,13 +67,12 @@ try {
     const shot=await send('Page.captureScreenshot',{format:'png'});
     await writeFile(new URL(`../assets/crops/payments-${width}.png`,import.meta.url),Buffer.from(shot.data,'base64'));
   }
-  await evaluate('paymentFixture.render(true)');
+  await evaluate('paymentFixture.state.balances[0].paid_cents=400;paymentFixture.state.balances[0].due_cents=800;paymentFixture.state.balances[0].payment_status="partial";paymentFixture.render(true)');
   assert.match(await evaluate('document.body.textContent'),/Minha conta corrente/);
   assert.match(await evaluate('document.body.textContent'),/Parcialmente pago/);
   assert.equal(await evaluate('!!document.querySelector("[data-pay-refund]")'),false);
   const beforePix=await evaluate('paymentFixture.state.calls.length');
-  await evaluate('paymentFixture.state.balances.push({...paymentFixture.state.balances[0],order_id:"other-order",customer_id:"other-customer",due_cents:5000})');
-  await evaluate('document.querySelector("[data-pix-order]").click()');
+  await evaluate('paymentFixture.state.balances.push({...paymentFixture.state.balances[0],order_id:"other-order",due_cents:5000,paid_cents:0,payment_status:"open"});document.querySelector(`[data-pix-select="${paymentFixture.order}"]`).checked=true;document.querySelector(`[data-pix-order="selected"]`).click()');
   for(let i=0;i<40&&!await evaluate('!!document.querySelector(".pix-qr")');i++)await pause(100);
   assert.match(await evaluate('document.querySelector(".pix-amount").textContent'),/8,00/);
   assert.equal(await evaluate('document.querySelector(".pix-qr").complete'),true);
@@ -82,11 +82,11 @@ try {
   assert.ok(await evaluate('document.querySelector(".pix-dialog").scrollWidth<=document.querySelector(".pix-dialog").clientWidth'),'QR dialog fits mobile');
   const pixShot=await send('Page.captureScreenshot',{format:'png'});
   await writeFile(new URL('../assets/crops/pix-390.png',import.meta.url),Buffer.from(pixShot.data,'base64'));
-  await evaluate('document.querySelector("[data-pix-close]").click();paymentFixture.state.balances[0].due_cents=0;document.querySelector("[data-pix-order]").click()');
+  await evaluate('document.querySelector("[data-pix-close]").click();paymentFixture.state.balances[0].due_cents=0;document.querySelector(`[data-pix-order="${paymentFixture.order}"]`).click()');
   await pause(150);
   assert.equal(await evaluate('!!document.querySelector(".pix-qr")'),false);
   assert.match(await evaluate('document.querySelector(".pix-dialog").textContent'),/Não há saldo/);
-  await evaluate('document.querySelector("[data-pix-close]").click();paymentFixture.state.balances[0].due_cents=800;paymentFixture.state.pix.enabled=false;document.querySelector("[data-pix-order]").click()');
+  await evaluate('document.querySelector("[data-pix-close]").click();paymentFixture.state.balances[0].due_cents=800;paymentFixture.state.pix.enabled=false;document.querySelector(`[data-pix-order="${paymentFixture.order}"]`).click()');
   await pause(150);
   assert.match(await evaluate('document.querySelector(".pix-dialog").textContent'),/não foi habilitado/);
   await evaluate('document.querySelector("[data-pix-close]").click();paymentFixture.render()');
@@ -103,8 +103,8 @@ try {
   assert.equal(await evaluate('document.querySelector("[data-day-close]").disabled'),true);
   await evaluate('paymentFixture.state.missing=false;paymentFixture.state.fail=true;paymentFixture.render()');
   assert.equal(await evaluate('!!document.querySelector("[data-pay-account]")'),false);
-  console.log('UI pagamentos: parcial, envio duplo bloqueado, não identificado, fechamento, extrato, falha de conexão e mobile OK.');
-  console.log('UI Pix: saldo parcial atualizado, QR local, sem baixa automática, bloqueio de saldo zero, desativação, conferência obrigatória e layout mobile OK.');
+  console.log('UI pagamentos: quitação integral, envio duplo bloqueado, não identificado, fechamento, extrato, falha de conexão e mobile OK.');
+  console.log('UI Pix: seleção de pedidos, saldo atualizado, QR local, sem baixa automática, bloqueio de saldo zero, desativação, conferência obrigatória e layout mobile OK.');
 } finally {
   socket?.close();browser.kill();await pause(400);
   if(resolve(profile).startsWith(resolve(tmpdir())+sep)&&profile.includes('trameli-payments-test-'))await rm(profile,{recursive:true,force:true,maxRetries:3}).catch(()=>{});
