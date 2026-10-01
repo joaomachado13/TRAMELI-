@@ -67,8 +67,12 @@ jobs:
           supabase db dump --db-url "$db_url" --file "$work/schema.sql"
           supabase db dump --db-url "$db_url" --data-only --use-copy -x storage.buckets_vectors -x storage.vector_indexes --file "$work/data.sql"
           supabase db dump --db-url "$db_url" --data-only --use-copy --schema auth --file "$work/auth-data.sql"
-          supabase db dump --db-url "$db_url" --schema supabase_migrations --file "$work/history-schema.sql"
-          supabase db dump --db-url "$db_url" --data-only --use-copy --schema supabase_migrations --file "$work/history-data.sql"
+          if supabase db dump --db-url "$db_url" --schema supabase_migrations --file "$work/history-schema.sql"; then
+            supabase db dump --db-url "$db_url" --data-only --use-copy --schema supabase_migrations --file "$work/history-data.sql"
+          else
+            printf '%s\n' '-- O banco de origem não possui o schema opcional supabase_migrations.' > "$work/history-schema.sql"
+            printf '%s\n' '-- Sem histórico de migrations no banco de origem.' > "$work/history-data.sql"
+          fi
 
           for name in roles schema data auth-data history-schema history-data; do
             test -s "$work/$name.sql"
