@@ -23,6 +23,7 @@ export default defineConfig(({ command, mode }) => {
     });
   }
   return {
+    base: mode === 'github-pages' ? '/TRAMELI-/' : '/',
     optimizeDeps: { noDiscovery: true, include: ['qrcode'] },
     build: { rollupOptions: { input } },
     plugins: [{
