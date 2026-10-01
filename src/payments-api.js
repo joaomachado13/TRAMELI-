@@ -1,7 +1,7 @@
 export class PaymentsApi {
   constructor(live) {
     this.live = live; this.ready = null; this.error = ''; this.pending = null;
-    this.balances = []; this.statement = []; this.payments = []; this.allocations = [];
+    this.balances = []; this.statement = []; this.payments = []; this.allocations = []; this.intents = [];
   }
   async rows(factory, sort) {
     const rows = [];
@@ -23,7 +23,10 @@ export class PaymentsApi {
         const statement = await this.rows(() => c.rpc('trameli_payment_statement'), ['payment_id', 'order_id']);
         const payments = this.live.operator ? await this.rows(() => c.from('trameli_payments').select('id,kind,amount_cents,method,reference,note,reverses_id,recorded_at'), ['id']) : [];
         const allocations = this.live.operator ? await this.rows(() => c.from('trameli_payment_allocations').select('payment_id,order_id,amount_cents'), ['payment_id', 'order_id']) : [];
-        Object.assign(this, { balances, statement, payments, allocations, ready: true, error: '' });
+        const intentResult = await c.from('trameli_payment_intents').select('id,customer_id,order_ids,amount_cents,status,created_at,resolved_at').order('created_at',{ascending:false}).limit(500);
+        if (intentResult.error && intentResult.error.code !== 'PGRST205') throw intentResult.error;
+        const intents = intentResult.error ? [] : intentResult.data;
+        Object.assign(this, { balances, statement, payments, allocations, intents, ready: true, error: '' });
         window.dispatchEvent(new Event('trameli:payments-changed'));
       } catch (error) {
         this.ready = ['PGRST202', 'PGRST205'].includes(error.code) ? false : this.ready;

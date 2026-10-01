@@ -1,6 +1,6 @@
 # Recebimentos, conta corrente e fechamento diário
 
-Implementados no código em 30/09/2026 e ajustados às regras aprovadas em 01/10/2026. **A auditoria somente leitura confirmou 007, 008 e 009 no Supabase real; a regra de quitação integral da migration 011 está validada apenas localmente e ainda não foi aplicada em produção.**
+Implementados no código em 30/09/2026 e ajustados às regras aprovadas em 01/10/2026. As migrations 010 e 011 foram aplicadas no Supabase real; a migration 012 adiciona os recursos operacionais gratuitos descritos abaixo.
 Não há provedor Pix contratado, cobrança bancária criada, webhook ativo ou transferência de dinheiro.
 Pix manual com QR e Copia e Cola está em `PIX-MANUAL.md`. Integração paga não faz parte da opção atual.
 
@@ -52,7 +52,7 @@ devolução, cancelamento, preservação de fechamento, formulário e tela peque
 ## Próximas etapas do texto de prioridades
 
 Recompra, favoritos e frequentes estão descritos em `RECOMPRA.md`.
-Ainda não entregues: Pix integrado ao provedor,
-aviso instantâneo, indisponibilidade por período/substituição, central completa de pendências
-e histórico de alterações do preço/custo do catálogo. O bloqueio de edição do cliente após
-conferência e o registro de preços/custos no pedido já existem; não equivalem ao histórico completo do catálogo.
+Entregues sem provedor pago na migration 012: aviso “já paguei” que **não confirma pagamento**,
+atualização em tempo real dentro do sistema, indisponibilidade por período com substituto apenas
+sugerido, central de pendências e histórico de preço/custo do catálogo. Continua fora do escopo
+o Pix integrado a um provedor, webhook bancário e qualquer confirmação automática de recebimento.

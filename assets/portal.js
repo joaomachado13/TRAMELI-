@@ -14,7 +14,9 @@
   const tomorrow = () => { const date = new Date(); date.setDate(date.getDate() + 1); return dateKey(date); };
   const formatDate = value => new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
   const readJson = (key, fallback) => { try { return JSON.parse(localStorage.getItem(key) || 'null') ?? fallback; } catch { return fallback; } };
-  const products = () => window.TrameliCatalog?.list().filter(item => item.active && Number.isSafeInteger(item.priceCents) && item.priceCents >= 0) || [];
+  const allProducts = () => window.TrameliCatalog?.list().filter(item => item.active && Number.isSafeInteger(item.priceCents) && item.priceCents >= 0) || [];
+  const unavailableFor = (item, date = tomorrow()) => Boolean(item.unavailableFrom && item.unavailableUntil && date >= item.unavailableFrom && date <= item.unavailableUntil);
+  const products = () => allProducts().filter(item => !unavailableFor(item));
   const weighted = product => product.unit === 'kg';
   const linePrice = (product, quantity) => weighted(product)
     ? window.TrameliOrderMath.weightPriceCents(product.priceCents, quantity * 50)
@@ -122,9 +124,11 @@
   }
   function catalog() {
     const all = products();
+    const unavailable = allProducts().filter(item => unavailableFor(item));
     const categories = ['Todos', ...new Set(all.map(product => product.category || 'Outros'))];
     const visible = filteredProducts();
-    return `<section class="portal-hero"><div><span class="portal-eyebrow">SEU CAFÉ DA MANHÃ, SEM COMPLICAÇÃO</span><h1>O que vai para a sua mesa <em>amanhã?</em></h1><p>Escolha seus favoritos em poucos toques. Entrega de amanhã: ${formatDate(tomorrow())}.</p><a href="#portal-products">Escolher produtos ↓</a></div><div class="portal-hero__accent" aria-hidden="true"><span>☀</span><strong>Bom dia<br>começa aqui.</strong></div></section><section id="portal-products" class="portal-section"><div class="portal-section__head"><div><span class="portal-eyebrow">FEITO PARA O SEU DIA</span><h2>Produtos da padaria</h2></div><span>${all.length} opções</span></div><label class="portal-search">Buscar produto<input id="portal-search" type="search" value="${escapeHtml(query)}" placeholder="Pão, bolo, suco..."></label><div class="portal-categories" aria-label="Categorias">${categories.map(item => `<button type="button" data-category="${escapeHtml(item)}" aria-pressed="${String(item === category)}">${escapeHtml(item)}</button>`).join('')}</div>${personalFilters()}<div class="portal-grid" id="portal-grid">${visible.length ? visible.map(card).join('') : '<p class="portal-empty">Não encontramos produtos nessa busca.</p>'}</div></section>`;
+    const notice=unavailable.length?`<aside class="portal-review-notice" role="status"><strong>Indisponíveis para amanhã</strong><ul>${unavailable.map(item=>{const substitute=allProducts().find(candidate=>candidate.id===item.substituteProductId&&!unavailableFor(candidate));return `<li>${escapeHtml(item.name)}${substitute?` — sugestão: ${escapeHtml(substitute.name)}`:''}</li>`;}).join('')}</ul><p>A troca não é automática; escolha a sugestão no catálogo se desejar.</p></aside>`:'';
+    return `<section class="portal-hero"><div><span class="portal-eyebrow">SEU CAFÉ DA MANHÃ, SEM COMPLICAÇÃO</span><h1>O que vai para a sua mesa <em>amanhã?</em></h1><p>Escolha seus favoritos em poucos toques. Entrega de amanhã: ${formatDate(tomorrow())}.</p><a href="#portal-products">Escolher produtos ↓</a></div><div class="portal-hero__accent" aria-hidden="true"><span>☀</span><strong>Bom dia<br>começa aqui.</strong></div></section><section id="portal-products" class="portal-section">${notice}<div class="portal-section__head"><div><span class="portal-eyebrow">FEITO PARA O SEU DIA</span><h2>Produtos da padaria</h2></div><span>${all.length} opções</span></div><label class="portal-search">Buscar produto<input id="portal-search" type="search" value="${escapeHtml(query)}" placeholder="Pão, bolo, suco..."></label><div class="portal-categories" aria-label="Categorias">${categories.map(item => `<button type="button" data-category="${escapeHtml(item)}" aria-pressed="${String(item === category)}">${escapeHtml(item)}</button>`).join('')}</div>${personalFilters()}<div class="portal-grid" id="portal-grid">${visible.length ? visible.map(card).join('') : '<p class="portal-empty">Não encontramos produtos nessa busca.</p>'}</div></section>`;
   }
   function cartView() {
     const lines = cartLines();

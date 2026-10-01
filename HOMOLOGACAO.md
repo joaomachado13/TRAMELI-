@@ -4,9 +4,9 @@ Status em 01/10/2026: suíte local aprovada; homologação real bloqueada pelos 
 
 ## Portões antes do piloto
 
-- [ ] Primeiro backup criptografado copiado para o Google Drive.
+- [x] Primeiro backup criptografado copiado para o Google Drive em 01/10/2026.
 - [ ] Restauração aprovada em projeto Supabase descartável conforme `RESTAURACAO.md`.
-- [ ] Histórico remoto reconciliado para migrations 001–009 e migrations 010–011 aplicadas.
+- [ ] Histórico remoto reconciliado para migrations 001–009; migrations 010–012 aplicadas.
 - [ ] Advisor de segurança sem funções internas expostas; proteção de senhas vazadas habilitada.
 - [ ] URL de staging HTTPS e redirects do Auth configurados.
 - [ ] SMTP próprio testado para cadastro e recuperação de senha.

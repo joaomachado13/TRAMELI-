@@ -21,6 +21,8 @@ const mapProduct = (row, cost) => ({
   sourceRow: row.source_row, reviewReason: row.review_reason,
   costCents: cost?.unit_cost_cents ?? null, supplierName: cost?.supplier_name || '',
   costEstimated: Boolean(cost?.estimated),
+  unavailableFrom: row.unavailable_from || null, unavailableUntil: row.unavailable_until || null,
+  substituteProductId: row.substitute_product_id || null,
 });
 
 export class LiveData {
@@ -43,6 +45,7 @@ export class LiveData {
     this.lastOrderSync = null;
     this.costSummaryCache = new Map();
     this.catalogUpgradeReady = false;
+    this.realtimeChannel = null;
   }
 
   async preflight() {
@@ -121,8 +124,15 @@ export class LiveData {
       p_unit: product.unit, p_image_url: product.image || null,
       p_price_cents: product.priceCents, p_active: product.active,
     };
-    const { error } = await this.client.rpc(this.catalogUpgradeReady ? 'trameli_save_product_full' : 'trameli_save_product',
+    const operationalArgs = { ...args, p_cost_cents: product.costCents ?? null,
+      p_supplier_name: product.supplierName || '', p_unavailable_from: product.unavailableFrom || null,
+      p_unavailable_until: product.unavailableUntil || null,
+      p_substitute_product_id: product.substituteProductId || null };
+    let result = await this.client.rpc('trameli_save_product_operational', operationalArgs);
+    if (result.error?.code === 'PGRST202') result = await this.client.rpc(
+      this.catalogUpgradeReady ? 'trameli_save_product_full' : 'trameli_save_product',
       this.catalogUpgradeReady ? { ...args, p_cost_cents: product.costCents ?? null, p_supplier_name: product.supplierName || '' } : args);
+    const { error } = result;
     if (error) throw error;
     this.costSummaryCache.clear();
     await this.load(true);
@@ -184,6 +194,32 @@ export class LiveData {
       .eq('order_id', orderId).order('happened_at', { ascending: false }).limit(100);
     if (error) throw error;
     return data;
+  }
+
+  async productEvents(productId) {
+    if (!this.operator) throw new Error('Acesso restrito à operação.');
+    const { data, error } = await this.client.from('trameli_product_events')
+      .select('id,event_kind,happened_at,before_state,after_state')
+      .eq('product_id', productId).order('happened_at', { ascending: false }).limit(100);
+    if (error) throw error;
+    return data;
+  }
+
+  startRealtime() {
+    if (this.realtimeChannel) return;
+    let refreshTimer;
+    const changed = payload => {
+      clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(() => this.load(true).catch(() => {}), 150);
+      window.dispatchEvent(new CustomEvent('trameli:remote-change', { detail: payload }));
+    };
+    this.realtimeChannel = this.client.channel(`trameli-live-${this.user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'trameli_orders' }, changed)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'trameli_products' }, changed)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'trameli_payment_intents' }, payload => {
+        window.dispatchEvent(new CustomEvent('trameli:remote-change', { detail: payload }));
+        window.dispatchEvent(new Event('trameli:payments-refresh'));
+      }).subscribe();
   }
 
   async costSummary(from = null, to = null) {

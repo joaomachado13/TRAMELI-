@@ -76,7 +76,7 @@ on conflict do nothing;
 5. Antes de automatizar, decripte em uma pasta temporária protegida e restaure em **outro projeto Supabase de teste**, seguindo [RESTAURACAO.md](RESTAURACAO.md). Teste login, leitura de pedidos e integridade das referências entre `auth.users`, perfis e pedidos. Apague os SQL temporários ao fim. A restauração de autenticação pode exigir ajustes manuais no projeto de destino; não trate uma exportação bem-sucedida como recuperação comprovada.
 6. Só depois defina destino off-site, periodicidade diária, retenção e alerta para falha. O arquivo local não é backup contra falha, roubo ou perda do próprio computador.
 
-Destino escolhido: **Google Drive, sem instalar o Drive para computador no PC da empresa**. O script PowerShell acima fica apenas como alternativa manual em um computador confiável. O fluxo principal preparado é `.github/workflows/backup-drive.yml`: uma execução manual do GitHub Actions exporta o banco em um runner temporário, criptografa antes de enviar, confere os arquivos no Drive e nunca adiciona dados ao Git. **Ainda não foi ativado nem testado com credenciais reais.**
+Destino escolhido: **Google Drive, sem instalar o Drive para computador no PC da empresa**. O script PowerShell acima fica apenas como alternativa manual em um computador confiável. O fluxo principal é `.github/workflows/backup-drive.yml`: uma execução manual do GitHub Actions exporta o banco em um runner temporário, criptografa antes de enviar, confere os arquivos no Drive e nunca adiciona dados ao Git. A primeira execução real foi concluída em 01/10/2026; a restauração em projeto descartável continua pendente.
 
 Para ativar o fluxo remoto:
 

@@ -5,7 +5,7 @@ const screenView = document.getElementById('screen-view');
 const portalView = document.getElementById('portal-view');
 const appShell = document.querySelector('.app-shell');
 const navigation = [...document.querySelectorAll('.nav__item')];
-const routes = new Set(['operacao', 'inicio', 'pedidos', 'clientes', 'produtos', 'agenda', 'financeiro', 'relatorios', 'configuracoes', 'loja']);
+const routes = new Set(['operacao', 'inicio', 'pendencias', 'pedidos', 'clientes', 'produtos', 'agenda', 'financeiro', 'relatorios', 'configuracoes', 'loja']);
 const systemReducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 let userReducedMotion = false;
 try { userReducedMotion = localStorage.getItem('trameli-reduced-motion') === 'true'; } catch { /* Storage may be unavailable on file URLs. */ }
@@ -72,6 +72,9 @@ function updateOverview() {
   const dueOrders = balances?.filter(row => Number(row.due_cents) > 0).length || 0;
   const allocations = new Set(api?.allocations.map(row => row.payment_id) || []);
   const unknownReceipts = api?.ready ? api.payments.filter(row => row.kind === 'receipt' && !allocations.has(row.id) && !api.payments.some(refund => refund.reverses_id === row.id)).length : 0;
+  const paymentIntents = api?.ready ? (api.intents || []).filter(item => item.status === 'pending').length : 0;
+  const missingCosts = live?.operator ? (window.TrameliCatalog?.list() || []).filter(item => item.active && item.costCents == null).length : 0;
+  const attentionTotal = pending + todayDeliveries.length + dueOrders + unknownReceipts + paymentIntents + missingCosts;
   document.getElementById('operational-message').textContent = nextDay.length
     ? `${nextDay.length} ${nextDay.length === 1 ? 'pedido registrado' : 'pedidos registrados'} para amanhã.`
     : 'Ainda não há pedidos registrados para amanhã.';
@@ -87,11 +90,11 @@ function updateOverview() {
   document.getElementById('attention-finance').textContent = balances ? `${currency(due)} em aberto` : api?.error || 'Saldos indisponíveis';
   document.getElementById('attention-deliveries').textContent = `${todayDeliveries.length} ${todayDeliveries.length === 1 ? 'entrega' : 'entregas'}`;
   const count = document.getElementById('nav-pending-count');
-  count.textContent = pending;
-  count.hidden = pending === 0;
-  count.setAttribute('aria-label', `${pending} pedidos precisam de atenção`);
-  document.querySelector('.notification-button').setAttribute('aria-label', pending ? `${pending} pedidos precisam de atenção` : 'Nenhum pedido pendente');
-  document.querySelector('.notification-dot').hidden = pending === 0;
+  count.textContent = attentionTotal;
+  count.hidden = attentionTotal === 0;
+  count.setAttribute('aria-label', `${attentionTotal} pendências precisam de atenção`);
+  document.querySelector('.notification-button').setAttribute('aria-label', attentionTotal ? `${attentionTotal} pendências precisam de atenção` : 'Nenhuma pendência');
+  document.querySelector('.notification-dot').hidden = attentionTotal === 0;
   document.querySelector('.attention-strip').hidden = pending === 0 && !todayDeliveries.length && !dueOrders && !unknownReceipts && !!balances;
   const rows = document.getElementById('home-recent-orders');
   rows.innerHTML = nextDay.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5).map(order => `<tr><td>#${escapeHtml(order.id.slice(0, 8))}</td><td>${escapeHtml(order.customer)}</td><td>${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR')}</td><td>${orderStateLabel(order)}</td><td>${currency(orderTotal(order))}<small>Inclui ${currency(order.feeCents || 0)} de entrega</small></td></tr>`).join('');
@@ -115,16 +118,18 @@ function updateOverview() {
   if (todayDeliveries.length) actions.push(`<li><a href="#agenda">${todayDeliveries.length} ${todayDeliveries.length === 1 ? 'entrega prevista' : 'entregas previstas'} para hoje →</a></li>`);
   if (dueOrders) actions.push(`<li><a href="#financeiro">${dueOrders} ${dueOrders === 1 ? 'pedido em aberto' : 'pedidos em aberto'} · ${currency(due)} →</a></li>`);
   if (unknownReceipts) actions.push(`<li><a href="#financeiro">${unknownReceipts} ${unknownReceipts === 1 ? 'recebimento sem identificação' : 'recebimentos sem identificação'} →</a></li>`);
+  if (paymentIntents) actions.push(`<li><a href="#financeiro">${paymentIntents} ${paymentIntents === 1 ? 'aviso “já paguei” para conferir' : 'avisos “já paguei” para conferir'} →</a></li>`);
+  if (missingCosts) actions.push(`<li><a href="#produtos">${missingCosts} ${missingCosts === 1 ? 'produto sem custo' : 'produtos sem custo'} →</a></li>`);
   if (!balances) actions.push('<li><a href="#financeiro">Conferir disponibilidade dos saldos no Financeiro →</a></li>');
   document.getElementById('home-next-actions').innerHTML = actions.length ? `<ul class="home-next-list">${actions.join('')}</ul>` : '<div class="home-next-list"><p>Nenhuma pendência nos pedidos e recebimentos atuais.</p></div>';
 }
 updateOverview();
 window.addEventListener('trameli:orders-changed', () => {
   updateOverview();
-  if (['#pedidos', '#clientes', '#agenda', '#financeiro', '#relatorios'].includes(location.hash)) showRoute(true);
+  if (['#pendencias', '#pedidos', '#clientes', '#agenda', '#financeiro', '#relatorios'].includes(location.hash)) showRoute(true);
 });
 window.addEventListener('trameli:payments-changed', updateOverview);
-window.addEventListener('trameli:catalog-changed', () => { if (location.hash === '#produtos') showRoute(true); });
+window.addEventListener('trameli:catalog-changed', () => { updateOverview(); if (['#produtos','#pendencias'].includes(location.hash)) showRoute(true); });
 window.addEventListener('trameli:clients-changed', () => { if (location.hash === '#clientes') showRoute(true); });
 
 function intro(eyebrow, title, description) {
@@ -141,6 +146,24 @@ function empty(message, link = '') {
 }
 
 const pages = {
+  pendencias: () => {
+    const received=activeOrders().filter(order=>orderState(order)==='received');
+    const api=window.TrameliPayments?.api;
+    const due=(api?.balances||[]).filter(row=>Number(row.due_cents)>0);
+    const allocated=new Set((api?.allocations||[]).map(row=>row.payment_id));
+    const unknown=(api?.payments||[]).filter(row=>row.kind==='receipt'&&!allocated.has(row.id)&&!(api?.payments||[]).some(refund=>refund.reverses_id===row.id));
+    const intents=(api?.intents||[]).filter(item=>item.status==='pending');
+    const products=window.TrameliCatalog?.list()||[];
+    const missing=products.filter(item=>item.active&&item.costCents==null);
+    const day=tomorrow();
+    const unavailable=products.filter(item=>item.active&&item.unavailableFrom&&day>=item.unavailableFrom&&day<=item.unavailableUntil);
+    const list=(items,emptyText)=>items.length?`<ul class="home-next-list">${items.join('')}</ul>`:`<p>${emptyText}</p>`;
+    return `${intro('Atenção centralizada','Pendências','Tudo que exige conferência humana, sem transformar aviso em confirmação automática.')}
+      <div class="screen-metrics">${metric('Pedidos a conferir',received.length,'Todos os dias')}${metric('Saldos em aberto',due.length,'Pedidos')}${metric('Avisos Pix',intents.length,'Ainda não confirmados')}${metric('Custos pendentes',missing.length,'Produtos ativos')}</div>
+      ${panel('Pedidos a conferir',list(received.map(order=>`<li><a href="#operacao">#${escapeHtml(order.id.slice(0,8))} · ${escapeHtml(order.customer)} · ${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR')} →</a></li>`),'Nenhum pedido aguardando conferência.'))}
+      ${panel('Financeiro',list([...intents.map(item=>`<li><a href="#financeiro">Aviso “já paguei” · ${currency(item.amount_cents)} · ainda não confirmado →</a></li>`),...unknown.map(item=>`<li><a href="#financeiro">Recebimento sem identificação · ${currency(item.amount_cents)} →</a></li>`),...due.map(item=>`<li><a href="#financeiro">#${escapeHtml(item.order_id.slice(0,8))} · ${escapeHtml(item.customer_name)} · ${currency(item.due_cents)} em aberto →</a></li>`)],'Nenhuma pendência financeira carregada.'))}
+      ${panel('Catálogo',list([...missing.map(item=>`<li><a href="#produtos">${escapeHtml(item.name)} · custo pendente →</a></li>`),...unavailable.map(item=>`<li><a href="#produtos">${escapeHtml(item.name)} · indisponível amanhã →</a></li>`)],'Nenhuma pendência de catálogo para amanhã.'))}`;
+  },
   pedidos: () => {
     const orders = storedOrders().slice().sort((a, b) => b.date.localeCompare(a.date));
     const pending = orders.filter(order => orderState(order) === 'received').length;
@@ -319,7 +342,7 @@ document.querySelector('.nav__close').addEventListener('click', () => setMenu(fa
 menuOverlay.addEventListener('click', () => setMenu(false));
 navigation.forEach(link => link.addEventListener('click', () => setMenu(false)));
 window.addEventListener('hashchange', () => showRoute());
-document.querySelector('.notification-button').addEventListener('click', () => { location.hash = 'operacao'; });
+document.querySelector('.notification-button').addEventListener('click', () => { location.hash = 'pendencias'; });
 document.addEventListener('click', event => {
   const financePreset = event.target.closest('[data-finance-days]');
   if (financePreset) {

@@ -25,6 +25,16 @@ if (enabled) {
   if (!live.operator) location.hash = '#loja';
   document.body.classList.toggle('live-customer', !live.operator);
   initAccount(live);
+  live.startRealtime();
+  const updateNotice = document.createElement('p');
+  updateNotice.className = 'payment-notice'; updateNotice.setAttribute('role', 'status'); updateNotice.hidden = true;
+  document.body.append(updateNotice);
+  window.addEventListener('trameli:remote-change', event => {
+    if (event.detail?.table !== 'trameli_orders' || !live.operator) return;
+    updateNotice.textContent = event.detail.eventType === 'INSERT' ? 'Novo pedido recebido. A fila foi atualizada.' : 'A operação foi atualizada em outro dispositivo.';
+    updateNotice.hidden = false; clearTimeout(updateNotice.timer);
+    updateNotice.timer = setTimeout(() => { updateNotice.hidden = true; }, 8000);
+  });
   const currentUserId = live.user.id;
   live.client.auth.onAuthStateChange((event, session) => {
     if (event === 'SIGNED_OUT') {

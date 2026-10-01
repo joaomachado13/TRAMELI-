@@ -61,8 +61,10 @@ export function initPayments(live) {
     const allocated=new Set(api.allocations.map(a=>a.payment_id));
     const unknown=api.payments.filter(p=>p.kind==='receipt'&&!allocated.has(p.id)&&!reversed.has(p.id));
     const receipts=api.payments.filter(p=>p.kind==='receipt').sort((a,b)=>b.recorded_at.localeCompare(a.recorded_at));
+    const intents=(api.intents||[]).filter(item=>item.status==='pending').sort((a,b)=>b.created_at.localeCompare(a.created_at));
     return `${accountSummary(api.balances)}<div class="payment-actions"><label>Conta do cliente<select data-payment-group><option value="">Selecione uma conta ou pedido manual</option>${options()}</select></label><button type="button" data-pay-account>Ver extrato / registrar pagamento</button><button type="button" data-pay-unknown>Registrar recebimento não identificado</button></div>
       <p>Pedidos manuais sem conta ficam separados por pedido. Pix aqui é conferido manualmente; não há cobrança ou confirmação bancária automática.</p>
+      <h3>Avisos “já paguei” (${intents.length})</h3>${intents.length?`<ul class="payment-log">${intents.map(item=>`<li><span>${timestamp(item.created_at)} · ${money(item.amount_cents)}<small>Pedidos ${item.order_ids.map(id=>`#${short(id)}`).join(' · ')} · ainda não confirmado</small></span><span><button type="button" data-intent-open="${item.customer_id}">Conferir conta</button><button type="button" data-intent-dismiss="${item.id}">Encerrar aviso</button></span></li>`).join('')}</ul>`:'<p>Nenhum cliente avisou pagamento pendente de conferência.</p>'}
       <h3>Não identificados (${unknown.length})</h3>${unknown.length?`<ul class="payment-log">${unknown.map(p=>`<li><span>${timestamp(p.recorded_at)} · ${money(p.amount_cents)}<small>${esc(p.reference || 'Sem referência')} · ${esc(p.note)}</small></span><button type="button" data-pay-identify="${p.id}">Vincular à conta selecionada</button></li>`).join('')}</ul>`:'<p>Nenhum recebimento aguardando identificação.</p>'}
       <details><summary>Recebimentos registrados (${receipts.length})</summary><ul class="payment-log">${receipts.map(p=>`<li><span>${timestamp(p.recorded_at)} · ${money(p.amount_cents)}<small>${methods[p.method]} · ${esc(p.reference || 'Sem referência')} · ${esc(p.note)}</small><small>${api.allocations.filter(a=>a.payment_id===p.id).map(a=>`#${short(a.order_id)}: ${money(a.amount_cents)}`).join(' · ') || 'Sem pedido identificado'}</small></span>${reversed.has(p.id)?'<strong>Estornado</strong>':`<button type="button" data-pay-refund="${p.id}">Registrar devolução integral</button>`}</li>`).join('')}</ul></details>`;
   }
@@ -150,9 +152,11 @@ export function initPayments(live) {
     if(button.matches('[data-payment-close]')){if(!dialog.querySelector('[data-busy]'))dialog.close();return;}
     if(button.matches('[data-fill-balances]')){dialog.querySelectorAll('[data-allocation]').forEach(input=>input.checked=true);dialog.dispatchEvent(new Event('change'));return;}
     if(button.matches('[data-pay-refresh]')){await refresh();await previewDay();return;}
-    if(!button.matches('[data-pay-account],[data-pay-identify],[data-pay-unknown],[data-pay-refund],[data-day-preview],[data-day-close]'))return;
+    if(!button.matches('[data-pay-account],[data-pay-identify],[data-pay-unknown],[data-pay-refund],[data-day-preview],[data-day-close],[data-intent-open],[data-intent-dismiss]'))return;
     if(warning()){notify(warning());return;}
     if(!live.operator)return;
+    if(button.matches('[data-intent-open]')){const row=api.balances.find(item=>item.customer_id===button.dataset.intentOpen);if(!row){notify('A conta deste cliente não foi encontrada.');return;}selectedGroup=groupKey(row);await openAccount();return;}
+    if(button.matches('[data-intent-dismiss]')){if(!confirm('Encerrar este aviso sem confirmar automaticamente o pagamento?'))return;try{await api.call('trameli_resolve_payment_intent',{p_intent_id:button.dataset.intentDismiss,p_status:'dismissed'});await api.load(true);refreshContent();notify('Aviso encerrado. Nenhum pagamento foi criado.');}catch(error){notify(error.message);}return;}
     if(button.matches('[data-pay-account]')){await openAccount();return;}
     if(button.matches('[data-pay-identify]')){await openAccount(button.dataset.payIdentify);return;}
     if(button.matches('[data-pay-unknown]')){open(`<h2>Recebimento não identificado</h2><p>Fica pendente de vinculação. Não quita nenhum pedido automaticamente.</p><form data-payment-form="unknown"><label>Valor recebido (R$)<input name="amount" inputmode="decimal" required></label><label>Forma<select name="method">${methodOptions}</select></label><label>Referência<input name="reference" maxlength="120"></label><label>Observação interna<textarea name="note" maxlength="280"></textarea></label><label class="payment-check"><input type="checkbox" required> Conferi que o dinheiro foi recebido.</label>${formFooter('Registrar recebimento')}</form>`);return;}
@@ -170,5 +174,6 @@ export function initPayments(live) {
   dialog.addEventListener('cancel',event=>{if(dialog.querySelector('[data-busy]'))event.preventDefault();});
   window.TrameliPayments={render,customerRender,refresh,previewDay,api};
   window.addEventListener('trameli:orders-changed',()=>{if(document.querySelector('[data-payment-content]'))refresh();});
+  window.addEventListener('trameli:payments-refresh',()=>refresh());
   refresh();
 }

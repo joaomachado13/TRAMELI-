@@ -33,7 +33,7 @@ O modo com Supabase ainda **não está homologado com um projeto real**. Consult
 - Lançamento manual, ajuste, cancelamento com histórico, estados de conferência/separação/entrega, totais em centavos e lista diária consolidada de quantidades para conferência com a padaria.
 - Portal de pedido, edição e cancelamento até 22h30 do dia anterior à entrega, com forma de pagamento pretendida.
 - Banco com acesso por cliente/operadora, totais calculados no servidor, controle de versão para evitar sobrescrita e trilha de alterações.
-- Sincronização por consulta periódica a cada 15 segundos no modo com Supabase.
+- Sincronização em tempo real pelo Supabase, mantendo a consulta periódica como contingência.
 - Rolagem suave com GSAP no desktop, entradas discretas das seções e transições entre telas. Em telas de toque, a rolagem permanece nativa; a opção de movimento reduzido desativa os efeitos. Menu, sacola e impressão preservam seu posicionamento.
 - Modelo A4 de 27 etiquetas de 70 × 33 mm (3 × 9), com deslocamento ajustável e divisão de pedidos longos em mais de uma etiqueta; **ainda não calibrado** na impressora e folha reais.
 
