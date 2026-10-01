@@ -25,8 +25,8 @@ jobs:
           cache: npm
       - name: Conferir configuração pública
         env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_URL: https://rwxwcyerhqcprarjptak.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_2NZu3_raKwWYRkaVPcqzPg_DPEgrn5j
         run: |
           test -n "$VITE_SUPABASE_URL"
           test -n "$VITE_SUPABASE_PUBLISHABLE_KEY"
@@ -35,8 +35,8 @@ jobs:
       - run: npm ci
       - name: Compilar aplicação
         env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_URL: https://rwxwcyerhqcprarjptak.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_2NZu3_raKwWYRkaVPcqzPg_DPEgrn5j
         run: npm run build -- --mode github-pages
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
