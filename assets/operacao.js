@@ -76,6 +76,8 @@ const paymentLabels = { pix_manual: 'Pix', cash: 'Dinheiro', bank: 'Transferênc
 const operationSettingsKey = 'trameli-operation-settings-v1';
 
 function operationRolloverTime() {
+  if (live?.settings?.rollover_time) return String(live.settings.rollover_time).slice(0, 5);
+  if (window.TrameliSettings?.rolloverTime) return window.TrameliSettings.rolloverTime;
   try {
     const value = JSON.parse(localStorage.getItem(operationSettingsKey) || '{}').rolloverTime;
     return /^([01]\d|2[0-3]):[0-5]\d$/.test(value) ? value : '13:30';
@@ -241,7 +243,7 @@ function detailActions(order) {
   const state = orderStatus(order);
   const master = !live || live.role === 'master';
   const canCorrect = state === 'received' || master;
-  return `<div class="order-detail__actions">${nextStatus[state] ? `<button class="button button--primary" type="button" data-action="toggle" data-id="${escapeHtml(order.id)}">Avançar para ${escapeHtml(statusLabels[nextStatus[state]].toLowerCase())}</button>` : ''}${previousStatus[state] && master ? `<button class="button button--quiet" type="button" data-action="back" data-id="${escapeHtml(order.id)}">Voltar para ${escapeHtml(statusLabels[previousStatus[state]].toLowerCase())}</button>` : ''}${!['delivered', 'cancelled'].includes(state) && canCorrect ? `<button class="button button--quiet" type="button" data-action="edit" data-id="${escapeHtml(order.id)}">Editar pedido</button>` : ''}${live ? `<button class="button button--quiet" type="button" data-action="history" data-id="${escapeHtml(order.id)}">Ver histórico</button>` : ''}${!['delivered', 'cancelled'].includes(state) && canCorrect ? `<button class="order-detail__danger" type="button" data-action="delete" data-id="${escapeHtml(order.id)}">Cancelar pedido</button>` : ''}</div>`;
+  return `<div class="order-detail__actions">${nextStatus[state] ? `<button class="button button--primary" type="button" data-action="toggle" data-id="${escapeHtml(order.id)}">Avançar para ${escapeHtml(statusLabels[nextStatus[state]].toLowerCase())}</button>` : ''}${previousStatus[state] && master ? `<button class="button button--quiet" type="button" data-action="back" data-id="${escapeHtml(order.id)}">Voltar para ${escapeHtml(statusLabels[previousStatus[state]].toLowerCase())}</button>` : ''}${!['delivered', 'cancelled'].includes(state) && canCorrect ? `<button class="button button--quiet" type="button" data-action="edit" data-id="${escapeHtml(order.id)}">Editar pedido</button>` : ''}${live ? `<button class="button button--quiet" type="button" data-action="history" data-id="${escapeHtml(order.id)}">Ver histórico</button>` : ''}${!['delivered', 'cancelled'].includes(state) && canCorrect ? `<button class="order-detail__danger" type="button" data-action="delete" data-id="${escapeHtml(order.id)}">Cancelar pedido</button>` : ''}${live?.role === 'master' ? `<button class="order-detail__danger" type="button" data-action="destroy" data-id="${escapeHtml(order.id)}">Excluir definitivamente</button>` : ''}</div>`;
 }
 
 function renderOrderDetail(order) {
@@ -278,6 +280,12 @@ async function handleOrderAction(button) {
   if (button.dataset.action === 'open') { openOrderDetail(order); return; }
   if (button.dataset.action === 'history') { await openHistory(order); return; }
   if (button.dataset.action === 'edit') { detailDrawer.close(); openForm(order); return; }
+  if (button.dataset.action === 'destroy') {
+    if (live?.role !== 'master' || !confirm(`Excluir definitivamente o pedido de ${order.customer}? Esta ação não pode ser desfeita.`)) return;
+    try { await live.deleteOrder(order.id); orders = readOrders(); detailDrawer.close(); render(); }
+    catch (cause) { alert(`O pedido não foi excluído: ${cause.message}`); }
+    return;
+  }
   if (button.dataset.action === 'delete' && !confirm(`Cancelar o pedido de ${order.customer}? O registro ficará no histórico.`)) return;
   const previous = orders;
   const state = button.dataset.action === 'delete' ? 'cancelled' : button.dataset.action === 'back' ? previousStatus[orderStatus(order)] : nextStatus[orderStatus(order)];

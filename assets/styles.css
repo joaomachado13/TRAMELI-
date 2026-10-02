@@ -73,6 +73,9 @@
 }
 
 :root {
+  --trameli-primary: #244d32;
+  --trameli-accent: #b6c780;
+  --trameli-surface: #f5f1e8;
   --color-forest-950: #07130b;
   --color-forest-900: #0b1a0f;
   --color-forest-850: #0d2113;
@@ -1491,6 +1494,16 @@ body.menu-open { overflow: hidden; }
   background: #315b3a;
   color: #fffdf8;
 }
+
+#screen-view .screen-primary,
+#operation-view .button--primary,
+#screen-view .catalog-toolbar button,
+.catalog-actions button:last-child { border-color: var(--trameli-primary); background: var(--trameli-primary); }
+.nav__item[aria-current="page"], .settings-tabs button[aria-pressed="true"] { background: var(--trameli-primary); }
+#home-view, #screen-view { background: var(--trameli-surface); }
+.screen-eyebrow, .portal-eyebrow { color: var(--trameli-accent) !important; }
+.nav__item[aria-current="page"] { border-color: var(--trameli-accent); }
+.settings-colors input[type="color"] { width: 100%; min-height: 48px; padding: 4px; border: 1px solid #cbd4c6; border-radius: 8px; background: #fff; }
 
 .screen-badge--amber {
   background: #75581d;

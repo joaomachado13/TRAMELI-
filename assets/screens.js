@@ -11,6 +11,24 @@ let userReducedMotion = false;
 try { userReducedMotion = localStorage.getItem('trameli-reduced-motion') === 'true'; } catch { /* Storage may be unavailable on file URLs. */ }
 const motionDisabled = () => systemReducedMotion.matches || userReducedMotion;
 const motion = window.TrameliMotion;
+const settingsDefaults = { businessName: 'Trameli', contact: '', primaryColor: '#244d32', accentColor: '#b6c780', surfaceColor: '#f5f1e8', rolloverTime: '13:30', cutoffTime: '22:30', deliveryFeeCents: 200 };
+function readSettings() {
+  const remote = live?.settings;
+  if (remote) return { businessName: remote.business_name, contact: remote.contact, primaryColor: remote.primary_color, accentColor: remote.accent_color, surfaceColor: remote.surface_color, rolloverTime: String(remote.rollover_time).slice(0, 5), cutoffTime: String(remote.cutoff_time).slice(0, 5), deliveryFeeCents: Number(remote.delivery_fee_cents) };
+  try { return { ...settingsDefaults, ...JSON.parse(localStorage.getItem('trameli-operation-settings-v1') || '{}') }; } catch { return { ...settingsDefaults }; }
+}
+function applySettings() {
+  const settings = readSettings();
+  window.TrameliSettings = settings;
+  document.documentElement.style.setProperty('--trameli-primary', settings.primaryColor);
+  document.documentElement.style.setProperty('--trameli-accent', settings.accentColor);
+  document.documentElement.style.setProperty('--trameli-surface', settings.surfaceColor);
+  document.querySelectorAll('.brand__name').forEach(node => { node.textContent = settings.businessName; });
+  const portalBrand = document.querySelector('.portal-brand');
+  if (portalBrand?.firstChild) portalBrand.firstChild.nodeValue = settings.businessName;
+}
+applySettings();
+window.addEventListener('trameli:settings-changed', applySettings);
 
 function syncMotionPreference() {
   document.body.classList.toggle('motion-off', motionDisabled());
@@ -64,8 +82,7 @@ document.getElementById('today-date').textContent = new Intl.DateTimeFormat('pt-
 function updateOverview() {
   const orders = activeOrders();
   const today = saoPauloToday();
-  let rollover = '13:30';
-  try { rollover = JSON.parse(localStorage.getItem('trameli-operation-settings-v1') || '{}').rolloverTime || rollover; } catch { /* Default. */ }
+  const rollover = readSettings().rolloverTime;
   const clock = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date()).filter(part => part.type !== 'literal').map(part => [part.type, Number(part.value)]));
   const [rolloverHour, rolloverMinute] = rollover.split(':').map(Number);
   const todayPending = orders.some(order => order.date === today && !['delivered', 'cancelled'].includes(orderState(order)));
@@ -211,15 +228,16 @@ const pages = {
   relatorios: () => `${intro('Documentos', 'Relatórios', 'Escolha o que precisa, gere um resumo e salve em PDF.')}
     <section class="report-generator"><div class="report-generator__form"><label>Tipo de relatório<select id="report-type"><option value="financial" ${reportState.type === 'financial' ? 'selected' : ''}>Resumo financeiro</option><option value="sales" ${reportState.type === 'sales' ? 'selected' : ''}>Vendas</option><option value="customers" ${reportState.type === 'customers' ? 'selected' : ''}>Clientes</option><option value="products" ${reportState.type === 'products' ? 'selected' : ''}>Produtos</option><option value="orders" ${reportState.type === 'orders' ? 'selected' : ''}>Pedidos</option><option value="deliveries" ${reportState.type === 'deliveries' ? 'selected' : ''}>Entregas</option></select></label><label>Período<select id="report-period"><option value="today">Hoje</option><option value="week">Últimos 7 dias</option><option value="month" ${reportState.period === 'month' ? 'selected' : ''}>Últimos 30 dias</option><option value="custom" ${reportState.period === 'custom' ? 'selected' : ''}>Personalizado</option></select></label><div class="report-custom-dates" ${reportState.period === 'custom' ? '' : 'hidden'}><label>De<input id="report-from" type="date" value="${reportRange.from}"></label><label>Até<input id="report-to" type="date" value="${reportRange.to}"></label></div><button class="screen-primary" type="button" data-report-generate>Gerar relatório</button></div><div id="report-results" class="report-preview" aria-live="polite">${reportState.generated ? '' : '<div class="friendly-empty"><strong>Nenhum relatório gerado.</strong><span>Escolha um tipo e um período para começar.</span></div>'}</div></section>`,
   configuracoes: () => {
-    let operation = {}, print = {};
-    try { operation = JSON.parse(localStorage.getItem('trameli-operation-settings-v1') || '{}'); print = JSON.parse(localStorage.getItem('trameli-print-settings-70x33-v1') || '{}'); } catch { /* Defaults below. */ }
-    const tabs = [['geral','Geral'],['pedidos','Pedidos'],['entregas','Entregas'],['pagamentos','Pagamentos'],['catalogo','Catálogo'],['impressao','Impressão'],['acessos','Equipe e acessos'],['conta','Conta']];
+    const operation = readSettings(); let print = {};
+    try { print = JSON.parse(localStorage.getItem('trameli-print-settings-70x33-v1') || '{}'); } catch { /* Defaults below. */ }
+    const tabs = [['geral','Geral'],['aparencia','Aparência'],['pedidos','Pedidos'],['entregas','Entregas'],['pagamentos','Pagamentos'],['catalogo','Catálogo'],['impressao','Impressão'],['acessos','Equipe e acessos'],['conta','Conta']];
     const content = {
       geral: `<form class="settings-form" data-settings-form="general"><label>Nome da operação<input name="businessName" value="${escapeHtml(operation.businessName || 'Trameli')}" maxlength="80"></label><label>Contato<input name="contact" value="${escapeHtml(operation.contact || '')}" maxlength="80" placeholder="Telefone ou WhatsApp"></label><div class="settings-row settings-row--motion"><span>Movimento da interface</span><button type="button" class="motion-toggle" aria-pressed="${!motionDisabled()}" ${systemReducedMotion.matches ? 'disabled' : ''}>${systemReducedMotion.matches ? 'Reduzido pelo sistema' : motionDisabled() ? 'Desativado' : 'Ativado'}</button></div><button class="screen-primary" type="submit">Salvar</button></form>`,
-      pedidos: `<form class="settings-form" data-settings-form="orders"><label>Horário de virada operacional<input name="rolloverTime" type="time" value="${escapeHtml(operation.rolloverTime || '13:30')}" required></label><p>A tela passa a priorizar o próximo dia somente quando os pedidos de hoje estiverem resolvidos.</p><label>Horário de corte do cliente<input type="time" value="22:30" disabled></label><small>Regra atual protegida pelo fluxo de pedidos.</small><button class="screen-primary" type="submit">Salvar</button></form>`,
-      entregas: `<div class="settings-form"><label>Taxa padrão<input value="R$ 2,00" disabled></label><p>A taxa atual faz parte das regras validadas da operação.</p></div>`,
+      aparencia: `<form class="settings-form settings-colors" data-settings-form="appearance"><label>Cor principal<input name="primaryColor" type="color" value="${escapeHtml(operation.primaryColor)}"></label><label>Cor de destaque<input name="accentColor" type="color" value="${escapeHtml(operation.accentColor)}"></label><label>Fundo claro<input name="surfaceColor" type="color" value="${escapeHtml(operation.surfaceColor)}"></label><button class="screen-primary" type="submit">Salvar aparência</button></form>`,
+      pedidos: `<form class="settings-form" data-settings-form="orders"><label>Horário de virada operacional<input name="rolloverTime" type="time" value="${escapeHtml(operation.rolloverTime)}" required></label><p>A tela passa a priorizar o próximo dia somente quando os pedidos de hoje estiverem resolvidos.</p><label>Horário de corte do cliente<input type="time" value="22:30" disabled></label><small>Regra protegida pelo cálculo dos pedidos.</small><button class="screen-primary" type="submit">Salvar</button></form>`,
+      entregas: `<div class="settings-form"><label>Taxa padrão<input value="R$ 2,00" disabled></label><p>A taxa está protegida pelo cálculo dos pedidos para impedir divergências.</p></div>`,
       pagamentos: `<div class="settings-form"><h3>Meios aceitos</h3><label class="settings-check"><input type="checkbox" checked disabled> Pix</label><label class="settings-check"><input type="checkbox" checked disabled> Dinheiro</label><label class="settings-check"><input type="checkbox" checked disabled> A combinar</label><p>Transferência bancária não aparece mais no checkout.</p></div>`,
-      catalogo: `<div class="settings-form"><p>Categorias e disponibilidade são gerenciadas diretamente em Produtos.</p><a class="screen-primary" href="#produtos">Abrir produtos</a></div>`,
+      catalogo: `<div class="settings-form"><p>Categorias, preços, custos, fotos e disponibilidade são gerenciados diretamente em Produtos.</p><a class="screen-primary" href="#produtos">Abrir produtos</a>${live?.role === 'master' ? '<button class="entity-danger" type="button" data-purge-orders>Excluir todos os pedidos de teste</button><small>Remove pedidos, pagamentos e fechamentos. Produtos e clientes permanecem.</small>' : ''}</div>`,
       impressao: `<form class="settings-form" data-settings-form="print"><label>Deslocamento horizontal (mm)<input name="offsetX" type="number" min="-3" max="3" step="0.5" value="${Number(print.offsetX || 0)}"></label><label>Deslocamento vertical (mm)<input name="offsetY" type="number" min="-3" max="3" step="0.5" value="${Number(print.offsetY || 0)}"></label><p>Etiqueta atual: 70 × 33 mm, folha A4.</p><button class="screen-primary" type="submit">Salvar</button></form>`,
       acessos: '<div class="settings-slot" data-account-slot="team"><div class="friendly-empty"><strong>Equipe disponível na versão conectada.</strong><span>Entre como Master para administrar acessos.</span></div></div>',
       conta: '<div class="settings-slot" data-account-slot="account"><div class="friendly-empty"><strong>Perfil disponível após o login.</strong><span>Nome, telefone, endereço e senha ficam reunidos aqui.</span></div></div>',
@@ -351,7 +369,7 @@ function renderRoute(route, preserveScroll = false) {
   appShell.hidden = isPortal;
   document.body.classList.toggle('portal-mode', isPortal);
   if (isPortal) {
-    document.title = 'Peça para amanhã — Trameli';
+    document.title = `Peça para amanhã — ${readSettings().businessName}`;
     navigation.forEach(link => {
       const active = link.getAttribute('href') === '#loja';
       link.classList.toggle('btn', active);
@@ -390,7 +408,7 @@ function renderRoute(route, preserveScroll = false) {
     if (active) link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current');
   });
   const current = navigation.find(link => link.getAttribute('href') === `#${route}`);
-  document.title = `${current?.querySelector('.nav__label')?.textContent.trim() || 'Operação diária'} — Trameli`;
+  document.title = `${current?.querySelector('.nav__label')?.textContent.trim() || 'Operação diária'} — ${readSettings().businessName}`;
   setMenu(false);
   if (!preserveScroll) motion.scrollTo(0, false);
   activeRoute = route;
@@ -539,7 +557,7 @@ document.addEventListener('input', event => {
     input?.setSelectionRange(orderFilters.query.length, orderFilters.query.length);
   }
 });
-document.addEventListener('submit', event => {
+document.addEventListener('submit', async event => {
   const form = event.target.closest('[data-settings-form]');
   if (!form) return;
   event.preventDefault();
@@ -549,12 +567,27 @@ document.addEventListener('submit', event => {
     if (form.dataset.settingsForm === 'print') {
       localStorage.setItem('trameli-print-settings-70x33-v1', JSON.stringify({ offsetX: Number(data.get('offsetX')), offsetY: Number(data.get('offsetY')) }));
     } else {
-      const current = JSON.parse(localStorage.getItem('trameli-operation-settings-v1') || '{}');
-      const values = form.dataset.settingsForm === 'orders' ? { rolloverTime: data.get('rolloverTime') } : { businessName: data.get('businessName'), contact: data.get('contact') };
-      localStorage.setItem('trameli-operation-settings-v1', JSON.stringify({ ...current, ...values }));
+      const current = readSettings();
+      const values = form.dataset.settingsForm === 'orders' ? { rolloverTime: data.get('rolloverTime') }
+        : form.dataset.settingsForm === 'appearance' ? { primaryColor: data.get('primaryColor'), accentColor: data.get('accentColor'), surfaceColor: data.get('surfaceColor') }
+          : { businessName: data.get('businessName'), contact: data.get('contact') };
+      const next = { ...current, ...values };
+      if (live) await live.saveSettings(next); else localStorage.setItem('trameli-operation-settings-v1', JSON.stringify(next));
+      applySettings();
     }
-    if (feedback) feedback.textContent = 'Configurações salvas neste aparelho.';
-  } catch { if (feedback) feedback.textContent = 'Não foi possível salvar as configurações.'; }
+    if (feedback) feedback.textContent = live ? 'Configurações salvas para todos os aparelhos.' : 'Configurações salvas neste aparelho.';
+  } catch (cause) { if (feedback) feedback.textContent = `Não foi possível salvar: ${cause.message}`; }
+});
+
+document.addEventListener('click', async event => {
+  const button = event.target.closest('[data-purge-orders]');
+  if (!button || live?.role !== 'master') return;
+  if (!confirm('Excluir TODOS os pedidos, pagamentos e fechamentos de teste? Esta ação não pode ser desfeita.')) return;
+  if (prompt('Para confirmar, digite EXCLUIR PEDIDOS') !== 'EXCLUIR PEDIDOS') return;
+  button.disabled = true;
+  try { const count = await live.purgeTestOrders(); alert(`${count} pedidos de teste foram excluídos.`); showRoute(true); }
+  catch (cause) { alert(`Não foi possível limpar a base: ${cause.message}`); }
+  finally { button.disabled = false; }
 });
 document.addEventListener('keydown', event => { if (event.key === 'Escape') setMenu(false); });
 showRoute();

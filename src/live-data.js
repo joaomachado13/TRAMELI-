@@ -36,6 +36,7 @@ export class LiveData {
     });
     this.orders = [];
     this.products = [];
+    this.settings = null;
     this.profile = null;
     this.user = null;
     this.operator = false;
@@ -89,6 +90,8 @@ export class LiveData {
         if (costResult.data) costs = new Map(costResult.data.map(row => [row.product_id, row]));
       }
       const nextProducts = productResult.data.map(row => mapProduct(row, costs.get(row.id)));
+      const settingsResult = await this.client.from('trameli_settings').select('*').eq('singleton', true).maybeSingle();
+      if (settingsResult.error && settingsResult.error.code !== 'PGRST205') throw settingsResult.error;
       const changedOrders = [];
       for (let from = 0; ; from += 500) {
         let query = this.client.from('trameli_orders').select('*')
@@ -102,6 +105,8 @@ export class LiveData {
       const profileResult = await this.client.from('trameli_profiles').select('*').eq('user_id', this.user.id).maybeSingle();
       if (profileResult.error) throw profileResult.error;
       this.products = nextProducts;
+      this.settings = settingsResult.data;
+      window.dispatchEvent(new Event('trameli:settings-changed'));
       const merged = new Map(this.orders.map(order => [order.id, order]));
       changedOrders.forEach(order => merged.set(order.id, order));
       this.orders = [...merged.values()];
@@ -196,6 +201,57 @@ export class LiveData {
     return data;
   }
 
+  async uploadProductImage(productId, file) {
+    if (this.role !== 'master') throw new Error('Apenas Master pode enviar fotos de produtos.');
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 2097152) {
+      throw new Error('Use PNG, JPEG ou WebP de até 2 MB.');
+    }
+    const extension = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }[file.type];
+    const path = `${productId}/${crypto.randomUUID()}.${extension}`;
+    const { error } = await this.client.storage.from('trameli-products').upload(path, file, { contentType: file.type, upsert: false });
+    if (error) throw error;
+    return this.client.storage.from('trameli-products').getPublicUrl(path).data.publicUrl;
+  }
+
+  async saveSettings(settings) {
+    if (this.role !== 'master') throw new Error('Apenas Master pode alterar as configurações.');
+    const { error } = await this.client.rpc('trameli_save_settings', {
+      p_business_name: settings.businessName, p_contact: settings.contact,
+      p_primary_color: settings.primaryColor, p_accent_color: settings.accentColor,
+      p_surface_color: settings.surfaceColor, p_rollover_time: settings.rolloverTime,
+      p_cutoff_time: settings.cutoffTime, p_delivery_fee_cents: settings.deliveryFeeCents,
+    });
+    if (error) throw error;
+    await this.load(true);
+  }
+
+  async deleteOrder(orderId) {
+    if (this.role !== 'master') throw new Error('Apenas Master pode excluir pedidos definitivamente.');
+    const { error } = await this.client.rpc('trameli_master_delete_order', { p_order_id: orderId });
+    if (error) throw error;
+    this.orders = this.orders.filter(order => order.id !== orderId);
+    this.costSummaryCache.clear();
+    dispatchEvent(new Event('trameli:orders-changed'));
+  }
+
+  async deleteProduct(productId) {
+    if (this.role !== 'master') throw new Error('Apenas Master pode excluir produtos definitivamente.');
+    const { error } = await this.client.rpc('trameli_master_delete_product', { p_product_id: productId });
+    if (error) throw error;
+    await this.load(true);
+  }
+
+  async purgeTestOrders() {
+    if (this.role !== 'master') throw new Error('Apenas Master pode limpar a base de pedidos.');
+    const { data, error } = await this.client.rpc('trameli_master_purge_test_orders');
+    if (error) throw error;
+    this.orders = [];
+    this.lastOrderSync = null;
+    this.costSummaryCache.clear();
+    dispatchEvent(new Event('trameli:orders-changed'));
+    return Number(data || 0);
+  }
+
   async productEvents(productId) {
     if (!this.operator) throw new Error('Acesso restrito à operação.');
     const { data, error } = await this.client.from('trameli_product_events')
@@ -216,6 +272,7 @@ export class LiveData {
     this.realtimeChannel = this.client.channel(`trameli-live-${this.user.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'trameli_orders' }, changed)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'trameli_products' }, changed)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'trameli_settings' }, changed)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'trameli_payment_intents' }, payload => {
         window.dispatchEvent(new CustomEvent('trameli:remote-change', { detail: payload }));
         window.dispatchEvent(new Event('trameli:payments-refresh'));
