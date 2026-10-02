@@ -1688,3 +1688,29 @@ body .live-logout:hover { border-color: rgba(255,255,255,.65); background: rgba(
   .record-toolbar--orders label:first-child,
   .catalog-filters label:first-child { grid-column: auto; }
 }
+
+:root {
+  --trameli-primary: #244d32;
+  --trameli-accent: #b6c780;
+  --trameli-surface: #f5f1e8;
+}
+
+#home-view,
+#screen-view { background: var(--trameli-surface) !important; }
+.nav__item[aria-current="page"],
+.settings-tabs button[aria-pressed="true"],
+.entity-detail__actions .screen-primary,
+.settings-form .screen-primary,
+.report-generator .screen-primary,
+.record-toolbar .screen-primary,
+#operation-view .button--primary,
+.catalog-actions button:last-child {
+  border-color: var(--trameli-primary) !important;
+  background: var(--trameli-primary) !important;
+}
+.screen-primary::before,
+.portal-primary::before,
+#operation-view .button--primary::before,
+.catalog-toolbar [data-catalog-action="new"]::before { background: var(--trameli-accent); }
+.screen-eyebrow,
+.portal-eyebrow { color: var(--trameli-accent) !important; }

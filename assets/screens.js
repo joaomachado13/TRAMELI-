@@ -29,6 +29,7 @@ function applySettings() {
 }
 applySettings();
 window.addEventListener('trameli:settings-changed', applySettings);
+window.addEventListener('trameli:profile-changed', () => showRoute(true));
 
 function syncMotionPreference() {
   document.body.classList.toggle('motion-off', motionDisabled());

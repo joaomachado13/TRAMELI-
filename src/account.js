@@ -1,12 +1,14 @@
 import { authError, displayName, escapeHtml, roleLabel } from './auth-utils.js';
 
 export function initAccount(live) {
-  const name = displayName(live.user, live.profile);
+  let name = displayName(live.user, live.profile);
   const button = document.querySelector('.profile-button');
-  if (button) {
+  const syncIdentity = () => {
+    if (!button) return;
     button.querySelector('.av').textContent = name.split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase();
     button.querySelector('.av + span').innerHTML = `${escapeHtml(name)}<small class="account-role">${roleLabel(live.role)}</small>`;
-  }
+  };
+  syncIdentity();
   const passwordForm = () => `<form data-account-password><label>Nova senha<input name="password" type="password" autocomplete="new-password" minlength="8" required></label><label>Confirme a senha<input name="confirmation" type="password" autocomplete="new-password" minlength="8" required></label><p class="account-message" role="status"></p><button type="submit">Salvar senha</button></form>`;
   const identity = () => `<p><strong>${escapeHtml(name)}</strong><br>${escapeHtml(live.user.email || live.user.phone || '')} · ${roleLabel(live.role)}</p>`;
   const accountSection = () => `<div class="account-panel">${identity()}<form data-account-profile><label>Nome<input name="name" value="${escapeHtml(live.profile?.name || live.user.user_metadata?.full_name || live.user.user_metadata?.name || '')}" maxlength="90" required></label><label>Telefone<input name="phone" type="tel" value="${escapeHtml(live.profile?.phone || live.user.user_metadata?.phone || live.user.phone || '')}" maxlength="25"></label><label>Endereço e referência<input name="address" value="${escapeHtml(live.profile?.address || live.user.user_metadata?.address || '')}" maxlength="180" required></label><p class="account-message" role="status"></p><button type="submit">Salvar meus dados</button></form><details><summary>Alterar senha</summary>${passwordForm()}</details></div>`;
@@ -61,8 +63,10 @@ export function initAccount(live) {
       } else if (form.matches('[data-account-profile]')) {
         const profile = { name: fields.get('name').trim(), phone: fields.get('phone').trim(), address: fields.get('address').trim() };
         await live.auth.updateProfile(profile);
+        await live.saveProfile(profile);
         Object.assign(live.user.user_metadata, { name: profile.name, full_name: profile.name, phone: profile.phone, address: profile.address });
         if (live.profile) Object.assign(live.profile, profile);
+        name = profile.name; syncIdentity(); accountButton.title = profile.name;
         message.textContent = 'Seus dados foram atualizados.';
       } else {
         const { error } = await live.client.rpc('trameli_set_team_role', { p_identity: fields.get('identity').trim(), p_role: fields.get('role') });

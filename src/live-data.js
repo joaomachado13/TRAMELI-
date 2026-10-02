@@ -225,6 +225,15 @@ export class LiveData {
     await this.load(true);
   }
 
+  async saveProfile(profile) {
+    const { error } = await this.client.rpc('trameli_save_profile', {
+      p_name: profile.name, p_phone: profile.phone, p_address: profile.address,
+    });
+    if (error) throw error;
+    this.profile = { ...(this.profile || {}), ...profile };
+    window.dispatchEvent(new Event('trameli:profile-changed'));
+  }
+
   async deleteOrder(orderId) {
     if (this.role !== 'master') throw new Error('Apenas Master pode excluir pedidos definitivamente.');
     const { error } = await this.client.rpc('trameli_master_delete_order', { p_order_id: orderId });

@@ -22,6 +22,7 @@ export async function requireAccess(live) {
     recover: ['Vamos recuperar seu acesso.', 'Você só precisa fazer isso para criar ou recuperar sua senha.'],
     reset: ['Escolha sua senha.', 'Depois, você poderá entrar diretamente com ela.'],
     verify: ['Confirme seu telefone.', 'Digite o código que enviamos por SMS.'],
+    profile: ['Complete seu cadastro.', 'Antes de entrar, confirme seus dados de contato e entrega.'],
     connected: ['Preparando seu espaço.', 'Sua conta foi reconhecida. Estamos carregando seus pedidos.'],
   };
   function message(text, isError = false) {
@@ -43,11 +44,12 @@ export async function requireAccess(live) {
       <form>
       ${credentials ? `<label>${method === 'phone' ? 'Telefone com DDD' : 'E-mail'}<input name="identity" type="${method === 'phone' ? 'tel' : 'email'}" autocomplete="${method === 'phone' ? 'tel' : 'username'}" value="${escapeHtml(identity)}" placeholder="${method === 'phone' ? '(34) 99999-9999' : 'voce@exemplo.com'}" required></label>` : ''}
       ${mode === 'signup' ? '<label>Seu nome<input name="name" autocomplete="name" maxlength="90" required></label><label>Telefone para contato<input name="phone" type="tel" autocomplete="tel" maxlength="25" required></label><label>Endereço e referência<input name="address" autocomplete="street-address" maxlength="180" required></label>' : ''}
+      ${mode === 'profile' ? `<label>Seu nome<input name="name" autocomplete="name" maxlength="90" value="${escapeHtml(live.profile?.name || live.user?.user_metadata?.full_name || live.user?.user_metadata?.name || '')}" required></label><label>Telefone para contato<input name="phone" type="tel" autocomplete="tel" maxlength="25" value="${escapeHtml(live.profile?.phone || live.user?.user_metadata?.phone || '')}" required></label><label>Endereço e referência<input name="address" autocomplete="street-address" maxlength="180" value="${escapeHtml(live.profile?.address || live.user?.user_metadata?.address || '')}" required></label>` : ''}
       ${['signin', 'signup', 'reset'].includes(mode) ? `<label>Senha<span class="auth-password"><input name="password" type="password" autocomplete="${newPassword ? 'new-password' : 'current-password'}" ${newPassword ? 'minlength="8"' : ''} required><button type="button" data-action="reveal" aria-label="Mostrar senha" aria-pressed="false">Mostrar</button></span></label>${newPassword ? '<small class="auth-hint">Pelo menos 8 caracteres.</small><label>Confirme a senha<input name="confirmation" type="password" autocomplete="new-password" minlength="8" required></label>' : ''}` : ''}
       ${mode === 'verify' ? '<label>Código por SMS<input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required></label>' : ''}
       ${mode === 'signin' ? '<button class="auth-text" type="button" data-mode="recover">Criar ou recuperar senha</button>' : ''}
       <p class="live-gate__message" role="status">${escapeHtml(note)}</p>
-      <button class="auth-submit" type="submit">${({ signin: 'Entrar na minha conta', signup: 'Criar minha conta', recover: method === 'phone' ? 'Enviar código por SMS' : 'Enviar recuperação de senha', reset: 'Salvar senha e entrar', verify: 'Confirmar código', connected: 'Tentar carregar novamente' })[mode]}</button></form>
+      <button class="auth-submit" type="submit">${({ signin: 'Entrar na minha conta', signup: 'Criar minha conta', recover: method === 'phone' ? 'Enviar código por SMS' : 'Enviar recuperação de senha', reset: 'Salvar senha e entrar', verify: 'Confirmar código', profile: 'Salvar dados e entrar', connected: 'Tentar carregar novamente' })[mode]}</button></form>
       ${['recover', 'reset', 'verify'].includes(mode) ? '<button class="auth-text auth-back" type="button" data-action="back">Voltar para entrar</button>' : ''}
       ${mode === 'connected' ? '<button class="auth-text" type="button" data-action="logout">Entrar com outra conta</button>' : ''}
       ${mode === 'signin' ? '<p class="auth-team-note">Cliente, operadora ou master: entre com sua conta. Seu acesso é reconhecido automaticamente.</p>' : ''}
@@ -72,6 +74,15 @@ export async function requireAccess(live) {
     const preflight = await live.preflight();
     if (!preflight.ready) throw new Error('Sua conta está pronta, mas a operação ainda precisa ser ativada pela administração.');
     await live.load();
+    const profile = {
+      name: live.profile?.name || live.user.user_metadata?.full_name || live.user.user_metadata?.name || '',
+      phone: live.profile?.phone || live.user.user_metadata?.phone || '',
+      address: live.profile?.address || live.user.user_metadata?.address || '',
+    };
+    if (!profile.name || !profile.phone || !profile.address) {
+      mode = 'profile'; render(); setBusy(false); return;
+    }
+    if (!live.profile) await live.saveProfile(profile);
     settled = true;
     document.body.classList.remove('auth-pending');
     gate.remove();
@@ -167,6 +178,14 @@ export async function requireAccess(live) {
         live.recovery = false;
         history.replaceState(null, '', location.pathname);
         await enter();
+      } else if (mode === 'profile') {
+        const profile = { name: fields.get('name')?.trim(), phone: fields.get('phone')?.trim(), address: fields.get('address')?.trim() };
+        await live.auth.updateProfile(profile);
+        await live.saveProfile(profile);
+        settled = true;
+        document.body.classList.remove('auth-pending');
+        gate.remove();
+        finish();
       } else if (mode === 'connected') await enter();
     } catch (error) {
       message(authError(error), true);
