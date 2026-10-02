@@ -1488,13 +1488,13 @@ body.menu-open { overflow: hidden; }
 }
 
 .screen-badge--green {
-  background: rgba(45, 101, 57, 0.55);
-  color: #e4f0da;
+  background: #315b3a;
+  color: #fffdf8;
 }
 
 .screen-badge--amber {
-  background: rgba(126, 94, 46, 0.57);
-  color: #f4e8ce;
+  background: #75581d;
+  color: #fffdf8;
 }
 
 .flow-list {

@@ -100,7 +100,7 @@ try {
   await send('Emulation.setDeviceMetricsOverride', { width: 1350, height: 900, deviceScaleFactor: 1, mobile: false });
   await pause(180);
   assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'), 'Rolagem horizontal no desktop.');
-  assert(await evaluate('!document.querySelector("#main-navigation-panel").inert && getComputedStyle(document.querySelector(".mobile-menu-button")).display === "none"'), 'Sidebar desktop não permaneceu acessível e visível.');
+  assert(await evaluate('!document.querySelector("#main-navigation-panel").inert && getComputedStyle(document.querySelector(".mobile-menu-button")).display === "none"'), 'Sidebar desktop não permaneceu acessível sem controle visual.');
   const desktopImage = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
   await writeFile(desktopShot, Buffer.from(desktopImage.data, 'base64'));
   await send('Page.reload');

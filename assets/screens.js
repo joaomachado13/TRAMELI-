@@ -307,6 +307,24 @@ const menuButtons = [...document.querySelectorAll('.mobile-menu-button, .portal-
 const menuOverlay = document.querySelector('.menu-overlay');
 const menuPanel = document.getElementById('main-navigation-panel');
 const persistentNavigation = matchMedia('(min-width: 1100px)');
+const sidebarStorageKey = 'trameli-sidebar-collapsed-v1';
+
+function sidebarIsCollapsed() {
+  return document.body.classList.contains('sidebar-collapsed');
+}
+
+function setSidebarCollapsed(collapsed, persist = true) {
+  document.body.classList.toggle('sidebar-collapsed', collapsed);
+  const closeButton = document.querySelector('.nav__close');
+  closeButton?.setAttribute('aria-label', collapsed ? 'Expandir menu' : 'Recolher menu');
+  closeButton?.setAttribute('aria-expanded', String(!collapsed));
+  menuButtons.forEach(button => {
+    if (!button.classList.contains('mobile-menu-button')) return;
+    button.setAttribute('aria-label', collapsed ? 'Expandir menu' : 'Recolher menu');
+    button.setAttribute('aria-expanded', String(!collapsed));
+  });
+  if (persist) localStorage.setItem(sidebarStorageKey, String(collapsed));
+}
 
 function navigationIsPersistent() {
   return persistentNavigation.matches && !document.body.classList.contains('portal-mode');
@@ -417,11 +435,29 @@ function renderGlobalSearch() {
   globalSearchInput.setAttribute('aria-expanded', 'true');
 }
 
-menuButtons.forEach(button => button.addEventListener('click', () => setMenu(!document.body.classList.contains('menu-open'))));
-document.querySelector('.nav__close').addEventListener('click', () => setMenu(false));
+try { setSidebarCollapsed(localStorage.getItem(sidebarStorageKey) === 'true', false); } catch { setSidebarCollapsed(false, false); }
+menuButtons.forEach(button => button.addEventListener('click', () => {
+  if (navigationIsPersistent() && button.classList.contains('mobile-menu-button')) setSidebarCollapsed(!sidebarIsCollapsed());
+  else setMenu(!document.body.classList.contains('menu-open'));
+}));
+document.querySelector('.nav__close').addEventListener('click', () => {
+  if (navigationIsPersistent()) setSidebarCollapsed(!sidebarIsCollapsed());
+  else setMenu(false);
+});
 menuOverlay.addEventListener('click', () => setMenu(false));
 navigation.forEach(link => link.addEventListener('click', () => setMenu(false)));
-persistentNavigation.addEventListener('change', () => setMenu(false));
+persistentNavigation.addEventListener('change', () => {
+  setMenu(false);
+  if (!persistentNavigation.matches) return;
+  try { setSidebarCollapsed(localStorage.getItem(sidebarStorageKey) === 'true', false); } catch { setSidebarCollapsed(false, false); }
+});
+appShell.addEventListener('click', event => {
+  if (!navigationIsPersistent() || sidebarIsCollapsed() || event.target.closest('.mobile-menu-button')) return;
+  setSidebarCollapsed(true);
+});
+menuPanel.addEventListener('click', () => {
+  if (navigationIsPersistent() && sidebarIsCollapsed()) setSidebarCollapsed(false);
+});
 window.addEventListener('hashchange', () => showRoute());
 document.querySelector('.notification-button').addEventListener('click', () => { location.hash = 'pendencias'; });
 document.addEventListener('click', event => {

@@ -41,6 +41,35 @@ try {
     for (let attempt = 0; attempt < 50 && !(await evaluate(`!!document.querySelector(${JSON.stringify(selector)})`)); attempt++) await pause(100);
     assert(await evaluate(`!!document.querySelector(${JSON.stringify(selector)})`), `Tela não renderizou ${selector}.`);
   };
+  const findLightOnLightText = () => evaluate(`(() => {
+    const rgb = value => (value.match(/[\\d.]+/g) || []).slice(0, 4).map(Number);
+    const luminance = ([red, green, blue]) => {
+      const channels = [red, green, blue].map(value => {
+        value /= 255;
+        return value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4;
+      });
+      return .2126 * channels[0] + .7152 * channels[1] + .0722 * channels[2];
+    };
+    const background = element => {
+      for (let current = element; current; current = current.parentElement) {
+        const color = rgb(getComputedStyle(current).backgroundColor);
+        if (color.length >= 3 && (color[3] ?? 1) > .85) return color;
+      }
+      return [255, 255, 255, 1];
+    };
+    return [...document.querySelectorAll('body *')].flatMap(element => {
+      const style = getComputedStyle(element);
+      if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) < .2 || !element.getClientRects().length) return [];
+      const hasOwnText = [...element.childNodes].some(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+      const isTextControl = element.matches('input, select, textarea, button');
+      if (!hasOwnText && !isTextControl) return [];
+      const foreground = rgb(style.color), surface = background(element);
+      if (foreground.length < 3 || luminance(foreground) < .72 || luminance(surface) < .62) return [];
+      const contrast = (Math.max(luminance(foreground), luminance(surface)) + .05) / (Math.min(luminance(foreground), luminance(surface)) + .05);
+      if (contrast >= 3) return [];
+      return [{ tag: element.tagName.toLowerCase(), className: element.className?.toString().slice(0, 80), text: (element.innerText || element.value || element.placeholder || '').trim().slice(0, 70), color: style.color, background: getComputedStyle(element).backgroundColor, surface: surface.slice(0, 3).join(',') }];
+    }).slice(0, 20);
+  })()`);
 
   await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
   await waitFor('#home-view:not([hidden])');
@@ -60,8 +89,17 @@ try {
   assert(await evaluate('getComputedStyle(document.body).backgroundColor === "rgb(244, 240, 231)"'), 'Canvas Master não usa o creme do design system.');
   assert(await evaluate('!document.querySelector("#main-navigation-panel").inert'), 'Sidebar desktop não está acessível.');
   assert(await evaluate('document.querySelector(".app-shell").getBoundingClientRect().left >= 250'), 'Conteúdo não respeita a sidebar desktop.');
+  await evaluate('document.querySelector("#home-view").click()');
+  await pause(180);
+  assert(await evaluate('document.body.classList.contains("sidebar-collapsed")'), 'Sidebar desktop não recolheu ao clicar no conteúdo.');
+  assert(await evaluate('document.querySelector(".app-shell").getBoundingClientRect().left < 100'), 'Conteúdo não reajustou ao recolher a sidebar.');
+  await evaluate('document.querySelector("#main-navigation-panel").click()');
+  await pause(180);
+  assert(await evaluate('!document.body.classList.contains("sidebar-collapsed")'), 'Sidebar desktop não expandiu ao clicar na barra lateral.');
+  assert(await evaluate('getComputedStyle(document.querySelector(".mobile-menu-button")).display === "none"'), 'Controle desktop da sidebar continuou visível.');
   assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'), 'Visão Geral criou rolagem horizontal.');
   assert(await evaluate('getComputedStyle(document.querySelector(".attention-strip__heading h2")).color !== "rgb(238, 232, 215)"'), 'Aviso principal permaneceu com baixo contraste.');
+  assert(!(await findLightOnLightText()).length, `início contém texto claro sobre fundo claro: ${JSON.stringify(await findLightOnLightText())}`);
 
   const routes = [
     ['pedidos', '.orders-browser'],
@@ -79,6 +117,19 @@ try {
     await waitFor(selector);
     await pause(80);
     assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'), `${route} criou rolagem horizontal no desktop.`);
+    const contrastProblems = await findLightOnLightText();
+    assert(!contrastProblems.length, `${route} contém texto claro sobre fundo claro: ${JSON.stringify(contrastProblems)}`);
+    if (route === 'produtos') {
+      await evaluate('document.querySelector("[data-catalog-action=\\"view\\"]").click()');
+      await waitFor('.product-drawer[open]');
+      const detailProblems = await findLightOnLightText();
+      assert(!detailProblems.length, `detalhe do produto contém texto claro sobre fundo claro: ${JSON.stringify(detailProblems)}`);
+      await evaluate('document.querySelector("[data-catalog-action=\\"edit\\"]").click()');
+      await waitFor('.catalog-dialog[open]');
+      const formProblems = await findLightOnLightText();
+      assert(!formProblems.length, `edição do produto contém texto claro sobre fundo claro: ${JSON.stringify(formProblems)}`);
+      await evaluate('document.querySelector(".catalog-dialog[open] .catalog-close").click()');
+    }
     if (['produtos', 'financeiro', 'loja'].includes(route)) {
       const image = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
       await writeFile(new URL(`../assets/crops/design-${route}-1440.png`, import.meta.url), Buffer.from(image.data, 'base64'));
@@ -91,6 +142,8 @@ try {
   await pause(100);
   assert(await evaluate('getComputedStyle(document.querySelector(".product-insights")).gridTemplateColumns.split(" ").length === 2'), 'Indicadores de produto não mantiveram grade 2×2 no celular.');
   assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'), 'Produtos criou rolagem horizontal no celular.');
+  const mobileContrastProblems = await findLightOnLightText();
+  assert(!mobileContrastProblems.length, `produtos mobile contém texto claro sobre fundo claro: ${JSON.stringify(mobileContrastProblems)}`);
   process.stdout.write('Design system: canvas, sidebar, contraste, oito rotas Master/Portal e responsividade 390/1440px OK.\n');
 } finally {
   socket?.close();
