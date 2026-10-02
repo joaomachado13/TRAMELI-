@@ -724,6 +724,10 @@ summary {
 }
 
 /* Drawers e modais */
+dialog:not([open]) {
+  display: none !important;
+}
+
 .entity-drawer,
 .order-drawer {
   border: 0;

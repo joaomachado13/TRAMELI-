@@ -97,6 +97,7 @@ try {
   await pause(180);
   assert(await evaluate('!document.body.classList.contains("sidebar-collapsed")'), 'Sidebar desktop não expandiu ao clicar na barra lateral.');
   assert(await evaluate('getComputedStyle(document.querySelector(".mobile-menu-button")).display === "none"'), 'Controle desktop da sidebar continuou visível.');
+  assert(await evaluate('[...document.querySelectorAll("dialog:not([open])")].every(dialog => getComputedStyle(dialog).display === "none")'), 'Um diálogo fechado permaneceu visível no fim da página.');
   assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'), 'Visão Geral criou rolagem horizontal.');
   assert(await evaluate('getComputedStyle(document.querySelector(".attention-strip__heading h2")).color !== "rgb(238, 232, 215)"'), 'Aviso principal permaneceu com baixo contraste.');
   assert(!(await findLightOnLightText()).length, `início contém texto claro sobre fundo claro: ${JSON.stringify(await findLightOnLightText())}`);
