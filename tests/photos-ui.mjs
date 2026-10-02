@@ -42,8 +42,9 @@ try {
   };
   for (let i = 0; i < 60 && !await evaluate('!!window.photosReady'); i++) await pause(100);
   assert.equal(await evaluate('!!window.photosReady'), true);
-  assert.equal(await evaluate('document.querySelectorAll(".portal-product__photo img").length'), 16);
-  assert.equal(await evaluate('new DOMParser().parseFromString(TrameliCatalog.render(), "text/html").querySelectorAll(".catalog-card__image[src]").length'), 16);
+  const expectedPhotos = await evaluate('TrameliCatalog.list().filter(product => product.image).length');
+  assert.equal(await evaluate('document.querySelectorAll(".portal-product__photo img").length'), expectedPhotos);
+  assert.equal(await evaluate('new DOMParser().parseFromString(TrameliCatalog.render(), "text/html").querySelectorAll(".catalog-card__image[src]").length'), expectedPhotos);
   await evaluate('Promise.all([...document.querySelectorAll(".portal-product__photo img")].map(img => { img.loading = "eager"; return img.decode(); }))');
   await mkdir(new URL('../assets/crops/', import.meta.url), { recursive: true });
   for (const width of [1280, 390]) {
