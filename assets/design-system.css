@@ -829,8 +829,8 @@ summary {
 }
 
 .catalog-grid--compact .catalog-card__image {
-  aspect-ratio: 4 / 3;
-  height: auto;
+  aspect-ratio: auto;
+  height: 120px;
   object-fit: cover;
   background: #ece9e0;
 }
@@ -863,7 +863,7 @@ summary {
 }
 
 .catalog-cost-state {
-  display: none;
+  display: block;
 }
 
 /* Agenda */
@@ -1532,7 +1532,7 @@ body { min-height: 100dvh; overflow-x: hidden; }
 .product-insights { grid-template-columns: repeat(4, minmax(170px, 1fr)); }
 .insight-card { min-height: 96px; }
 .insight-card strong { overflow: visible; overflow-wrap: anywhere; text-overflow: clip; white-space: normal; line-height: 1.25; }
-.catalog-grid--compact { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+.catalog-grid--compact { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
 .catalog-grid--compact .catalog-card { min-height: 0; }
 .catalog-card__body { padding: 14px 16px 16px; }
 .catalog-card__body > strong { line-height: 1.3; }
