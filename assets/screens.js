@@ -34,6 +34,10 @@ const activeOrders = () => storedOrders().filter(order => orderState(order) !== 
 const financeMath = window.TrameliFinanceMath;
 const financeRange = { from: '', to: '' };
 const reportRange = { from: '', to: '' };
+const orderFilters = { query: '', customer: 'all', status: 'all', payment: 'all', from: '', to: '', sort: 'newest' };
+const agendaState = { mode: 'calendar', selected: '' };
+const reportState = { type: 'financial', period: 'month', generated: false };
+let settingsTab = 'geral';
 const inRange = (orders, from, to) => orders.filter(order => (!from || order.date >= from) && (!to || order.date <= to));
 const saoPauloToday = () => {
   const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', {
@@ -59,10 +63,15 @@ document.getElementById('today-date').textContent = new Intl.DateTimeFormat('pt-
 
 function updateOverview() {
   const orders = activeOrders();
-  const today = dateKey(new Date());
-  const nextDay = orders.filter(order => order.date === tomorrow());
-  const pending = nextDay.filter(order => orderState(order) === 'received').length;
-  const total = nextDay.reduce((sum, order) => sum + orderTotal(order), 0);
+  const today = saoPauloToday();
+  let rollover = '13:30';
+  try { rollover = JSON.parse(localStorage.getItem('trameli-operation-settings-v1') || '{}').rolloverTime || rollover; } catch { /* Default. */ }
+  const clock = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date()).filter(part => part.type !== 'literal').map(part => [part.type, Number(part.value)]));
+  const [rolloverHour, rolloverMinute] = rollover.split(':').map(Number);
+  const todayPending = orders.some(order => order.date === today && !['delivered', 'cancelled'].includes(orderState(order)));
+  const operationDay = clock.hour * 60 + clock.minute >= rolloverHour * 60 + rolloverMinute && !todayPending ? shiftDate(today, 1) : today;
+  const nextDay = orders.filter(order => order.date === operationDay && orderState(order) !== 'delivered');
+  const pending = orders.filter(order => orderState(order) === 'received').length;
   const todayDeliveries = orders.filter(order => order.date === today && orderState(order) !== 'delivered');
   const upcoming = orders.filter(order => order.date >= today && orderState(order) !== 'delivered')
     .sort((a, b) => a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt));
@@ -75,20 +84,15 @@ function updateOverview() {
   const paymentIntents = api?.ready ? (api.intents || []).filter(item => item.status === 'pending').length : 0;
   const missingCosts = live?.operator ? (window.TrameliCatalog?.list() || []).filter(item => item.active && item.costCents == null).length : 0;
   const attentionTotal = pending + todayDeliveries.length + dueOrders + unknownReceipts + paymentIntents + missingCosts;
-  document.getElementById('operational-message').textContent = nextDay.length
-    ? `${nextDay.length} ${nextDay.length === 1 ? 'pedido registrado' : 'pedidos registrados'} para amanhã.`
-    : 'Ainda não há pedidos registrados para amanhã.';
+  document.getElementById('operational-message').textContent = attentionTotal ? `${attentionTotal} ${attentionTotal === 1 ? 'item precisa' : 'itens precisam'} da sua atenção.` : 'Tudo certo por aqui. Nenhuma pendência importante.';
   document.getElementById('home-order-count').textContent = nextDay.length;
   document.getElementById('home-order-count').parentElement.querySelector('.kpi-card__context').textContent = nextDay.length ? `${nextDay.length} ${nextDay.length === 1 ? 'pedido registrado' : 'pedidos registrados'}` : 'Nenhum registrado';
   document.getElementById('home-pending-count').textContent = pending;
   document.getElementById('home-pending-count').parentElement.querySelector('.kpi-card__context').textContent = pending ? `${pending} ${pending === 1 ? 'pedido pendente' : 'pedidos pendentes'}` : 'Nenhum pendente';
   document.getElementById('home-delivery-count').textContent = todayDeliveries.length;
   document.getElementById('home-delivery-context').textContent = todayDeliveries.length ? 'Ainda previstas para hoje' : 'Nenhuma pendente hoje';
-  document.getElementById('home-order-total').textContent = currency(total);
-  document.getElementById('home-order-total').parentElement.querySelector('.kpi-card__context').textContent = 'Total final, incluindo entregas';
-  document.getElementById('attention-pending-orders').textContent = `${pending} ${pending === 1 ? 'pedido' : 'pedidos'}`;
-  document.getElementById('attention-finance').textContent = balances ? `${currency(due)} em aberto` : api?.error || 'Saldos indisponíveis';
-  document.getElementById('attention-deliveries').textContent = `${todayDeliveries.length} ${todayDeliveries.length === 1 ? 'entrega' : 'entregas'}`;
+  document.getElementById('home-order-total').textContent = balances ? currency(due) : '—';
+  document.getElementById('home-order-total').parentElement.querySelector('.kpi-card__context').textContent = balances ? `${dueOrders} ${dueOrders === 1 ? 'pedido pendente' : 'pedidos pendentes'}` : 'Saldos indisponíveis';
   const count = document.getElementById('nav-pending-count');
   count.textContent = attentionTotal;
   count.hidden = attentionTotal === 0;
@@ -101,18 +105,6 @@ function updateOverview() {
   document.getElementById('home-orders-empty').hidden = nextDay.length > 0;
   document.getElementById('home-deliveries').innerHTML = upcoming.slice(0, 4).map(order => `<li><span class="delivery-list__dot" aria-hidden="true"></span><time datetime="${escapeHtml(order.date)}">${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</time><div><strong>${escapeHtml(order.customer)}</strong><small>${escapeHtml(orderStateLabel(order))} · #${escapeHtml(order.id.slice(0, 8))}</small></div></li>`).join('');
   document.getElementById('home-deliveries-empty').hidden = upcoming.length > 0;
-  const customers = new Map();
-  storedOrders().forEach(order => {
-    const key = order.customerId || order.customerToken || order.id;
-    const record = customers.get(key) || { name: order.customer, count: 0, recent: '' };
-    record.count++;
-    if (order.createdAt > record.recent) { record.recent = order.createdAt; record.name = order.customer; }
-    customers.set(key, record);
-  });
-  const featured = [...customers.values()].sort((a, b) => b.recent.localeCompare(a.recent)).slice(0, 3);
-  document.getElementById('home-clients').innerHTML = featured.length
-    ? featured.map(customer => `<div class="home-client"><strong>${escapeHtml(customer.name)}</strong><small>${customer.count} ${customer.count === 1 ? 'pedido' : 'pedidos'}</small></div>`).join('')
-    : '<p class="data-empty">Nenhum cliente nos pedidos.</p>';
   const actions = [];
   if (pending) actions.push(`<li><a href="#operacao">${pending} ${pending === 1 ? 'pedido para conferir' : 'pedidos para conferir'} →</a></li>`);
   if (todayDeliveries.length) actions.push(`<li><a href="#agenda">${todayDeliveries.length} ${todayDeliveries.length === 1 ? 'entrega prevista' : 'entregas previstas'} para hoje →</a></li>`);
@@ -144,6 +136,23 @@ function panel(title, body) {
 function empty(message, link = '') {
   return `<div class="screen-empty"><p>${message}</p>${link ? `<a href="#operacao">${link} ↗</a>` : ''}</div>`;
 }
+function productIntelligence() {
+  const products = window.TrameliCatalog?.list() || [];
+  const stats = new Map(products.map(product => [product.id, { product, units: 0, revenue: 0, cost: 0, known: true }]));
+  activeOrders().forEach(order => order.items.forEach(item => {
+    const product = products.find(entry => entry.id === item.productId) || products.find(entry => entry.name === item.name);
+    if (!product) return;
+    const row = stats.get(product.id);
+    row.units += item.weightGrams ? 1 : item.quantity;
+    row.revenue += item.quantity * item.priceCents;
+    if (product.costCents == null) row.known = false;
+    else row.cost += item.weightGrams ? Math.round(product.costCents * item.weightGrams / 1000) : product.costCents * item.quantity;
+  }));
+  const rows = [...stats.values()].filter(row => row.units > 0).map(row => ({ ...row, profit: row.known ? row.revenue - row.cost : null, margin: row.known && row.revenue ? Math.round((row.revenue - row.cost) * 100 / row.revenue) : null }));
+  const top = (key, known = false) => rows.filter(row => !known || row[key] != null).sort((a, b) => b[key] - a[key])[0];
+  const item = (label, row, value) => `<article class="insight-card"><span>${label}</span>${row ? `<strong>${escapeHtml(row.product.name)}</strong><small>${value(row)}</small>` : '<strong>Sem dados</strong><small>Os pedidos formarão este indicador.</small>'}</article>`;
+  return `<section class="product-insights" aria-label="Inteligência de produtos">${item('Mais pedido', top('units'), row => `${row.units} ${row.units === 1 ? 'item' : 'itens'}`)}${item('Maior faturamento', top('revenue'), row => currency(row.revenue))}${item('Maior lucro', top('profit', true), row => currency(row.profit))}${item('Maior margem', top('margin', true), row => `${row.margin}% de margem`)}</section>`;
+}
 
 const pages = {
   pendencias: () => {
@@ -165,31 +174,58 @@ const pages = {
       ${panel('Catálogo',list([...missing.map(item=>`<li><a href="#produtos">${escapeHtml(item.name)} · custo pendente →</a></li>`),...unavailable.map(item=>`<li><a href="#produtos">${escapeHtml(item.name)} · indisponível amanhã →</a></li>`)],'Nenhuma pendência de catálogo para amanhã.'))}`;
   },
   pedidos: () => {
-    const orders = storedOrders().slice().sort((a, b) => b.date.localeCompare(a.date));
-    const pending = orders.filter(order => orderState(order) === 'received').length;
-    const list = orders.length ? `<div class="screen-records">${orders.map(order => `<article class="screen-order-row"><div class="screen-order-row__primary"><span class="screen-kicker">${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR')}</span><strong>${escapeHtml(order.customer)}</strong><small>${order.items.map(item => `${item.quantity}× ${escapeHtml(item.name)}`).join(' · ')}</small></div><div class="screen-order-row__delivery"><span>Endereço</span><strong>${escapeHtml(order.address)}</strong></div><div class="screen-order-row__amount"><strong>${currency(orderTotal(order))}</strong><span class="screen-badge screen-badge--${orderState(order) === 'received' ? 'neutral' : 'green'}">${orderStateLabel(order)}</span></div></article>`).join('')}</div>` : empty('Nenhum pedido cadastrado. Os pedidos lançados na Operação diária aparecerão aqui.', 'Lançar pedido');
-    return `${intro('Acompanhamento', 'Pedidos', 'Uma visão dos pedidos lançados na operação.')}
-      <div class="screen-metrics">${metric('Pedidos', orders.filter(order => orderState(order) !== 'cancelled').length, 'Ativos no navegador')}${metric('A conferir', pending, 'Ainda pendentes')}${metric('Total', currency(orders.filter(order => orderState(order) !== 'cancelled').reduce((sum, order) => sum + orderTotal(order), 0)), 'Exclui cancelados')}</div>
-      ${panel('Todos os pedidos', list)}`;
+    const all = storedOrders();
+    const customers = [...new Set(all.map(order => order.customer))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    const paymentLabels = { pix_manual: 'Pix', cash: 'Dinheiro', other: 'A combinar', bank: 'Transferência', unspecified: 'Não informado' };
+    const normalized = orderFilters.query.trim().toLocaleLowerCase('pt-BR');
+    const orders = all.filter(order => (!normalized || [order.id, order.customer, order.address, ...order.items.map(item => item.name)].some(value => String(value).toLocaleLowerCase('pt-BR').includes(normalized)))
+      && (orderFilters.customer === 'all' || order.customer === orderFilters.customer)
+      && (orderFilters.status === 'all' || orderState(order) === orderFilters.status)
+      && (orderFilters.payment === 'all' || (order.paymentMethod || 'unspecified') === orderFilters.payment)
+      && (!orderFilters.from || order.date >= orderFilters.from) && (!orderFilters.to || order.date <= orderFilters.to))
+      .sort((a, b) => orderFilters.sort === 'oldest' ? a.date.localeCompare(b.date) : orderFilters.sort === 'value' ? orderTotal(b) - orderTotal(a) : b.date.localeCompare(a.date));
+    const active = all.filter(order => orderState(order) !== 'cancelled');
+    const pending = active.filter(order => orderState(order) === 'received').length;
+    const rows = orders.length ? `<div class="orders-browser"><div class="orders-browser__head"><span>Pedido</span><span>Cliente</span><span>Entrega</span><span>Itens</span><span>Valor</span><span>Pagamento</span><span>Status</span></div>${orders.map(order => `<button type="button" class="orders-browser__row" data-open-order="${escapeHtml(order.id)}"><span><strong>#${escapeHtml(order.id.slice(0, 8))}</strong><small>${new Date(order.createdAt).toLocaleDateString('pt-BR')}</small></span><strong>${escapeHtml(order.customer)}</strong><span>${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR')}</span><span>${order.items.reduce((sum, item) => sum + (item.weightGrams ? 1 : item.quantity), 0)}</span><strong>${currency(orderTotal(order))}</strong><span>${escapeHtml(paymentLabels[order.paymentMethod || 'unspecified'] || 'Não informado')}</span><span class="screen-badge screen-badge--${orderState(order) === 'received' ? 'amber' : orderState(order) === 'cancelled' ? 'neutral' : 'green'}">${orderStateLabel(order)}</span></button>`).join('')}</div>` : '<div class="friendly-empty"><strong>Nenhum pedido encontrado.</strong><span>Ajuste os filtros ou registre um novo pedido.</span></div>';
+    return `${intro('Acompanhamento', 'Pedidos', 'Encontre um pedido e abra somente o detalhe de que precisa.')}
+      <div class="screen-metrics screen-metrics--compact">${metric('Pedidos ativos', active.length, 'Todos os períodos')}${metric('A conferir', pending, 'Pedem ação')}${metric('Valor ativo', currency(active.reduce((sum, order) => sum + orderTotal(order), 0)), 'Exclui cancelados')}</div>
+      <section class="screen-panel"><div class="record-toolbar record-toolbar--orders"><label>Buscar<input id="orders-search" type="search" value="${escapeHtml(orderFilters.query)}" placeholder="Cliente, produto ou ID"></label><label>Cliente<select data-order-filter="customer"><option value="all">Todos</option>${customers.map(value => `<option value="${escapeHtml(value)}" ${orderFilters.customer === value ? 'selected' : ''}>${escapeHtml(value)}</option>`).join('')}</select></label><label>Status<select data-order-filter="status"><option value="all">Todos</option>${Object.entries({ received: 'A conferir', confirmed: 'Conferido', packing: 'Em separação', ready: 'Pronto', delivered: 'Entregue', cancelled: 'Cancelado' }).map(([value, label]) => `<option value="${value}" ${orderFilters.status === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label><label>Pagamento<select data-order-filter="payment"><option value="all">Todos</option>${Object.entries(paymentLabels).filter(([value]) => value !== 'bank').map(([value, label]) => `<option value="${value}" ${orderFilters.payment === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label><label>De<input data-order-filter="from" type="date" value="${orderFilters.from}"></label><label>Até<input data-order-filter="to" type="date" value="${orderFilters.to}"></label><label>Ordenar<select data-order-filter="sort"><option value="newest">Mais recentes</option><option value="oldest" ${orderFilters.sort === 'oldest' ? 'selected' : ''}>Mais antigos</option><option value="value" ${orderFilters.sort === 'value' ? 'selected' : ''}>Maior valor</option></select></label><button class="screen-primary" type="button" data-new-order>+ Novo pedido</button></div>${rows}</section>`;
   },
-  clientes: () => `${intro('Relacionamento', 'Clientes', live ? 'Clientes identificados nos pedidos da operação.' : 'Cadastre clientes para reutilizar nome e endereço nos próximos pedidos. Contas do portal virão depois.')}${panel('Clientes', window.TrameliClients.render(storedOrders()))}`,
-  produtos: () => `${intro('Catálogo', 'Produtos', 'Cadastre os itens e preços confirmados. Eles ficarão disponíveis no lançamento de pedidos.')}${panel('Catálogo de produtos', window.TrameliCatalog.render())}`,
+  clientes: () => `${intro('Relacionamento', 'Clientes', 'Busque, consulte o histórico e registre um novo pedido sem sair do perfil.')}${panel('Clientes', window.TrameliClients.render(storedOrders()))}`,
+  produtos: () => `${intro('Catálogo', 'Produtos', 'Navegue pelo catálogo e abra cada produto para editar informações.')}${productIntelligence()}${panel('Catálogo de produtos', window.TrameliCatalog.render())}`,
   agenda: () => {
     const groups = new Map();
     activeOrders().forEach(order => { const day = groups.get(order.date) || []; day.push(order); groups.set(order.date, day); });
     const days = [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-    return `${intro('Planejamento', 'Agenda', 'Pedidos agrupados pela data de entrega. Horários ainda não são registrados.')}
-      <div class="screen-metrics">${metric('Datas com pedidos', days.length, 'No navegador')}${metric('Pedidos', activeOrders().length, 'Ativos')}</div>
-      ${panel('Entregas por dia', days.length ? `<div class="agenda-days">${days.map(([date, orders]) => `<section class="agenda-day"><h3>${new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</h3><span>${orders.length} ${orders.length === 1 ? 'pedido' : 'pedidos'}</span><ul>${orders.map(order => `<li><strong>${escapeHtml(order.customer)}</strong><small>${escapeHtml(order.address)}</small><span>${orderStateLabel(order)}</span></li>`).join('')}</ul></section>`).join('')}</div>` : empty('Nenhuma data com pedidos. Ao lançar um pedido, ele aparecerá no dia escolhido.', 'Lançar pedido'))}`;
+    if (!agendaState.selected || !groups.has(agendaState.selected)) agendaState.selected = groups.has(saoPauloToday()) ? saoPauloToday() : days[0]?.[0] || '';
+    const selectedOrders = groups.get(agendaState.selected) || [];
+    const orderRows = orders => `<div class="agenda-order-list">${orders.map(order => `<button type="button" data-open-order="${escapeHtml(order.id)}"><span><strong>${escapeHtml(order.customer)}</strong><small>#${escapeHtml(order.id.slice(0, 8))} · ${order.items.length} ${order.items.length === 1 ? 'linha' : 'linhas'}</small></span><span>${currency(orderTotal(order))}</span><span class="screen-badge screen-badge--${orderState(order) === 'received' ? 'amber' : 'green'}">${orderStateLabel(order)}</span></button>`).join('')}</div>`;
+    const calendar = days.length ? `<div class="agenda-calendar">${days.map(([date, orders]) => `<button type="button" data-agenda-day="${date}" aria-pressed="${agendaState.selected === date}"><span>${new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'short' })}</span><strong>${new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</strong><small>${orders.length} ${orders.length === 1 ? 'pedido' : 'pedidos'}</small></button>`).join('')}</div><section class="agenda-selected"><div class="screen-panel__heading"><h2>${new Date(`${agendaState.selected}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</h2><span>${selectedOrders.length} pedidos</span></div>${orderRows(selectedOrders)}</section>` : empty('Nenhuma entrega programada.', 'Lançar pedido');
+    const list = days.length ? `<div class="agenda-groups">${days.map(([date, orders]) => `<section><div><strong>${new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</strong><span>${orders.length}</span></div>${orderRows(orders)}</section>`).join('')}</div>` : empty('Nenhuma entrega programada.', 'Lançar pedido');
+    return `${intro('Planejamento', 'Agenda', 'Escolha um dia e abra apenas o pedido que deseja consultar.')}<div class="view-toggle" aria-label="Visualização da agenda"><button type="button" data-agenda-mode="calendar" aria-pressed="${agendaState.mode === 'calendar'}">Calendário</button><button type="button" data-agenda-mode="list" aria-pressed="${agendaState.mode === 'list'}">Lista</button></div><section class="screen-panel">${agendaState.mode === 'calendar' ? calendar : list}</section>`;
   },
-  financeiro: () => `${intro('Resultado da operação', 'Financeiro', 'Acompanhe venda dos produtos, custo da padaria e lucro bruto no período escolhido.')}
+  financeiro: () => `${intro('Resultado da operação', 'Financeiro', 'Quatro números primeiro; os lançamentos e fechamentos ficam nos detalhes.')}
     <div class="finance-presets" aria-label="Períodos rápidos"><button type="button" data-finance-days="1">Hoje</button><button type="button" data-finance-days="7">Últimos 7 dias</button><button type="button" data-finance-days="15">Últimos 15 dias</button></div>
     <div class="report-filters"><label>De<input id="finance-from" type="date" value="${financeRange.from}"></label><label>Até<input id="finance-to" type="date" value="${financeRange.to}"></label></div>
-    <div id="finance-cost-summary" aria-live="polite"></div>
-    ${panel('Como ler os valores', '<p class="report-note">Lucro bruto dos produtos = valor cobrado pelos produtos − custo da padaria. A taxa de entrega fica fora desta conta. Estes números não confirmam pagamentos recebidos nem descontam outras despesas.</p>')}`,
-  relatorios: () => `${intro('Análise', 'Relatórios', 'Escolha um intervalo para resumir os pedidos da operação.')}
-    ${panel('Extrato de pedidos', `<div class="report-filters"><label>De<input id="report-from" type="date" value="${reportRange.from}"></label><label>Até<input id="report-to" type="date" value="${reportRange.to}"></label></div><div id="report-results" aria-live="polite"></div><div id="report-cost-summary" aria-live="polite"></div><p class="report-note">Este extrato não comprova pagamento. Lucro bruto só aparece quando todos os itens tiverem custo conhecido.</p>`)}`,
-  configuracoes: () => `${intro('Preferências', 'Configurações', 'Ajustes da interface e futuras regras da operação.')}<div class="settings-grid">${panel('Movimento', `<div class="settings-row settings-row--motion"><span>Movimento da interface</span><button type="button" class="motion-toggle" aria-pressed="${!motionDisabled()}" ${systemReducedMotion.matches ? 'disabled' : ''}>${systemReducedMotion.matches ? 'Reduzido pelo sistema' : motionDisabled() ? 'Desativado' : 'Ativado'}</button></div>`)}${panel('Dados da operação', empty('Catálogo, entregas, pagamentos e acessos serão configurados por partes. Nenhuma regra fictícia será aplicada.'))}</div>`,
+    <div id="finance-cost-summary" aria-live="polite"></div>`,
+  relatorios: () => `${intro('Documentos', 'Relatórios', 'Escolha o que precisa, gere um resumo e salve em PDF.')}
+    <section class="report-generator"><div class="report-generator__form"><label>Tipo de relatório<select id="report-type"><option value="financial" ${reportState.type === 'financial' ? 'selected' : ''}>Resumo financeiro</option><option value="sales" ${reportState.type === 'sales' ? 'selected' : ''}>Vendas</option><option value="customers" ${reportState.type === 'customers' ? 'selected' : ''}>Clientes</option><option value="products" ${reportState.type === 'products' ? 'selected' : ''}>Produtos</option><option value="orders" ${reportState.type === 'orders' ? 'selected' : ''}>Pedidos</option><option value="deliveries" ${reportState.type === 'deliveries' ? 'selected' : ''}>Entregas</option></select></label><label>Período<select id="report-period"><option value="today">Hoje</option><option value="week">Últimos 7 dias</option><option value="month" ${reportState.period === 'month' ? 'selected' : ''}>Últimos 30 dias</option><option value="custom" ${reportState.period === 'custom' ? 'selected' : ''}>Personalizado</option></select></label><div class="report-custom-dates" ${reportState.period === 'custom' ? '' : 'hidden'}><label>De<input id="report-from" type="date" value="${reportRange.from}"></label><label>Até<input id="report-to" type="date" value="${reportRange.to}"></label></div><button class="screen-primary" type="button" data-report-generate>Gerar relatório</button></div><div id="report-results" class="report-preview" aria-live="polite">${reportState.generated ? '' : '<div class="friendly-empty"><strong>Nenhum relatório gerado.</strong><span>Escolha um tipo e um período para começar.</span></div>'}</div></section>`,
+  configuracoes: () => {
+    let operation = {}, print = {};
+    try { operation = JSON.parse(localStorage.getItem('trameli-operation-settings-v1') || '{}'); print = JSON.parse(localStorage.getItem('trameli-print-settings-70x33-v1') || '{}'); } catch { /* Defaults below. */ }
+    const tabs = [['geral','Geral'],['pedidos','Pedidos'],['entregas','Entregas'],['pagamentos','Pagamentos'],['catalogo','Catálogo'],['impressao','Impressão'],['acessos','Equipe e acessos'],['conta','Conta']];
+    const content = {
+      geral: `<form class="settings-form" data-settings-form="general"><label>Nome da operação<input name="businessName" value="${escapeHtml(operation.businessName || 'Trameli')}" maxlength="80"></label><label>Contato<input name="contact" value="${escapeHtml(operation.contact || '')}" maxlength="80" placeholder="Telefone ou WhatsApp"></label><div class="settings-row settings-row--motion"><span>Movimento da interface</span><button type="button" class="motion-toggle" aria-pressed="${!motionDisabled()}" ${systemReducedMotion.matches ? 'disabled' : ''}>${systemReducedMotion.matches ? 'Reduzido pelo sistema' : motionDisabled() ? 'Desativado' : 'Ativado'}</button></div><button class="screen-primary" type="submit">Salvar</button></form>`,
+      pedidos: `<form class="settings-form" data-settings-form="orders"><label>Horário de virada operacional<input name="rolloverTime" type="time" value="${escapeHtml(operation.rolloverTime || '13:30')}" required></label><p>A tela passa a priorizar o próximo dia somente quando os pedidos de hoje estiverem resolvidos.</p><label>Horário de corte do cliente<input type="time" value="22:30" disabled></label><small>Regra atual protegida pelo fluxo de pedidos.</small><button class="screen-primary" type="submit">Salvar</button></form>`,
+      entregas: `<div class="settings-form"><label>Taxa padrão<input value="R$ 2,00" disabled></label><p>A taxa atual faz parte das regras validadas da operação.</p></div>`,
+      pagamentos: `<div class="settings-form"><h3>Meios aceitos</h3><label class="settings-check"><input type="checkbox" checked disabled> Pix</label><label class="settings-check"><input type="checkbox" checked disabled> Dinheiro</label><label class="settings-check"><input type="checkbox" checked disabled> A combinar</label><p>Transferência bancária não aparece mais no checkout.</p></div>`,
+      catalogo: `<div class="settings-form"><p>Categorias e disponibilidade são gerenciadas diretamente em Produtos.</p><a class="screen-primary" href="#produtos">Abrir produtos</a></div>`,
+      impressao: `<form class="settings-form" data-settings-form="print"><label>Deslocamento horizontal (mm)<input name="offsetX" type="number" min="-3" max="3" step="0.5" value="${Number(print.offsetX || 0)}"></label><label>Deslocamento vertical (mm)<input name="offsetY" type="number" min="-3" max="3" step="0.5" value="${Number(print.offsetY || 0)}"></label><p>Etiqueta atual: 70 × 33 mm, folha A4.</p><button class="screen-primary" type="submit">Salvar</button></form>`,
+      acessos: '<div class="settings-slot" data-account-slot="team"><div class="friendly-empty"><strong>Equipe disponível na versão conectada.</strong><span>Entre como Master para administrar acessos.</span></div></div>',
+      conta: '<div class="settings-slot" data-account-slot="account"><div class="friendly-empty"><strong>Perfil disponível após o login.</strong><span>Nome, telefone, endereço e senha ficam reunidos aqui.</span></div></div>',
+    };
+    return `${intro('Preferências', 'Configurações', 'Regras e ajustes organizados fora das telas de trabalho.')}<div class="settings-shell"><nav class="settings-tabs" aria-label="Categorias de configuração">${tabs.map(([value, label]) => `<button type="button" data-settings-tab="${value}" aria-pressed="${settingsTab === value}">${label}</button>`).join('')}</nav><section class="screen-panel settings-content"><div class="screen-panel__heading"><h2>${tabs.find(([value]) => value === settingsTab)?.[1]}</h2></div>${content[settingsTab]}</section></div> <p class="settings-feedback" role="status"></p>`;
+  },
 };
 
 function renderReportResults() {
@@ -198,17 +234,29 @@ function renderReportResults() {
   const { from, to } = reportRange;
   if (from && to && from > to) {
     host.innerHTML = '<p class="report-note">A data inicial precisa ser anterior à data final.</p>';
-    const costHost = document.getElementById('report-cost-summary');
-    if (costHost) costHost.textContent = '';
-    costRequest++;
     return;
   }
   const orders = inRange(activeOrders(), from, to);
   const total = orders.reduce((sum, order) => sum + orderTotal(order), 0);
-  const days = new Map();
-  orders.forEach(order => { const day = days.get(order.date) || { count: 0, total: 0 }; day.count++; day.total += orderTotal(order); days.set(order.date, day); });
-  host.innerHTML = `<div class="report-summary"><div><span>Pedidos no período</span><strong>${orders.length}</strong></div><div><span>Total dos pedidos</span><strong>${currency(total)}</strong></div></div>${days.size ? `<div class="report-days">${[...days.entries()].sort((a,b) => b[0].localeCompare(a[0])).map(([date, day]) => `<div><span>${new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR')}</span><span>${day.count} ${day.count === 1 ? 'pedido' : 'pedidos'}</span><strong>${currency(day.total)}</strong></div>`).join('')}</div>` : '<p class="screen-empty">Nenhum pedido neste período.</p>'}`;
-  renderCostSummary('report-cost-summary', from || null, to || null);
+  const title = ({ financial: 'Resumo financeiro', sales: 'Vendas', customers: 'Clientes', products: 'Produtos', orders: 'Pedidos', deliveries: 'Entregas' })[reportState.type];
+  const period = `${from ? new Date(`${from}T12:00:00`).toLocaleDateString('pt-BR') : 'Início'} — ${to ? new Date(`${to}T12:00:00`).toLocaleDateString('pt-BR') : 'Hoje'}`;
+  let detail = '';
+  if (reportState.type === 'customers') {
+    const rows = new Map();
+    orders.forEach(order => { const row = rows.get(order.customer) || { count: 0, total: 0 }; row.count++; row.total += orderTotal(order); rows.set(order.customer, row); });
+    detail = `<div class="report-table">${[...rows.entries()].sort((a, b) => b[1].total - a[1].total).map(([name, row]) => `<div><strong>${escapeHtml(name)}</strong><span>${row.count} pedidos</span><strong>${currency(row.total)}</strong></div>`).join('')}</div>`;
+  } else if (reportState.type === 'products') {
+    const rows = new Map();
+    orders.forEach(order => order.items.forEach(item => { const row = rows.get(item.name) || { quantity: 0, total: 0 }; row.quantity += item.weightGrams ? 1 : item.quantity; row.total += item.quantity * item.priceCents; rows.set(item.name, row); }));
+    detail = `<div class="report-table">${[...rows.entries()].sort((a, b) => b[1].total - a[1].total).map(([name, row]) => `<div><strong>${escapeHtml(name)}</strong><span>${row.quantity} itens</span><strong>${currency(row.total)}</strong></div>`).join('')}</div>`;
+  } else {
+    detail = `<div class="report-table">${orders.slice().sort((a, b) => b.date.localeCompare(a.date)).map(order => `<div><strong>#${escapeHtml(order.id.slice(0, 8))} · ${escapeHtml(order.customer)}</strong><span>${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR')} · ${orderStateLabel(order)}</span><strong>${currency(orderTotal(order))}</strong></div>`).join('')}</div>`;
+  }
+  const body = `<article class="generated-report"><header><div><span>TRAMELI · RELATÓRIO</span><h2>${title}</h2><p>${period}</p></div><strong>${orders.length} pedidos</strong></header><div class="report-summary"><div><span>Pedidos</span><strong>${orders.length}</strong></div><div><span>Valor total</span><strong>${currency(total)}</strong></div></div>${orders.length ? detail : '<div class="friendly-empty"><strong>Nenhum dado neste período.</strong><span>Escolha outro intervalo para gerar o relatório.</span></div>'}</article>`;
+  host.innerHTML = `${body}<div class="report-actions"><button class="screen-primary" type="button" data-report-print ${orders.length ? '' : 'disabled'}>Baixar PDF</button><button type="button" data-report-generate>Atualizar relatório</button></div>`;
+  let sheet = document.getElementById('report-print-sheet');
+  if (!sheet) { sheet = document.createElement('div'); sheet.id = 'report-print-sheet'; document.body.append(sheet); }
+  sheet.innerHTML = body;
 }
 
 let costRequest = 0;
@@ -217,24 +265,27 @@ async function renderCostSummary(hostId, from = null, to = null) {
   if (!host) return;
   const orders = inRange(activeOrders(), from, to);
   const initial = financeMath.summarizeFinancials(orders, null);
-  const trio = (summary, note) => `<div class="screen-metrics financial-trio">
-    ${metric('Valor dos clientes', currency(summary.customerCents), 'Somente produtos')}
-    ${metric('Valor da padaria', summary.supplierCents === null ? '—' : currency(summary.supplierCents),
-      summary.missingItems ? 'Custo parcial' : summary.estimatedItems ? 'Inclui custo estimado' : 'Custo dos produtos')}
-    ${metric(summary.estimatedItems ? 'Lucro provisório' : 'Lucro bruto', summary.profitCents === null ? 'Pendente' : currency(summary.profitCents),
-      summary.profitCents === null ? 'Faltam custos' : summary.estimatedItems ? 'Depende de confirmação' : 'Sem taxa de entrega e outras despesas')}
-    </div><p class="financial-detail">Taxas de entrega no período: ${currency(summary.deliveryCents)}. Não entram no lucro acima.</p>
-    <p class="report-note">${note}</p>`;
+  const overview = (summary, note) => {
+    const balances = (window.TrameliPayments?.api?.balances || []).filter(row => (!from || row.delivery_date >= from) && (!to || row.delivery_date <= to));
+    const received = balances.reduce((sum, row) => sum + Number(row.paid_cents || 0), 0);
+    const due = balances.reduce((sum, row) => sum + Number(row.due_cents || 0), 0);
+    const days = new Map();
+    orders.forEach(order => days.set(order.date, (days.get(order.date) || 0) + orderTotal(order)));
+    const max = Math.max(1, ...days.values());
+    const bars = [...days.entries()].sort((a, b) => a[0].localeCompare(b[0])).slice(-10).map(([date, value]) => `<div><span style="--bar:${Math.max(5, Math.round(value * 100 / max))}%"></span><small>${new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</small><strong>${currency(value)}</strong></div>`).join('');
+    const totalBalance = Math.max(1, received + due);
+    return `<div class="finance-headline">${metric('Vendas', currency(summary.customerCents + summary.deliveryCents), `${orders.length} pedidos`)}${metric('Recebido', live ? currency(received) : '—', live ? 'Recebimentos conferidos' : 'Requer conexão')}${metric('Em aberto', live ? currency(due) : '—', live ? `${balances.filter(row => Number(row.due_cents) > 0).length} pedidos` : 'Requer conexão')}${metric(summary.estimatedItems ? 'Resultado provisório' : 'Resultado', summary.profitCents === null ? 'Pendente' : currency(summary.profitCents), summary.profitCents === null ? 'Faltam custos' : 'Lucro bruto dos produtos')}</div><div class="finance-charts"><section><div class="screen-panel__heading"><h2>Faturamento por dia</h2></div>${bars ? `<div class="bar-chart">${bars}</div>` : '<div class="friendly-empty"><strong>Sem vendas no período.</strong></div>'}</section><section><div class="screen-panel__heading"><h2>Recebido × em aberto</h2></div>${live ? `<div class="balance-chart" style="--received:${Math.round(received * 100 / totalBalance)}%"><div><span>Recebido</span><strong>${currency(received)}</strong></div><div><span>Em aberto</span><strong>${currency(due)}</strong></div></div>` : '<div class="friendly-empty"><strong>Conecte a operação.</strong><span>Recebimentos reais não são simulados localmente.</span></div>'}</section></div><details class="finance-help"><summary>Como estes valores são calculados?</summary><p>${escapeHtml(note)}</p><p>Taxas de entrega no período: ${currency(summary.deliveryCents)}. Elas não entram no lucro bruto dos produtos.</p></details>`;
+  };
   const request = ++costRequest;
   if (from && to && from > to) {
     host.innerHTML = '<p class="report-note">A data inicial precisa ser anterior à data final.</p>';
     return;
   }
   if (!live?.operator) {
-    host.innerHTML = trio(initial, 'Custos e lucro ficam disponíveis somente na conta da operação conectada. No modo local, não há custo confiável sincronizado.');
+    host.innerHTML = overview(initial, 'Custos, recebimentos e lucro confiável ficam disponíveis somente na conta da operação conectada.');
     return;
   }
-  host.innerHTML = trio(initial, 'Calculando custo da padaria…');
+  host.innerHTML = overview(initial, 'Calculando custo da padaria…');
   try {
     const rows = await live.costSummary(from, to);
     if (request !== costRequest || !document.getElementById(hostId)) return;
@@ -244,9 +295,9 @@ async function renderCostSummary(hostId, from = null, to = null) {
       : summary.estimatedItems
         ? `${summary.estimatedItems} ${summary.estimatedItems === 1 ? 'item usa custo estimado' : 'itens usam custo estimado'}. Confirme o preço de compra com a padaria antes de fechar lucro ou repasse.`
         : 'Lucro bruto dos produtos = valor dos clientes − valor da padaria. Não representa dinheiro já recebido nem lucro líquido.';
-    host.innerHTML = trio(summary, note);
+    host.innerHTML = overview(summary, note);
   } catch (cause) {
-    if (request === costRequest && document.getElementById(hostId)) host.innerHTML = trio(initial, `Custos indisponíveis: ${escapeHtml(cause.message)}`);
+    if (request === costRequest && document.getElementById(hostId)) host.innerHTML = overview(initial, `Custos indisponíveis: ${cause.message}`);
   }
 }
 
@@ -255,17 +306,24 @@ let routeRevision = 0;
 const menuButtons = [...document.querySelectorAll('.mobile-menu-button, .portal-menu-button')];
 const menuOverlay = document.querySelector('.menu-overlay');
 const menuPanel = document.getElementById('main-navigation-panel');
+const persistentNavigation = matchMedia('(min-width: 1100px)');
+
+function navigationIsPersistent() {
+  return persistentNavigation.matches && !document.body.classList.contains('portal-mode');
+}
 
 function setMenu(open) {
-  document.body.classList.toggle('menu-open', open);
-  menuOverlay.hidden = !open;
-  menuPanel.inert = !open;
-  menuPanel.setAttribute('aria-hidden', String(!open));
+  const overlayOpen = open && !navigationIsPersistent();
+  const accessible = overlayOpen || navigationIsPersistent();
+  document.body.classList.toggle('menu-open', overlayOpen);
+  menuOverlay.hidden = !overlayOpen;
+  menuPanel.inert = !accessible;
+  menuPanel.setAttribute('aria-hidden', String(!accessible));
   menuButtons.forEach(button => {
-    button.setAttribute('aria-expanded', String(open));
-    button.setAttribute('aria-label', open ? 'Fechar menu' : 'Abrir menu');
+    button.setAttribute('aria-expanded', String(overlayOpen));
+    button.setAttribute('aria-label', overlayOpen ? 'Fechar menu' : 'Abrir menu');
   });
-  motion?.menu(open);
+  motion?.menu(overlayOpen);
 }
 window.TrameliMenu = { close: () => setMenu(false) };
 
@@ -294,15 +352,16 @@ function renderRoute(route, preserveScroll = false) {
   operationView.hidden = !isOperation;
   screenView.hidden = isHome || isOperation;
   if (!isHome && !isOperation) { motion.reset(screenView); screenView.innerHTML = pages[route](); }
-  if (route === 'relatorios') renderReportResults();
+  if (route === 'relatorios' && reportState.generated) renderReportResults();
   if (route === 'financeiro') renderCostSummary('finance-cost-summary', financeRange.from || null, financeRange.to || null);
   if (route === 'financeiro' && window.TrameliPayments) {
     screenView.insertAdjacentHTML('beforeend', window.TrameliPayments.render());
-    window.TrameliPayments.refresh().then(() => window.TrameliPayments.previewDay());
+    window.TrameliPayments.refresh().then(() => { renderCostSummary('finance-cost-summary', financeRange.from || null, financeRange.to || null); window.TrameliPayments.previewDay(); });
   }
   if (route === 'configuracoes' && window.TrameliAccount) {
-    screenView.insertAdjacentHTML('beforeend', window.TrameliAccount.render());
-    window.TrameliAccount.refreshTeam();
+    const slot = screenView.querySelector('[data-account-slot]');
+    if (slot) slot.innerHTML = window.TrameliAccount.render(settingsTab === 'acessos' ? 'team' : 'account');
+    if (settingsTab === 'acessos') window.TrameliAccount.refreshTeam();
   }
   const operationDialog = document.getElementById('operation-dialog');
   if (!isOperation && operationDialog.open) operationDialog.close();
@@ -337,13 +396,67 @@ function showRoute(force = false) {
   } else finish();
 }
 
+function setReportPeriod() {
+  const to = saoPauloToday();
+  if (reportState.period === 'today') reportRange.from = reportRange.to = to;
+  if (reportState.period === 'week') { reportRange.from = shiftDate(to, -6); reportRange.to = to; }
+  if (reportState.period === 'month') { reportRange.from = shiftDate(to, -29); reportRange.to = to; }
+}
+
+const globalSearchInput = document.getElementById('global-search-input');
+const globalSearchResults = document.getElementById('global-search-results');
+function renderGlobalSearch() {
+  const query = globalSearchInput.value.trim().toLocaleLowerCase('pt-BR');
+  if (query.length < 2) { globalSearchResults.hidden = true; globalSearchInput.setAttribute('aria-expanded', 'false'); return; }
+  const orders = storedOrders().filter(order => [order.id, order.customer, ...order.items.map(item => item.name)].some(value => String(value).toLocaleLowerCase('pt-BR').includes(query))).slice(0, 4);
+  const clients = [...new Set([...window.TrameliClients.list().map(client => client.name), ...storedOrders().map(order => order.customer)])].filter(name => name.toLocaleLowerCase('pt-BR').includes(query)).slice(0, 4);
+  const products = (window.TrameliCatalog?.list() || []).filter(product => product.name.toLocaleLowerCase('pt-BR').includes(query)).slice(0, 4);
+  const group = (title, rows) => rows.length ? `<section><h3>${title}</h3>${rows.join('')}</section>` : '';
+  globalSearchResults.innerHTML = group('Pedidos', orders.map(order => `<button type="button" data-global-order="${escapeHtml(order.id)}"><span>#${escapeHtml(order.id.slice(0, 8))} · ${escapeHtml(order.customer)}</span><small>${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR')}</small></button>`)) + group('Clientes', clients.map(name => `<button type="button" data-global-client="${escapeHtml(name)}"><span>${escapeHtml(name)}</span><small>Abrir clientes</small></button>`)) + group('Produtos', products.map(product => `<button type="button" data-global-product="${escapeHtml(product.id)}"><span>${escapeHtml(product.name)}</span><small>${currency(product.priceCents)}</small></button>`)) || '<p>Nenhum resultado encontrado.</p>';
+  globalSearchResults.hidden = false;
+  globalSearchInput.setAttribute('aria-expanded', 'true');
+}
+
 menuButtons.forEach(button => button.addEventListener('click', () => setMenu(!document.body.classList.contains('menu-open'))));
 document.querySelector('.nav__close').addEventListener('click', () => setMenu(false));
 menuOverlay.addEventListener('click', () => setMenu(false));
 navigation.forEach(link => link.addEventListener('click', () => setMenu(false)));
+persistentNavigation.addEventListener('change', () => setMenu(false));
 window.addEventListener('hashchange', () => showRoute());
 document.querySelector('.notification-button').addEventListener('click', () => { location.hash = 'pendencias'; });
 document.addEventListener('click', event => {
+  const openOrder = event.target.closest('[data-open-order]');
+  if (openOrder) { window.TrameliOperation?.openOrder(openOrder.dataset.openOrder); return; }
+  if (event.target.closest('[data-new-order]')) { window.TrameliOperation?.openNew(); return; }
+  const agendaMode = event.target.closest('[data-agenda-mode]');
+  if (agendaMode) { agendaState.mode = agendaMode.dataset.agendaMode; showRoute(true); return; }
+  const agendaDay = event.target.closest('[data-agenda-day]');
+  if (agendaDay) { agendaState.selected = agendaDay.dataset.agendaDay; showRoute(true); return; }
+  const settingsButton = event.target.closest('[data-settings-tab]');
+  if (settingsButton) { settingsTab = settingsButton.dataset.settingsTab; showRoute(true); return; }
+  const reportGenerate = event.target.closest('[data-report-generate]');
+  if (reportGenerate) {
+    reportState.type = document.getElementById('report-type')?.value || reportState.type;
+    reportState.period = document.getElementById('report-period')?.value || reportState.period;
+    if (reportState.period !== 'custom') setReportPeriod();
+    else { reportRange.from = document.getElementById('report-from')?.value || ''; reportRange.to = document.getElementById('report-to')?.value || ''; }
+    reportState.generated = true;
+    renderReportResults();
+    return;
+  }
+  if (event.target.closest('[data-report-print]')) {
+    document.body.classList.add('report-printing');
+    addEventListener('afterprint', () => document.body.classList.remove('report-printing'), { once: true });
+    window.print();
+    return;
+  }
+  const globalOrder = event.target.closest('[data-global-order]');
+  if (globalOrder) { globalSearchResults.hidden = true; globalSearchInput.value = ''; window.TrameliOperation?.openOrder(globalOrder.dataset.globalOrder); return; }
+  const globalClient = event.target.closest('[data-global-client]');
+  if (globalClient) { globalSearchResults.hidden = true; globalSearchInput.value = ''; location.hash = '#clientes'; setTimeout(() => { const input = document.getElementById('client-search'); if (input) { input.value = globalClient.dataset.globalClient; input.dispatchEvent(new Event('input', { bubbles: true })); } }, 300); return; }
+  const globalProduct = event.target.closest('[data-global-product]');
+  if (globalProduct) { globalSearchResults.hidden = true; globalSearchInput.value = ''; window.TrameliCatalog?.open(globalProduct.dataset.globalProduct); return; }
+  if (!event.target.closest('.global-search')) { globalSearchResults.hidden = true; globalSearchInput.setAttribute('aria-expanded', 'false'); }
   const financePreset = event.target.closest('[data-finance-days]');
   if (financePreset) {
     const days = Number(financePreset.dataset.financeDays);
@@ -363,14 +476,49 @@ document.addEventListener('click', event => {
   motion.setReduced(userReducedMotion);
 });
 document.addEventListener('change', event => {
+  const orderFilter = event.target.closest('[data-order-filter]');
+  if (orderFilter) { orderFilters[orderFilter.dataset.orderFilter] = orderFilter.value; showRoute(true); return; }
+  if (event.target.id === 'report-period') {
+    reportState.period = event.target.value;
+    const custom = document.querySelector('.report-custom-dates');
+    if (custom) custom.hidden = reportState.period !== 'custom';
+  }
+  if (event.target.id === 'report-type') reportState.type = event.target.value;
   if (event.target.id === 'report-from' || event.target.id === 'report-to') {
     reportRange[event.target.id === 'report-from' ? 'from' : 'to'] = event.target.value;
-    renderReportResults();
+    if (reportState.generated) renderReportResults();
   }
   if (event.target.id === 'finance-from' || event.target.id === 'finance-to') {
     financeRange[event.target.id === 'finance-from' ? 'from' : 'to'] = event.target.value;
     renderCostSummary('finance-cost-summary', financeRange.from || null, financeRange.to || null);
   }
+});
+document.addEventListener('input', event => {
+  if (event.target === globalSearchInput) { renderGlobalSearch(); return; }
+  if (event.target.id === 'orders-search') {
+    orderFilters.query = event.target.value;
+    showRoute(true);
+    const input = document.getElementById('orders-search');
+    input?.focus({ preventScroll: true });
+    input?.setSelectionRange(orderFilters.query.length, orderFilters.query.length);
+  }
+});
+document.addEventListener('submit', event => {
+  const form = event.target.closest('[data-settings-form]');
+  if (!form) return;
+  event.preventDefault();
+  const data = new FormData(form);
+  const feedback = document.querySelector('.settings-feedback');
+  try {
+    if (form.dataset.settingsForm === 'print') {
+      localStorage.setItem('trameli-print-settings-70x33-v1', JSON.stringify({ offsetX: Number(data.get('offsetX')), offsetY: Number(data.get('offsetY')) }));
+    } else {
+      const current = JSON.parse(localStorage.getItem('trameli-operation-settings-v1') || '{}');
+      const values = form.dataset.settingsForm === 'orders' ? { rolloverTime: data.get('rolloverTime') } : { businessName: data.get('businessName'), contact: data.get('contact') };
+      localStorage.setItem('trameli-operation-settings-v1', JSON.stringify({ ...current, ...values }));
+    }
+    if (feedback) feedback.textContent = 'Configurações salvas neste aparelho.';
+  } catch { if (feedback) feedback.textContent = 'Não foi possível salvar as configurações.'; }
 });
 document.addEventListener('keydown', event => { if (event.key === 'Escape') setMenu(false); });
 showRoute();

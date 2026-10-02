@@ -9,8 +9,9 @@ export function initAccount(live) {
   }
   const passwordForm = () => `<form data-account-password><label>Nova senha<input name="password" type="password" autocomplete="new-password" minlength="8" required></label><label>Confirme a senha<input name="confirmation" type="password" autocomplete="new-password" minlength="8" required></label><p class="account-message" role="status"></p><button type="submit">Salvar senha</button></form>`;
   const identity = () => `<p><strong>${escapeHtml(name)}</strong><br>${escapeHtml(live.user.email || live.user.phone || '')} · ${roleLabel(live.role)}</p>`;
-  const render = () => `<section class="screen-panel account-panel"><div class="screen-panel__heading"><h2>Minha conta</h2></div>${identity()}<p>Crie ou altere sua senha para entrar diretamente. Sua sessão fica salva neste aparelho até você sair.</p>${passwordForm()}</section>
-    ${live.role === 'master' ? `<section class="screen-panel account-panel"><div class="screen-panel__heading"><h2>Equipe e acessos</h2></div><p>Gerencie as contas que já se cadastraram na Trameli. Operadoras cuidam dos pedidos; contas master também gerenciam a equipe.</p><ul class="account-team-list" data-team-list><li>Carregando equipe…</li></ul><form data-team-access><label>E-mail ou telefone cadastrado<input name="identity" autocomplete="off" placeholder="E-mail ou telefone com +55" required></label><label>Permissão<select name="role"><option value="operator">Operadora</option><option value="master">Master</option><option value="customer">Cliente — retirar acesso à equipe</option></select></label><p class="account-message" role="status"></p><button type="submit">Atualizar acesso</button></form></section>` : ''}`;
+  const accountSection = () => `<div class="account-panel">${identity()}<form data-account-profile><label>Nome<input name="name" value="${escapeHtml(live.profile?.name || live.user.user_metadata?.full_name || live.user.user_metadata?.name || '')}" maxlength="90" required></label><label>Telefone<input name="phone" type="tel" value="${escapeHtml(live.profile?.phone || live.user.user_metadata?.phone || live.user.phone || '')}" maxlength="25"></label><label>Endereço e referência<input name="address" value="${escapeHtml(live.profile?.address || live.user.user_metadata?.address || '')}" maxlength="180" required></label><p class="account-message" role="status"></p><button type="submit">Salvar meus dados</button></form><details><summary>Alterar senha</summary>${passwordForm()}</details></div>`;
+  const teamSection = () => live.role === 'master' ? `<div class="account-panel"><p>Operadoras cuidam dos pedidos; contas master também gerenciam a equipe.</p><ul class="account-team-list" data-team-list><li>Carregando equipe…</li></ul><form data-team-access><label>E-mail ou telefone cadastrado<input name="identity" autocomplete="off" placeholder="E-mail ou telefone com +55" required></label><label>Permissão<select name="role"><option value="operator">Operadora</option><option value="master">Master</option><option value="customer">Cliente — retirar acesso à equipe</option></select></label><p class="account-message" role="status"></p><button type="submit">Atualizar acesso</button></form></div>` : '<p>Somente uma conta Master pode alterar os acessos da equipe.</p>';
+  const render = section => section === 'team' ? teamSection() : accountSection();
   async function refreshTeam() {
     const host = document.querySelector('[data-team-list]');
     if (!host || live.role !== 'master') return;
@@ -45,7 +46,7 @@ export function initAccount(live) {
   document.querySelector('.portal-header__actions')?.append(accountButton);
   document.addEventListener('submit', async event => {
     const form = event.target;
-    if (!form.matches('[data-account-password], [data-team-access]')) return;
+    if (!form.matches('[data-account-password], [data-account-profile], [data-team-access]')) return;
     event.preventDefault();
     const submit = form.querySelector('[type="submit"]');
     if (submit.disabled) return;
@@ -57,6 +58,12 @@ export function initAccount(live) {
       if (form.matches('[data-account-password]')) {
         await live.auth.setPassword(fields.get('password'), fields.get('confirmation'));
         form.reset(); message.textContent = 'Senha salva. No próximo acesso, entre com ela.';
+      } else if (form.matches('[data-account-profile]')) {
+        const profile = { name: fields.get('name').trim(), phone: fields.get('phone').trim(), address: fields.get('address').trim() };
+        await live.auth.updateProfile(profile);
+        Object.assign(live.user.user_metadata, { name: profile.name, full_name: profile.name, phone: profile.phone, address: profile.address });
+        if (live.profile) Object.assign(live.profile, profile);
+        message.textContent = 'Seus dados foram atualizados.';
       } else {
         const { error } = await live.client.rpc('trameli_set_team_role', { p_identity: fields.get('identity').trim(), p_role: fields.get('role') });
         if (error) throw error;

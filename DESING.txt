@@ -1,0 +1,1049 @@
+SOBRE O DESING DO SITE, TVLZ ESSA FONTE ESTEJA UM POUCO BATIDO, PRECISO DE AJUDA COM MUDANÇAS NECESSARIAS, VOU TRAZER UM REMUMO DAS MELHORIAS DE DESING QUE PRECISMAMOS FAZER
+
+TRAMELI — REVISÃO VISUAL COMPLETA
+UI DESIGN / DESIGN SYSTEM / ACABAMENTO
+
+Utilize todas as capturas anexadas como referência do estado atual da Trameli.
+
+Esta etapa é EXCLUSIVAMENTE de design.
+
+Não alterar regras de negócio.
+Não reconstruir fluxos.
+Não modificar banco de dados.
+Não criar novas funcionalidades nesta etapa.
+Não alterar permissões ou autenticação.
+
+O objetivo é corrigir o design atual, criar consistência visual e fazer a aplicação parecer um produto maduro, organizado, acolhedor e extremamente fácil de ler.
+
+A Trameli precisa manter sua personalidade própria.
+
+Não transformar o sistema em um SaaS genérico azul/cinza.
+Não abandonar o verde.
+Não descaracterizar a marca.
+
+Porém, o design atual utiliza verde em superfícies demais e praticamente todos os elementos possuem peso visual semelhante.
+
+Precisamos criar HIERARQUIA.
+
+
+==================================================
+01 — NÃO UTILIZAR VERDE EM TODA A SUPERFÍCIE
+==================================================
+
+O painel administrativo atualmente utiliza praticamente toda a tela em verde escuro.
+
+Isso está deixando:
+
+a interface visualmente pesada;
+as seções pouco separadas;
+os cards parecidos entre si;
+os conteúdos difíceis de escanear;
+as páginas longas cansativas;
+a identidade excessivamente monocromática.
+
+Não remover o verde da Trameli.
+
+Mudar a função do verde.
+
+O verde deve passar a funcionar principalmente como:
+
+identidade;
+estrutura;
+navegação;
+ação;
+destaque;
+estado.
+
+E não como superfície de absolutamente toda a interface.
+
+
+==================================================
+02 — NOVA ESTRUTURA DE COR
+==================================================
+
+Criar uma paleta baseada em:
+
+VERDE FLORESTA PROFUNDO
+Cor estrutural principal da marca.
+
+Utilizar em:
+
+header;
+sidebar;
+elementos de navegação;
+botões primários;
+estados ativos;
+alguns destaques importantes.
+
+CREME / OFF-WHITE QUENTE
+Deve se tornar a principal superfície de trabalho da aplicação.
+
+Não utilizar branco frio puro.
+
+A interface deve possuir uma sensação levemente artesanal, acolhedora e relacionada ao universo de padaria/alimentos, sem parecer rústica ou antiga.
+
+VERDE MUITO CLARO
+Utilizar pontualmente em:
+
+áreas selecionadas;
+estados positivos;
+fundos auxiliares;
+categorias;
+pequenos destaques.
+
+BRANCO QUENTE
+Cards principais sobre o canvas creme.
+
+AMARELO / OCRE SUAVE
+Somente para atenção, alerta leve ou informação pendente.
+
+VERMELHO DESATURADO
+Somente para:
+
+erro;
+cancelamento;
+ação destrutiva.
+
+Não transformar vermelho em cor decorativa.
+
+
+==================================================
+03 — EXEMPLO DE DISTRIBUIÇÃO
+==================================================
+
+A estrutura pode funcionar aproximadamente assim:
+
+Header superior:
+verde escuro.
+
+Sidebar:
+verde escuro ou verde ligeiramente diferente do header.
+
+Área principal:
+creme/off-white.
+
+Cards:
+branco quente ou creme muito claro.
+
+Card selecionado:
+verde extremamente claro.
+
+Botão principal:
+verde profundo.
+
+Botão secundário:
+creme com borda verde.
+
+Texto principal:
+verde muito escuro / quase preto esverdeado.
+
+Texto secundário:
+cinza quente ou verde acinzentado.
+
+Isso cria profundidade sem precisar utilizar sombras fortes.
+
+
+==================================================
+04 — NÃO UTILIZAR GRADIENTE VERDE COMO SOLUÇÃO
+==================================================
+
+O gradiente atual entre verdes não está resolvendo a hierarquia.
+
+Não tentar corrigir o excesso de verde adicionando ainda mais tonalidades ou gradientes.
+
+Preferir superfícies sólidas e claramente distintas.
+
+A sensação deve vir de:
+
+contraste;
+espaçamento;
+tipografia;
+hierarquia;
+proporção.
+
+E não de efeitos.
+
+
+==================================================
+05 — CORRIGIR ELEMENTOS ENCOSTANDO EM LINHAS
+==================================================
+
+Há diversos pontos nas telas atuais em que:
+
+texto fica muito próximo da borda;
+texto encosta visualmente em divisórias;
+linhas passam excessivamente perto do conteúdo;
+títulos estão apertados;
+cards não possuem área interna suficiente;
+informações parecem ter sido encaixadas à força.
+
+Realizar uma revisão completa de padding e spacing.
+
+Nenhum texto deve parecer colado:
+
+na borda de um card;
+em uma linha divisória;
+em outro bloco;
+em um botão;
+em um input.
+
+Criar um sistema consistente de espaçamento.
+
+Utilizar escala baseada em aproximadamente:
+
+4 px
+8 px
+12 px
+16 px
+24 px
+32 px
+48 px
+64 px
+
+Não utilizar valores aleatórios página por página.
+
+Elementos relacionados ficam próximos.
+
+Grupos diferentes precisam respirar.
+
+
+==================================================
+06 — CARDS PRECISAM RESPIRAR
+==================================================
+
+Os cards atuais possuem bordas muito próximas do conteúdo e aparecem em excesso.
+
+Criar padding interno mais confortável.
+
+Cards pequenos:
+aproximadamente 16–20 px.
+
+Cards médios:
+20–24 px.
+
+Cards importantes:
+24–32 px.
+
+Evitar cards dentro de cards dentro de cards sempre que possível.
+
+A interface não precisa de uma caixa desenhada ao redor de todo conteúdo existente.
+
+Utilizar espaço em branco como elemento de separação.
+
+
+==================================================
+07 — REDUZIR O EXCESSO DE CONTORNOS
+==================================================
+
+Atualmente muitas áreas são separadas por bordas.
+
+Isso cria sensação de formulário e deixa tudo visualmente fragmentado.
+
+Não utilizar border em todo elemento.
+
+Criar hierarquia através de:
+
+fundo;
+espaçamento;
+tipografia;
+alinhamento.
+
+Quando utilizar borda:
+
+ela deve ser fina;
+discreta;
+com contraste baixo.
+
+Reservar bordas mais evidentes para:
+
+input ativo;
+seleção;
+erro;
+elemento clicável importante.
+
+
+==================================================
+08 — TIPOGRAFIA
+==================================================
+
+Revisar completamente a utilização da fonte atual.
+
+A fonte serifada possui personalidade e pode continuar fazendo parte da marca.
+
+Porém, ela está sendo utilizada em excesso dentro de uma aplicação operacional.
+
+Isso reduz velocidade de leitura e começa a criar repetição visual.
+
+Utilizar a serifada principalmente em:
+
+títulos grandes;
+boas-vindas;
+momentos editoriais;
+portal do cliente;
+algumas chamadas de marca.
+
+No painel Master, utilizar predominantemente uma sans-serif extremamente legível.
+
+A sans-serif deve cuidar de:
+
+números;
+pedidos;
+produtos;
+clientes;
+tabelas;
+inputs;
+valores;
+botões;
+status;
+informações operacionais.
+
+Não substituir simplesmente a serifada por uma fonte genérica qualquer.
+
+Encontrar uma combinação que preserve a personalidade acolhedora da Trameli.
+
+
+==================================================
+09 — CRIAR ESCALA TIPOGRÁFICA
+==================================================
+
+O tamanho das fontes atuais varia pouco e existem muitos textos pequenos.
+
+Criar escala consistente.
+
+Referência aproximada:
+
+Título principal:
+40–48 px desktop.
+
+Título de seção:
+24–28 px.
+
+Título de card:
+18–20 px.
+
+Texto principal:
+15–16 px.
+
+Texto secundário:
+14 px.
+
+Metadata:
+12–13 px somente quando realmente necessário.
+
+Evitar qualquer informação importante com tamanho extremamente reduzido.
+
+Valores financeiros e números relevantes devem possuir destaque adequado.
+
+
+==================================================
+10 — NÃO ESCREVER TUDO EM PEQUENO PARA CABER
+==================================================
+
+Se uma informação não cabe confortavelmente:
+
+não diminuir a fonte até caber.
+
+Primeiro avaliar:
+
+se o texto pode ser resumido;
+se pode quebrar linha;
+se existe informação secundária;
+se o componente está pequeno demais.
+
+Legibilidade é prioridade.
+
+
+==================================================
+11 — HIERARQUIA DOS TÍTULOS
+==================================================
+
+Atualmente existem:
+
+eyebrow;
+título;
+subtítulo;
+card;
+subtítulo de card;
+metadata;
+
+muito próximos visualmente em alguns pontos.
+
+Criar diferenças claras.
+
+Exemplo:
+
+PEQUENO LABEL
+RELACIONAMENTO
+
+Título:
+Clientes
+
+Descrição:
+Gerencie seus clientes e acompanhe seus pedidos.
+
+Depois iniciar o conteúdo com distância suficiente.
+
+O título principal não deve parecer conectado à borda do primeiro card.
+
+
+==================================================
+12 — HEADER
+==================================================
+
+O header atual possui uma boa estrutura, mas precisa de refinamento.
+
+Reduzir sensação de elementos soltos.
+
+Padronizar:
+
+altura;
+alinhamento vertical;
+área de busca;
+notificação;
+avatar;
+nome;
+perfil;
+logout.
+
+O campo de busca não precisa competir visualmente com o conteúdo da página.
+
+Utilizar uma largura consistente.
+
+Garantir alinhamento perfeito entre:
+
+menu;
+busca;
+ícones;
+avatar;
+texto.
+
+A linha inferior do header deve ser extremamente discreta.
+
+
+==================================================
+13 — SIDEBAR
+==================================================
+
+A navegação principal deve possuir:
+
+ícone;
+nome;
+estado ativo;
+hover.
+
+Não depender somente do menu hamburguer em telas desktop se isso estiver prejudicando a navegação.
+
+Visualmente, a sidebar pode funcionar como uma faixa verde escura e dar identidade à aplicação.
+
+Itens ativos podem utilizar:
+
+fundo verde mais claro;
+pequeno marcador;
+contraste tipográfico.
+
+Evitar exageros.
+
+
+==================================================
+14 — BOTÕES
+==================================================
+
+Padronizar todos os botões.
+
+Criar três níveis:
+
+PRIMÁRIO
+verde preenchido.
+
+SECUNDÁRIO
+fundo claro com borda verde.
+
+TERCIÁRIO
+texto + ícone sem caixa pesada.
+
+Não criar dezenas de estilos diferentes.
+
+Padronizar:
+
+altura;
+raio;
+padding;
+tipografia;
+hover;
+pressed;
+disabled;
+loading.
+
+Botões importantes precisam parecer botões.
+
+Links secundários não precisam parecer botões.
+
+
+==================================================
+15 — BORDER RADIUS
+==================================================
+
+A aplicação utiliza muitos cantos arredondados.
+
+Manter isso como característica, mas reduzir variações.
+
+Criar poucos tokens.
+
+Exemplo conceitual:
+
+pequeno;
+médio;
+grande.
+
+Cards não precisam parecer cápsulas.
+
+Botões não precisam utilizar o mesmo raio dos cards.
+
+
+==================================================
+16 — SOMBRAS
+==================================================
+
+Evitar sombras pesadas.
+
+A Trameli combina mais com profundidade criada através de:
+
+contraste de superfície;
+bordas sutis;
+espaçamento.
+
+Utilizar sombra somente quando ajudar a indicar:
+
+drawer;
+modal;
+menu flutuante;
+elemento sobreposto.
+
+
+==================================================
+17 — DASHBOARD / VISÃO GERAL
+==================================================
+
+Os indicadores superiores devem ter dimensões consistentes.
+
+Não utilizar quatro caixas visualmente idênticas se uma informação for mais importante que outra.
+
+Criar hierarquia.
+
+Os cards precisam ter:
+
+label;
+valor;
+contexto curto.
+
+Nada além disso no primeiro nível.
+
+A página precisa respirar mais verticalmente.
+
+
+==================================================
+18 — OPERAÇÃO
+==================================================
+
+Visualmente, a Operação atual é muito pesada.
+
+Os blocos dos pedidos são enormes e parecem documentos.
+
+Mesmo antes de alterar o funcionamento, reconstruir a apresentação visual para utilizar cards menores.
+
+Criar contraste claro entre:
+
+identificação;
+cliente;
+informação principal;
+status;
+valor.
+
+Evitar linhas horizontais entre cada frase.
+
+Não utilizar bordas para separar toda informação.
+
+
+==================================================
+19 — PEDIDOS
+==================================================
+
+A página precisa parecer um navegador de registros e não um documento corrido.
+
+Cada pedido precisa ter uma estrutura visual previsível.
+
+Alinhar informações em colunas.
+
+Não deixar:
+
+endereço;
+valor;
+status;
+cliente;
+
+flutuando em posições diferentes dependendo do conteúdo.
+
+
+==================================================
+20 — CLIENTES
+==================================================
+
+Os cards atuais de clientes possuem bastante espaço vazio e pouca hierarquia.
+
+Refazer o card visual.
+
+Nome deve ser o primeiro elemento.
+
+Depois:
+
+contato;
+endereço;
+quantidade de pedidos.
+
+Eliminar textos visualmente estranhos como a junção:
+
+“Via pedido3 pedidos”.
+
+Garantir espaçamento real entre labels e valores.
+
+Os cards devem ter mesma altura quando estiverem na mesma linha.
+
+
+==================================================
+21 — PRODUTOS
+==================================================
+
+Esta é uma das páginas onde o problema de densidade fica mais evidente.
+
+Os cards são pequenos demais para a quantidade de informação apresentada.
+
+Não tentar colocar:
+
+foto;
+categoria;
+estoque;
+nome;
+preço;
+custo;
+ações;
+histórico;
+status;
+
+todos competindo pelo mesmo espaço.
+
+Visualmente priorizar:
+
+foto;
+nome;
+preço;
+status.
+
+Ações secundárias podem ficar em menu contextual.
+
+A fotografia precisa possuir:
+
+mesma proporção;
+mesmo enquadramento;
+mesmo raio;
+placeholder consistente.
+
+O placeholder “Foto pendente” precisa parecer intencional e não um erro de carregamento.
+
+
+==================================================
+22 — IMAGENS DE PRODUTO
+==================================================
+
+Padronizar proporção das imagens.
+
+Não permitir que imagens diferentes criem alturas diferentes nos cards.
+
+Utilizar object-fit adequado.
+
+Criar placeholder elegante para produto sem foto.
+
+Exemplo:
+
+ícone discreto de imagem
+Foto pendente
+
+Não utilizar grandes blocos verdes vazios apenas com texto no centro.
+
+
+==================================================
+23 — AGENDA
+==================================================
+
+Criar mais distinção entre:
+
+data;
+cliente;
+endereço;
+status.
+
+Atualmente a informação está muito horizontal e com bastante espaço vazio.
+
+Utilizar alinhamentos consistentes.
+
+A data deve ser um agrupador visual forte.
+
+Os pedidos abaixo dela devem ser secundários.
+
+
+==================================================
+24 — FINANCEIRO
+==================================================
+
+Visualmente esta é a página mais carregada da aplicação.
+
+Não resolver simplesmente removendo dados.
+
+Criar níveis visuais.
+
+PRIMEIRO NÍVEL:
+indicadores principais.
+
+SEGUNDO NÍVEL:
+gráficos/resumos.
+
+TERCEIRO NÍVEL:
+detalhes e registros.
+
+Diminuir radicalmente a quantidade de boxes concorrendo simultaneamente.
+
+Existem muitos retângulos com praticamente o mesmo desenho.
+
+Isso reduz a percepção de prioridade.
+
+Utilizar cards grandes somente para informação importante.
+
+
+==================================================
+25 — RELATÓRIOS
+==================================================
+
+A página deve possuir grande área vazia intencional.
+
+Não preencher espaço apenas para parecer completa.
+
+A interface deve parecer uma ferramenta de geração, não outro dashboard.
+
+Trabalhar com:
+
+um bloco principal;
+filtros bem alinhados;
+área de resultado.
+
+Muito mais simples visualmente.
+
+
+==================================================
+26 — CONFIGURAÇÕES
+==================================================
+
+Hoje esta página parece inacabada.
+
+Existem blocos enormes contendo pouco conteúdo.
+
+Reorganizar visualmente.
+
+Utilizar navegação por categorias.
+
+Não colocar um formulário de senha enorme ocupando praticamente toda a largura.
+
+Campos de formulário devem possuir largura coerente com o dado solicitado.
+
+Exemplo:
+
+senha não precisa ocupar 100% de uma tela desktop.
+
+Criar grid de formulário mais compacto e profissional.
+
+
+==================================================
+27 — INPUTS
+==================================================
+
+Padronizar:
+
+altura;
+radius;
+borda;
+label;
+placeholder;
+estado ativo;
+erro;
+disabled.
+
+Labels devem ficar claramente acima dos campos.
+
+Inputs não podem encostar em linhas de seção.
+
+Criar distância consistente entre:
+
+label;
+campo;
+helper text.
+
+
+==================================================
+28 — LINHAS DIVISÓRIAS
+==================================================
+
+Utilizar menos.
+
+Hoje algumas páginas parecem construídas através de linhas horizontais.
+
+Uma linha só deve existir quando realmente existir uma separação lógica.
+
+Preferir espaço.
+
+Quando utilizada:
+
+cor muito discreta;
+margens laterais corretas;
+distância vertical confortável.
+
+
+==================================================
+29 — ALINHAMENTO
+==================================================
+
+Criar um grid mestre para toda aplicação.
+
+Todos os títulos devem começar no mesmo eixo.
+
+Todos os cards principais devem respeitar a mesma largura do container.
+
+Elementos de cabeçalho e conteúdo precisam compartilhar linhas visuais.
+
+Evitar pequenos deslocamentos de 5–15 px entre páginas.
+
+A aplicação precisa parecer construída por um único sistema.
+
+
+==================================================
+30 — LARGURA DO CONTEÚDO
+==================================================
+
+Atualmente algumas páginas ocupam quase toda a largura disponível.
+
+Isso cria linhas longas e áreas vazias estranhas dentro dos componentes.
+
+Criar max-width adequado para o conteúdo.
+
+Em telas grandes, não simplesmente esticar todos os componentes.
+
+Utilizar grids.
+
+A aplicação deve continuar elegante em monitores grandes.
+
+
+==================================================
+31 — ESPAÇO EM BRANCO
+==================================================
+
+Não interpretar espaço vazio como desperdício.
+
+Espaço vazio é necessário para separar:
+
+grupos;
+ações;
+informações;
+prioridades.
+
+Mas espaço vazio deve ser INTENCIONAL.
+
+Não deixar um card gigante vazio apenas porque seu container possui largura excessiva.
+
+
+==================================================
+32 — STATUS
+==================================================
+
+Padronizar badges de status.
+
+Exemplos:
+
+Novo
+A conferir
+Conferido
+Entregue
+Pendente
+Pago
+Em aberto
+Cancelado
+
+Todos devem utilizar:
+
+mesmo tamanho;
+mesma tipografia;
+mesmo raio;
+mesma lógica de cor.
+
+Não utilizar verde para absolutamente todos os estados.
+
+A cor precisa transmitir significado.
+
+
+==================================================
+33 — ÍCONES
+==================================================
+
+Padronizar uma única família de ícones.
+
+Não misturar estilos.
+
+Utilizar ícones simples, lineares e de leitura imediata.
+
+Ícone nunca deve substituir um texto quando a ação não for óbvia.
+
+
+==================================================
+34 — MICROINTERAÇÕES
+==================================================
+
+Criar feedback visual discreto.
+
+Hover em card clicável.
+Hover em botão.
+Focus em input.
+Transição de drawer.
+Menu aparecendo.
+Mudança de estado.
+
+Movimento deve ser curto e funcional.
+
+Nada excessivamente animado.
+
+
+==================================================
+35 — CONTRASTE
+==================================================
+
+Revisar especialmente textos cinza/verdes sobre fundo verde.
+
+Existem pontos onde a leitura está fraca.
+
+Informação principal precisa possuir alto contraste.
+
+Informação secundária pode ser mais suave, mas ainda perfeitamente legível.
+
+Não utilizar baixa opacidade como única maneira de criar hierarquia.
+
+
+==================================================
+36 — CONSISTÊNCIA ENTRE PORTAL E MASTER
+==================================================
+
+Hoje o portal do cliente e o painel Master parecem quase dois produtos diferentes.
+
+Eles podem possuir comportamentos diferentes, porém precisam compartilhar DNA visual.
+
+Compartilhar:
+
+paleta;
+raio;
+tipografia;
+botões;
+iconografia;
+tratamento de imagens;
+detalhes de marca.
+
+O portal pode ser mais acolhedor/editorial.
+
+O Master deve ser mais funcional e objetivo.
+
+Mas ambos precisam claramente pertencer à Trameli.
+
+
+==================================================
+37 — PERSONALIDADE
+==================================================
+
+A Trameli trabalha com:
+
+padaria;
+entregas;
+clientes recorrentes;
+rotina;
+proximidade.
+
+O design não deve parecer:
+
+banco;
+ERP industrial;
+software médico;
+painel de tecnologia genérico.
+
+Deve transmitir:
+
+organização;
+proximidade;
+calma;
+rotina;
+confiança;
+cuidado.
+
+Sem recorrer a:
+
+ilustrações infantis;
+desenhos óbvios de pão;
+texturas rústicas;
+madeira;
+xadrez;
+estética de padaria antiga.
+
+A personalidade precisa ser contemporânea.
+
+
+==================================================
+38 — RESULTADO VISUAL ESPERADO
+==================================================
+
+Quando abrir a nova interface, a percepção deve ser:
+
+“É claramente a Trameli.”
+
+Mas imediatamente também:
+
+“Agora eu consigo respirar.”
+
+A marca continua verde.
+
+Porém a tela não é inteira verde.
+
+Existe contraste.
+Existe espaço.
+Existe hierarquia.
+Existe acabamento.
+
+Nada encosta nas bordas.
+Nada parece apertado.
+Nada parece colocado por acaso.
+
+Os elementos relacionados parecem relacionados.
+
+As ações parecem ações.
+
+Os dados importantes aparecem primeiro.
+
+O sistema deve parecer simples mesmo contendo muita informação.
+
+
+==================================================
+39 — REGRA FINAL
+==================================================
+
+Antes de adicionar qualquer elemento visual, perguntar:
+
+Isso ajuda a entender?
+Isso ajuda a clicar?
+Isso ajuda a encontrar?
+Isso estabelece hierarquia?
+
+Se não fizer nenhuma dessas coisas, provavelmente não precisa estar na tela.
+
+O objetivo não é “deixar mais bonito”.
+
+O objetivo é tornar a interface mais clara, confortável, consistente e profissional sem perder a personalidade da Trameli.

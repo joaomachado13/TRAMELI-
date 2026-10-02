@@ -10,3 +10,4 @@ backups/
 *.sql.partial
 supabase/.temp/
 private/
+.codex-vite.*.log

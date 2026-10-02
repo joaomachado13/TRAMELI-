@@ -1,0 +1,1168 @@
+TRAMELI — REVISÃO COMPLETA DE UI/UX E FLUXO OPERACIONAL
+
+Quero fazer uma revisão estrutural da interface atual da Trameli.
+
+As imagens anexadas representam o estado atual do sistema e devem ser utilizadas como referência para identificar exatamente as páginas e componentes mencionados abaixo.
+
+IMPORTANTE:
+Não quero reconstruir o sistema do zero e não quero alterar regras, dados, autenticação, permissões ou funcionalidades que já estejam funcionando sem necessidade.
+
+O objetivo desta etapa é:
+
+- melhorar leitura;
+- melhorar hierarquia visual;
+- reduzir excesso de informação simultânea;
+- transformar páginas passivas em páginas realmente interativas;
+- preparar a interface para um volume real de clientes e pedidos;
+- simplificar o trabalho diário da pessoa responsável pela operação;
+- manter a identidade visual da Trameli.
+
+A regra principal desta revisão é:
+
+NÃO MOSTRAR TUDO AO MESMO TEMPO.
+
+A interface deve mostrar primeiro o que é necessário para tomar uma decisão.
+Informações secundárias devem aparecer somente quando o usuário abrir um pedido, cliente, produto, recebimento etc.
+
+Preferir constantemente:
+
+RESUMO → CLIQUE → DETALHE EM DRAWER/PAINEL LATERAL
+
+em vez de:
+
+CARDS GIGANTES → MUITO TEXTO → MUITOS NÚMEROS → PÁGINAS LONGAS.
+
+
+==================================================
+1. DIREÇÃO VISUAL GERAL
+==================================================
+
+A identidade atual em verde deve ser preservada.
+
+Não quero transformar a Trameli em um dashboard empresarial genérico.
+
+Porém, a interface atual está excessivamente escura, com muitos elementos utilizando praticamente o mesmo verde, pouco contraste entre níveis de informação e uma quantidade grande de textos pequenos.
+
+Precisamos criar uma hierarquia visual muito mais clara.
+
+Revisar:
+
+- escala tipográfica;
+- tamanho mínimo dos textos;
+- espaçamento;
+- contraste;
+- peso das fontes;
+- distância entre elementos;
+- quantidade de elementos por tela;
+- densidade dos cards;
+- tamanhos dos títulos;
+- estados de hover;
+- estados selecionados;
+- estados clicáveis;
+- feedback visual de ações.
+
+Não resolver o problema simplesmente aumentando todas as fontes.
+
+Criar uma escala tipográfica consistente para todo o sistema.
+
+Exemplo de hierarquia:
+
+Título da página
+Subtítulo/contexto
+Indicadores principais
+Título de seção
+Texto operacional
+Informação auxiliar
+Metadata
+
+Informações auxiliares não podem competir visualmente com informações importantes.
+
+A fonte serifada atual pode continuar existindo como elemento de personalidade da marca, principalmente no portal do cliente e em títulos pontuais.
+
+No painel administrativo/operacional, reduzir bastante seu uso.
+
+A operação precisa parecer mais rápida, legível e funcional.
+
+Utilizar uma tipografia sans-serif muito legível para:
+
+- dados;
+- pedidos;
+- tabelas;
+- valores;
+- filtros;
+- formulários;
+- produtos;
+- status;
+- informações operacionais.
+
+Preservar o caráter acolhedor da marca através de:
+
+- cores;
+- espaçamentos;
+- linguagem;
+- fotografia;
+- detalhes gráficos;
+- títulos selecionados.
+
+Não depender exclusivamente da fonte serifada para criar identidade.
+
+
+==================================================
+2. PRINCÍPIO DE INTERAÇÃO
+==================================================
+
+Hoje várias páginas mostram informações, mas praticamente não permitem trabalhar com elas.
+
+Isso precisa mudar.
+
+Pedidos, clientes, produtos, agenda e financeiro devem funcionar como ferramentas de trabalho.
+
+Sempre que fizer sentido:
+
+Ao clicar em um registro, abrir um DRAWER/Painel lateral.
+
+Exemplo:
+
+clicar em pedido →
+abre pedido completo;
+
+clicar em cliente →
+abre perfil do cliente;
+
+clicar em produto →
+abre produto completo;
+
+clicar em recebimento →
+abre detalhes financeiros.
+
+O usuário não deve precisar navegar para outra página toda vez que quiser apenas consultar ou alterar algo pequeno.
+
+
+==================================================
+3. LOGIN E CRIAÇÃO DE CONTA
+==================================================
+
+Revisar o fluxo de autenticação.
+
+Adicionar login com Google.
+
+Após a criação bem-sucedida da conta, não obrigar o usuário a fazer login novamente.
+
+Criar sessão automaticamente e direcioná-lo para o próximo passo.
+
+Evitar etapas de confirmação que não sejam realmente necessárias ao fluxo principal.
+
+Caso confirmação por e-mail/código seja necessária por segurança ou recuperação de conta, utilizá-la somente onde fizer sentido, sem tornar o cadastro inicial cansativo.
+
+
+==================================================
+4. PRIMEIRO ACESSO DO CLIENTE
+==================================================
+
+No primeiro acesso/cadastro, solicitar:
+
+- nome;
+- telefone;
+- endereço.
+
+Esses dados devem ficar associados ao cliente e serem preenchidos automaticamente nos pedidos seguintes.
+
+O cliente não deve precisar informar endereço e telefone toda vez.
+
+Permitir alteração desses dados posteriormente na conta.
+
+
+==================================================
+5. HOME / BOAS-VINDAS DO CLIENTE
+==================================================
+
+A atual área inicial precisa ser bastante revisada.
+
+Hoje a mensagem inicial não ajuda suficientemente a pessoa a entender o que fazer.
+
+Criar uma home mais pessoal.
+
+Exemplo:
+
+Bom dia, Matheus.
+
+ou
+
+Boa tarde, Matheus.
+
+Utilizar o primeiro nome da conta.
+
+Logo abaixo, criar uma explicação extremamente curta do processo.
+
+Exemplo conceitual:
+
+1. Escolha seus produtos
+2. Revise seu pedido
+3. Selecione entrega e pagamento
+
+Não criar um tutorial grande.
+
+A ideia é transmitir em poucos segundos:
+
+“é simples pedir aqui”.
+
+
+==================================================
+6. ÚLTIMO PEDIDO / PEDIR NOVAMENTE
+==================================================
+
+Uma das ações mais importantes deve aparecer logo no início do portal.
+
+Criar um card:
+
+SEU ÚLTIMO PEDIDO
+
+Mostrar apenas um resumo:
+
+- alguns produtos;
+- valor;
+- data;
+- botão “Pedir novamente”.
+
+Não mandar o cliente para a página “Meus pedidos” apenas para repetir uma compra.
+
+Ao clicar em “Pedir novamente”, adicionar novamente os produtos ao pedido atual, permitindo alterações antes da confirmação.
+
+
+==================================================
+7. PEDIDOS FAVORITOS
+==================================================
+
+Permitir que o cliente favorite um pedido.
+
+Exemplo:
+
+♡ Favoritar pedido
+
+Depois ele poderá acessar rapidamente:
+
+MEUS FAVORITOS
+
+e repetir aquele conjunto de produtos.
+
+Não confundir produto favorito com pedido favorito.
+
+São conceitos diferentes.
+
+
+==================================================
+8. LISTA SEMANAL / PEDIDO DA SEMANA
+==================================================
+
+Criar a possibilidade de o cliente preparar antecipadamente os pedidos da semana.
+
+Internamente podemos pensar nisso como uma “playlist”, mas para o usuário utilizar um nome mais claro, por exemplo:
+
+Minha semana
+Lista semanal
+Pedidos da semana
+
+O cliente poderá selecionar:
+
+segunda-feira
+terça-feira
+quarta-feira
+quinta-feira
+sexta-feira
+etc.
+
+e montar antecipadamente o que deseja em cada dia.
+
+Depois de configurado, ele não precisa montar novamente o pedido todos os dias.
+
+IMPORTANTE:
+
+não transformar automaticamente isso em pedido confirmado sem deixar essa regra extremamente clara.
+
+Primeiro construir a estrutura de planejamento.
+
+Automação de confirmação pode ser definida posteriormente.
+
+
+==================================================
+9. FORMAS DE PAGAMENTO
+==================================================
+
+Remover transferência bancária.
+
+Revisar o componente atual de seleção de pagamento.
+
+Hoje a seleção parece visualmente desconectada do restante do fluxo.
+
+Criar opções grandes, claras e fáceis de selecionar.
+
+Manter somente os meios de pagamento realmente utilizados pela operação.
+
+
+==================================================
+10. FINALIZAÇÃO DO PEDIDO
+==================================================
+
+Retirar mensagens como:
+
+“Até amanhã”.
+
+A confirmação deve funcionar independentemente do dia da entrega.
+
+Utilizar comunicação neutra.
+
+Exemplo:
+
+Pedido recebido.
+
+ou
+
+Pedido registrado com sucesso.
+
+Em seguida mostrar:
+
+- número/resumo do pedido;
+- data prevista;
+- endereço;
+- valor;
+- pagamento escolhido.
+
+E ações como:
+
+Ver meu pedido
+Voltar aos produtos
+
+
+==================================================
+11. OPERAÇÃO DIÁRIA
+==================================================
+
+Essa página precisa sofrer uma mudança estrutural importante.
+
+Hoje apenas três pedidos já ocupam uma quantidade enorme de espaço.
+
+Com 20, 30 ou 50 pedidos isso ficará inviável.
+
+Transformar a área principal em um KANBAN operacional.
+
+Utilizar somente três etapas visíveis:
+
+NOVOS
+CONFERIDOS
+ENTREGUES
+
+Cada pedido deve ser um card compacto.
+
+Mostrar somente:
+
+- nome;
+- número/ID curto;
+- quantidade de itens;
+- valor;
+- entrega;
+- algum alerta importante, caso exista.
+
+NÃO mostrar todos os produtos diretamente dentro do card.
+
+Ao clicar no pedido:
+
+abrir painel lateral.
+
+Nesse painel mostrar:
+
+- cliente;
+- telefone;
+- endereço;
+- produtos;
+- quantidades;
+- observações;
+- pagamento;
+- situação financeira;
+- histórico;
+- ações.
+
+As colunas devem permitir identificar rapidamente quantos pedidos estão em cada etapa.
+
+Se for seguro para a implementação existente, considerar drag-and-drop entre as colunas.
+
+Caso contrário, usar botões de mudança de estado dentro do drawer.
+
+
+==================================================
+12. DIA OPERACIONAL
+==================================================
+
+A Operação Diária deve sempre priorizar o dia relevante para separação/entrega.
+
+Existe a intenção de, após o horário operacional do almoço, permitir que a tela passe a trabalhar principalmente com o próximo dia.
+
+Não hardcodar um horário arbitrário.
+
+Criar uma configuração:
+
+HORÁRIO DE VIRADA OPERACIONAL
+
+Exemplo:
+
+13:30
+
+Antes desse horário:
+priorizar operação de hoje.
+
+Depois:
+se os pedidos de hoje estiverem resolvidos, priorizar o próximo dia de operação.
+
+Permitir que o usuário altere essa configuração futuramente.
+
+
+==================================================
+13. IMPRESSÃO
+==================================================
+
+A seção atual de impressão possui explicações demais para uma função relativamente simples.
+
+Reduzir drasticamente.
+
+Na Operação Diária deixar apenas uma ação clara:
+
+IMPRIMIR ETIQUETAS
+
+ou
+
+IMPRIMIR FICHAS
+
+Configurações técnicas como:
+
+- deslocamento horizontal;
+- deslocamento vertical;
+- tamanho de etiqueta;
+- impressora;
+
+não precisam ocupar a página operacional.
+
+Mover essas opções para Configurações > Impressão.
+
+A tela operacional precisa servir para executar, não configurar.
+
+
+==================================================
+14. VISÃO GERAL
+==================================================
+
+A Visão Geral deve ser realmente uma visão geral.
+
+Não pode virar uma segunda página de Operação.
+
+Priorizar apenas:
+
+- pedidos do próximo ciclo;
+- pedidos a conferir;
+- entregas do dia;
+- valor em aberto;
+- alertas realmente importantes.
+
+Reduzir listas extensas.
+
+Mostrar no máximo alguns itens recentes/relevantes e adicionar:
+
+Ver todos
+
+quando necessário.
+
+A seção “Precisa de atenção” deve ganhar maior importância.
+
+Em vez de espalhar alertas pela tela, centralizar aqui itens como:
+
+- pedido aguardando conferência;
+- pagamento em aberto;
+- produto sem custo;
+- entrega atrasada;
+- recebimento não identificado.
+
+A Visão Geral deve responder em poucos segundos:
+
+“O que eu preciso resolver agora?”
+
+
+==================================================
+15. VALIDAR COERÊNCIA DE STATUS
+==================================================
+
+Revisar a lógica visual entre:
+
+- data de entrega;
+- status;
+- dashboard;
+- agenda;
+- operação.
+
+Nas imagens anexadas existem pedidos identificados como:
+
+“Pedidos para amanhã”
+
+ao mesmo tempo em que aparecem como:
+
+“Entregue”.
+
+Validar se isso é apenas dado de teste ou se existe inconsistência de lógica.
+
+O dashboard nunca deve apresentar informações contraditórias.
+
+
+==================================================
+16. PEDIDOS
+==================================================
+
+A página Pedidos hoje funciona praticamente como um arquivo.
+
+Transformá-la em um navegador real de pedidos.
+
+Adicionar:
+
+- busca;
+- filtro por período;
+- filtro por cliente;
+- filtro por status;
+- filtro por pagamento;
+- ordenação.
+
+Utilizar uma tabela/lista compacta.
+
+Exemplo de colunas:
+
+Pedido
+Cliente
+Entrega
+Itens
+Valor
+Pagamento
+Status
+
+Ao clicar:
+
+abrir drawer com o pedido completo.
+
+A página deve permitir:
+
+- visualizar;
+- editar quando permitido;
+- alterar status;
+- registrar recebimento;
+- duplicar;
+- consultar histórico.
+
+Evitar colocar a descrição completa dos produtos diretamente na linha da tabela.
+
+
+==================================================
+17. CLIENTES
+==================================================
+
+A página atual precisa deixar de ser apenas uma lista de nomes.
+
+Remover informações pouco úteis como:
+
+“Via pedido”.
+
+Criar busca por:
+
+- nome;
+- telefone;
+- endereço.
+
+Cada cliente deve aparecer em formato compacto.
+
+Ao clicar:
+
+abrir perfil lateral.
+
+Mostrar:
+
+- nome;
+- telefone;
+- endereço;
+- pedidos realizados;
+- último pedido;
+- valor total comprado;
+- ticket médio;
+- saldo em aberto;
+- pagamentos;
+- pedidos favoritos;
+- histórico.
+
+A partir do cliente, permitir:
+
+NOVO PEDIDO
+
+Isso é importante porque a operadora poderá receber pedidos por telefone ou WhatsApp e registrar diretamente para aquele cliente.
+
+Também permitir registrar vendas/pedidos sem navegar por várias páginas.
+
+Corrigir formatação de telefone e endereço para um padrão único.
+
+
+==================================================
+18. PRODUTOS
+==================================================
+
+A página de produtos possui muitos produtos e ficará cada vez maior.
+
+Criar ferramentas de navegação.
+
+Adicionar:
+
+- busca;
+- categoria;
+- disponibilidade;
+- com foto / sem foto;
+- custo preenchido / custo pendente;
+- ordenação.
+
+Manter os cards mais compactos.
+
+No card mostrar apenas:
+
+- foto;
+- nome;
+- preço;
+- disponibilidade;
+- situação do custo.
+
+Ao clicar:
+
+abrir produto.
+
+Dentro dele permitir:
+
+- trocar/enviar foto;
+- editar nome;
+- preço;
+- custo;
+- categoria;
+- disponibilidade;
+- histórico.
+
+Criar uma área separada de inteligência de produtos.
+
+Mostrar indicadores como:
+
+MAIS PEDIDOS
+MAIOR FATURAMENTO
+MAIOR LUCRO
+MAIOR MARGEM / RENTABILIDADE
+
+IMPORTANTE:
+
+não confundir faturamento com lucro.
+
+Não confundir lucro absoluto com margem/rentabilidade.
+
+Exemplo:
+
+um produto pode gerar R$ 500 de lucro e ter margem baixa;
+outro pode gerar R$ 200 e possuir margem muito maior.
+
+A Master precisa conseguir analisar os dois.
+
+
+==================================================
+19. PRODUTOS SEM CUSTO
+==================================================
+
+Não espalhar treze avisos por diversas páginas.
+
+Criar um indicador claro:
+
+13 produtos sem custo
+
+Ao clicar:
+
+mostrar exatamente quais produtos precisam ser corrigidos.
+
+Permitir editar o custo diretamente.
+
+Utilizar o mesmo padrão para outros alertas.
+
+
+==================================================
+20. AGENDA
+==================================================
+
+A Agenda atual funciona principalmente como uma listagem por data.
+
+Ela precisa ser mais interativa e escaneável.
+
+Criar duas visualizações:
+
+CALENDÁRIO
+LISTA
+
+O calendário pode mostrar a quantidade de pedidos por dia.
+
+Exemplo:
+
+02 OUT
+12 pedidos
+
+Ao selecionar o dia:
+
+mostrar os pedidos daquele dia.
+
+Na visualização em lista:
+
+agrupar por data de maneira compacta.
+
+Ao clicar no pedido:
+
+abrir drawer.
+
+Não mostrar todas as informações de todos os pedidos simultaneamente.
+
+
+==================================================
+21. FINANCEIRO — REESTRUTURAÇÃO
+==================================================
+
+Esta é uma das áreas que mais precisa de atenção.
+
+Hoje existem muitos cards:
+
+- valor dos clientes;
+- valor da padaria;
+- lucro;
+- compras;
+- pago;
+- aberto;
+- devolver;
+- recebimentos;
+- líquidos;
+- Pix manual;
+- recebimentos da data;
+- etc.
+
+Isso cria uma enorme carga cognitiva.
+
+A primeira tela financeira deve responder apenas quatro perguntas:
+
+QUANTO VENDEU?
+QUANTO RECEBEU?
+QUANTO AINDA TEM A RECEBER?
+QUAL O RESULTADO?
+
+Criar quatro indicadores principais.
+
+Exemplo:
+
+Vendas
+Recebido
+Em aberto
+Lucro
+
+Depois organizar detalhes em seções.
+
+
+==================================================
+22. FINANCEIRO — VISUALIZAÇÕES
+==================================================
+
+Adicionar gráficos quando eles realmente facilitarem a compreensão.
+
+Exemplos:
+
+FATURAMENTO POR DIA
+gráfico de linha ou barras.
+
+RECEBIDO × EM ABERTO
+visual comparativo.
+
+FORMAS DE PAGAMENTO
+gráfico de distribuição.
+
+CUSTO × LUCRO
+comparativo.
+
+Não criar gráficos apenas para decoração.
+
+Cada gráfico precisa responder uma pergunta operacional.
+
+
+==================================================
+23. RECEBIMENTOS
+==================================================
+
+Simplificar muito a apresentação.
+
+Em vez de vários textos como:
+
+“Avisos Já paguei”
+“Não identificados”
+e subtítulos explicativos permanentes,
+
+utilizar indicadores compactos.
+
+Exemplo:
+
+2 aguardando conferência
+1 não identificado
+
+Ao clicar:
+abrir a lista correspondente.
+
+Explicações detalhadas podem existir através de tooltip ou ajuda contextual.
+
+Não devem ocupar permanentemente a interface.
+
+
+==================================================
+24. SEPARAR CONCEITOS FINANCEIROS
+==================================================
+
+Manter visualmente separados:
+
+VENDAS
+o que foi vendido.
+
+RECEBIMENTOS
+o dinheiro que realmente entrou.
+
+CONTAS A RECEBER
+o que ainda está pendente.
+
+CUSTOS
+o valor da padaria/outros custos.
+
+RESULTADO
+lucro.
+
+Não utilizar cards diferentes para números que representam praticamente a mesma coisa sem explicar claramente a relação entre eles.
+
+
+==================================================
+25. FECHAMENTO DIÁRIO
+==================================================
+
+Manter a função de fechamento diário.
+
+Ela é importante.
+
+Porém, simplificar a visualização.
+
+Mostrar inicialmente:
+
+Vendas
+Recebido
+Em aberto
+Custo da padaria
+Outras despesas/devoluções
+Lucro
+
+Informações contábeis/operacionais secundárias ficam em:
+
+Ver detalhes
+
+Preservar snapshots/fechamentos anteriores.
+
+Uma alteração posterior em pedido não deve apagar silenciosamente o histórico de um fechamento já realizado.
+
+
+==================================================
+26. RELATÓRIOS
+==================================================
+
+A página Relatórios não precisa repetir todo o dashboard financeiro.
+
+Transformá-la em um GERADOR DE RELATÓRIOS.
+
+O usuário escolhe:
+
+TIPO DE RELATÓRIO
+
+Exemplos:
+
+Resumo financeiro
+Vendas
+Lucro
+Clientes
+Produtos
+Padaria
+Pedidos
+Recebimentos
+Entregas
+
+Depois:
+
+PERÍODO
+
+Hoje
+Semana
+Mês
+Personalizado
+
+Adicionar botão:
+
+GERAR RELATÓRIO
+
+Após gerar:
+
+permitir uma visualização resumida e:
+
+BAIXAR PDF
+
+Os PDFs devem ser organizados, legíveis e preparados para impressão/arquivamento.
+
+Evitar manter grandes quantidades de informação permanentemente nesta página.
+
+
+==================================================
+27. CONFIGURAÇÕES
+==================================================
+
+A página atual de Configurações precisa ser praticamente reconstruída em termos de organização.
+
+Ela deve concentrar regras que não precisam ocupar as telas operacionais.
+
+Criar categorias.
+
+GERAL
+- dados da operação;
+- nome;
+- contato.
+
+PEDIDOS
+- horário de corte;
+- horário de virada operacional;
+- regras futuras de pedido.
+
+ENTREGAS
+- taxa padrão;
+- configurações relacionadas às entregas.
+
+PAGAMENTOS
+- meios aceitos;
+- Pix;
+- dados da conta.
+
+CATÁLOGO
+- categorias;
+- disponibilidade;
+- possíveis regras globais.
+
+IMPRESSÃO
+- tamanho da etiqueta;
+- deslocamento horizontal;
+- deslocamento vertical;
+- demais ajustes técnicos.
+
+EQUIPE E ACESSOS
+- Master;
+- Operadora;
+- permissões.
+
+CONTA
+- nome;
+- e-mail;
+- senha;
+- segurança.
+
+Não misturar todas essas funções em uma única página enorme.
+
+Utilizar navegação lateral ou abas.
+
+
+==================================================
+28. BUSCA GLOBAL
+==================================================
+
+A busca superior já existe e deve ganhar utilidade real.
+
+Ao pesquisar:
+
+“Matheus”
+
+mostrar:
+
+Clientes
+Pedidos relacionados
+
+Ao pesquisar:
+
+“Biscoito”
+
+mostrar:
+
+Produtos
+Pedidos contendo esse produto
+
+Ao pesquisar um ID:
+
+abrir o pedido correspondente.
+
+Utilizar um dropdown de resultados sem obrigar a pessoa a trocar de página antes de saber o que encontrou.
+
+
+==================================================
+29. REDUZIR TEXTO EXPLICATIVO
+==================================================
+
+Existe excesso de frases explicativas permanentes.
+
+Regra:
+
+se a pessoa precisar ler o mesmo texto todos os dias, provavelmente esse texto não deveria estar ocupando aquele espaço.
+
+Transformar explicações secundárias em:
+
+- tooltip;
+- ícone de ajuda;
+- modal;
+- texto contextual somente quando necessário.
+
+Exemplo:
+
+não é necessário explicar diariamente em um bloco grande como o lucro é calculado.
+
+Deixar:
+
+Lucro
+R$ X
+
+ⓘ
+
+E disponibilizar a explicação através do ícone.
+
+
+==================================================
+30. RESPONSIVIDADE
+==================================================
+
+Toda essa estrutura deve continuar utilizável em:
+
+desktop;
+tablet;
+celular.
+
+Principalmente:
+
+Operação Diária
+Pedidos
+Clientes
+Agenda
+
+não podem depender de uma tela enorme.
+
+No mobile:
+
+drawer pode virar bottom sheet ou página de detalhe;
+Kanban pode permitir navegação horizontal entre etapas;
+tabelas podem virar listas compactas.
+
+
+==================================================
+31. ESTADOS VAZIOS
+==================================================
+
+Não deixar grandes áreas vazias sem explicar o que acontece.
+
+Exemplo:
+
+Nenhuma pendência.
+
+Tudo certo por aqui.
+
+ou
+
+Nenhuma entrega programada para hoje.
+
+Evitar preencher espaço apenas com cards vazios.
+
+
+==================================================
+32. PRINCÍPIO FINAL DA EXPERIÊNCIA
+==================================================
+
+O sistema precisa ser desenvolvido pensando na seguinte pessoa:
+
+alguém que antes fazia praticamente toda a operação manualmente.
+
+Ela não deve precisar aprender um sistema complexo.
+
+A Trameli deve reduzir a quantidade de coisas que ela precisa lembrar.
+
+A interface deve dizer:
+
+O QUE PRECISA SER FEITO
+O QUE ESTÁ PENDENTE
+O QUE JÁ FOI RESOLVIDO
+
+Ela não precisa enxergar todos os dados o tempo inteiro.
+
+A automação deve cuidar do que puder.
+
+O restante deve ser apresentado de forma simples para decisão humana.
+
+
+==================================================
+33. NÃO FAZER
+==================================================
+
+Não reconstruir a aplicação inteira sem necessidade.
+
+Não alterar banco ou regras existentes apenas para mudar interface.
+
+Não criar dezenas de novos cards.
+
+Não encher páginas com gráficos.
+
+Não esconder informações importantes apenas para “deixar bonito”.
+
+Não usar fonte minúscula para caber mais conteúdo.
+
+Não transformar o sistema em um dashboard corporativo genérico.
+
+Não criar novas regras de negócio sem necessidade.
+
+Não aplicar ações irreversíveis sem confirmação.
+
+Não remover histórico operacional.
+
+
+==================================================
+34. PRIORIDADE DE EXECUÇÃO
+==================================================
+
+Antes de implementar tudo de uma vez, priorizar nesta ordem:
+
+1. Sistema visual global e tipografia.
+2. Operação Diária + Kanban + drawer do pedido.
+3. Pedidos.
+4. Clientes.
+5. Financeiro.
+6. Visão Geral.
+7. Produtos.
+8. Agenda.
+9. Relatórios.
+10. Configurações.
+11. Melhorias do portal do cliente.
+12. Ajustes responsivos finais.
+
+Manter funcionalidades existentes funcionando durante a refatoração.
+
+
+==================================================
+RESULTADO ESPERADO
+==================================================
+
+A Trameli não deve parecer um sistema com mais funcionalidades.
+
+Ela deve parecer um sistema mais simples, mesmo tendo mais capacidade.
+
+A sensação final deve ser:
+
+“Eu abro a Trameli e imediatamente sei o que tenho que fazer.”
+
+Menos informação simultânea.
+Mais hierarquia.
+Mais interação.
+Mais automação.
+Mais clareza.
+Menos esforço mental.

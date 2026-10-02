@@ -18,7 +18,7 @@ export async function requireAccess(live) {
 
   const descriptions = {
     signin: ['Bom ter você aqui.', 'Entre com sua conta. No próximo acesso, a gente lembra de você.'],
-    signup: ['Vamos começar?', 'Crie seu acesso. Seu nome e endereço vêm na próxima etapa.'],
+    signup: ['Vamos começar?', 'Crie seu acesso e deixe seus dados prontos para os próximos pedidos.'],
     recover: ['Vamos recuperar seu acesso.', 'Você só precisa fazer isso para criar ou recuperar sua senha.'],
     reset: ['Escolha sua senha.', 'Depois, você poderá entrar diretamente com ela.'],
     verify: ['Confirme seu telefone.', 'Digite o código que enviamos por SMS.'],
@@ -42,6 +42,7 @@ export async function requireAccess(live) {
       ${credentials && providers?.external?.phone ? `<div class="auth-methods" aria-label="Identificação"><button type="button" data-method="email" aria-pressed="${method === 'email'}">E-mail</button><button type="button" data-method="phone" aria-pressed="${method === 'phone'}">Telefone</button></div>` : ''}
       <form>
       ${credentials ? `<label>${method === 'phone' ? 'Telefone com DDD' : 'E-mail'}<input name="identity" type="${method === 'phone' ? 'tel' : 'email'}" autocomplete="${method === 'phone' ? 'tel' : 'username'}" value="${escapeHtml(identity)}" placeholder="${method === 'phone' ? '(34) 99999-9999' : 'voce@exemplo.com'}" required></label>` : ''}
+      ${mode === 'signup' ? '<label>Seu nome<input name="name" autocomplete="name" maxlength="90" required></label><label>Telefone para contato<input name="phone" type="tel" autocomplete="tel" maxlength="25" required></label><label>Endereço e referência<input name="address" autocomplete="street-address" maxlength="180" required></label>' : ''}
       ${['signin', 'signup', 'reset'].includes(mode) ? `<label>Senha<span class="auth-password"><input name="password" type="password" autocomplete="${newPassword ? 'new-password' : 'current-password'}" ${newPassword ? 'minlength="8"' : ''} required><button type="button" data-action="reveal" aria-label="Mostrar senha" aria-pressed="false">Mostrar</button></span></label>${newPassword ? '<small class="auth-hint">Pelo menos 8 caracteres.</small><label>Confirme a senha<input name="confirmation" type="password" autocomplete="new-password" minlength="8" required></label>' : ''}` : ''}
       ${mode === 'verify' ? '<label>Código por SMS<input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required></label>' : ''}
       ${mode === 'signin' ? '<button class="auth-text" type="button" data-mode="recover">Criar ou recuperar senha</button>' : ''}
@@ -149,7 +150,7 @@ export async function requireAccess(live) {
     try {
       if (mode === 'signin') { await live.auth.signIn(method, identity, fields.get('password')); await enter(); }
       else if (mode === 'signup') {
-        const result = await live.auth.signUp(method, identity, fields.get('password'), fields.get('confirmation'));
+        const result = await live.auth.signUp(method, identity, fields.get('password'), fields.get('confirmation'), { name: fields.get('name')?.trim(), phone: fields.get('phone')?.trim(), address: fields.get('address')?.trim() });
         if (result.session) await enter();
         else if (method === 'phone') { mode = 'verify'; phoneRecovery = false; render(); }
         else { mode = 'signin'; render('Cadastro solicitado. Se necessário, confirme o e-mail uma vez; depois entre com sua senha. Se já tem conta, use a recuperação.'); gate.querySelector('.auth-help').hidden = false; }

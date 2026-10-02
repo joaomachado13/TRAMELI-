@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><base href="/"><title>Teste isolado — fotos oficiais</title>
-<link rel="stylesheet" href="/assets/styles.css"><link rel="stylesheet" href="/assets/catalogo.css"><link rel="stylesheet" href="/assets/portal.css">
+<link rel="stylesheet" href="/assets/styles.css"><link rel="stylesheet" href="/assets/catalogo.css"><link rel="stylesheet" href="/assets/portal.css"><link rel="stylesheet" href="/assets/design-system.css">
 <link rel="stylesheet" href="/assets/operacao.css">
 </head><body><script type="module">
 // No credentials, backend, orders or personal browser storage used in this fixture.
@@ -14,6 +14,7 @@ window.loadOperationTestModules = async () => {
   localStorage.setItem('trameli-reduced-motion', 'true');
   await import('/src/motion.js');
   await import('/assets/operacao.js');
+  await import('/assets/clientes.js');
   await import('/assets/screens.js');
 };
 const markup = new DOMParser().parseFromString(await (await fetch('/index.html')).text(), 'text/html');

@@ -7,8 +7,10 @@
   const profileKey = 'trameli-portal-profile-v1';
   const tokenKey = 'trameli-portal-token-v1';
   const cartKey = 'trameli-portal-cart-v1';
+  const favoriteOrdersKey = `trameli-favorite-orders-v1:${live?.user?.id || 'local'}`;
+  const weeklyPlanKey = `trameli-weekly-plan-v1:${live?.user?.id || 'local'}`;
   const money = cents => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100);
-  const paymentLabels = { pix_manual: 'Pix', cash: 'Dinheiro', bank: 'Transferência bancária', other: 'Combinar com a loja', unspecified: 'Não informado' };
+  const paymentLabels = { pix_manual: 'Pix', cash: 'Dinheiro', other: 'Combinar com a loja', unspecified: 'Não informado' };
   const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
   const dateKey = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   const tomorrow = () => { const date = new Date(); date.setDate(date.getDate() + 1); return dateKey(date); };
@@ -47,6 +49,9 @@
   const editable = order => (order.status || (order.checked ? 'confirmed' : 'received')) === 'received' && beforeCustomerCutoff(order.date);
   let cart = readJson(cartKey, {});
   if (!cart || typeof cart !== 'object' || Array.isArray(cart)) cart = {};
+  let favoriteOrders = new Set(readJson(favoriteOrdersKey, []));
+  let weeklyPlan = readJson(weeklyPlanKey, {});
+  let weeklyDay = 'monday';
   let view = 'catalog';
   let renderedView = null;
   let portalVisible = false;
@@ -122,13 +127,24 @@
   function card(product) {
     return `<article class="portal-product"><div class="portal-product__photo">${photo(product)}</div><div class="portal-product__body"><span class="portal-product__category">${escapeHtml(product.category || 'Padaria')}</span>${favoriteButton(product)}<h3>${escapeHtml(product.name)}</h3><p>${money(product.priceCents)} <small>/ ${escapeHtml(product.unit)}</small>${weighted(product) ? `<small class="portal-weight-hint">50 g = ${money(linePrice(product, 1))}</small>` : ''}</p>${stepper(product)}</div></article>`;
   }
+  const greeting = () => {
+    const hour = saoPauloClock().hour;
+    return hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
+  };
+  const firstName = () => String(profile.name || '').trim().split(/\s+/)[0] || '';
+  const orderValue = order => order.items.reduce((sum, item) => sum + item.quantity * item.priceCents, order.feeCents || 0);
+  function lastOrderCard() {
+    const order = readOrders().filter(owns).sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+    if (!order) return `<article class="portal-first-order"><span>SEU PRIMEIRO PEDIDO</span><strong>Escolha seus produtos</strong><p>Sua sacola fica disponível enquanto você navega.</p><a href="#portal-products">Começar agora ↓</a></article>`;
+    return `<article class="portal-last-order"><div><span>SEU ÚLTIMO PEDIDO</span><h2>${order.items.slice(0, 3).map(item => escapeHtml(item.name)).join(' · ')}${order.items.length > 3 ? ` +${order.items.length - 3}` : ''}</h2><p>${formatDate(order.date)} · ${money(orderValue(order))}</p></div><button type="button" data-reorder="${escapeHtml(order.id)}">Pedir novamente</button></article>`;
+  }
   function catalog() {
     const all = products();
     const unavailable = allProducts().filter(item => unavailableFor(item));
     const categories = ['Todos', ...new Set(all.map(product => product.category || 'Outros'))];
     const visible = filteredProducts();
     const notice=unavailable.length?`<aside class="portal-review-notice" role="status"><strong>Indisponíveis para amanhã</strong><ul>${unavailable.map(item=>{const substitute=allProducts().find(candidate=>candidate.id===item.substituteProductId&&!unavailableFor(candidate));return `<li>${escapeHtml(item.name)}${substitute?` — sugestão: ${escapeHtml(substitute.name)}`:''}</li>`;}).join('')}</ul><p>A troca não é automática; escolha a sugestão no catálogo se desejar.</p></aside>`:'';
-    return `<section class="portal-hero"><div><span class="portal-eyebrow">SEU CAFÉ DA MANHÃ, SEM COMPLICAÇÃO</span><h1>O que vai para a sua mesa <em>amanhã?</em></h1><p>Escolha seus favoritos em poucos toques. Entrega de amanhã: ${formatDate(tomorrow())}.</p><a href="#portal-products">Escolher produtos ↓</a></div><div class="portal-hero__accent" aria-hidden="true"><span>☀</span><strong>Bom dia<br>começa aqui.</strong></div></section><section id="portal-products" class="portal-section">${notice}<div class="portal-section__head"><div><span class="portal-eyebrow">FEITO PARA O SEU DIA</span><h2>Produtos da padaria</h2></div><span>${all.length} opções</span></div><label class="portal-search">Buscar produto<input id="portal-search" type="search" value="${escapeHtml(query)}" placeholder="Pão, bolo, suco..."></label><div class="portal-categories" aria-label="Categorias">${categories.map(item => `<button type="button" data-category="${escapeHtml(item)}" aria-pressed="${String(item === category)}">${escapeHtml(item)}</button>`).join('')}</div>${personalFilters()}<div class="portal-grid" id="portal-grid">${visible.length ? visible.map(card).join('') : '<p class="portal-empty">Não encontramos produtos nessa busca.</p>'}</div></section>`;
+    return `<section class="portal-welcome"><span class="portal-eyebrow">${greeting().toLocaleUpperCase('pt-BR')}${firstName() ? `, ${escapeHtml(firstName()).toLocaleUpperCase('pt-BR')}` : ''}</span><h1>${greeting()}${firstName() ? `, ${escapeHtml(firstName())}` : ''}.</h1><p>Seu pedido em três passos simples.</p><ol><li><strong>1</strong> Escolha os produtos</li><li><strong>2</strong> Revise a sacola</li><li><strong>3</strong> Confirme entrega e pagamento</li></ol><a class="portal-welcome__action" href="#portal-products">Escolher produtos ↓</a></section><section class="portal-quick-actions">${lastOrderCard()}<article><span>PLANEJE COM CALMA</span><strong>Pedidos da semana</strong><p>Organize cada dia sem confirmar nada automaticamente.</p><button type="button" data-view="week">Montar minha semana</button></article></section><section id="portal-products" class="portal-section">${notice}<div class="portal-section__head"><div><span class="portal-eyebrow">FEITO PARA O SEU DIA</span><h2>Produtos da padaria</h2></div><span>${all.length} opções</span></div><label class="portal-search">Buscar produto<input id="portal-search" type="search" value="${escapeHtml(query)}" placeholder="Pão, bolo, suco..."></label><div class="portal-categories" aria-label="Categorias">${categories.map(item => `<button type="button" data-category="${escapeHtml(item)}" aria-pressed="${String(item === category)}">${escapeHtml(item)}</button>`).join('')}</div>${personalFilters()}<div class="portal-grid" id="portal-grid">${visible.length ? visible.map(card).join('') : '<p class="portal-empty">Não encontramos produtos nessa busca.</p>'}</div></section>`;
   }
   function cartView() {
     const lines = cartLines();
@@ -138,15 +154,22 @@
     if (!count()) { view = 'cart'; return cartView(); }
     const previous = readOrders().find(order => order.id === editingOrderId && owns(order) && editable(order));
     const deliveryDate = previous?.date || tomorrow();
-    return `<section class="portal-page"><button class="portal-back" type="button" data-view="cart">← Voltar à sacola</button><span class="portal-eyebrow">ENTREGA EM ${escapeHtml(formatDate(deliveryDate).toLocaleUpperCase('pt-BR'))}</span><h1>Onde entregamos?</h1>${reviewNotice()}<p>${live ? 'Seus dados ficam vinculados à sua conta para o próximo pedido.' : 'Se você já pediu neste navegador, seus dados aparecem preenchidos para poupar tempo.'}</p><form id="portal-checkout-form"><label>Seu nome<input name="customer" autocomplete="name" maxlength="90" value="${escapeHtml(previous?.customer || profile.name || '')}" required></label><label>Telefone <span>(opcional)</span><input name="phone" type="tel" autocomplete="tel" maxlength="25" value="${escapeHtml(previous?.phone || profile.phone || '')}"></label><label>Endereço e referência<input name="address" autocomplete="street-address" maxlength="180" value="${escapeHtml(previous?.address || profile.address || '')}" placeholder="Bloco, apartamento ou ponto de encontro" required></label><label>Como pretende pagar?<select name="paymentMethod" required>${Object.entries(paymentLabels).filter(([key]) => key !== 'unspecified').map(([key, label]) => `<option value="${key}" ${key === (previous?.paymentMethod || 'pix_manual') ? 'selected' : ''}>${label}</option>`).join('')}</select></label><label>Observação <span>(opcional)</span><textarea name="notes" maxlength="280" rows="3" placeholder="Ex.: deixar na portaria">${escapeHtml(previous?.notes || '')}</textarea></label><div class="portal-order-summary"><h2>Resumo do pedido</h2>${cartLines().map(({ product, quantity }) => `<div><span>${escapeHtml(lineLabel(product, quantity))}</span><strong>${money(linePrice(product, quantity))}</strong></div>`).join('')}<div><span>Subtotal dos produtos</span><strong>${money(subtotal())}</strong></div><div><span>Taxa de entrega</span><strong>${money(200)}</strong></div><div class="portal-order-summary__total"><span>Total para ${formatDate(deliveryDate)}</span><strong>${money(subtotal() + 200)}</strong></div></div><p class="portal-payment-note">A forma acima é apenas sua intenção. O pedido pode seguir em aberto e o recebimento será conferido manualmente. Pedidos para esta data podem ser alterados ou cancelados até 22h30 do dia anterior.</p>${!beforeCustomerCutoff(deliveryDate) ? '<p class="portal-error" role="alert">O prazo das 22h30 para esta entrega já terminou.</p>' : ''}${error ? `<p class="portal-error" role="alert">${escapeHtml(error)}</p>` : ''}<button class="portal-primary" type="submit" ${beforeCustomerCutoff(deliveryDate) ? '' : 'disabled'}>${previous ? 'Salvar alterações' : 'Confirmar pedido'} · ${money(subtotal() + 200)}</button></form></section>`;
+    const selectedPayment = paymentLabels[previous?.paymentMethod] ? previous.paymentMethod : 'pix_manual';
+    return `<section class="portal-page"><button class="portal-back" type="button" data-view="cart">← Voltar à sacola</button><span class="portal-eyebrow">ENTREGA EM ${escapeHtml(formatDate(deliveryDate).toLocaleUpperCase('pt-BR'))}</span><h1>Entrega e pagamento</h1>${reviewNotice()}<p>Seus dados ficam salvos para os próximos pedidos.</p><form id="portal-checkout-form"><label>Seu nome<input name="customer" autocomplete="name" maxlength="90" value="${escapeHtml(previous?.customer || profile.name || '')}" required></label><label>Telefone<input name="phone" type="tel" autocomplete="tel" maxlength="25" value="${escapeHtml(previous?.phone || profile.phone || '')}" required></label><label>Endereço e referência<input name="address" autocomplete="street-address" maxlength="180" value="${escapeHtml(previous?.address || profile.address || '')}" placeholder="Bloco, apartamento ou ponto de encontro" required></label><fieldset class="portal-payment-options"><legend>Como pretende pagar?</legend>${Object.entries(paymentLabels).filter(([key]) => key !== 'unspecified').map(([key, label]) => `<label><input type="radio" name="paymentMethod" value="${key}" ${key === selectedPayment ? 'checked' : ''} required><span>${key === 'pix_manual' ? '◇' : key === 'cash' ? 'R$' : '•••'}</span><strong>${label}</strong></label>`).join('')}</fieldset><label>Observação <span>(opcional)</span><textarea name="notes" maxlength="280" rows="3" placeholder="Ex.: deixar na portaria">${escapeHtml(previous?.notes || '')}</textarea></label><div class="portal-order-summary"><h2>Resumo do pedido</h2>${cartLines().map(({ product, quantity }) => `<div><span>${escapeHtml(lineLabel(product, quantity))}</span><strong>${money(linePrice(product, quantity))}</strong></div>`).join('')}<div><span>Subtotal dos produtos</span><strong>${money(subtotal())}</strong></div><div><span>Taxa de entrega</span><strong>${money(200)}</strong></div><div class="portal-order-summary__total"><span>Total para ${formatDate(deliveryDate)}</span><strong>${money(subtotal() + 200)}</strong></div></div><p class="portal-payment-note">A forma escolhida ainda não confirma o recebimento. Alterações são permitidas até 22h30 do dia anterior.</p>${!beforeCustomerCutoff(deliveryDate) ? '<p class="portal-error" role="alert">O prazo das 22h30 para esta entrega já terminou.</p>' : ''}${error ? `<p class="portal-error" role="alert">${escapeHtml(error)}</p>` : ''}<button class="portal-primary" type="submit" ${beforeCustomerCutoff(deliveryDate) ? '' : 'disabled'}>${previous ? 'Salvar alterações' : 'Confirmar pedido'} · ${money(subtotal() + 200)}</button></form></section>`;
   }
   function success() {
-    return `<section class="portal-page portal-success"><span class="portal-success__icon" aria-hidden="true">✓</span><span class="portal-eyebrow">PEDIDO REGISTRADO</span><h1>Até amanhã!</h1><p>Seu pedido entrou na fila de conferência para ${lastOrder ? formatDate(lastOrder.date) : 'amanhã'}. Ele aparece em “Meus pedidos” ${live ? 'na sua conta' : 'neste navegador'}.</p><div class="portal-success__receipt"><span>Pedido</span><strong>#${escapeHtml(lastOrder?.id.slice(0, 8) || '—')}</strong><span>Total</span><strong>${lastOrder ? money(lastOrder.items.reduce((sum, item) => sum + item.quantity * item.priceCents, lastOrder.feeCents)) : '—'}</strong></div><p class="portal-payment-note">O pedido ainda não representa pagamento confirmado.</p><button class="portal-primary" type="button" data-view="orders">Ver meus pedidos</button><button class="portal-link" type="button" data-view="catalog">Voltar aos produtos</button></section>`;
+    return `<section class="portal-page portal-success"><span class="portal-success__icon" aria-hidden="true">✓</span><span class="portal-eyebrow">PEDIDO RECEBIDO</span><h1>Pedido registrado com sucesso.</h1><p>Agora ele segue para a conferência da operação.</p><div class="portal-success__receipt"><span>Pedido</span><strong>#${escapeHtml(lastOrder?.id.slice(0, 8) || '—')}</strong><span>Entrega</span><strong>${lastOrder ? formatDate(lastOrder.date) : '—'}</strong><span>Endereço</span><strong>${escapeHtml(lastOrder?.address || '—')}</strong><span>Pagamento</span><strong>${escapeHtml(paymentLabels[lastOrder?.paymentMethod] || paymentLabels.unspecified)}</strong><span>Total</span><strong>${lastOrder ? money(orderValue(lastOrder)) : '—'}</strong></div><p class="portal-payment-note">O pedido ainda não representa pagamento confirmado.</p><button class="portal-primary" type="button" data-view="orders">Ver meu pedido</button><button class="portal-link" type="button" data-view="catalog">Voltar aos produtos</button></section>`;
   }
   function ordersView() {
     const orders = readOrders().filter(owns).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     const labels = { received: 'A conferir', confirmed: 'Conferido', packing: 'Em separação', ready: 'Pronto', delivered: 'Entregue', cancelled: 'Cancelado' };
-    return `<section class="portal-page"><button class="portal-back" type="button" data-view="catalog">← Voltar aos produtos</button><span class="portal-eyebrow">NO SEU RITMO</span><h1>Meus pedidos</h1>${error ? `<p class="portal-error" role="alert">${escapeHtml(error)}</p>` : ''}${reviewNotice()}<p>${live ? 'Pedidos vinculados à sua conta.' : 'Pedidos feitos neste navegador.'} Você pode ajustar ou cancelar pedidos ainda não conferidos até 22h30 do dia anterior à entrega.</p>${orders.length ? `<div class="portal-history">${orders.map(order => { const state = order.status || (order.checked ? 'confirmed' : 'received'); return `<article><div><span>${formatDate(order.date)}</span><strong>${labels[state] || 'A conferir'}</strong></div><h2>${order.items.map(item => escapeHtml(window.TrameliOrderMath.itemLabel(item))).join(' · ')}</h2><p>${escapeHtml(order.address)}</p><p>Forma pretendida: ${escapeHtml(paymentLabels[order.paymentMethod] || paymentLabels.unspecified)}</p><footer><strong>${money(order.items.reduce((sum, item) => sum + item.quantity * item.priceCents, order.feeCents))}</strong>${shopping() ? `<button type="button" data-reorder="${escapeHtml(order.id)}">Pedir novamente</button>` : ''}${editable(order) ? `<span><button type="button" data-edit-order="${escapeHtml(order.id)}">Alterar</button><button type="button" data-cancel-order="${escapeHtml(order.id)}">Cancelar</button></span>` : ''}</footer></article>`; }).join('')}</div>` : `<div class="portal-empty"><h2>Nenhum pedido por aqui</h2><p>Quando você confirmar um pedido, ele aparecerá nesta lista.</p><button type="button" data-view="catalog">Escolher produtos</button></div>`}</section>`;
+    return `<section class="portal-page portal-orders-page"><button class="portal-back" type="button" data-view="catalog">← Voltar aos produtos</button><span class="portal-eyebrow">SEUS PEDIDOS</span><h1>Meus pedidos</h1>${error ? `<p class="portal-error" role="alert">${escapeHtml(error)}</p>` : ''}${reviewNotice()}${orders.length ? `<div class="portal-history portal-history--clean">${orders.map(order => { const state = order.status || (order.checked ? 'confirmed' : 'received'); const favorite = favoriteOrders.has(order.id); return `<article><div><span>${formatDate(order.date)}</span><strong>${labels[state] || 'A conferir'}</strong></div><h2>${order.items.slice(0, 3).map(item => escapeHtml(window.TrameliOrderMath.itemLabel(item))).join(' · ')}${order.items.length > 3 ? ` +${order.items.length - 3}` : ''}</h2><p>#${escapeHtml(order.id.slice(0, 8))} · ${escapeHtml(paymentLabels[order.paymentMethod] || paymentLabels.unspecified)}</p><footer><strong>${money(orderValue(order))}</strong><button type="button" data-favorite-order="${escapeHtml(order.id)}" aria-pressed="${favorite}">${favorite ? '♥ Favorito' : '♡ Favoritar'}</button>${shopping() ? `<button type="button" data-reorder="${escapeHtml(order.id)}">Pedir novamente</button>` : ''}${editable(order) ? `<span><button type="button" data-edit-order="${escapeHtml(order.id)}">Alterar</button><button type="button" data-cancel-order="${escapeHtml(order.id)}">Cancelar</button></span>` : ''}</footer></article>`; }).join('')}</div>` : `<div class="portal-empty"><h2>Nenhum pedido por aqui</h2><p>Quando você confirmar um pedido, ele aparecerá nesta lista.</p><button type="button" data-view="catalog">Escolher produtos</button></div>`}</section>`;
+  }
+  function weekView() {
+    const days = [['monday','Segunda'],['tuesday','Terça'],['wednesday','Quarta'],['thursday','Quinta'],['friday','Sexta'],['saturday','Sábado'],['sunday','Domingo']];
+    const plan = weeklyPlan[weeklyDay] || {};
+    const selectedCount = Object.values(plan).reduce((sum, value) => sum + Number(value || 0), 0);
+    return `<section class="portal-page portal-week"><button class="portal-back" type="button" data-view="catalog">← Voltar aos produtos</button><span class="portal-eyebrow">PLANEJAMENTO, NÃO CONFIRMAÇÃO</span><h1>Minha semana</h1><p>Organize o que pretende pedir em cada dia. Nada será enviado automaticamente.</p><div class="portal-week__days">${days.map(([value, label]) => `<button type="button" data-week-day="${value}" aria-pressed="${weeklyDay === value}">${label}<small>${Object.values(weeklyPlan[value] || {}).reduce((sum, quantity) => sum + Number(quantity || 0), 0)} itens</small></button>`).join('')}</div><div class="portal-week__products">${products().map(product => { const quantity = Number(plan[product.id] || 0); return `<article><div class="portal-week__photo">${photo(product)}</div><span><strong>${escapeHtml(product.name)}</strong><small>${money(product.priceCents)} / ${escapeHtml(product.unit)}</small></span><div class="portal-stepper"><button type="button" data-week-qty="-1" data-id="${escapeHtml(product.id)}" ${quantity ? '' : 'disabled'}>−</button><span>${weighted(product) ? `${quantity * 50} g` : quantity}</span><button type="button" data-week-qty="1" data-id="${escapeHtml(product.id)}">+</button></div></article>`; }).join('')}</div><div class="portal-week__footer"><span>${selectedCount} ${selectedCount === 1 ? 'item planejado' : 'itens planejados'} para ${days.find(([value]) => value === weeklyDay)[1]}</span><button class="portal-primary" type="button" data-week-to-cart ${selectedCount ? '' : 'disabled'}>Revisar este dia na sacola</button></div></section>`;
   }
   function render(preserveScroll = false) {
     if (location.hash !== '#loja') return;
@@ -156,7 +179,7 @@
     const draft = preserveScroll && view === 'checkout' && host.querySelector('#portal-checkout-form')
       ? Object.fromEntries(new FormData(host.querySelector('#portal-checkout-form'))) : null;
     motion()?.reset(host);
-    host.innerHTML = ({ catalog, cart: cartView, checkout, success, orders: ordersView })[view]();
+    host.innerHTML = ({ catalog, cart: cartView, checkout, success, orders: ordersView, week: weekView })[view]();
     if (view === 'orders' && window.TrameliPayments) {
       host.querySelector('.portal-page').insertAdjacentHTML('beforeend', window.TrameliPayments.customerRender());
       window.TrameliPayments.refresh();
@@ -198,7 +221,8 @@
     const lines = cartLines();
     const customer = form.elements.customer.value.trim();
     const address = form.elements.address.value.trim();
-    if (!lines.length || !customer || !address) { error = 'Informe seu nome, endereço e ao menos um produto.'; render(true); return; }
+    const phone = form.elements.phone.value.trim();
+    if (!lines.length || !customer || !phone || !address) { error = 'Informe seu nome, telefone, endereço e ao menos um produto.'; render(true); return; }
     const oldOrders = readOrders();
     const previous = oldOrders.find(order => order.id === editingOrderId && owns(order) && editable(order));
     if (editingOrderId && !previous) { error = 'Este pedido não pode mais ser alterado. Confira em Meus pedidos.'; render(true); return; }
@@ -207,7 +231,7 @@
     const nextOrder = {
       id: previous?.id || (crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`),
       createdAt: previous?.createdAt || new Date().toISOString(),
-      checked: false, customer, address, phone: form.elements.phone.value.trim(),
+      checked: false, customer, address, phone,
       date: deliveryDate, feeCents: 200,
       items: lines.map(orderItem),
       notes: form.elements.notes.value.trim(), paymentMethod: form.elements.paymentMethod.value,
@@ -253,6 +277,34 @@
   host.addEventListener('click', async event => {
     const favorite = event.target.closest('[data-favorite]');
     if (favorite) { await shopping()?.toggle(favorite.dataset.favorite); return; }
+    const favoriteOrder = event.target.closest('[data-favorite-order]');
+    if (favoriteOrder) {
+      const id = favoriteOrder.dataset.favoriteOrder;
+      if (favoriteOrders.has(id)) favoriteOrders.delete(id); else favoriteOrders.add(id);
+      try { localStorage.setItem(favoriteOrdersKey, JSON.stringify([...favoriteOrders])); } catch { /* Favorite remains for this session. */ }
+      render(true);
+      return;
+    }
+    const weekDayButton = event.target.closest('[data-week-day]');
+    if (weekDayButton) { weeklyDay = weekDayButton.dataset.weekDay; render(true); return; }
+    const weekQuantity = event.target.closest('[data-week-qty]');
+    if (weekQuantity) {
+      const product = products().find(item => item.id === weekQuantity.dataset.id);
+      if (!product) return;
+      const plan = { ...(weeklyPlan[weeklyDay] || {}) };
+      const next = Math.max(0, Math.min(99, Number(plan[product.id] || 0) + Number(weekQuantity.dataset.weekQty)));
+      if (next) plan[product.id] = next; else delete plan[product.id];
+      weeklyPlan = { ...weeklyPlan, [weeklyDay]: plan };
+      try { localStorage.setItem(weeklyPlanKey, JSON.stringify(weeklyPlan)); } catch { /* Plan remains for this session. */ }
+      render(true);
+      return;
+    }
+    if (event.target.closest('[data-week-to-cart]')) {
+      const plan = weeklyPlan[weeklyDay] || {};
+      if ((cartLines().length || editingOrderId) && !confirm('Substituir a sacola atual pelo planejamento deste dia?')) return;
+      cart = { ...plan }; editingOrderId = null; reorderNotices = ['Planejamento carregado. Revise a sacola antes de confirmar o pedido.'];
+      persistCart(); view = 'cart'; render(); return;
+    }
     const filter = event.target.closest('[data-personal-filter]');
     if (filter) { personalFilter = filter.dataset.personalFilter; render(true); return; }
     const reorder = event.target.closest('[data-reorder]');

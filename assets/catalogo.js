@@ -32,11 +32,16 @@
     } catch { /* The catalog can still be viewed without persistent storage. */ }
   }
   let editingId = null;
+  const filters = { query: '', category: 'all', availability: 'all', photo: 'all', cost: 'all', sort: 'name' };
 
   const dialog = document.createElement('dialog');
   dialog.className = 'catalog-dialog';
-  dialog.innerHTML = `<form id="catalog-form" novalidate><div class="catalog-dialog__heading"><div><p class="screen-eyebrow">CATÁLOGO</p><h2 id="catalog-dialog-title">Novo produto</h2></div><button type="button" class="catalog-close" aria-label="Fechar">×</button></div><p>Preços cobrados do cliente e custos da padaria são campos separados.</p><label>Nome do produto<input name="name" maxlength="90" required></label><div class="catalog-form-grid"><label>Preço ao cliente (R$)<input name="price" inputmode="decimal" placeholder="0,00" required></label><label>Unidade<input name="unit" maxlength="30" placeholder="unidade, pacote, kg..." required></label></div>${live?.operator ? '<div class="catalog-form-grid"><label>Custo da padaria (R$) <span>(opcional)</span><input name="cost" inputmode="decimal" placeholder="A confirmar"></label><label>Nome no fornecedor <span>(opcional)</span><input name="supplierName" maxlength="90"></label></div><p class="catalog-cost-note">Custo e repasse ficam visíveis somente para a operação. Para frios em kg, informe o custo de 1 kg. Em branco significa custo não confirmado.</p><div class="catalog-form-grid"><label>Indisponível de <span>(opcional)</span><input name="unavailableFrom" type="date"></label><label>Até <span>(inclusive)</span><input name="unavailableUntil" type="date"></label></div><label>Substituto sugerido <span>(opcional)</span><select name="substituteProductId"><option value="">Nenhum</option></select></label><p class="catalog-cost-note">O portal apenas sugere a troca. O cliente sempre decide; nenhum item é substituído automaticamente.</p>' : ''}<label>Categoria <span>(opcional)</span><input name="category" maxlength="50"></label><label class="catalog-check"><input name="active" type="checkbox" checked> Disponível para pedidos</label><p class="catalog-error" role="alert" hidden></p><div class="catalog-actions"><button type="button" class="catalog-cancel">Cancelar</button><button type="submit">Salvar produto</button></div></form>`;
+  dialog.innerHTML = `<form id="catalog-form" novalidate><div class="catalog-dialog__heading"><div><p class="screen-eyebrow">CATÁLOGO</p><h2 id="catalog-dialog-title">Novo produto</h2></div><button type="button" class="catalog-close" aria-label="Fechar">×</button></div><label>Nome do produto<input name="name" maxlength="90" required></label><div class="catalog-form-grid"><label>Preço ao cliente (R$)<input name="price" inputmode="decimal" placeholder="0,00" required></label><label>Unidade<input name="unit" maxlength="30" placeholder="unidade, pacote, kg..." required></label></div><label>Foto do produto${live ? '<input name="imageUrl" type="url" placeholder="https://..."><span>Use uma URL pública da imagem.</span>' : '<input name="imageFile" type="file" accept="image/png,image/jpeg,image/webp"><span>PNG, JPEG ou WebP de até 1,5 MB.</span>'}</label>${live?.operator ? '<div class="catalog-form-grid"><label>Custo da padaria (R$) <span>(opcional)</span><input name="cost" inputmode="decimal" placeholder="A confirmar"></label><label>Nome no fornecedor <span>(opcional)</span><input name="supplierName" maxlength="90"></label></div><div class="catalog-form-grid"><label>Indisponível de <span>(opcional)</span><input name="unavailableFrom" type="date"></label><label>Até <span>(inclusive)</span><input name="unavailableUntil" type="date"></label></div><label>Substituto sugerido <span>(opcional)</span><select name="substituteProductId"><option value="">Nenhum</option></select></label>' : ''}<label>Categoria <span>(opcional)</span><input name="category" maxlength="50"></label><label class="catalog-check"><input name="active" type="checkbox" checked> Disponível para pedidos</label><p class="catalog-error" role="alert" hidden></p><div class="catalog-actions"><button type="button" class="catalog-cancel">Cancelar</button><button type="submit">Salvar produto</button></div></form>`;
   document.body.append(dialog);
+  const detailDialog = document.createElement('dialog');
+  detailDialog.className = 'entity-drawer product-drawer';
+  detailDialog.setAttribute('aria-label', 'Detalhes do produto');
+  document.body.append(detailDialog);
   const historyDialog = document.createElement('dialog');
   historyDialog.className = 'catalog-dialog';
   document.body.append(historyDialog);
@@ -60,6 +65,7 @@
     form.elements.price.value = product ? (product.priceCents / 100).toFixed(2).replace('.', ',') : '';
     form.elements.unit.value = product?.unit || '';
     form.elements.category.value = product?.category || '';
+    if (form.elements.imageUrl) form.elements.imageUrl.value = product?.image || '';
     if (form.elements.cost) form.elements.cost.value = product?.costCents == null ? '' : (product.costCents / 100).toFixed(2).replace('.', ',');
     if (form.elements.supplierName) form.elements.supplierName.value = product?.supplierName || '';
     if (form.elements.unavailableFrom) form.elements.unavailableFrom.value = product?.unavailableFrom || '';
@@ -95,17 +101,42 @@
   }
 
   function render() {
-    const sorted = products.slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
-    return `<div class="catalog-toolbar"><div><p>${sorted.length} ${sorted.length === 1 ? 'produto cadastrado' : 'produtos cadastrados'}</p><small>${live ? 'Confira os itens pendentes e as fotos antes de liberar o link aos clientes.' : 'Preços da planilha real em modo local de teste. Pedidos deste modo não são sincronizados.'}</small></div><div class="catalog-toolbar__actions"><a href="#loja">Ver portal do cliente ↗</a><button type="button" data-catalog-action="new">+ Adicionar produto</button></div></div>${sorted.length ? `<div class="catalog-grid">${sorted.map(item => { const substitute=products.find(candidate=>candidate.id===item.substituteProductId);return `<article class="catalog-card">${item.image ? `<img class="catalog-card__image" src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy">` : '<div class="catalog-card__image catalog-card__image--pending" aria-label="Foto pendente">Foto pendente</div>'}<div><span>${escapeHtml(item.category || 'Sem categoria')}</span><span class="catalog-card__state ${item.active ? '' : 'catalog-card__state--off'}">${item.active ? 'Disponível' : 'Indisponível'}</span></div><h3>${escapeHtml(item.name)}</h3><p><strong>${money(item.priceCents)}</strong> / ${escapeHtml(item.unit)}</p>${item.unavailableFrom ? `<p class="catalog-card__review">Indisponível de ${new Date(`${item.unavailableFrom}T12:00:00`).toLocaleDateString('pt-BR')} até ${new Date(`${item.unavailableUntil}T12:00:00`).toLocaleDateString('pt-BR')}${substitute ? ` · sugerir ${escapeHtml(substitute.name)}` : ''}</p>` : ''}${item.reviewReason ? `<p class="catalog-card__review">Revisar: ${escapeHtml(item.reviewReason)}</p>` : ''}${live?.operator ? `<p class="catalog-card__cost">Padaria: ${item.costCents == null ? 'custo pendente' : money(item.costCents)}${item.costEstimated ? ' · estimado' : ''}</p>` : ''}<div class="catalog-card__actions"><button type="button" data-catalog-action="edit" data-id="${escapeHtml(item.id)}">Editar</button>${live?.operator ? `<button type="button" data-catalog-action="history" data-id="${escapeHtml(item.id)}">Histórico</button>` : ''}${live?.operator && item.costEstimated ? `<button type="button" data-catalog-action="confirm-cost" data-id="${escapeHtml(item.id)}">Confirmar custo</button>` : ''}<button type="button" data-catalog-action="delete" data-id="${escapeHtml(item.id)}">${live ? 'Desativar' : 'Excluir'}</button></div></article>`;}).join('')}</div>` : `<div class="screen-empty"><p>Nenhum produto cadastrado ainda.</p><button type="button" data-catalog-action="new">+ Cadastrar primeiro produto</button></div>`}`;
+    const categories = [...new Set(products.map(item => item.category || 'Sem categoria'))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    const normalized = filters.query.trim().toLocaleLowerCase('pt-BR');
+    const sorted = products.filter(item => (!normalized || item.name.toLocaleLowerCase('pt-BR').includes(normalized))
+      && (filters.category === 'all' || (item.category || 'Sem categoria') === filters.category)
+      && (filters.availability === 'all' || (filters.availability === 'active') === Boolean(item.active))
+      && (filters.photo === 'all' || (filters.photo === 'with') === Boolean(item.image))
+      && (filters.cost === 'all' || (filters.cost === 'known') === (item.costCents != null)))
+      .sort((a, b) => filters.sort === 'price-desc' ? b.priceCents - a.priceCents : filters.sort === 'price-asc' ? a.priceCents - b.priceCents : a.name.localeCompare(b.name, 'pt-BR'));
+    const missingCosts = products.filter(item => item.active && item.costCents == null).length;
+    return `<div data-catalog-root><div class="catalog-toolbar"><div><p>${sorted.length} de ${products.length} produtos</p>${missingCosts ? `<button class="catalog-alert" type="button" data-catalog-missing>${missingCosts} sem custo</button>` : '<small>Custos ativos preenchidos.</small>'}</div><div class="catalog-toolbar__actions"><a href="#loja">Ver portal ↗</a><button type="button" data-catalog-action="new">+ Produto</button></div></div><div class="catalog-filters"><label>Buscar<input id="catalog-search" type="search" value="${escapeHtml(filters.query)}" placeholder="Nome do produto"></label><label>Categoria<select data-catalog-filter="category"><option value="all">Todas</option>${categories.map(value => `<option value="${escapeHtml(value)}" ${filters.category === value ? 'selected' : ''}>${escapeHtml(value)}</option>`).join('')}</select></label><label>Disponibilidade<select data-catalog-filter="availability"><option value="all">Todas</option><option value="active" ${filters.availability === 'active' ? 'selected' : ''}>Disponíveis</option><option value="inactive" ${filters.availability === 'inactive' ? 'selected' : ''}>Indisponíveis</option></select></label><label>Foto<select data-catalog-filter="photo"><option value="all">Todas</option><option value="with" ${filters.photo === 'with' ? 'selected' : ''}>Com foto</option><option value="without" ${filters.photo === 'without' ? 'selected' : ''}>Sem foto</option></select></label>${live?.operator ? `<label>Custo<select data-catalog-filter="cost"><option value="all">Todos</option><option value="known" ${filters.cost === 'known' ? 'selected' : ''}>Preenchido</option><option value="missing" ${filters.cost === 'missing' ? 'selected' : ''}>Pendente</option></select></label>` : ''}<label>Ordenar<select data-catalog-filter="sort"><option value="name">Nome</option><option value="price-desc" ${filters.sort === 'price-desc' ? 'selected' : ''}>Maior preço</option><option value="price-asc" ${filters.sort === 'price-asc' ? 'selected' : ''}>Menor preço</option></select></label></div>${sorted.length ? `<div class="catalog-grid catalog-grid--compact">${sorted.map(item => `<button type="button" class="catalog-card catalog-card--compact" data-catalog-action="view" data-id="${escapeHtml(item.id)}">${item.image ? `<img class="catalog-card__image" src="${escapeHtml(item.image)}" alt="" loading="lazy">` : '<div class="catalog-card__image catalog-card__image--pending" aria-hidden="true">Foto pendente</div>'}<span class="catalog-card__body"><span><small>${escapeHtml(item.category || 'Sem categoria')}</small><small class="catalog-card__state ${item.active ? '' : 'catalog-card__state--off'}">${item.active ? 'Disponível' : 'Indisponível'}</small></span><strong>${escapeHtml(item.name)}</strong><span>${money(item.priceCents)} / ${escapeHtml(item.unit)}</span>${live?.operator ? `<small class="catalog-cost-state ${item.costCents == null ? 'is-missing' : ''}">${item.costCents == null ? 'Custo pendente' : `Custo ${money(item.costCents)}`}</small>` : ''}</span></button>`).join('')}</div>` : '<div class="friendly-empty"><strong>Nenhum produto encontrado.</strong><span>Ajuste os filtros para visualizar outros itens.</span></div>'}</div>`;
+  }
+
+  function rerender() {
+    const root = document.querySelector('[data-catalog-root]');
+    if (root) root.outerHTML = render();
+  }
+
+  function openDetail(id) {
+    const product = products.find(item => item.id === id);
+    if (!product) return;
+    const margin = product.costCents == null || !product.priceCents ? null : Math.round(((product.priceCents - product.costCents) / product.priceCents) * 100);
+    detailDialog.innerHTML = `<div class="entity-detail"><header class="entity-detail__header"><div><p class="screen-eyebrow">PRODUTO</p><h2>${escapeHtml(product.name)}</h2><p>${escapeHtml(product.category || 'Sem categoria')} · ${product.active ? 'Disponível' : 'Indisponível'}</p></div><button type="button" data-product-close aria-label="Fechar">×</button></header><div class="entity-detail__body">${product.image ? `<img class="product-detail-photo" src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}">` : '<div class="product-detail-photo product-detail-photo--empty">Foto pendente</div>'}<section class="entity-summary"><div><span>Preço</span><strong>${money(product.priceCents)}</strong></div><div><span>Custo</span><strong>${product.costCents == null ? 'Pendente' : money(product.costCents)}</strong></div><div><span>Margem</span><strong>${margin == null ? '—' : `${margin}%`}</strong></div></section><section class="entity-block"><h3>Cadastro</h3><p>Unidade: ${escapeHtml(product.unit)}</p>${product.supplierName ? `<p>Fornecedor: ${escapeHtml(product.supplierName)}</p>` : ''}${product.unavailableFrom ? `<p>Indisponível de ${escapeHtml(product.unavailableFrom)} até ${escapeHtml(product.unavailableUntil)}</p>` : ''}</section></div><footer class="entity-detail__actions"><button class="screen-primary" type="button" data-catalog-action="edit" data-id="${escapeHtml(product.id)}">Editar produto</button>${live?.operator ? `<button type="button" data-catalog-action="history" data-id="${escapeHtml(product.id)}">Histórico</button>` : ''}<button type="button" class="entity-danger" data-catalog-action="delete" data-id="${escapeHtml(product.id)}">${live ? 'Desativar' : 'Excluir'}</button></footer></div>`;
+    detailDialog.showModal();
   }
 
   document.addEventListener('click', async event => {
+    if (event.target.closest('[data-product-close]')) { detailDialog.close(); return; }
+    if (event.target.closest('[data-catalog-missing]')) { filters.cost = 'missing'; rerender(); return; }
     const button = event.target.closest('[data-catalog-action]');
     if (!button) return;
     const action = button.dataset.catalogAction;
     if (action === 'new') open();
-    if (action === 'edit') open(button.dataset.id);
+    if (action === 'view') openDetail(button.dataset.id);
+    if (action === 'edit') { detailDialog.close(); open(button.dataset.id); }
     if (action === 'history' && live?.operator) {
+      detailDialog.close();
       const product=products.find(item=>item.id===button.dataset.id);
       historyDialog.innerHTML='<p>Carregando histórico…</p>';historyDialog.showModal();
       try { const events=await live.productEvents(button.dataset.id);historyDialog.innerHTML=`<div class="catalog-dialog__heading"><h2>Histórico · ${escapeHtml(product?.name||'produto')}</h2><button type="button" data-history-close class="catalog-close" aria-label="Fechar">×</button></div>${events.length?`<ul>${events.map(item=>`<li><strong>${item.event_kind==='cost'?'Custo':'Catálogo'}</strong> · ${new Date(item.happened_at).toLocaleString('pt-BR')}</li>`).join('')}</ul>`:'<p>Nenhuma alteração registrada desde a ativação do histórico.</p>'}`; }
@@ -124,6 +155,20 @@
         else save(products.filter(item => item.id !== product.id));
       }
     }
+  });
+  document.addEventListener('input', event => {
+    if (event.target.id !== 'catalog-search') return;
+    filters.query = event.target.value;
+    rerender();
+    const input = document.getElementById('catalog-search');
+    input?.focus({ preventScroll: true });
+    input?.setSelectionRange(filters.query.length, filters.query.length);
+  });
+  document.addEventListener('change', event => {
+    const select = event.target.closest('[data-catalog-filter]');
+    if (!select) return;
+    filters[select.dataset.catalogFilter] = select.value;
+    rerender();
   });
   historyDialog.addEventListener('click',event=>{if(event.target.closest('[data-history-close]'))historyDialog.close();});
   dialog.querySelector('.catalog-close').addEventListener('click', () => dialog.close());
@@ -153,7 +198,14 @@
       return;
     }
     const previous = products.find(item => item.id === editingId);
-    const product = { ...previous, id: editingId || (live ? null : crypto.randomUUID()), name, priceCents, unit, category: form.elements.category.value.trim(), active: form.elements.active.checked, costCents, supplierName: form.elements.supplierName?.value.trim() || '', unavailableFrom, unavailableUntil, substituteProductId, ...(previous?.demo ? { demo: true } : {}) };
+    let image = form.elements.imageUrl?.value.trim() || previous?.image || '';
+    const file = form.elements.imageFile?.files?.[0];
+    if (file) {
+      if (file.size > 1572864) { error.textContent = 'A foto precisa ter no máximo 1,5 MB.'; error.hidden = false; return; }
+      image = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file); }).catch(() => null);
+      if (!image) { error.textContent = 'Não foi possível ler a foto selecionada.'; error.hidden = false; return; }
+    }
+    const product = { ...previous, id: editingId || (live ? null : crypto.randomUUID()), name, image, priceCents, unit, category: form.elements.category.value.trim(), active: form.elements.active.checked, costCents, supplierName: form.elements.supplierName?.value.trim() || '', unavailableFrom, unavailableUntil, substituteProductId, ...(previous?.demo ? { demo: true } : {}) };
     if (product.active) product.reviewReason = null;
     const next = editingId ? products.map(item => item.id === editingId ? product : item) : [...products, product];
     if (await save(next)) dialog.close();
@@ -161,5 +213,5 @@
 
   if (live) window.addEventListener('trameli:catalog-changed', () => { products = read(); updateDatalist(); });
 
-  window.TrameliCatalog = { render, list: () => products.slice(), findByName: name => products.find(item => item.active && item.name.toLocaleLowerCase('pt-BR') === name.trim().toLocaleLowerCase('pt-BR')) };
+  window.TrameliCatalog = { render, list: () => products.slice(), findByName: name => products.find(item => item.active && item.name.toLocaleLowerCase('pt-BR') === name.trim().toLocaleLowerCase('pt-BR')), open: openDetail };
 })();

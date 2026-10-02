@@ -84,7 +84,7 @@ try {
   await evaluate('document.querySelector(".auth-google").click()');
   await until('authFixture.log.includes("google")');
   await evaluate('document.querySelector("[data-method=phone]").click(); document.querySelector("[data-mode=signup]").click()');
-  await submit({ identity: '(34) 99999-9999', password: 'correct-password', confirmation: 'correct-password' });
+  await submit({ identity: '(34) 99999-9999', name: 'Cliente Teste', phone: '(34) 99999-9999', address: 'Bloco A, ap. 10', password: 'correct-password', confirmation: 'correct-password' });
   await until('!!document.querySelector("[name=code]")');
   await submit({ code: '123456' });
   await until('authResult === "entered"');

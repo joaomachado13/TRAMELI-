@@ -2,6 +2,8 @@
 
 O painel operacional e o portal do cliente compartilham a mesma aplicação. A versão sem configuração do Supabase é **somente demonstração local**; não use dados pessoais reais nela.
 
+Versão atual: **0.3.0** — revisão de experiência e design system da Trameli.
+
 ## Executar
 
 ```powershell
@@ -30,6 +32,7 @@ O modo com Supabase ainda **não está homologado com um projeto real**. Consult
 
 ## Implementado
 
+- Design system unificado com canvas creme, verde estrutural, hierarquia tipográfica, sidebar persistente no desktop, estados semânticos e componentes responsivos compartilhados pelo Master e portal.
 - Lançamento manual, ajuste, cancelamento com histórico, estados de conferência/separação/entrega, totais em centavos e lista diária consolidada de quantidades para conferência com a padaria.
 - Portal de pedido, edição e cancelamento até 22h30 do dia anterior à entrega, com forma de pagamento pretendida.
 - Banco com acesso por cliente/operadora, totais calculados no servidor, controle de versão para evitar sobrescrita e trilha de alterações.

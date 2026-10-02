@@ -5,13 +5,6 @@ const printSettingsKey = 'trameli-print-settings-70x33-v1';
 try { localStorage.removeItem('trameli-operation-draft-v1'); } catch { /* Storage may be unavailable. */ }
 const money = value => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value / 100);
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
-const localDate = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-
-function tomorrow() {
-  const date = new Date();
-  date.setDate(date.getDate() + 1);
-  return localDate(date);
-}
 
 function parseMoney(value) {
   const raw = String(value).trim().replace(/\s|R\$/gi, '');
@@ -31,9 +24,9 @@ function readOrders() {
 
 let orders = readOrders();
 let editingId = null;
+let detailId = null;
 let submitting = false;
 let requestId = null;
-let dayFinanceRequest = 0;
 const dateInput = document.getElementById('delivery-date');
 const searchInput = document.getElementById('order-search');
 const list = document.getElementById('orders-list');
@@ -41,6 +34,8 @@ const supplierList = document.getElementById('supplier-list-items');
 const supplierCopy = document.getElementById('copy-supplier-list');
 const supplierFeedback = document.getElementById('supplier-list-feedback');
 const dialog = document.getElementById('operation-dialog');
+const detailDrawer = document.getElementById('order-detail-drawer');
+const detailContent = document.getElementById('order-detail-content');
 const form = document.getElementById('order-form');
 const itemsHost = document.getElementById('form-items');
 const formError = document.getElementById('form-error');
@@ -57,8 +52,6 @@ try {
     printSettingsHost?.querySelector(`[name="${key}"]`)?.setAttribute('value', printSettings[key]);
   }
 } catch { /* Use safe print defaults. */ }
-
-dateInput.value = tomorrow();
 
 function saveOrders() {
   try {
@@ -79,6 +72,35 @@ const statusLabels = { received: 'A conferir', confirmed: 'Conferido', packing: 
 const nextStatus = { received: 'confirmed', confirmed: 'packing', packing: 'ready', ready: 'delivered' };
 const previousStatus = { confirmed: 'received', packing: 'confirmed', ready: 'packing' };
 const orderStatus = order => order.status || (order.checked ? 'confirmed' : 'received');
+const paymentLabels = { pix_manual: 'Pix', cash: 'Dinheiro', bank: 'Transferência', other: 'A combinar', unspecified: 'Não informado' };
+const operationSettingsKey = 'trameli-operation-settings-v1';
+
+function operationRolloverTime() {
+  try {
+    const value = JSON.parse(localStorage.getItem(operationSettingsKey) || '{}').rolloverTime;
+    return /^([01]\d|2[0-3]):[0-5]\d$/.test(value) ? value : '13:30';
+  } catch { return '13:30'; }
+}
+
+function saoPauloClock() {
+  return Object.fromEntries(new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).formatToParts(new Date()).filter(part => part.type !== 'literal').map(part => [part.type, Number(part.value)]));
+}
+
+function suggestedOperationDate() {
+  const clock = saoPauloClock();
+  const today = `${clock.year}-${String(clock.month).padStart(2, '0')}-${String(clock.day).padStart(2, '0')}`;
+  const [hour, minute] = operationRolloverTime().split(':').map(Number);
+  const afterRollover = clock.hour * 60 + clock.minute >= hour * 60 + minute;
+  const todayPending = orders.some(order => order.date === today && !['delivered', 'cancelled'].includes(orderStatus(order)));
+  if (!afterRollover || todayPending) return today;
+  const next = new Date(Date.UTC(clock.year, clock.month - 1, clock.day + 1));
+  return `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, '0')}-${String(next.getUTCDate()).padStart(2, '0')}`;
+}
+
+dateInput.value = suggestedOperationDate();
 
 function addItem(item = {}) {
   const row = document.createElement('div');
@@ -164,38 +186,9 @@ function selectedOrders() {
   return orders.filter(order => order.date === dateInput.value && orderStatus(order) !== 'cancelled').sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
-async function renderDailyFinance(dayOrders) {
-  const request = ++dayFinanceRequest;
-  const initial = window.TrameliFinanceMath.summarizeFinancials(dayOrders, null);
-  document.getElementById('day-customer-value').textContent = money(initial.customerCents);
-  document.getElementById('day-supplier-value').textContent = '—';
-  document.getElementById('day-profit-value').textContent = 'Pendente';
-  const note = document.getElementById('day-finance-note');
-  if (!live?.operator) {
-    note.textContent = 'Custos e lucro exigem a conta da operação conectada. A taxa de entrega fica fora desta conta.';
-    return;
-  }
-  note.textContent = 'Calculando custos da padaria…';
-  try {
-    const rows = await live.costSummary(dateInput.value, dateInput.value);
-    if (request !== dayFinanceRequest) return;
-    const result = window.TrameliFinanceMath.summarizeFinancials(dayOrders, rows);
-    document.getElementById('day-supplier-value').textContent = money(result.supplierCents);
-    document.getElementById('day-profit-value').textContent = result.profitCents === null ? 'Pendente' : `${money(result.profitCents)}${result.estimatedItems ? ' *' : ''}`;
-    note.textContent = result.missingItems
-      ? `${result.missingItems} ${result.missingItems === 1 ? 'item sem custo' : 'itens sem custo'}${result.estimatedItems ? `; ${result.estimatedItems} com custo estimado` : ''}. O valor da padaria é parcial; não feche o lucro ainda.`
-      : result.estimatedItems
-        ? `* Lucro provisório: ${result.estimatedItems} ${result.estimatedItems === 1 ? 'item usa custo estimado' : 'itens usam custo estimado'}. Confirme com a padaria. Taxa de entrega fora da conta.`
-        : 'Lucro bruto dos produtos; taxa de entrega e outras despesas não entram nesta conta.';
-  } catch (cause) {
-    if (request === dayFinanceRequest) note.textContent = `Custos indisponíveis: ${cause.message}`;
-  }
-}
-
 function render() {
   const dayOrders = selectedOrders();
-  renderDailyFinance(dayOrders);
-  const displayOrders = orders.filter(order => order.date === dateInput.value).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const displayOrders = dayOrders.slice();
   const filtered = displayOrders.filter(order => {
     const query = searchInput.value.trim().toLocaleLowerCase('pt-BR');
     return !query || [order.customer, order.address, ...order.items.map(item => item.name)].some(value => value.toLocaleLowerCase('pt-BR').includes(query));
@@ -203,8 +196,14 @@ function render() {
   const summary = window.TrameliOrderMath.summarizeDay(orders, dateInput.value);
   document.getElementById('total-orders').textContent = summary.count;
   document.getElementById('pending-orders').textContent = summary.pending;
-  document.getElementById('products-total').textContent = money(summary.productsCents);
+  document.getElementById('completed-orders').textContent = dayOrders.filter(order => orderStatus(order) === 'delivered').length;
   document.getElementById('grand-total').textContent = money(summary.totalCents);
+  const selectedLabel = new Date(`${dateInput.value}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+  const rollover = operationRolloverTime();
+  const suggested = suggestedOperationDate();
+  document.getElementById('operation-day-hint').textContent = dateInput.value === suggested
+    ? `Dia priorizado pela operação. Virada configurada para ${rollover}.`
+    : `Visualizando ${selectedLabel}. Virada configurada para ${rollover}.`;
   const products = window.TrameliOrderMath.summarizeProducts(orders, dateInput.value);
   supplierList.innerHTML = products.length
     ? `<ul>${products.map(item => `<li><strong>${item.grams ? `${item.grams} g` : `${item.quantity}×`}</strong><span>${escapeHtml(item.name)}</span></li>`).join('')}</ul>`
@@ -212,17 +211,85 @@ function render() {
   supplierCopy.disabled = !products.length;
   supplierFeedback.textContent = '';
 
-  if (!filtered.length) {
-    list.innerHTML = `<div class="empty-state"><span aria-hidden="true">✳</span><h3>${displayOrders.length ? 'Nenhum pedido encontrado' : 'O dia ainda está em branco'}</h3><p>${displayOrders.length ? 'Tente outro nome, endereço ou produto.' : 'Quando os pedidos chegarem, lance o primeiro aqui. A soma e as fichas serão preparadas automaticamente.'}</p>${displayOrders.length ? '' : '<button class="button button--primary" type="button" data-action="new">+ Lançar primeiro pedido</button>'}</div>`;
+  if (!filtered.length && displayOrders.length) {
+    list.innerHTML = '<div class="empty-state operation-empty"><span aria-hidden="true">⌕</span><h3>Nenhum pedido encontrado</h3><p>Tente buscar por outro nome, endereço ou produto.</p></div>';
     return;
   }
 
-  list.innerHTML = filtered.map((order, index) => {
+  const card = order => {
     const state = orderStatus(order);
-    const master = !live || live.role === 'master';
-    const canCorrect = state === 'received' || master;
-    return `<article class="order-card ${state !== 'received' ? 'order-card--checked' : ''}"><div class="order-card__number">${String(index + 1).padStart(2, '0')}</div><div class="order-card__main"><div class="order-card__title"><div><h3>${escapeHtml(order.customer)}</h3><p>${escapeHtml(order.address)}${order.phone ? ` · ${escapeHtml(order.phone)}` : ''}</p></div><span class="status ${state !== 'received' ? 'status--checked' : ''}">${statusLabels[state] || 'A conferir'}</span></div><ul>${order.items.map(item => `<li><strong>${escapeHtml(itemLabel(item))}</strong><span>${money(itemTotal(item))}</span></li>`).join('')}</ul>${order.paymentMethod && order.paymentMethod !== 'unspecified' ? `<p class="order-card__notes">Pagamento pretendido: ${escapeHtml({pix_manual:'Pix',cash:'Dinheiro',bank:'Transferência',other:'A combinar'}[order.paymentMethod] || order.paymentMethod)}</p>` : ''}${order.notes ? `<p class="order-card__notes">Obs.: ${escapeHtml(order.notes)}</p>` : ''}<div class="order-card__footer"><span>Produtos ${money(orderSubtotal(order))} · Entrega ${money(order.feeCents)}</span><strong>${money(orderTotal(order))}</strong></div><div class="order-card__actions">${nextStatus[state] ? `<button type="button" data-action="toggle" data-id="${order.id}">Avançar para ${statusLabels[nextStatus[state]].toLowerCase()}</button>` : ''}${previousStatus[state] && master ? `<button type="button" data-action="back" data-id="${order.id}">Voltar para ${statusLabels[previousStatus[state]].toLowerCase()}</button>` : ''}${live ? `<button type="button" data-action="history" data-id="${order.id}">Histórico</button>` : ''}${!['delivered','cancelled'].includes(state) && canCorrect ? `<button type="button" data-action="edit" data-id="${order.id}">Editar</button><button type="button" data-action="delete" data-id="${order.id}">Cancelar</button>` : ''}</div></div></article>`;
-  }).join('');
+    const itemCount = order.items.reduce((sum, item) => sum + (item.weightGrams ? 1 : item.quantity), 0);
+    return `<button class="order-card order-card--${state}" type="button" data-action="open" data-id="${escapeHtml(order.id)}" aria-label="Abrir pedido de ${escapeHtml(order.customer)}"><span class="order-card__top"><span class="order-card__id">#${escapeHtml(order.id.slice(0, 8))}</span><span class="status status--${state}">${escapeHtml(statusLabels[state])}</span></span><strong class="order-card__customer">${escapeHtml(order.customer)}</strong><span class="order-card__meta">${itemCount} ${itemCount === 1 ? 'item' : 'itens'} · ${money(orderTotal(order))}</span><span class="order-card__delivery">Entrega ${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</span>${order.notes ? '<span class="order-card__alert">Tem observação</span>' : ''}<span class="order-card__open">Ver pedido <span aria-hidden="true">→</span></span></button>`;
+  };
+  const columns = [
+    { key: 'new', title: 'Novos', note: 'Aguardando conferência', states: ['received'] },
+    { key: 'checked', title: 'Conferidos', note: 'Em preparação', states: ['confirmed', 'packing', 'ready'] },
+    { key: 'done', title: 'Entregues', note: 'Finalizados', states: ['delivered'] },
+  ];
+  list.innerHTML = `<div class="kanban" aria-label="Pedidos por etapa">${columns.map(column => {
+    const columnOrders = filtered.filter(order => column.states.includes(orderStatus(order)));
+    return `<section class="kanban-column kanban-column--${column.key}" aria-labelledby="kanban-${column.key}"><header><div><h3 id="kanban-${column.key}">${column.title}</h3><p>${column.note}</p></div><strong aria-label="${columnOrders.length} pedidos">${columnOrders.length}</strong></header><div class="kanban-column__cards">${columnOrders.length ? columnOrders.map(card).join('') : `<p class="kanban-empty">${displayOrders.length ? 'Nenhum pedido nesta etapa.' : column.key === 'new' ? 'Os novos pedidos aparecerão aqui.' : 'Nada por aqui ainda.'}</p>`}</div></section>`;
+  }).join('')}</div>${displayOrders.length ? '' : '<div class="operation-first-order"><p>O dia ainda está em branco.</p><button class="button button--primary" type="button" data-action="new">+ Lançar primeiro pedido</button></div>'}`;
+
+  if (detailDrawer.open) {
+    const current = orders.find(order => order.id === detailId && order.date === dateInput.value && orderStatus(order) !== 'cancelled');
+    if (current) renderOrderDetail(current); else detailDrawer.close();
+  }
+}
+
+function detailActions(order) {
+  const state = orderStatus(order);
+  const master = !live || live.role === 'master';
+  const canCorrect = state === 'received' || master;
+  return `<div class="order-detail__actions">${nextStatus[state] ? `<button class="button button--primary" type="button" data-action="toggle" data-id="${escapeHtml(order.id)}">Avançar para ${escapeHtml(statusLabels[nextStatus[state]].toLowerCase())}</button>` : ''}${previousStatus[state] && master ? `<button class="button button--quiet" type="button" data-action="back" data-id="${escapeHtml(order.id)}">Voltar para ${escapeHtml(statusLabels[previousStatus[state]].toLowerCase())}</button>` : ''}${!['delivered', 'cancelled'].includes(state) && canCorrect ? `<button class="button button--quiet" type="button" data-action="edit" data-id="${escapeHtml(order.id)}">Editar pedido</button>` : ''}${live ? `<button class="button button--quiet" type="button" data-action="history" data-id="${escapeHtml(order.id)}">Ver histórico</button>` : ''}${!['delivered', 'cancelled'].includes(state) && canCorrect ? `<button class="order-detail__danger" type="button" data-action="delete" data-id="${escapeHtml(order.id)}">Cancelar pedido</button>` : ''}</div>`;
+}
+
+function renderOrderDetail(order) {
+  const state = orderStatus(order);
+  const itemRows = order.items.map(item => `<li><span><strong>${escapeHtml(itemLabel(item))}</strong><small>${money(item.priceCents)}${item.weightGrams ? '' : ' cada'}</small></span><strong>${money(itemTotal(item))}</strong></li>`).join('');
+  detailContent.innerHTML = `<div class="order-detail"><header class="order-detail__header"><div><p class="eyebrow">PEDIDO #${escapeHtml(order.id.slice(0, 8))}</p><h2 id="order-detail-title">${escapeHtml(order.customer)}</h2><span class="status status--${state}">${escapeHtml(statusLabels[state])}</span></div><button class="order-detail__close" type="button" data-action="close-detail" aria-label="Fechar detalhes">×</button></header><div class="order-detail__body"><section class="order-detail__section"><h3>Entrega</h3><p><strong>${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</strong></p><p>${escapeHtml(order.address)}</p>${order.phone ? `<p><a href="tel:${escapeHtml(order.phone)}">${escapeHtml(order.phone)}</a></p>` : '<p class="order-detail__muted">Telefone não informado</p>'}</section><section class="order-detail__section"><div class="order-detail__section-heading"><h3>Itens</h3><span>${order.items.length} ${order.items.length === 1 ? 'linha' : 'linhas'}</span></div><ul class="order-detail__items">${itemRows}</ul><div class="order-detail__totals"><p><span>Produtos</span><strong>${money(orderSubtotal(order))}</strong></p><p><span>Entrega</span><strong>${money(order.feeCents)}</strong></p><p><span>Total</span><strong>${money(orderTotal(order))}</strong></p></div></section><div class="order-detail__grid"><section class="order-detail__section"><h3>Pagamento</h3><p>${escapeHtml(paymentLabels[order.paymentMethod || 'unspecified'] || order.paymentMethod)}</p><small>A forma escolhida não confirma recebimento.</small></section><section class="order-detail__section"><h3>Observação</h3><p>${order.notes ? escapeHtml(order.notes) : '<span class="order-detail__muted">Nenhuma observação.</span>'}</p></section></div></div>${detailActions(order)}</div>`;
+}
+
+function openOrderDetail(order) {
+  detailId = order.id;
+  renderOrderDetail(order);
+  if (!detailDrawer.open) detailDrawer.showModal();
+}
+
+async function openHistory(order) {
+  if (!live || !historyDialog) return;
+  try {
+    const events = await live.orderEvents(order.id);
+    historyDialog.innerHTML = `<div class="history-dialog__content"><button type="button" class="history-dialog__close" aria-label="Fechar">×</button><h2>Histórico do pedido</h2><p>${escapeHtml(order.customer)} · #${escapeHtml(order.id.slice(0, 8))}</p><ol>${events.map(entry => {
+      const before = entry.before_state;
+      const after = entry.after_state;
+      const change = !before ? 'Pedido criado' : before.status !== after.status ? `Estado: ${statusLabels[before.status] || before.status} → ${statusLabels[after.status] || after.status}` : 'Dados ou valores ajustados';
+      return `<li><time>${new Date(entry.happened_at).toLocaleString('pt-BR')}</time><strong>${escapeHtml(change)}</strong><small>Conta: ${escapeHtml(entry.actor_id?.slice(0, 8) || 'sistema')}</small></li>`;
+    }).join('')}</ol></div>`;
+    historyDialog.querySelector('button').addEventListener('click', () => historyDialog.close());
+    historyDialog.showModal();
+  } catch (cause) { alert(`Não foi possível carregar o histórico: ${cause.message}`); }
+}
+
+async function handleOrderAction(button) {
+  if (button.dataset.action === 'new') { openForm(); return; }
+  const order = orders.find(item => item.id === button.dataset.id);
+  if (!order) return;
+  if (button.dataset.action === 'open') { openOrderDetail(order); return; }
+  if (button.dataset.action === 'history') { await openHistory(order); return; }
+  if (button.dataset.action === 'edit') { detailDrawer.close(); openForm(order); return; }
+  if (button.dataset.action === 'delete' && !confirm(`Cancelar o pedido de ${order.customer}? O registro ficará no histórico.`)) return;
+  const previous = orders;
+  const state = button.dataset.action === 'delete' ? 'cancelled' : button.dataset.action === 'back' ? previousStatus[orderStatus(order)] : nextStatus[orderStatus(order)];
+  if (!state || ['cancelled', 'delivered'].includes(orderStatus(order))) return;
+  if (live) {
+    try { await live.setStatus(order, state); orders = readOrders(); render(); }
+    catch (cause) { alert(`O pedido não foi alterado: ${cause.message}`); }
+    return;
+  }
+  orders = orders.map(item => item.id === order.id ? { ...item, status: state, checked: state !== 'received' } : item);
+  if (!saveOrders()) { orders = previous; return; }
+  render();
 }
 
 function preparePrint() {
@@ -314,43 +381,22 @@ form.addEventListener('submit', async event => {
   render();
 });
 
-list.addEventListener('click', async event => {
+list.addEventListener('click', event => {
   const button = event.target.closest('button[data-action]');
   if (!button) return;
-  if (button.dataset.action === 'new') { openForm(); return; }
-  const order = orders.find(item => item.id === button.dataset.id);
-  if (!order) return;
-  if (button.dataset.action === 'history' && live) {
-    try {
-      const events = await live.orderEvents(order.id);
-      historyDialog.innerHTML = `<div class="history-dialog__content"><button type="button" class="history-dialog__close" aria-label="Fechar">×</button><h2>Histórico do pedido</h2><p>${escapeHtml(order.customer)} · #${escapeHtml(order.id.slice(0, 8))}</p><ol>${events.map(entry => {
-        const before = entry.before_state;
-        const after = entry.after_state;
-        const change = !before ? 'Pedido criado' : before.status !== after.status ? `Estado: ${statusLabels[before.status] || before.status} → ${statusLabels[after.status] || after.status}` : 'Dados ou valores ajustados';
-        return `<li><time>${new Date(entry.happened_at).toLocaleString('pt-BR')}</time><strong>${escapeHtml(change)}</strong><small>Conta: ${escapeHtml(entry.actor_id?.slice(0, 8) || 'sistema')}</small></li>`;
-      }).join('')}</ol></div>`;
-      historyDialog.querySelector('button').addEventListener('click', () => historyDialog.close());
-      historyDialog.showModal();
-    } catch (cause) { alert(`Não foi possível carregar o histórico: ${cause.message}`); }
-    return;
-  }
-  if (button.dataset.action === 'edit') { openForm(order); return; }
-  if (button.dataset.action === 'delete' && !confirm(`Cancelar o pedido de ${order.customer}? O registro ficará no histórico.`)) return;
-  const previous = orders;
-  const state = button.dataset.action === 'delete' ? 'cancelled' : button.dataset.action === 'back' ? previousStatus[orderStatus(order)] : nextStatus[orderStatus(order)];
-  if (!state || ['cancelled', 'delivered'].includes(orderStatus(order))) return;
-  if (live) {
-    try { await live.setStatus(order, state); orders = readOrders(); render(); }
-    catch (cause) { alert(`O pedido não foi alterado: ${cause.message}`); }
-    return;
-  }
-  orders = orders.map(item => item.id === order.id ? { ...item, status: state, checked: state !== 'received' } : item);
-  if (!saveOrders()) { orders = previous; return; }
-  render();
+  handleOrderAction(button);
 });
 
-for (const id of ['print-orders', 'print-orders-bottom']) {
-  document.getElementById(id).addEventListener('click', () => { if (preparePrint()) window.print(); });
+detailDrawer.addEventListener('click', event => {
+  const button = event.target.closest('button[data-action]');
+  if (!button) return;
+  if (button.dataset.action === 'close-detail') { detailDrawer.close(); return; }
+  handleOrderAction(button);
+});
+detailDrawer.addEventListener('close', () => { detailId = null; });
+
+for (const id of ['print-orders']) {
+  document.getElementById(id)?.addEventListener('click', () => { if (preparePrint()) window.print(); });
 }
 printSettingsHost?.addEventListener('change', event => {
   const input = event.target.closest('input[name]');
@@ -367,5 +413,27 @@ window.addEventListener('trameli:orders-changed', () => { orders = readOrders();
 window.addEventListener('storage', event => {
   if (event.key === storageKey) { orders = readOrders(); render(); }
 });
-window.TrameliOperation = { preparePrint };
+function openNewOrder(prefill = {}) {
+  location.hash = '#operacao';
+  setTimeout(() => {
+    openForm();
+    form.elements.customer.value = prefill.customer || '';
+    form.elements.phone.value = prefill.phone || '';
+    form.elements.address.value = prefill.address || '';
+    form.elements.date.value = prefill.date || dateInput.value;
+    form.elements.notes.value = prefill.notes || '';
+    if (Array.isArray(prefill.items) && prefill.items.length) {
+      itemsHost.replaceChildren();
+      prefill.items.forEach(item => addItem(item));
+      updateFormTotal();
+    }
+  }, 260);
+}
+function openOrderById(id) {
+  orders = readOrders();
+  const order = orders.find(item => item.id === id);
+  if (order) openOrderDetail(order);
+}
+window.addEventListener('trameli:new-order', event => openNewOrder(event.detail || {}));
+window.TrameliOperation = { preparePrint, openOrder: openOrderById, openNew: openNewOrder };
 })();

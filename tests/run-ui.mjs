@@ -14,7 +14,8 @@ const previewPort = String(address.port);
 await new Promise((resolveClose, rejectClose) => server.close(error => error ? rejectClose(error) : resolveClose()));
 const origin = `http://127.0.0.1:${previewPort}/`;
 const vite = resolve(root, 'node_modules/vite/bin/vite.js');
-const tests = ['auth-ui.mjs', 'payments-ui.mjs', 'photos-ui.mjs', 'motion-ui.mjs'];
+const allTests = ['auth-ui.mjs', 'payments-ui.mjs', 'photos-ui.mjs', 'motion-ui.mjs', 'operation-ui.mjs', 'design-ui.mjs'];
+const tests = process.env.TRAMELI_UI_TEST ? [process.env.TRAMELI_UI_TEST] : allTests;
 const build = spawn(process.execPath, [vite, 'build', '--configLoader', 'runner', '--mode', 'test'], {
   cwd: root,
   windowsHide: true,
@@ -51,7 +52,7 @@ try {
   if (!ready) throw new Error(`Vite preview não iniciou em ${origin}.`);
 
   for (const test of tests) {
-    const child = spawn(process.execPath, [resolve(root, 'tests', test)], {
+    const child = spawn(process.execPath, ['--experimental-websocket', resolve(root, 'tests', test)], {
       cwd: root,
       windowsHide: true,
       stdio: 'inherit',

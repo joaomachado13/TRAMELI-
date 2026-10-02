@@ -28,11 +28,12 @@ export class AuthService {
     return data;
   }
 
-  async signUp(method, identity, password, confirmation) {
+  async signUp(method, identity, password, confirmation, profile = null) {
     validateNewPassword(password, confirmation);
+    if (profile && (!profile.name || !profile.phone || !profile.address)) throw new Error('Informe nome, telefone e endereço.');
     const { data, error } = await this.client.auth.signUp({
       ...identityFields(method, identity), password,
-      options: { emailRedirectTo: this.redirect() },
+      options: { emailRedirectTo: this.redirect(), ...(profile ? { data: { ...profile, full_name: profile.name } } : {}) },
     });
     if (error) throw error;
     return data;
@@ -66,6 +67,12 @@ export class AuthService {
   async setPassword(password, confirmation) {
     validateNewPassword(password, confirmation);
     const { error } = await this.client.auth.updateUser({ password });
+    if (error) throw error;
+  }
+
+  async updateProfile(profile) {
+    if (!profile.name || !profile.address) throw new Error('Informe nome e endereço.');
+    const { error } = await this.client.auth.updateUser({ data: { ...profile, full_name: profile.name } });
     if (error) throw error;
   }
 }

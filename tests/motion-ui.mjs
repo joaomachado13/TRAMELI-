@@ -73,8 +73,8 @@ try {
   assert.equal(await evaluate('(Date.parse(document.querySelector("#finance-to").value)-Date.parse(document.querySelector("#finance-from").value))/86400000'), 14);
 
   await evaluate('location.hash="#loja"');
-  for (let i = 0; i < 40 && !(await evaluate('!!document.querySelector(".portal-hero a")')); i++) await pause(100);
-  await evaluate('document.querySelector(".portal-hero a").click()');
+  for (let i = 0; i < 40 && !(await evaluate('!!document.querySelector(".portal-welcome a")')); i++) await pause(100);
+  await evaluate('document.querySelector(".portal-welcome a").click()');
   await pause(750);
   assert.equal(await evaluate('location.hash'), '#loja', 'Catalog CTA left the portal');
   assert.ok(await evaluate('scrollY > 200'), 'Catalog CTA did not scroll to products');

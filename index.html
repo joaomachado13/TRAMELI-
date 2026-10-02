@@ -3,13 +3,14 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="color-scheme" content="dark">
+    <meta name="color-scheme" content="light">
     <title>Visão e CRM — Trameli</title>
     <link rel="icon" href="assets/brand-mark.svg" type="image/svg+xml">
     <link rel="stylesheet" href="assets/styles.css?v=4">
     <link rel="stylesheet" href="assets/operacao.css">
     <link rel="stylesheet" href="assets/catalogo.css">
     <link rel="stylesheet" href="assets/portal.css?v=4">
+    <link rel="stylesheet" href="assets/design-system.css?v=1">
   </head>
   <body>
     <div class="ambient-field" aria-hidden="true"></div>
@@ -49,10 +50,13 @@
       <main class="section" id="inicio">
         <header class="nav2">
           <button class="mobile-menu-button" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="main-navigation-panel"><span></span><span></span><span></span></button>
-          <label class="search">
-            <span class="ico ico--search" aria-hidden="true"></span>
-            <input class="in" type="search" placeholder="Buscar clientes, pedidos ou produtos..." aria-label="Busca global">
-          </label>
+          <div class="global-search">
+            <label class="search">
+              <span class="ico ico--search" aria-hidden="true"></span>
+              <input class="in" id="global-search-input" type="search" placeholder="Buscar clientes, pedidos ou produtos..." aria-label="Busca global" autocomplete="off" aria-controls="global-search-results" aria-expanded="false">
+            </label>
+            <div class="global-search__results" id="global-search-results" role="listbox" hidden></div>
+          </div>
 
           <div class="account-actions">
             <button class="notification-button" type="button" aria-label="0 pedidos precisam de atenção" title="Ver pedidos que precisam de atenção">
@@ -70,17 +74,14 @@
         <div id="operation-view" class="view">
           <div class="workspace">
             <section class="intro">
-              <div><p class="eyebrow">CENTRAL DE PEDIDOS · ÁREA PRINCIPAL</p><h1>Uma manhã inteira,<br><em>em ordem.</em></h1><p>Lance os pedidos recebidos, confira os valores e prepare as fichas de separação em uma única tela.</p></div>
-              <div class="intro__actions"><button class="button button--primary" id="new-order" type="button">+ Novo pedido</button><button class="button button--quiet" id="print-orders" type="button">Imprimir fichas</button><a class="button button--quiet" href="#loja">Ver portal do cliente ↗</a></div>
+              <div><p class="eyebrow">OPERAÇÃO DIÁRIA</p><h1>Pedidos do dia,<br><em>sem confusão.</em></h1><p>Acompanhe o que chegou, o que já foi conferido e o que terminou.</p></div>
+              <div class="intro__actions"><button class="button button--primary" id="new-order" type="button">+ Novo pedido</button><button class="button button--quiet" id="print-orders" type="button">Imprimir etiquetas</button></div>
             </section>
-            <p class="prototype-note" role="note"><strong>Modo local de demonstração.</strong> Pedidos e cadastro ficam somente neste navegador. Os preços de venda vieram da planilha recebida, mas ainda precisam de conferência antes do uso com clientes reais. Itens com dúvidas ficam indisponíveis.</p>
-            <section class="day-tools" aria-label="Seleção do dia"><div><label for="delivery-date">Entregas de</label><input id="delivery-date" type="date"></div><div class="day-tools__hint">Pedidos recebidos na noite anterior para entrega de manhã.</div></section>
-            <section class="summary" aria-label="Resumo do dia"><div class="summary-card"><span>Pedidos</span><strong id="total-orders">0</strong><small>na data selecionada</small></div><div class="summary-card summary-card--warm"><span>A conferir</span><strong id="pending-orders">0</strong><small>antes de fechar a lista</small></div><div class="summary-card"><span>Produtos</span><strong id="products-total">R$ 0,00</strong><small>soma dos itens</small></div><div class="summary-card"><span>Total cobrado</span><strong id="grand-total">R$ 0,00</strong><small>produtos + taxas</small></div></section>
-            <section class="ledger-note"><span class="ledger-note__mark">i</span><div><strong>Venda não é repasse à padaria</strong><p>Este resumo mostra o valor cobrado dos clientes. Os custos conhecidos aparecem separadamente em Financeiro; pedidos sem custo confirmado não entram num repasse definitivo.</p></div></section>
-            <section class="day-finance" aria-labelledby="day-finance-title"><div class="section-heading"><div><p class="eyebrow">RESULTADO DA DATA</p><h2 id="day-finance-title">Clientes · Padaria · Lucro</h2></div><a class="text-button" href="#financeiro">Ver Financeiro →</a></div><div class="day-finance__grid"><div><span>Clientes (produtos)</span><strong id="day-customer-value">R$ 0,00</strong></div><div><span>Padaria</span><strong id="day-supplier-value">—</strong></div><div><span>Lucro bruto</span><strong id="day-profit-value">Pendente</strong></div></div><p id="day-finance-note">A taxa de entrega não entra no lucro dos produtos.</p></section>
-            <section class="orders-section" aria-labelledby="orders-title"><div class="section-heading"><div><p class="eyebrow">FILA DO DIA</p><h2 id="orders-title">Pedidos para separar</h2></div><label class="search-box">Buscar nesta data<input id="order-search" type="search" placeholder="Nome, endereço ou item"></label></div><div class="orders-list" id="orders-list" aria-live="polite"></div></section>
+            <p class="prototype-note" role="note"><strong>Modo de demonstração.</strong> Os dados ficam neste navegador. Confira os preços antes de usar com clientes reais.</p>
+            <section class="day-tools" aria-label="Seleção do dia"><div><label for="delivery-date">Dia da operação</label><input id="delivery-date" type="date"></div><div class="day-tools__hint" id="operation-day-hint">Escolha uma data para acompanhar a fila.</div></section>
+            <section class="summary" aria-label="Resumo do dia"><div class="summary-card"><span>Pedidos</span><strong id="total-orders">0</strong><small>ativos nesta data</small></div><div class="summary-card summary-card--warm"><span>Novos</span><strong id="pending-orders">0</strong><small>aguardando conferência</small></div><div class="summary-card"><span>Entregues</span><strong id="completed-orders">0</strong><small>finalizados no dia</small></div><div class="summary-card summary-card--total"><span>Total dos pedidos</span><strong id="grand-total">R$ 0,00</strong><small>produtos + entregas</small></div></section>
+            <section class="orders-section" aria-labelledby="orders-title"><div class="section-heading"><div><p class="eyebrow">FLUXO DO DIA</p><h2 id="orders-title">Acompanhe cada pedido</h2><p class="section-description">Abra um cartão para conferir detalhes e realizar ações.</p></div><label class="search-box">Buscar pedido<input id="order-search" type="search" placeholder="Nome, endereço ou produto"></label></div><div class="orders-list" id="orders-list" aria-live="polite"></div></section>
             <section class="supplier-list" aria-labelledby="supplier-list-title"><div class="section-heading"><div><p class="eyebrow">CONSOLIDADO DO DIA</p><h2 id="supplier-list-title">Lista de produtos</h2></div><button class="button button--quiet" id="copy-supplier-list" type="button">Copiar lista</button></div><p class="supplier-list__help">Quantidades dos pedidos não cancelados da data selecionada. Confira antes de enviar à padaria; esta lista não representa valores de repasse.</p><div id="supplier-list-items" aria-live="polite"></div><p class="supplier-list__feedback" id="supplier-list-feedback" role="status"></p></section>
-            <section class="print-info"><div><p class="eyebrow">IMPRESSÃO</p><h2>Etiquetas 70 × 33 mm</h2><p>Modelo de teste para 27 etiquetas por folha A4: 3 colunas × 9 linhas. Pedidos com mais de três produtos ocupam etiquetas adicionais para não ocultar itens.</p><div class="print-settings" id="print-settings"><label>Deslocamento horizontal (mm)<input name="offsetX" type="number" min="-3" max="3" step="0.5" value="0"></label><label>Deslocamento vertical (mm)<input name="offsetY" type="number" min="-3" max="3" step="0.5" value="0"></label></div><small class="print-warning">Teste primeiro em papel comum sobreposto à folha de etiquetas. Imprima em A4, escala 100%, sem margens extras nem cabeçalhos/rodapés. Ajuste o deslocamento se a impressora sair do alinhamento.</small></div><button class="button button--quiet" id="print-orders-bottom" type="button">Ver impressão</button></section>
           </div>
           <dialog id="operation-dialog" aria-labelledby="dialog-title"><form id="order-form" novalidate>
             <div class="dialog-heading"><div><p class="eyebrow">LANÇAMENTO MANUAL</p><h2 id="dialog-title">Novo pedido</h2></div><button class="icon-button" id="close-dialog" type="button" aria-label="Fechar">×</button></div>
@@ -95,86 +96,19 @@
           <div class="print-document" id="print-document" aria-hidden="true"></div>
         </div>
         <div id="home-view" class="view" hidden>
-        <section class="hero">
-          <div>
-            <h1 class="h1">Bom dia!</h1>
-            <p class="t1" id="operational-message">Carregando o resumo do dia...</p>
-          </div>
-          <p class="t2 hero__date" id="today-date">22 de setembro</p>
-        </section>
-
-        <section class="kpi-grid" aria-label="Resumo do dia">
-          <article class="card kpi-card">
-            <span class="ico ico--kpi ico--cart" aria-hidden="true"></span>
-            <div><strong class="h2" id="home-order-count">0</strong><p class="t2">Pedidos para amanhã</p><small class="kpi-card__context">Nenhum registrado</small></div>
-          </article>
-          <article class="card2 kpi-card">
-            <span class="ico ico--kpi ico--clock" aria-hidden="true"></span>
-            <div><strong class="h2" id="home-pending-count">0</strong><p class="t2">A conferir</p><small class="kpi-card__context">Nenhum pendente</small></div>
-          </article>
-          <article class="card kpi-card">
-            <span class="ico ico--kpi ico--truck" aria-hidden="true"></span>
-            <div><strong class="h2" id="home-delivery-count">0</strong><p class="t2">Entregas hoje</p><small class="kpi-card__context" id="home-delivery-context">Agenda vazia</small></div>
-          </article>
-          <article class="card3 kpi-card">
-            <span class="ico ico--kpi ico--currency" aria-hidden="true"></span>
-            <div><strong class="h2" id="home-order-total">R$ 0,00</strong><p class="t2">Total dos pedidos</p><small class="kpi-card__context">Na data de amanhã</small></div>
-          </article>
-        </section>
-
-        <section class="attention-strip" aria-labelledby="attention-title">
-          <div class="attention-strip__heading"><span class="attention-strip__symbol" aria-hidden="true">!</span><h2 id="attention-title">Precisa de ação</h2></div>
-          <a href="#operacao"><strong id="attention-pending-orders">0 pedidos</strong> pedem análise <span aria-hidden="true">↗</span></a>
-          <a href="#financeiro"><strong>Financeiro</strong> <span id="attention-finance">Carregando saldos…</span> <span aria-hidden="true">↗</span></a>
-          <a href="#agenda"><strong id="attention-deliveries">0 compromissos</strong> na agenda de hoje <span aria-hidden="true">↗</span></a>
-        </section>
-
-        <section class="content-grid">
-          <article class="card4 panel orders-panel">
-            <div class="panel__heading">
-              <h2 class="h3">Pedidos para amanhã</h2>
-              <a class="lnk panel__link" href="#operacao">Ver operação <span class="ico ico--arrow" aria-hidden="true"></span></a>
-            </div>
-            <div class="orders-table-wrap">
-              <table class="orders-table">
-                <thead>
-                  <tr class="t3"><th>#</th><th>Cliente</th><th>Entrega</th><th>Status</th><th>Valor</th></tr>
-                </thead>
-                <tbody class="t1" id="home-recent-orders"></tbody>
-              </table>
-            </div>
-            <p class="data-empty" id="home-orders-empty">Nenhum pedido cadastrado. Comece pela Operação diária.</p>
-          </article>
-
-          <article class="card5 panel deliveries-panel">
-            <div class="panel__heading">
-              <h2 class="h3">Próximas entregas</h2>
-              <a class="lnk panel__link" href="#agenda">Ver agenda <span class="ico ico--arrow" aria-hidden="true"></span></a>
-            </div>
-            <ol class="delivery-list" id="home-deliveries"></ol>
-            <p class="data-empty" id="home-deliveries-empty">Nenhuma entrega agendada.</p>
-          </article>
-        </section>
-
-        <section class="bottom-grid">
-          <article class="card6 panel clients-panel">
-            <div class="panel__heading">
-              <h2 class="h3">Clientes dos pedidos</h2>
-              <a class="lnk panel__link" href="#clientes">Ver todos <span class="ico ico--arrow" aria-hidden="true"></span></a>
-            </div>
-            <div class="client-list" id="home-clients"><p class="data-empty">Nenhum cliente nos pedidos.</p></div>
-          </article>
-
-          <article class="card7 panel"><div class="panel__heading"><h2 class="h3">Precisa de atenção</h2></div><div id="home-next-actions" aria-live="polite"></div></article>
-        </section>
+          <section class="hero overview-hero"><div><p class="screen-eyebrow">VISÃO GERAL</p><h1 class="h1">O que precisa ser resolvido?</h1><p class="t1" id="operational-message">Carregando o resumo do dia...</p></div><p class="t2 hero__date" id="today-date">22 de setembro</p></section>
+          <section class="kpi-grid overview-kpis" aria-label="Resumo do dia"><article class="card kpi-card"><span class="ico ico--kpi ico--cart" aria-hidden="true"></span><div><strong class="h2" id="home-order-count">0</strong><p class="t2">Próximo ciclo</p><small class="kpi-card__context">Nenhum registrado</small></div></article><article class="card2 kpi-card"><span class="ico ico--kpi ico--clock" aria-hidden="true"></span><div><strong class="h2" id="home-pending-count">0</strong><p class="t2">A conferir</p><small class="kpi-card__context">Nenhum pendente</small></div></article><article class="card kpi-card"><span class="ico ico--kpi ico--truck" aria-hidden="true"></span><div><strong class="h2" id="home-delivery-count">0</strong><p class="t2">Entregas hoje</p><small class="kpi-card__context" id="home-delivery-context">Agenda vazia</small></div></article><article class="card3 kpi-card"><span class="ico ico--kpi ico--currency" aria-hidden="true"></span><div><strong class="h2" id="home-order-total">—</strong><p class="t2">Em aberto</p><small class="kpi-card__context">Carregando saldos</small></div></article></section>
+          <section class="attention-strip attention-center" aria-labelledby="attention-title"><div class="attention-strip__heading"><span class="attention-strip__symbol" aria-hidden="true">!</span><div><p class="screen-eyebrow">PRIORIDADE</p><h2 id="attention-title">Precisa de atenção</h2></div></div><div id="home-next-actions" aria-live="polite"></div></section>
+          <section class="content-grid overview-content"><article class="card4 panel orders-panel"><div class="panel__heading"><h2 class="h3">Pedidos do próximo ciclo</h2><a class="lnk panel__link" href="#pedidos">Ver todos <span class="ico ico--arrow" aria-hidden="true"></span></a></div><div class="orders-table-wrap"><table class="orders-table"><thead><tr class="t3"><th>#</th><th>Cliente</th><th>Entrega</th><th>Status</th><th>Valor</th></tr></thead><tbody class="t1" id="home-recent-orders"></tbody></table></div><p class="data-empty" id="home-orders-empty">Nenhum pedido para o próximo ciclo.</p></article><article class="card5 panel deliveries-panel"><div class="panel__heading"><h2 class="h3">Próximas entregas</h2><a class="lnk panel__link" href="#agenda">Ver agenda <span class="ico ico--arrow" aria-hidden="true"></span></a></div><ol class="delivery-list" id="home-deliveries"></ol><p class="data-empty" id="home-deliveries-empty">Nenhuma entrega agendada.</p></article></section>
         </div>
         <div id="screen-view" class="view" hidden aria-live="polite"></div>
+        <dialog id="order-detail-drawer" class="order-drawer" aria-labelledby="order-detail-title"><div id="order-detail-content"></div></dialog>
       </main>
     </div>
     <span id="loja" aria-hidden="true"></span>
     <main id="portal-view" class="portal" hidden>
       <header class="portal-header"><button class="portal-menu-button" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="main-navigation-panel"><span></span><span></span><span></span></button><a class="portal-brand" href="#loja" aria-label="Trameli, início da loja">Trameli<span class="portal-brand__dot">.</span><small>PADARIA NO SEU TEMPO</small></a><div class="portal-header__actions"><button type="button" id="portal-orders-link">Meus pedidos</button><button type="button" id="portal-cart-link" aria-label="Abrir carrinho">Sacola <span id="portal-cart-count">0</span></button></div></header>
-      <div class="portal-prototype" role="note">Protótipo local · preços transcritos da planilha · pedidos só neste navegador. Não use dados pessoais reais.</div>
+      <div class="portal-prototype" role="note">Modo de demonstração · dados salvos apenas neste navegador.</div>
       <div id="portal-content" aria-live="polite"></div>
     </main>
     </div></div>
