@@ -107,8 +107,10 @@ export function initPayments(live) {
     const unknown=api.payments.filter(p=>p.kind==='receipt'&&!allocated.has(p.id)&&!reversed.has(p.id));
     const receipts=api.payments.filter(p=>p.kind==='receipt').sort((a,b)=>b.recorded_at.localeCompare(a.recorded_at));
     const intents=(api.intents||[]).filter(item=>item.status==='pending').sort((a,b)=>b.created_at.localeCompare(a.created_at));
-    return `<div class="payment-attention"><article><span>Já paguei</span><strong>${intents.length}</strong><small>aguardando conferência</small></article><article><span>Não identificados</span><strong>${unknown.length}</strong><small>precisam de vínculo</small></article></div><div class="payment-actions"><label>Conta do cliente<select data-payment-group><option value="">Selecione uma conta ou pedido manual</option>${options()}</select></label><button type="button" data-pay-account>Ver conta</button><button type="button" data-pay-unknown>Novo recebimento</button></div>
-      <details class="payment-worklist" ${intents.length?'open':''}><summary>Avisos “já paguei” (${intents.length})</summary>${intents.length?`<ul class="payment-log">${intents.map(item=>`<li><span>${timestamp(item.created_at)} · ${money(item.amount_cents)}<small>Pedidos ${item.order_ids.map(id=>`#${short(id)}`).join(' · ')} · ainda não confirmado</small></span><span><button type="button" data-intent-open="${item.customer_id}">Conferir conta</button><button type="button" data-intent-dismiss="${item.id}">Encerrar aviso</button></span></li>`).join('')}</ul>`:'<p>Nenhum aviso pendente.</p>'}</details>
+    const uploaded=api.receipts||[];
+    const uploadedByIntent=new Map(uploaded.map(item=>[item.intent_id,item]));
+    return `<div class="payment-attention"><article><span>Já paguei</span><strong>${intents.length}</strong><small>aguardando conferência</small></article><article><span>Comprovantes</span><strong>${uploaded.filter(item=>intents.some(intent=>intent.id===item.intent_id)).length}</strong><small>enviados pelo site</small></article><article><span>Não identificados</span><strong>${unknown.length}</strong><small>precisam de vínculo</small></article></div><div class="payment-actions"><label>Conta do cliente<select data-payment-group><option value="">Selecione uma conta ou pedido manual</option>${options()}</select></label><button type="button" data-pay-account>Ver conta</button><button type="button" data-pay-unknown>Novo recebimento</button></div>
+      <details class="payment-worklist" ${intents.length?'open':''}><summary>Avisos “já paguei” (${intents.length})</summary>${intents.length?`<ul class="payment-log">${intents.map(item=>{const proof=uploadedByIntent.get(item.id);return `<li><span>${timestamp(item.created_at)} · ${money(item.amount_cents)}<small>Pedidos ${item.order_ids.map(id=>`#${short(id)}`).join(' · ')} · ${proof?'comprovante recebido':'sem comprovante'}</small></span><span>${proof?`<button type="button" data-receipt-open="${proof.id}">Ver comprovante</button>`:''}<button type="button" data-intent-open="${item.customer_id}">Conferir conta</button><button type="button" data-intent-dismiss="${item.id}">Encerrar aviso</button></span></li>`}).join('')}</ul>`:'<p>Nenhum aviso pendente.</p>'}</details>
       <details class="payment-worklist" ${unknown.length?'open':''}><summary>Não identificados (${unknown.length})</summary>${unknown.length?`<ul class="payment-log">${unknown.map(p=>`<li><span>${timestamp(p.recorded_at)} · ${money(p.amount_cents)}<small>${esc(p.reference || 'Sem referência')} · ${esc(p.note)}</small></span><button type="button" data-pay-identify="${p.id}">Vincular à conta selecionada</button></li>`).join('')}</ul>`:'<p>Nenhum recebimento aguardando identificação.</p>'}</details>
       <details class="payment-worklist"><summary>Visão completa das contas e recebimentos</summary>${accountSummary(api.balances)}<p>Pedidos manuais sem conta ficam separados por pedido. O Pix é conferido manualmente.</p><h3>Recebimentos registrados (${receipts.length})</h3><ul class="payment-log">${receipts.map(p=>`<li><span>${timestamp(p.recorded_at)} · ${money(p.amount_cents)}<small>${methods[p.method]} · ${esc(p.reference || 'Sem referência')} · ${esc(p.note)}</small><small>${api.allocations.filter(a=>a.payment_id===p.id).map(a=>`#${short(a.order_id)}: ${money(a.amount_cents)}`).join(' · ') || 'Sem pedido identificado'}</small></span>${reversed.has(p.id)?'<strong>Estornado</strong>':`<button type="button" data-pay-refund="${p.id}">Registrar devolução integral</button>`}</li>`).join('')}</ul></details>`;
   }
@@ -198,9 +200,21 @@ export function initPayments(live) {
     if(button.matches('[data-payment-close]')){if(!dialog.querySelector('[data-busy]'))dialog.close();return;}
     if(button.matches('[data-fill-balances]')){dialog.querySelectorAll('[data-allocation]').forEach(input=>input.checked=true);dialog.dispatchEvent(new Event('change'));return;}
     if(button.matches('[data-pay-refresh]')){await refresh();await previewDay();return;}
-    if(!button.matches('[data-pay-account],[data-pay-identify],[data-pay-unknown],[data-pay-refund],[data-day-preview],[data-day-close],[data-intent-open],[data-intent-dismiss]'))return;
+    if(!button.matches('[data-pay-account],[data-pay-identify],[data-pay-unknown],[data-pay-refund],[data-day-preview],[data-day-close],[data-intent-open],[data-intent-dismiss],[data-receipt-open]'))return;
     if(warning()){notify(warning());return;}
     if(!live.operator)return;
+    if(button.matches('[data-receipt-open]')){
+      const receipt=api.receipts.find(item=>item.id===button.dataset.receiptOpen);
+      if(!receipt){notify('Comprovante não encontrado.');return;}
+      button.disabled=true;
+      try{
+        const {data,error}=await live.client.storage.from('trameli-payment-receipts').createSignedUrl(receipt.storage_path,300);
+        if(error)throw error;
+        window.open(data.signedUrl,'_blank','noopener,noreferrer');
+      }catch(error){notify(error.message||'Não foi possível abrir o comprovante.');}
+      finally{button.disabled=false;}
+      return;
+    }
     if(button.matches('[data-intent-open]')){const row=api.balances.find(item=>item.customer_id===button.dataset.intentOpen);if(!row){notify('A conta deste cliente não foi encontrada.');return;}selectedGroup=groupKey(row);await openAccount();return;}
     if(button.matches('[data-intent-dismiss]')){if(!confirm('Encerrar este aviso sem confirmar automaticamente o pagamento?'))return;try{await api.call('trameli_resolve_payment_intent',{p_intent_id:button.dataset.intentDismiss,p_status:'dismissed'});await api.load(true);refreshContent();notify('Aviso encerrado. Nenhum pagamento foi criado.');}catch(error){notify(error.message);}return;}
     if(button.matches('[data-pay-account]')){await openAccount();return;}
