@@ -18,7 +18,7 @@ try {
       select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid;
     $$;
 
-    create function auth.jwt() returns jsonb language sql stable as $
+    create function auth.jwt() returns jsonb language sql stable as $$
       select jsonb_build_object(
         'sub', nullif(current_setting('request.jwt.claim.sub', true), ''),
         'aal', coalesce(nullif(current_setting('request.jwt.claim.aal', true), ''), 'aal1'),
@@ -30,7 +30,7 @@ try {
           ))
         end
       );
-    $;
+    $$;
 
     grant usage on schema auth to authenticated;
     grant execute on function auth.uid() to authenticated;
