@@ -398,7 +398,13 @@ function renderRoute(route, preserveScroll = false) {
   if (route === 'configuracoes' && window.TrameliAccount) {
     const slot = screenView.querySelector('[data-account-slot]');
     if (slot) slot.innerHTML = window.TrameliAccount.render(settingsTab === 'acessos' ? 'team' : 'account');
-    if (settingsTab === 'acessos') window.TrameliAccount.refreshTeam();
+    if (settingsTab === 'acessos') {
+      window.TrameliAccount.refreshTeam();
+      window.TrameliAccount.refreshMfa?.().then(() => {
+        const panel = screenView.querySelector('[data-mfa-panel]');
+        if (panel && settingsTab === 'acessos') panel.outerHTML = window.TrameliAccount.render('team').match(/<div class="account-panel" data-mfa-panel>[\s\S]*?<\/div>(?=<div class="account-panel">)/)?.[0] || panel.outerHTML;
+      }).catch(() => {});
+    }
   }
   const operationDialog = document.getElementById('operation-dialog');
   if (!isOperation && operationDialog.open) operationDialog.close();
