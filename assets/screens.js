@@ -578,6 +578,10 @@ document.addEventListener('submit', async event => {
       const values = form.dataset.settingsForm === 'orders' ? { rolloverTime: data.get('rolloverTime') }
         : form.dataset.settingsForm === 'appearance' ? { primaryColor: data.get('primaryColor'), accentColor: data.get('accentColor'), surfaceColor: data.get('surfaceColor') }
           : { businessName: data.get('businessName'), contact: data.get('contact') };
+      if (form.dataset.settingsForm === 'general' && values.contact) {
+        const digits = String(values.contact).replace(/\D/g, '').replace(/^0+/, '');
+        if (![10,11,12,13].includes(digits.length)) throw new Error('Informe o WhatsApp da loja com DDD.');
+      }
       const next = { ...current, ...values };
       if (live) {
         await window.TrameliAccount?.ensureMasterAal2?.();
