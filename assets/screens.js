@@ -579,7 +579,10 @@ document.addEventListener('submit', async event => {
         : form.dataset.settingsForm === 'appearance' ? { primaryColor: data.get('primaryColor'), accentColor: data.get('accentColor'), surfaceColor: data.get('surfaceColor') }
           : { businessName: data.get('businessName'), contact: data.get('contact') };
       const next = { ...current, ...values };
-      if (live) await live.saveSettings(next); else localStorage.setItem('trameli-operation-settings-v1', JSON.stringify(next));
+      if (live) {
+        await window.TrameliAccount?.ensureMasterAal2?.();
+        await live.saveSettings(next);
+      } else localStorage.setItem('trameli-operation-settings-v1', JSON.stringify(next));
       applySettings();
     }
     if (feedback) feedback.textContent = live ? 'Configurações salvas para todos os aparelhos.' : 'Configurações salvas neste aparelho.';
