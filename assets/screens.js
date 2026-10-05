@@ -402,7 +402,7 @@ function renderRoute(route, preserveScroll = false) {
       window.TrameliAccount.refreshTeam();
       window.TrameliAccount.refreshMfa?.().then(() => {
         const panel = screenView.querySelector('[data-mfa-panel]');
-        if (panel && settingsTab === 'acessos') panel.outerHTML = window.TrameliAccount.render('team').match(/<div class="account-panel" data-mfa-panel>[\s\S]*?<\/div>(?=<div class="account-panel">)/)?.[0] || panel.outerHTML;
+        if (panel && settingsTab === 'acessos') panel.outerHTML = window.TrameliAccount.renderMfa();
       }).catch(() => {});
     }
   }
