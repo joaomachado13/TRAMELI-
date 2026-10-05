@@ -19,6 +19,12 @@ const auth = Object.fromEntries(['signInWithPassword', 'signUp', 'signInWithOAut
   calls.push({ name, args }); return { data: { session: { user: { id: 'example' } } }, error: null };
 }]));
 globalThis.location = { origin: 'http://127.0.0.1:4173', pathname: '/', hash: '#loja' };
+globalThis.fetch = async url => {
+  if (String(url).endsWith('/functions/v1/password-breach-check')) {
+    return new Response('', { status: 200, headers: { 'content-type': 'text/plain' } });
+  }
+  throw new Error(`Unexpected fetch in auth test: ${url}`);
+};
 const service = new AuthService({ auth }, 'https://example.supabase.co', 'public-test-key');
 await service.signIn('email', ' A@EXAMPLE.COM ', 'test-password');
 assert.deepEqual(calls.at(-1), { name: 'signInWithPassword', args: [{ email: 'a@example.com', password: 'test-password' }] });
