@@ -125,6 +125,8 @@ try {
 
   await assume(master, 'aal2', nowSeconds() - 601);
   await assert.rejects(savePix(0), /novamente o código/);
+
+  await assume(master, 'aal1');
   await assert.rejects(
     db.query("select public.trameli_set_team_role('customer@example.test','operator')"),
     /duas etapas/,
