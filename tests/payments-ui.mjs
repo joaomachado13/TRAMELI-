@@ -73,7 +73,7 @@ try {
   assert.match(await evaluate('document.body.textContent'),/Parcialmente pago/);
   assert.equal(await evaluate('!!document.querySelector("[data-pay-refund]")'),false);
   const beforePix=await evaluate('paymentFixture.state.calls.length');
-  await evaluate('paymentFixture.state.balances.push({...paymentFixture.state.balances[0],order_id:"other-order",due_cents:5000,paid_cents:0,payment_status:"open"});paymentFixture.render(true);document.querySelector(`[data-pix-select="${paymentFixture.order}"]`).checked=true;document.querySelector(`[data-pix-select="${paymentFixture.order}"]`).dispatchEvent(new Event("change",{bubbles:true}));document.querySelector(`[data-pix-order="selected"]`).click()');
+  await evaluate('(async()=>{paymentFixture.state.balances.push({...paymentFixture.state.balances[0],order_id:"other-order",due_cents:5000,paid_cents:0,payment_status:"open"});await paymentFixture.render(true);const selected=document.querySelector(`[data-pix-select="${paymentFixture.order}"]`);selected.checked=true;selected.dispatchEvent(new Event("change",{bubbles:true}));document.querySelector(`[data-pix-order="selected"]`).click()})()');
   for(let i=0;i<40&&!await evaluate('!!document.querySelector(".pix-qr")');i++)await pause(100);
   assert.match(await evaluate('document.querySelector(".pix-amount").textContent'),/8,00/);
   assert.equal(await evaluate('document.querySelector(".pix-qr").complete'),true);
