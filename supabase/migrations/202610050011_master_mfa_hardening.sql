@@ -139,7 +139,7 @@ returns void
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $$
 begin
   perform public.trameli_require_master_aal2();
   perform public.trameli_save_settings_unchecked(
@@ -147,7 +147,7 @@ begin
     p_surface_color, p_rollover_time, p_cutoff_time, p_delivery_fee_cents
   );
 end;
-$;
+$$;
 revoke all on function public.trameli_save_settings(text,text,text,text,text,time,time,integer) from public, anon;
 grant execute on function public.trameli_save_settings(text,text,text,text,text,time,time,integer) to authenticated;
 
