@@ -125,5 +125,31 @@ $$;
 revoke all on function public.trameli_master_purge_test_orders() from public, anon;
 grant execute on function public.trameli_master_purge_test_orders() to authenticated;
 
+
+alter function public.trameli_save_settings(text,text,text,text,text,time,time,integer)
+  rename to trameli_save_settings_unchecked;
+revoke all on function public.trameli_save_settings_unchecked(text,text,text,text,text,time,time,integer)
+  from public, anon, authenticated;
+
+create function public.trameli_save_settings(
+  p_business_name text, p_contact text, p_primary_color text, p_accent_color text,
+  p_surface_color text, p_rollover_time time, p_cutoff_time time, p_delivery_fee_cents integer
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $
+begin
+  perform public.trameli_require_master_aal2();
+  perform public.trameli_save_settings_unchecked(
+    p_business_name, p_contact, p_primary_color, p_accent_color,
+    p_surface_color, p_rollover_time, p_cutoff_time, p_delivery_fee_cents
+  );
+end;
+$;
+revoke all on function public.trameli_save_settings(text,text,text,text,text,time,time,integer) from public, anon;
+grant execute on function public.trameli_save_settings(text,text,text,text,text,time,time,integer) to authenticated;
+
 notify pgrst, 'reload schema';
 commit;
