@@ -92,6 +92,7 @@ export function initAccount(live) {
     submit.disabled = true;
     try {
       if (form.matches('[data-account-password]')) {
+        if (live.role === 'master') await ensureMasterAal2();
         await live.auth.setPassword(fields.get('password'), fields.get('confirmation'));
         form.reset(); message.textContent = 'Senha salva. No próximo acesso, entre com ela.';
       } else if (form.matches('[data-account-profile]')) {
