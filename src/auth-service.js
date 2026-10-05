@@ -43,13 +43,8 @@ export class AuthService {
 
   async assertPasswordSafe(password) {
     await assertPasswordNotBreached(password, async prefix => {
-      const response = await fetch(`${this.url}/functions/v1/password-breach-check`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          apikey: this.key,
-        },
-        body: JSON.stringify({ prefix }),
+      const response = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`, {
+        headers: { 'Add-Padding': 'true' },
         signal: AbortSignal.timeout(10000),
       });
       if (!response.ok) {
