@@ -18,12 +18,19 @@ try {
       select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid;
     $$;
 
-    create function auth.jwt() returns jsonb language sql stable as $$
+    create function auth.jwt() returns jsonb language sql stable as $
       select jsonb_build_object(
         'sub', nullif(current_setting('request.jwt.claim.sub', true), ''),
-        'aal', coalesce(nullif(current_setting('request.jwt.claim.aal', true), ''), 'aal1')
+        'aal', coalesce(nullif(current_setting('request.jwt.claim.aal', true), ''), 'aal1'),
+        'amr', case
+          when nullif(current_setting('request.jwt.claim.totp_ts', true), '') is null then '[]'::jsonb
+          else jsonb_build_array(jsonb_build_object(
+            'method', 'totp',
+            'timestamp', current_setting('request.jwt.claim.totp_ts', true)::bigint
+          ))
+        end
       );
-    $$;
+    $;
 
     grant usage on schema auth to authenticated;
     grant execute on function auth.uid() to authenticated;
@@ -92,25 +99,32 @@ try {
     [master, operator],
   );
 
-  const assume = async (userId, aal = 'aal1') => {
+  const assume = async (userId, aal = 'aal1', totpTimestamp = null) => {
     await db.exec('reset role; set role authenticated');
     await db.query("select set_config('request.jwt.claim.sub',$1,false)", [userId]);
     await db.query("select set_config('request.jwt.claim.aal',$1,false)", [aal]);
+    await db.query("select set_config('request.jwt.claim.totp_ts',$1,false)", [
+      totpTimestamp == null ? '' : String(totpTimestamp),
+    ]);
   };
+  const nowSeconds = () => Math.floor(Date.now() / 1000);
 
   const savePix = version => db.query(
     'select public.trameli_save_pix_settings($1,$2,true,$3)',
     [examplePix, 'Titular de teste', version],
   );
 
-  await assume(customer, 'aal2');
+  await assume(customer, 'aal2', nowSeconds());
   await assert.rejects(savePix(0), /Master/);
 
-  await assume(operator, 'aal2');
+  await assume(operator, 'aal2', nowSeconds());
   await assert.rejects(savePix(0), /Master/);
 
   await assume(master, 'aal1');
   await assert.rejects(savePix(0), /duas etapas/);
+
+  await assume(master, 'aal2', nowSeconds() - 601);
+  await assert.rejects(savePix(0), /novamente o código/);
   await assert.rejects(
     db.query("select public.trameli_set_team_role('customer@example.test','operator')"),
     /duas etapas/,
@@ -132,7 +146,7 @@ try {
   );
   await assert.rejects(db.query('select public.trameli_require_master_aal2()'), /permission denied/);
 
-  await assume(master, 'aal2');
+  await assume(master, 'aal2', nowSeconds());
   await savePix(0);
   assert.equal((await db.query('select count(*)::int n from public.trameli_pix_settings_events')).rows[0].n, 1);
 
@@ -140,10 +154,10 @@ try {
   await db.query("select public.trameli_save_settings('Trameli','', '#244d32','#b6c780','#f5f1e8','13:30','22:30',200)");
   assert.equal((await db.query('select public.trameli_master_purge_test_orders() as n')).rows[0].n, 7);
 
-  await assume(customer, 'aal2');
+  await assume(customer, 'aal2', nowSeconds());
   assert.equal((await db.query('select public.trameli_access_role() as role')).rows[0].role, 'operator');
 
-  console.log('MFA Master: Pix, acessos, configurações e ações destrutivas exigem AAL2 no banco.');
+  console.log('MFA Master: ações críticas exigem Master + AAL2 + TOTP confirmado nos últimos 10 minutos.');
 } finally {
   await db.close();
 }
