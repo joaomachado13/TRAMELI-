@@ -20,7 +20,7 @@ const auth = Object.fromEntries(['signInWithPassword', 'signUp', 'signInWithOAut
 }]));
 globalThis.location = { origin: 'http://127.0.0.1:4173', pathname: '/', hash: '#loja' };
 globalThis.fetch = async url => {
-  if (String(url).endsWith('/functions/v1/password-breach-check')) {
+  if (String(url).startsWith('https://api.pwnedpasswords.com/range/')) {
     return new Response('', { status: 200, headers: { 'content-type': 'text/plain' } });
   }
   throw new Error(`Unexpected fetch in auth test: ${url}`);
