@@ -94,6 +94,7 @@ export function initManualPix(live) {
       const raw=form.elements.payload.value.trim(),receiver=form.elements.receiver.value.trim();
       if(enabled){validatePixTemplate(raw);if(receiver.length<2||!form.elements.verified.checked)throw new Error('Informe o titular e marque a conferência dos dados no banco.');}
       form.dataset.busy='true';button.disabled=true;
+      await window.TrameliAccount?.ensureMasterAal2?.();
       const {error}=await live.client.rpc('trameli_save_pix_settings',{p_payload:raw,p_receiver_label:receiver,p_enabled:enabled,p_expected_version:Number(form.dataset.version)});
       if(error)throw error;
       await refresh();open('<h2>Configuração salva</h2><p>Antes de usar com clientes, faça a leitura do QR no banco e confira titular e valor. Nenhum pagamento foi realizado pelo site.</p>');
