@@ -54,7 +54,7 @@ export function initAccount(live) {
     if (elevated.currentLevel !== 'aal2') throw new Error('Não foi possível elevar a sessão para o segundo fator.');
     return true;
   }
-  window.TrameliAccount = { render, refreshTeam, refreshMfa, ensureMasterAal2 };
+  window.TrameliAccount = { render, renderMfa: mfaPanel, refreshTeam, refreshMfa, ensureMasterAal2 };
   const logout = document.createElement('button');
   logout.type = 'button'; logout.className = 'live-logout'; logout.textContent = 'Sair';
   logout.addEventListener('click', async () => {
