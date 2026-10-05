@@ -234,6 +234,12 @@
   background:#e9f0e5;
   font-weight:800;
 }
+.portal-page .payment-order-card__select .payment-order-card__dot{
+  width:10px;
+  height:10px;
+  background:#315f43;
+  box-shadow:0 0 0 6px #e9f0e5;
+}
 .portal-page .payment-order-card__heading{
   display:flex;
   justify-content:space-between;
