@@ -56,3 +56,32 @@ body:not(.portal-mode) #portal-floating-host,body:not(.portal-mode) .portal-bott
 .portal-week{max-width:900px}.portal-week__days{display:flex;gap:8px;margin:25px 0;overflow:auto;padding-bottom:5px}.portal-week__days button{display:grid;flex:none;gap:3px;padding:10px 14px;border:1px solid #cbd6c3;border-radius:11px;background:#fff;color:#36543a;text-align:left}.portal-week__days button[aria-pressed=true]{border-color:#294e32;background:#294e32;color:#fff}.portal-week__days small{opacity:.72;font-size:.65rem}.portal-week__products{display:grid;gap:7px}.portal-week__products article{display:grid;grid-template-columns:58px minmax(0,1fr) auto;align-items:center;gap:12px;padding:9px;border:1px solid #dfe3d9;border-radius:12px;background:#fff}.portal-week__photo{width:58px;height:58px;overflow:hidden;border-radius:8px;background:#f0eadf}.portal-week__photo img{width:100%;height:100%;object-fit:cover}.portal-week__products article>span{display:grid;gap:3px}.portal-week__products small{color:#748077}.portal-week__footer{position:sticky;bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:15px;margin-top:18px;padding:13px 16px;border:1px solid #cbd8c4;border-radius:14px;background:#f8fff3;box-shadow:0 12px 35px #20392626}.portal-week__footer .portal-primary{width:auto;margin:0}
 @media(max-width:850px){.portal-quick-actions{margin-right:16px;margin-left:16px}}
 @media(max-width:640px){.portal-welcome{margin:12px 12px 0;padding:31px 25px;border-radius:20px}.portal-welcome h1{font-size:3rem}.portal-welcome ol{display:grid}.portal-quick-actions{grid-template-columns:1fr;margin-right:12px;margin-left:12px}.portal-last-order{display:flex!important}.portal-payment-options{grid-template-columns:1fr}.portal-week__products article{grid-template-columns:50px minmax(0,1fr)}.portal-week__photo{width:50px;height:50px}.portal-week__products .portal-stepper{grid-column:2}.portal-week__footer{align-items:stretch;flex-direction:column}.portal-week__footer .portal-primary{width:100%}}
+
+
+.portal-support-whatsapp{
+  position:fixed;
+  right:20px;
+  bottom:20px;
+  z-index:18;
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  min-height:48px;
+  padding:10px 14px;
+  border:1px solid #1ca64f;
+  border-radius:999px;
+  background:#25d366;
+  color:#083b20;
+  text-decoration:none;
+  box-shadow:0 12px 30px rgba(18,105,50,.22);
+}
+.portal-support-whatsapp[hidden]{display:none!important}
+.portal-support-whatsapp svg{width:21px;height:21px;flex:0 0 21px}
+.portal-support-whatsapp span{display:grid;line-height:1.05}
+.portal-support-whatsapp small{font-size:.61rem;font-weight:700;opacity:.76}
+.portal-support-whatsapp strong{font-size:.76rem}
+.portal-support-whatsapp:hover{background:#20c45c;transform:translateY(-1px)}
+@media(max-width:700px){
+  .portal-support-whatsapp{right:12px;bottom:82px;padding:10px 12px}
+  .portal-support-whatsapp span{display:none}
+}

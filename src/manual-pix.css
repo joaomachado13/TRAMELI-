@@ -6,3 +6,41 @@
 .pix-qr { display:block; max-width:100%; height:auto; margin:20px auto; background:white; }
 .pix-amount { display:block; font-size:30px; }
 .pix-dialog [role=alert] { color:#a43426; }
+
+
+.pix-flow{display:grid;gap:16px}
+.pix-flow__head{text-align:center}
+.pix-flow__head>span,.pix-afterpay__eyebrow{display:block;color:#607267;font-size:.68rem;font-weight:800;letter-spacing:.12em}
+.pix-flow__head h2{margin:4px 0 2px;color:#10261a;font-size:2rem;line-height:1}
+.pix-flow__head p{margin:0;color:#718078;font-size:.78rem}
+.pix-flow__receiver{padding:10px 12px;border:1px solid #e0e4dc;border-radius:10px;background:#faf9f4;color:#617067;font-size:.76rem}
+.pix-flow__receiver strong{color:#263d2d}
+.pix-copy-field{margin:0!important}
+.pix-copy-field>span{color:#4f6256;font-size:.75rem;font-weight:700}
+.pix-copy-field textarea{min-height:82px;background:#fff;font-size:.76rem;line-height:1.45}
+.pix-copy-button{min-height:46px;border:1px solid #214832!important;border-radius:10px;background:#214832!important;color:#fff!important;font-weight:750}
+.pix-copy-button:hover{background:#10261a!important;border-color:#10261a!important}
+.pix-copy-status{min-height:18px;margin:-8px 0 0;color:#46604f;font-size:.72rem}
+.pix-afterpay{padding:18px;border:1px solid #d8dfd4;border-radius:14px;background:#f8faf6}
+.pix-afterpay h3{margin:4px 0 12px;color:#173524;font-size:1rem}
+.pix-afterpay__actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pix-afterpay__actions>button,.pix-whatsapp{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:10px 14px;border-radius:10px;font:700 .8rem 'DM Sans',Arial,sans-serif;text-decoration:none}
+.pix-afterpay__actions>button{border:1px solid #315f43;background:#fff;color:#214832}
+.pix-afterpay__actions>button:hover{background:#e9f0e5}
+.pix-whatsapp{border:1px solid #1da851;background:#25d366;color:#083b20!important}
+.pix-whatsapp:hover{background:#20c45c}
+.pix-whatsapp svg{width:18px;height:18px;flex:0 0 18px}
+.pix-receipt-form{margin-top:12px;padding:14px;border:1px solid #dfe4dc;border-radius:11px;background:#fff}
+.pix-receipt-form label{margin:0!important;color:#42564a;font-size:.76rem;font-weight:700}
+.pix-receipt-form input[type=file]{padding:9px;background:#fbfaf6}
+.pix-receipt-file{margin:6px 0 10px;color:#7a857d;font-size:.67rem}
+.pix-receipt-form>button{min-height:42px;border:1px solid #214832!important;background:#214832!important;color:#fff!important;font-weight:750}
+.pix-receipt-success{display:grid;gap:3px;color:#214832}
+.pix-receipt-success span{color:#66756b;font-size:.72rem}
+.pix-signal-link{display:block;margin:10px auto 0!important;padding:5px 8px!important;border:0!important;background:transparent!important;color:#607267!important;font-size:.7rem!important;text-decoration:underline;box-shadow:none!important}
+.pix-confirm-note{margin:0;padding:10px 12px;border-radius:9px;background:#fff4d9;color:#6d591f;font-size:.72rem;line-height:1.4}
+@media(max-width:540px){
+  .pix-dialog{max-width:calc(100vw - 18px)}
+  .pix-afterpay__actions{grid-template-columns:1fr}
+  .pix-flow__head h2{font-size:1.8rem}
+}
