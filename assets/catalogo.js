@@ -152,7 +152,7 @@
       const product = products.find(item => item.id === button.dataset.id);
       const permanent = live?.role === 'master';
       if (product && confirm(`${permanent ? 'Excluir definitivamente' : live ? 'Desativar' : 'Excluir'} ${product.name} do catálogo? Os pedidos já salvos não serão alterados.`)) {
-        if (permanent) live.deleteProduct(product.id).then(() => detailDialog.close()).catch(cause => alert(`Não foi possível excluir: ${cause.message}`));
+        if (permanent) { try { await window.TrameliAccount?.ensureMasterAal2?.(); await live.deleteProduct(product.id); detailDialog.close(); } catch (cause) { alert(`Não foi possível excluir: ${cause.message}`); } }
         else if (live) live.saveProduct({ ...product, active: false }).catch(cause => alert(`Não foi possível desativar: ${cause.message}`));
         else save(products.filter(item => item.id !== product.id));
       }
