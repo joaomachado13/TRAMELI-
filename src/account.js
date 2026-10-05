@@ -14,14 +14,17 @@ export function initAccount(live) {
   const passwordForm = () => `<form data-account-password><label>Nova senha<input name="password" type="password" autocomplete="new-password" minlength="8" required></label><label>Confirme a senha<input name="confirmation" type="password" autocomplete="new-password" minlength="8" required></label><p class="account-message" role="status"></p><button type="submit">Salvar senha</button></form>`;
   const identity = () => `<p><strong>${escapeHtml(name)}</strong><br>${escapeHtml(live.user.email || live.user.phone || '')} · ${roleLabel(live.role)}</p>`;
   const accountSection = () => `<div class="account-panel">${identity()}<form data-account-profile><label>Nome<input name="name" value="${escapeHtml(live.profile?.name || live.user.user_metadata?.full_name || live.user.user_metadata?.name || '')}" maxlength="90" required></label><label>Telefone<input name="phone" type="tel" value="${escapeHtml(live.profile?.phone || live.user.user_metadata?.phone || live.user.phone || '')}" maxlength="25"></label><label>Endereço e referência<input name="address" value="${escapeHtml(live.profile?.address || live.user.user_metadata?.address || '')}" maxlength="180" required></label><p class="account-message" role="status"></p><button type="submit">Salvar meus dados</button></form><details><summary>Alterar senha</summary>${passwordForm()}</details></div>`;
+  const hasRecentTotp = status => Boolean(status?.currentAuthenticationMethods?.some(method =>
+    method.method === 'totp' && Number(method.timestamp) * 1000 >= Date.now() - 10 * 60 * 1000
+  ));
   const mfaPanel = () => {
     if (live.role !== 'master') return '';
     const verified = mfaState?.totp?.find(factor => factor.status === 'verified');
-    const active = mfaState?.currentLevel === 'aal2';
+    const active = mfaState?.currentLevel === 'aal2' && hasRecentTotp(mfaState);
     const enroll = mfaEnrollment?.totp;
     return `<div class="account-panel" data-mfa-panel><h3>Verificação em duas etapas</h3>
       <p>Protege alterações críticas, como destino Pix, acessos da equipe e exclusões administrativas.</p>
-      ${verified ? `<p><strong>${active ? 'Proteção ativa nesta sessão' : '2FA cadastrado — confirme o código para elevar esta sessão'}</strong></p>
+      ${verified ? `<p><strong>${active ? 'Proteção ativa para ações críticas' : '2FA cadastrado — confirme um código para liberar ações críticas por 10 minutos'}</strong></p>
         ${active ? '' : '<form data-mfa-stepup><label>Código do autenticador<input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required></label><p class="account-message" role="status"></p><button type="submit">Confirmar código</button></form>'}`
         : enroll ? `<p>Escaneie o QR no seu autenticador e confirme um código.</p><img src="${escapeHtml(enroll.qr_code || '')}" alt="QR Code para configurar 2FA" width="220" height="220"><details><summary>Não consegue escanear?</summary><code>${escapeHtml(enroll.secret || '')}</code></details><form data-mfa-enroll-verify data-factor-id="${escapeHtml(mfaEnrollment.id)}"><label>Código do autenticador<input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required></label><p class="account-message" role="status"></p><button type="submit">Ativar 2FA</button></form>`
         : '<button type="button" data-mfa-enroll>Ativar verificação em duas etapas</button>'}
@@ -44,14 +47,14 @@ export function initAccount(live) {
   async function ensureMasterAal2() {
     if (live.role !== 'master') throw new Error('Apenas Master pode executar esta ação.');
     const status = await refreshMfa();
-    if (status.currentLevel === 'aal2') return true;
+    if (status.currentLevel === 'aal2' && hasRecentTotp(status)) return true;
     const factor = status.totp.find(item => item.status === 'verified');
     if (!factor) throw new Error('Ative a verificação em duas etapas em Configurações → Acessos antes de continuar.');
     const code = prompt('Digite o código de 6 dígitos do seu autenticador para confirmar esta ação:');
     if (!code) throw new Error('Ação cancelada.');
     await live.auth.verifyTotp(factor.id, code);
     const elevated = await refreshMfa();
-    if (elevated.currentLevel !== 'aal2') throw new Error('Não foi possível elevar a sessão para o segundo fator.');
+    if (elevated.currentLevel !== 'aal2' || !hasRecentTotp(elevated)) throw new Error('Não foi possível confirmar recentemente o segundo fator.');
     return true;
   }
   window.TrameliAccount = { render, renderMfa: mfaPanel, refreshTeam, refreshMfa, ensureMasterAal2 };
