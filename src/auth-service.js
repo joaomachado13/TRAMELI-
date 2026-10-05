@@ -1,4 +1,5 @@
 import { identityFields, validateNewPassword } from './auth-utils.js';
+import { assertPasswordNotBreached } from './password-security.js';
 
 // Credentials are passed to Supabase Auth; the application never stores passwords.
 export class AuthService {
@@ -30,6 +31,7 @@ export class AuthService {
 
   async signUp(method, identity, password, confirmation, profile = null) {
     validateNewPassword(password, confirmation);
+    await this.assertPasswordSafe(password);
     if (profile && (!profile.name || !profile.phone || !profile.address)) throw new Error('Informe nome, telefone e endereço.');
     const { data, error } = await this.client.auth.signUp({
       ...identityFields(method, identity), password,
@@ -37,6 +39,19 @@ export class AuthService {
     });
     if (error) throw error;
     return data;
+  }
+
+  async assertPasswordSafe(password) {
+    await assertPasswordNotBreached(password, async prefix => {
+      const response = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`, {
+        headers: { 'Add-Padding': 'true' },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!response.ok) {
+        throw new Error('Não foi possível verificar se essa senha já apareceu em vazamentos. Tente novamente em instantes.');
+      }
+      return response.text();
+    });
   }
 
   async google() {
@@ -66,6 +81,7 @@ export class AuthService {
 
   async setPassword(password, confirmation) {
     validateNewPassword(password, confirmation);
+    await this.assertPasswordSafe(password);
     const { error } = await this.client.auth.updateUser({ password });
     if (error) throw error;
   }
