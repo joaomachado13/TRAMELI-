@@ -91,6 +91,7 @@ export class AuthService {
     return {
       currentLevel: aalResult.data?.currentLevel || 'aal1',
       nextLevel: aalResult.data?.nextLevel || 'aal1',
+      currentAuthenticationMethods: aalResult.data?.currentAuthenticationMethods || [],
       totp,
     };
   }
