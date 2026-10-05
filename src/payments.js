@@ -47,13 +47,58 @@ export function initPayments(live) {
     const entries=(api?.statement||[]).filter(entry=>ids.has(entry.order_id)).sort((a,b)=>b.recorded_at.localeCompare(a.recorded_at));
     return `<h3>Extrato de recebimentos e devoluções</h3>${entries.length?`<ul class="payment-log">${entries.map(entry=>`<li><span>${timestamp(entry.recorded_at)} · #${short(entry.order_id)}<small>${entry.kind==='refund'?'Devolução registrada':'Recebimento'} · ${methods[entry.method]}</small></span><strong>${entry.kind==='refund'?'−':''}${money(entry.amount_cents)}</strong></li>`).join('')}</ul>`:'<p>Nenhum pagamento registrado para estes pedidos.</p>'}`;
   };
+  const customerStatement = rows => {
+    const ids=new Set(rows.map(row=>row.order_id));
+    const entries=(api?.statement||[]).filter(entry=>ids.has(entry.order_id)).sort((a,b)=>b.recorded_at.localeCompare(a.recorded_at));
+    return `<details class="payment-customer-history"><summary>Ver histórico de pagamentos e devoluções</summary>${entries.length?`<ul class="payment-log">${entries.map(entry=>`<li><span>${timestamp(entry.recorded_at)} · #${short(entry.order_id)}<small>${entry.kind==='refund'?'Devolução registrada':'Pagamento confirmado'} · ${methods[entry.method]}</small></span><strong>${entry.kind==='refund'?'−':''}${money(entry.amount_cents)}</strong></li>`).join('')}</ul>`:'<p>Ainda não há pagamentos confirmados para estes pedidos.</p>'}</details>`;
+  };
+  const customerStatusClass = status => ['paid','refunded'].includes(status) ? 'is-done' : status==='partial' ? 'is-partial' : status==='refund_due' ? 'is-refund' : 'is-open';
+  const customerOrders = rows => `<div class="payment-customer-orders">${rows.map(row=>{
+    const due=Number(row.due_cents), paid=Number(row.paid_cents), refundable=Number(row.refund_due_cents);
+    return `<article class="payment-order-card ${due>0?'has-balance':'is-settled'}">
+      <div class="payment-order-card__select">${due>0?`<input type="checkbox" data-pix-select="${esc(row.order_id)}" data-due="${due}" aria-label="Selecionar pedido ${short(row.order_id)} por ${money(due)}">`:'<span aria-hidden="true">✓</span>'}</div>
+      <div class="payment-order-card__main">
+        <div class="payment-order-card__heading"><div><strong>Pedido #${short(row.order_id)}</strong><small>Entrega ${dateLabel(row.delivery_date)} · ${esc(orderLabels[row.order_status] || row.order_status)}</small></div><span class="payment-status ${customerStatusClass(row.payment_status)}">${esc(labels[row.payment_status] || row.payment_status)}</span></div>
+        <div class="payment-order-card__values"><div><span>Total</span><strong>${money(row.total_cents)}</strong></div><div><span>Já confirmado</span><strong>${money(paid)}</strong></div><div class="payment-order-card__due"><span>${due>0?'Falta pagar':'Saldo'}</span><strong>${due>0?money(due):'Quitado'}</strong></div></div>
+        ${refundable>0?`<p class="payment-refund-note">Há ${money(refundable)} para devolver neste pedido.</p>`:''}
+      </div>
+      <div class="payment-order-card__action">${window.TrameliPix && due>0?`<button type="button" class="payment-order-pix" data-pix-order="${esc(row.order_id)}">Pagar este pedido</button>`:''}</div>
+    </article>`;
+  }).join('')}</div>`;
+  function updateCustomerSelection() {
+    document.querySelectorAll('[data-payment-selection]').forEach(host=>{
+      const checked=[...document.querySelectorAll('[data-payment-content="customer"] [data-pix-select]:checked')];
+      const amount=checked.reduce((sum,input)=>sum+Number(input.dataset.due||0),0);
+      const count=checked.length;
+      const summary=host.querySelector('[data-payment-selection-summary]');
+      const button=host.querySelector('[data-pix-order="selected"]');
+      if(summary) summary.textContent=count ? `${count} ${count===1?'pedido selecionado':'pedidos selecionados'} · ${money(amount)}` : 'Nenhum pedido selecionado';
+      if(button) {
+        button.disabled=!count;
+        button.textContent=count ? `Pagar selecionados · ${money(amount)}` : 'Pagar selecionados';
+      }
+      host.classList.toggle('has-selection',Boolean(count));
+    });
+  }
   function customerRender() {
-    return `<section class="payment-panel"><h2>Minha conta corrente</h2><p>Entregar um pedido não significa que ele foi pago. Aqui aparecem os recebimentos conferidos pela operação.</p><div data-payment-content="customer">${warning()?`<p role="status">${esc(warning())}</p>`:customerContent()}</div></section>`;
+    return `<section class="payment-panel payment-customer"><span class="payment-customer__eyebrow">PAGAMENTOS</span><h2>Meus pagamentos</h2><p class="payment-customer__intro">Veja o que já foi confirmado e o que ainda falta pagar. O pagamento só aparece como concluído depois que a operação confere o recebimento.</p><div data-payment-content="customer">${warning()?`<p role="status">${esc(warning())}</p>`:customerContent()}</div></section>`;
   }
   function customerContent() {
     // An operator opening the storefront must not see other customers in "Minha conta".
     const rows=api.balances.filter(row=>row.customer_id===live.user.id);
-    return rows.length?`${accountSummary(rows)}${window.TrameliPix && rows.some(row=>Number(row.due_cents)>0) ? '<div class="payment-actions"><button type="button" data-pix-order="selected">Pagar pedidos selecionados com Pix</button><button type="button" data-pix-order="all">Pagar todo o saldo com Pix</button></div>' : ''}${orderTable(rows,false,true)}${statement(rows)}`:'<p>Você ainda não tem pedidos vinculados a esta conta.</p>';
+    if(!rows.length) return '<div class="payment-customer-empty"><strong>Nenhum pagamento pendente.</strong><p>Quando você tiver pedidos vinculados à sua conta, o resumo aparecerá aqui.</p></div>';
+    const t=totals(rows), openRows=rows.filter(row=>Number(row.due_cents)>0);
+    const pixReady=window.TrameliPix && openRows.length>0;
+    return `<div class="payment-customer-hero ${t.due_cents>0?'has-due':'is-clear'}">
+      <div class="payment-customer-hero__balance"><span>${t.due_cents>0?'Saldo em aberto':'Tudo certo por aqui'}</span><strong>${t.due_cents>0?money(t.due_cents):'R$ 0,00'}</strong><p>${t.due_cents>0?`Você tem ${openRows.length} ${openRows.length===1?'pedido aguardando pagamento':'pedidos aguardando pagamento'}.`:'Todos os pagamentos destes pedidos já foram confirmados.'}</p></div>
+      <div class="payment-customer-hero__details"><div><span>Total em pedidos</span><strong>${money(t.total_cents)}</strong></div><div><span>Já confirmado</span><strong>${money(t.paid_cents)}</strong></div>${t.refund_due_cents>0?`<div class="is-refund"><span>A devolver</span><strong>${money(t.refund_due_cents)}</strong></div>`:''}</div>
+      ${pixReady?`<button type="button" class="payment-pay-all" data-pix-order="all">Pagar saldo total · ${money(t.due_cents)}</button>`:''}
+    </div>
+    ${pixReady?`<div class="payment-how"><div><span>1</span><p><strong>Escolha</strong><small>Pague tudo de uma vez ou selecione pedidos específicos.</small></p></div><div><span>2</span><p><strong>Faça o Pix</strong><small>Confira o valor e o titular no aplicativo do seu banco.</small></p></div><div><span>3</span><p><strong>Aguarde a conferência</strong><small>Depois do aviso, a operação confirma o recebimento.</small></p></div></div>`:''}
+    <div class="payment-customer-list-head"><div><span>SEUS PEDIDOS</span><h3>${openRows.length?'Escolha o que deseja pagar':'Pedidos desta conta'}</h3><p>${openRows.length>1?'Marque mais de um pedido para gerar um único Pix com a soma dos saldos.':openRows.length===1?'Você pode pagar este pedido diretamente pelo botão abaixo.':'Consulte os valores já confirmados.'}</p></div></div>
+    ${customerOrders(rows)}
+    ${pixReady && openRows.length>1?`<div class="payment-selection-bar" data-payment-selection><div><span>Seleção</span><strong data-payment-selection-summary>Nenhum pedido selecionado</strong></div><button type="button" data-pix-order="selected" disabled>Pagar selecionados</button></div>`:''}
+    ${customerStatement(rows)}`;
   }
   function operatorContent() {
     if (warning()) return `<p role="status">${esc(warning())}</p><button type="button" data-pay-refresh>Verificar novamente</button>`;
@@ -74,6 +119,7 @@ export function initPayments(live) {
   function refreshContent() {
     document.querySelectorAll('[data-payment-content]').forEach(host=>{host.innerHTML=warning()?`<p role="status">${esc(warning())}</p><button type="button" data-pay-refresh>Verificar novamente</button>`:host.dataset.paymentContent==='customer'?customerContent():operatorContent();});
     document.querySelectorAll('[data-day-close],[data-day-preview]').forEach(button=>button.disabled=!!warning());
+    updateCustomerSelection();
   }
   async function refresh() { if(api) await api.load(); refreshContent(); }
   function open(body) { dialog.innerHTML=`<button type="button" data-payment-close class="payment-close" aria-label="Fechar">×</button>${body}`; dialog.showModal(); }
@@ -145,6 +191,7 @@ export function initPayments(live) {
   document.addEventListener('change',event=>{
     if(event.target.matches('[data-payment-group]'))selectedGroup=event.target.value;
     if(event.target.matches('[data-closing-day]')){selectedDay=event.target.value;previewDay();}
+    if(event.target.matches('[data-pix-select]'))updateCustomerSelection();
   });
   document.addEventListener('click',async event=>{
     const button=event.target.closest('button');if(!button)return;
