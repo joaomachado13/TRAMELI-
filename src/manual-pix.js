@@ -58,12 +58,40 @@ export function initManualPix(live) {
       const amount=rows.reduce((total,row)=>total+Number(row.due_cents),0);
       if(!rows.length)throw new Error('Não há saldo em aberto para esses pedidos.');
       shownOrderIds=rows.map(row=>row.order_id);
+      shownAmount=amount;
       intentRequestId=crypto.randomUUID();
       const payload=pixForAmount(config.payload,amount);
       const dataUrl=await QRCode.toDataURL(payload,{errorCorrectionLevel:'M',width:320,margin:4});
+      const phone=whatsappNumber(live.settings?.contact);
+      const orderText=rows.map(row=>`#${row.order_id.slice(0,8)}`).join(', ');
+      const waMessage=`Olá! Fiz o pagamento via Pix do pedido ${orderText}, no valor de ${money(amount)}. Vou enviar o comprovante por aqui.`;
+      const waHref=phone?`https://wa.me/${phone}?text=${encodeURIComponent(waMessage)}`:'';
       // Do not reopen a dialog that the customer closed while the requests ran.
       if(!dialog.open)return;
-      open(`<h2>Pix direto na conta</h2><strong class="pix-amount">${money(amount)}</strong><p>Saldo dos pedidos: ${rows.map(row=>`#${esc(row.order_id.slice(0,8))}`).join(', ')}</p><p>Titular informado pela loja: <strong>${esc(config.receiver_label)}</strong>. Antes de confirmar, confira o titular e o valor exibidos pelo seu banco. Se não corresponderem, não pague e contate a loja.</p><img class="pix-qr" src="${dataUrl}" width="320" height="320" alt="QR Code Pix para o saldo em aberto"><label>Pix Copia e Cola<textarea data-pix-payload readonly rows="4">${esc(payload)}</textarea></label><button type="button" data-pix-copy>Copiar Pix</button><p data-pix-copy-status role="status"></p><button type="button" data-pix-signal>Já paguei — avisar a operação</button><p><strong>Esse aviso não confirma o pagamento.</strong> A operação ainda precisa conferir a entrada no banco e registrar o recebimento.</p><p>Se já pagou, não pague de novo só porque o saldo continua em aberto.</p><p>Use o app do banco para ler o QR ou colar o código e autorizar a transferência. A Trameli não abre nem controla seu banco.</p><p>O código não vence no banco. Esta tela será ocultada após 5 minutos para você consultar o saldo novamente; cópias e capturas antigas continuam pagáveis.</p>`);
+      open(`<div class="pix-flow">
+        <div class="pix-flow__head"><span>PAGAMENTO VIA PIX</span><h2>${money(amount)}</h2><p>${rows.length===1?`Pedido ${orderText}`:`${rows.length} pedidos · ${orderText}`}</p></div>
+        <div class="pix-flow__receiver">Recebedor: <strong>${esc(config.receiver_label)}</strong></div>
+        <img class="pix-qr" src="${dataUrl}" width="320" height="320" alt="QR Code Pix para o saldo em aberto">
+        <label class="pix-copy-field"><span>Pix Copia e Cola</span><textarea data-pix-payload readonly rows="3">${esc(payload)}</textarea></label>
+        <button type="button" class="pix-copy-button" data-pix-copy>Copiar código Pix</button>
+        <p class="pix-copy-status" data-pix-copy-status role="status"></p>
+        <section class="pix-afterpay" data-pix-afterpay>
+          <span class="pix-afterpay__eyebrow">DEPOIS DE PAGAR</span>
+          <h3>Envie o comprovante</h3>
+          <div class="pix-afterpay__actions">
+            <button type="button" data-pix-upload-toggle>Enviar pelo site</button>
+            ${waHref?`<a class="pix-whatsapp" href="${waHref}" target="_blank" rel="noopener noreferrer">${whatsappIcon}<span>Enviar no WhatsApp</span></a>`:''}
+          </div>
+          <form class="pix-receipt-form" data-pix-receipt hidden>
+            <label>Comprovante<input type="file" name="receipt" accept="image/jpeg,image/png,application/pdf" required></label>
+            <p class="pix-receipt-file" data-pix-receipt-file>JPG, PNG ou PDF · até 5 MB</p>
+            <p class="payment-error" data-pix-receipt-status role="status"></p>
+            <button type="submit">Enviar comprovante</button>
+          </form>
+          <button type="button" class="pix-signal-link" data-pix-signal>Já paguei, sem comprovante</button>
+        </section>
+        <p class="pix-confirm-note">O pagamento só será marcado como confirmado depois da conferência da loja.</p>
+      </div>`);
       expires=setTimeout(()=>{if(dialog.open)fail('Consulte novamente o saldo antes de pagar. Esta tela foi ocultada, mas isso não invalida uma cópia antiga do Pix.');},300000);
     }catch(error){if(dialog.open)fail(error.message||'Não foi possível preparar o Pix.');}
     finally{opening=false;}
