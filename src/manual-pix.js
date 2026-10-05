@@ -102,6 +102,11 @@ export function initManualPix(live) {
     if(button.matches('[data-pix-config]')){await refresh();configure();return;}
     if(button.matches('[data-pix-refresh]')){await refresh();return;}
     if(button.matches('[data-pix-order]')){await pay(button.dataset.pixOrder);return;}
+    if(button.matches('[data-pix-upload-toggle]')){
+      const form=dialog.querySelector('[data-pix-receipt]');
+      if(form){form.hidden=!form.hidden;if(!form.hidden)form.elements.receipt?.focus();}
+      return;
+    }
     if(button.matches('[data-pix-signal]')){
       if(!intentRequestId||!shownOrderIds.length)return;
       button.disabled=true;
@@ -115,11 +120,48 @@ export function initManualPix(live) {
     }
     if(button.matches('[data-pix-copy]')){
       const input=dialog.querySelector('[data-pix-payload]'),status=dialog.querySelector('[data-pix-copy-status]');
-      try{await navigator.clipboard.writeText(input.value);status.textContent='Pix copiado. Cole no aplicativo do banco e confira os dados.';}
-      catch{input.focus();input.select();status.textContent='Não foi possível copiar automaticamente. Copie o texto selecionado.';}
+      try{
+        await navigator.clipboard.writeText(input.value);
+        status.textContent='Código copiado. Depois de pagar, envie o comprovante abaixo.';
+        const form=dialog.querySelector('[data-pix-receipt]');
+        if(form)form.hidden=false;
+      }catch{
+        input.focus();input.select();
+        status.textContent='Selecione e copie o código. Depois de pagar, envie o comprovante abaixo.';
+      }
     }
   });
   dialog.addEventListener('submit',async event=>{
+    const receiptForm=event.target.closest('[data-pix-receipt]');
+    if(receiptForm){
+      event.preventDefault();
+      if(receiptForm.dataset.busy||!intentRequestId||!shownOrderIds.length)return;
+      const file=receiptForm.elements.receipt.files?.[0];
+      const status=receiptForm.querySelector('[data-pix-receipt-status]');
+      const button=receiptForm.querySelector('[type=submit]');
+      let path='';
+      try{
+        if(!file)throw new Error('Selecione o comprovante.');
+        if(!['image/jpeg','image/png','application/pdf'].includes(file.type)||file.size>5242880)throw new Error('Use JPG, PNG ou PDF de até 5 MB.');
+        const ext={'image/jpeg':'jpg','image/png':'png','application/pdf':'pdf'}[file.type];
+        path=`${live.user.id}/${new Date().toISOString().slice(0,7)}/${crypto.randomUUID()}.${ext}`;
+        receiptForm.dataset.busy='true';button.disabled=true;status.textContent='Enviando…';
+        const upload=await live.client.storage.from('trameli-payment-receipts').upload(path,file,{contentType:file.type,upsert:false});
+        if(upload.error)throw upload.error;
+        const {error}=await live.client.rpc('trameli_submit_payment_receipt',{
+          p_request_id:intentRequestId,p_order_ids:shownOrderIds,p_storage_path:path,
+          p_file_name:file.name.slice(0,180),p_mime_type:file.type
+        });
+        if(error)throw error;
+        await window.TrameliPayments?.api?.load(true);
+        receiptForm.innerHTML='<div class="pix-receipt-success"><strong>Comprovante enviado ✓</strong><span>A loja já recebeu o aviso para conferir.</span></div>';
+      }catch(error){
+        if(path)await live.client.storage.from('trameli-payment-receipts').remove([path]).catch(()=>{});
+        status.textContent=error.message||'Não foi possível enviar o comprovante.';
+        button.disabled=false;delete receiptForm.dataset.busy;
+      }
+      return;
+    }
     const form=event.target.closest('[data-pix-form]');if(!form)return;event.preventDefault();
     if(form.dataset.busy)return;
     const errorHost=form.querySelector('[data-pix-error]'),button=form.querySelector('[type=submit]');errorHost.textContent='';
