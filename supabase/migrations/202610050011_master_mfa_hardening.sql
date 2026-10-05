@@ -17,6 +17,16 @@ begin
   if coalesce(auth.jwt()->>'aal', 'aal1') <> 'aal2' then
     raise exception 'Confirme a verificação em duas etapas antes de continuar.' using errcode = '42501';
   end if;
+
+  if not exists (
+    select 1
+    from jsonb_array_elements(coalesce(auth.jwt()->'amr', '[]'::jsonb)) as method
+    where method->>'method' = 'totp'
+      and coalesce(method->>'timestamp', '') ~ '^[0-9]+$'
+      and (method->>'timestamp')::bigint >= extract(epoch from now() - interval '10 minutes')::bigint
+  ) then
+    raise exception 'Confirme novamente o código do autenticador para esta ação crítica.' using errcode = '42501';
+  end if;
 end;
 $$;
 
