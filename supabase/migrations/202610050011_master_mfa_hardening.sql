@@ -23,7 +23,7 @@ begin
     from jsonb_array_elements(coalesce(auth.jwt()->'amr', '[]'::jsonb)) as method
     where method->>'method' = 'totp'
       and coalesce(method->>'timestamp', '') ~ '^[0-9]+$'
-      and (method->>'timestamp')::bigint >= extract(epoch from now() - interval '10 minutes')::bigint
+      and (method->>'timestamp')::bigint >= extract(epoch from now() - interval '30 minutes')::bigint
   ) then
     raise exception 'Confirme novamente o código do autenticador para esta ação crítica.' using errcode = '42501';
   end if;

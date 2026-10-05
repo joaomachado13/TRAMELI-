@@ -123,7 +123,7 @@ try {
   await assume(master, 'aal1');
   await assert.rejects(savePix(0), /duas etapas/);
 
-  await assume(master, 'aal2', nowSeconds() - 601);
+  await assume(master, 'aal2', nowSeconds() - 1801);
   await assert.rejects(savePix(0), /novamente o código/);
 
   await assume(master, 'aal1');
@@ -159,7 +159,7 @@ try {
   await assume(customer, 'aal2', nowSeconds());
   assert.equal((await db.query('select public.trameli_access_role() as role')).rows[0].role, 'operator');
 
-  console.log('MFA Master: ações críticas exigem Master + AAL2 + TOTP confirmado nos últimos 10 minutos.');
+  console.log('MFA Master: ações críticas exigem Master + AAL2 + TOTP confirmado nos últimos 30 minutos.');
 } finally {
   await db.close();
 }

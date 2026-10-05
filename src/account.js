@@ -15,7 +15,7 @@ export function initAccount(live) {
   const identity = () => `<p><strong>${escapeHtml(name)}</strong><br>${escapeHtml(live.user.email || live.user.phone || '')} · ${roleLabel(live.role)}</p>`;
   const accountSection = () => `<div class="account-panel">${identity()}<form data-account-profile><label>Nome<input name="name" value="${escapeHtml(live.profile?.name || live.user.user_metadata?.full_name || live.user.user_metadata?.name || '')}" maxlength="90" required></label><label>Telefone<input name="phone" type="tel" value="${escapeHtml(live.profile?.phone || live.user.user_metadata?.phone || live.user.phone || '')}" maxlength="25"></label><label>Endereço e referência<input name="address" value="${escapeHtml(live.profile?.address || live.user.user_metadata?.address || '')}" maxlength="180" required></label><p class="account-message" role="status"></p><button type="submit">Salvar meus dados</button></form><details><summary>Alterar senha</summary>${passwordForm()}</details></div>`;
   const hasRecentTotp = status => Boolean(status?.currentAuthenticationMethods?.some(method =>
-    method.method === 'totp' && Number(method.timestamp) * 1000 >= Date.now() - 10 * 60 * 1000
+    method.method === 'totp' && Number(method.timestamp) * 1000 >= Date.now() - 30 * 60 * 1000
   ));
   const mfaPanel = () => {
     if (live.role !== 'master') return '';
@@ -24,7 +24,7 @@ export function initAccount(live) {
     const enroll = mfaEnrollment?.totp;
     return `<div class="account-panel" data-mfa-panel><h3>Verificação em duas etapas</h3>
       <p>Protege alterações críticas, como destino Pix, acessos da equipe e exclusões administrativas.</p>
-      ${verified ? `<p><strong>${active ? 'Proteção ativa para ações críticas' : '2FA cadastrado — confirme um código para liberar ações críticas por 10 minutos'}</strong></p>
+      ${verified ? `<p><strong>${active ? 'Proteção ativa para ações críticas' : '2FA cadastrado — confirme um código para liberar ações críticas por 30 minutos'}</strong></p>
         ${active ? '' : '<form data-mfa-stepup><label>Código do autenticador<input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required></label><p class="account-message" role="status"></p><button type="submit">Confirmar código</button></form>'}`
         : enroll ? `<p>Escaneie o QR no seu autenticador e confirme um código.</p><img src="${escapeHtml(enroll.qr_code || '')}" alt="QR Code para configurar 2FA" width="220" height="220"><details><summary>Não consegue escanear?</summary><code>${escapeHtml(enroll.secret || '')}</code></details><form data-mfa-enroll-verify data-factor-id="${escapeHtml(mfaEnrollment.id)}"><label>Código do autenticador<input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required></label><p class="account-message" role="status"></p><button type="submit">Ativar 2FA</button></form>`
         : '<button type="button" data-mfa-enroll>Ativar verificação em duas etapas</button>'}
