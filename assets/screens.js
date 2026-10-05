@@ -592,7 +592,7 @@ document.addEventListener('click', async event => {
   if (!confirm('Excluir TODOS os pedidos, pagamentos e fechamentos de teste? Esta ação não pode ser desfeita.')) return;
   if (prompt('Para confirmar, digite EXCLUIR PEDIDOS') !== 'EXCLUIR PEDIDOS') return;
   button.disabled = true;
-  try { const count = await live.purgeTestOrders(); alert(`${count} pedidos de teste foram excluídos.`); showRoute(true); }
+  try { await window.TrameliAccount?.ensureMasterAal2?.(); const count = await live.purgeTestOrders(); alert(`${count} pedidos de teste foram excluídos.`); showRoute(true); }
   catch (cause) { alert(`Não foi possível limpar a base: ${cause.message}`); }
   finally { button.disabled = false; }
 });
