@@ -282,7 +282,7 @@ async function handleOrderAction(button) {
   if (button.dataset.action === 'edit') { detailDrawer.close(); openForm(order); return; }
   if (button.dataset.action === 'destroy') {
     if (live?.role !== 'master' || !confirm(`Excluir definitivamente o pedido de ${order.customer}? Esta ação não pode ser desfeita.`)) return;
-    try { await live.deleteOrder(order.id); orders = readOrders(); detailDrawer.close(); render(); }
+    try { await window.TrameliAccount?.ensureMasterAal2?.(); await live.deleteOrder(order.id); orders = readOrders(); detailDrawer.close(); render(); }
     catch (cause) { alert(`O pedido não foi excluído: ${cause.message}`); }
     return;
   }

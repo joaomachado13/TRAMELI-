@@ -75,4 +75,55 @@ export class AuthService {
     const { error } = await this.client.auth.updateUser({ data: { ...profile, full_name: profile.name } });
     if (error) throw error;
   }
+
+  async mfaStatus() {
+    const [aalResult, factorsResult] = await Promise.all([
+      this.client.auth.mfa.getAuthenticatorAssuranceLevel(),
+      this.client.auth.mfa.listFactors(),
+    ]);
+    if (aalResult.error) throw aalResult.error;
+    if (factorsResult.error) throw factorsResult.error;
+    const factors = factorsResult.data || {};
+    const all = Array.isArray(factors.all) ? factors.all : [];
+    const totp = Array.isArray(factors.totp)
+      ? factors.totp
+      : all.filter(factor => (factor.factor_type || factor.factorType || factor.type) === 'totp');
+    return {
+      currentLevel: aalResult.data?.currentLevel || 'aal1',
+      nextLevel: aalResult.data?.nextLevel || 'aal1',
+      currentAuthenticationMethods: aalResult.data?.currentAuthenticationMethods || [],
+      totp,
+    };
+  }
+
+  async enrollTotp() {
+    const { data, error } = await this.client.auth.mfa.enroll({
+      factorType: 'totp',
+      friendlyName: 'Trameli Master',
+    });
+    if (error) throw error;
+    return data;
+  }
+
+  async verifyTotp(factorId, code) {
+    const token = String(code || '').replace(/\s+/g, '');
+    if (!/^\d{6}$/.test(token)) throw new Error('Informe o código de 6 dígitos do autenticador.');
+    const { data, error } = await this.client.auth.mfa.challengeAndVerify({ factorId, code: token });
+    if (error) throw error;
+    return data;
+  }
+
+  async stepUpTotp(code) {
+    const status = await this.mfaStatus();
+    const factor = status.totp.find(item => item.status === 'verified');
+    if (!factor) throw new Error('Ative a verificação em duas etapas antes de continuar.');
+    return this.verifyTotp(factor.id, code);
+  }
+
+  async removeMfaFactor(factorId) {
+    const { data, error } = await this.client.auth.mfa.unenroll({ factorId });
+    if (error) throw error;
+    return data;
+  }
+
 }

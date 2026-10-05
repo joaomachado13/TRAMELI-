@@ -398,7 +398,13 @@ function renderRoute(route, preserveScroll = false) {
   if (route === 'configuracoes' && window.TrameliAccount) {
     const slot = screenView.querySelector('[data-account-slot]');
     if (slot) slot.innerHTML = window.TrameliAccount.render(settingsTab === 'acessos' ? 'team' : 'account');
-    if (settingsTab === 'acessos') window.TrameliAccount.refreshTeam();
+    if (settingsTab === 'acessos') {
+      window.TrameliAccount.refreshTeam();
+      window.TrameliAccount.refreshMfa?.().then(() => {
+        const panel = screenView.querySelector('[data-mfa-panel]');
+        if (panel && settingsTab === 'acessos') panel.outerHTML = window.TrameliAccount.renderMfa();
+      }).catch(() => {});
+    }
   }
   const operationDialog = document.getElementById('operation-dialog');
   if (!isOperation && operationDialog.open) operationDialog.close();
@@ -573,7 +579,10 @@ document.addEventListener('submit', async event => {
         : form.dataset.settingsForm === 'appearance' ? { primaryColor: data.get('primaryColor'), accentColor: data.get('accentColor'), surfaceColor: data.get('surfaceColor') }
           : { businessName: data.get('businessName'), contact: data.get('contact') };
       const next = { ...current, ...values };
-      if (live) await live.saveSettings(next); else localStorage.setItem('trameli-operation-settings-v1', JSON.stringify(next));
+      if (live) {
+        await window.TrameliAccount?.ensureMasterAal2?.();
+        await live.saveSettings(next);
+      } else localStorage.setItem('trameli-operation-settings-v1', JSON.stringify(next));
       applySettings();
     }
     if (feedback) feedback.textContent = live ? 'Configurações salvas para todos os aparelhos.' : 'Configurações salvas neste aparelho.';
@@ -586,7 +595,7 @@ document.addEventListener('click', async event => {
   if (!confirm('Excluir TODOS os pedidos, pagamentos e fechamentos de teste? Esta ação não pode ser desfeita.')) return;
   if (prompt('Para confirmar, digite EXCLUIR PEDIDOS') !== 'EXCLUIR PEDIDOS') return;
   button.disabled = true;
-  try { const count = await live.purgeTestOrders(); alert(`${count} pedidos de teste foram excluídos.`); showRoute(true); }
+  try { await window.TrameliAccount?.ensureMasterAal2?.(); const count = await live.purgeTestOrders(); alert(`${count} pedidos de teste foram excluídos.`); showRoute(true); }
   catch (cause) { alert(`Não foi possível limpar a base: ${cause.message}`); }
   finally { button.disabled = false; }
 });
