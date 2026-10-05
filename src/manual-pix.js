@@ -69,7 +69,7 @@ export function initManualPix(live) {
       // Do not reopen a dialog that the customer closed while the requests ran.
       if(!dialog.open)return;
       open(`<div class="pix-flow">
-        <div class="pix-flow__head"><span>PAGAMENTO VIA PIX</span><h2>${money(amount)}</h2><p>${rows.length===1?`Pedido ${orderText}`:`${rows.length} pedidos · ${orderText}`}</p></div>
+        <div class="pix-flow__head"><span>PAGAMENTO VIA PIX</span><h2 class="pix-amount">${money(amount)}</h2><p>${rows.length===1?`Pedido ${orderText}`:`${rows.length} pedidos · ${orderText}`}</p></div>
         <div class="pix-flow__receiver">Recebedor: <strong>${esc(config.receiver_label)}</strong></div>
         <img class="pix-qr" src="${dataUrl}" width="320" height="320" alt="QR Code Pix para o saldo em aberto">
         <label class="pix-copy-field"><span>Pix Copia e Cola</span><textarea data-pix-payload readonly rows="3">${esc(payload)}</textarea></label>
@@ -90,7 +90,7 @@ export function initManualPix(live) {
           </form>
           <button type="button" class="pix-signal-link" data-pix-signal>Já paguei, sem comprovante</button>
         </section>
-        <p class="pix-confirm-note">O pagamento só será marcado como confirmado depois da conferência da loja.</p>
+        <p class="pix-confirm-note">O pagamento só será marcado como confirmado depois da conferência da loja. Se já pagou, não pague de novo.</p>
       </div>`);
       expires=setTimeout(()=>{if(dialog.open)fail('Consulte novamente o saldo antes de pagar. Esta tela foi ocultada, mas isso não invalida uma cópia antiga do Pix.');},300000);
     }catch(error){if(dialog.open)fail(error.message||'Não foi possível preparar o Pix.');}
