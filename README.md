@@ -33,7 +33,8 @@ O modo com Supabase ainda **não está homologado com um projeto real**. Consult
 ## Implementado
 
 - Design system unificado com canvas creme, verde estrutural, hierarquia tipográfica, sidebar persistente no desktop, estados semânticos e componentes responsivos compartilhados pelo Master e portal.
-- Lançamento manual, ajuste, cancelamento com histórico, estados de conferência/separação/entrega, totais em centavos e lista diária consolidada de quantidades para conferência com a padaria.
+- Lançamento manual, ajuste, cancelamento com histórico, totais em centavos e Kanban com cinco colunas: A conferir, Conferido, Em separação, Pronto e Entregue. Cards podem ser arrastados (pela alça no celular) ou movidos pelo seletor. Avançar várias etapas usa as transições existentes, com histórico e versão atualizados a cada etapa; somente Master pode voltar etapas, e pedidos entregues permanecem finalizados.
+- Repasse da padaria com duas listas, no site, no PDF e no texto copiado: primeiro o consolidado de todos os produtos, somando quantidades/pesos; depois os pedidos por cliente, com todos os itens e observações. Sem preços ou informações de pagamento. A conferência por cliente permite marcar itens ou pedidos completos e riscar os concluídos. As marcações ficam neste navegador, separadas por conta; editar itens/quantidades invalida a conferência antiga. O PDF A4 possui caixas interativas para leitores compatíveis e também pode ser impresso. O arquivo reflete as marcações no momento do download; alterações na cópia do PDF não sincronizam com o site.
 - Portal de pedido, edição e cancelamento até 22h30 do dia anterior à entrega, com forma de pagamento pretendida.
 - Banco com acesso por cliente/operadora, totais calculados no servidor, controle de versão para evitar sobrescrita e trilha de alterações.
 - Sincronização em tempo real pelo Supabase, mantendo a consulta periódica como contingência.

@@ -10,4 +10,5 @@ backups/
 *.sql.partial
 supabase/.temp/
 private/
+tmp/pdfs/
 .codex-vite.*.log

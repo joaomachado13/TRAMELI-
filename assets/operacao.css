@@ -98,7 +98,7 @@ dialog{width:min(670px,calc(100vw - 24px));max-height:min(90vh,900px);padding:0;
 #operation-view .section-heading h2{color:#193824;font:600 1.55rem/1.2 var(--font-ui);letter-spacing:-.025em}
 #operation-view .section-description{margin-top:6px;color:#68756c;font-size:.84rem}
 #operation-view .orders-list{display:block;min-width:0}
-#operation-view .kanban{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:start;gap:14px}
+#operation-view .kanban{display:grid;grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:minmax(230px,1fr);align-items:start;gap:14px;overflow-x:auto;overscroll-behavior-inline:contain;padding-bottom:12px;scroll-snap-type:x proximity}
 #operation-view .kanban-column{min-width:0;padding:13px;border:1px solid #d9dfd4;border-radius:15px;background:#e9ede5}
 #operation-view .kanban-column--new{background:#f1ead9}
 #operation-view .kanban-column--done{background:#e3ebe0}
@@ -128,6 +128,58 @@ dialog{width:min(670px,calc(100vw - 24px));max-height:min(90vh,900px);padding:0;
 #operation-view .supplier-list__help,#operation-view .supplier-list__empty,#operation-view .supplier-list__feedback{color:#66746a;font-size:.82rem}
 #operation-view .supplier-list li{border-color:#e4e8e1;color:#334c3a;font-size:.86rem}
 #operation-view .supplier-list li strong{color:#4d6c40}
+
+#operation-view .kanban-column{scroll-snap-align:start;min-height:170px;transition:background 160ms,box-shadow 160ms}
+#operation-view .kanban.is-drag-active{scroll-snap-type:none;scroll-behavior:auto}
+#operation-view .kanban-column--received{background:#f1ead9}
+#operation-view .kanban-column--packing{background:#e5ecee}
+#operation-view .kanban-column--ready{background:#e5eddb}
+#operation-view .kanban-column--delivered{background:#e3ebe0}
+#operation-view .kanban-column>header{min-height:70px}
+#operation-view .kanban-column.is-drop-allowed{box-shadow:inset 0 0 0 1px #91ab7b}
+#operation-view .kanban-column.is-drop-target{background:#d4e3c6;box-shadow:inset 0 0 0 2px #537545}
+#operation-view .kanban-card{min-width:0;overflow:hidden;border:1px solid #d8dfd1;border-radius:12px;background:#fffdf9}
+#operation-view .kanban-card .order-card{border-radius:10px 10px 0;box-shadow:none}
+#operation-view .kanban-card .order-card:hover{transform:none}
+#operation-view .kanban-card.is-dragging{opacity:.4}
+#operation-view .kanban-card.is-moving{opacity:.65}
+#operation-view .kanban-card__move{display:flex;gap:6px;align-items:center;padding:0 12px 12px}
+#operation-view .kanban-card__move label{flex:1;min-width:0}
+#operation-view .kanban-card__move select{width:100%;min-height:38px;border:1px solid #d8dfd1;border-radius:7px;background:#f5f6f0;padding:7px;color:#315039;font:inherit;font-size:.75rem}
+#operation-view .kanban-drag-handle{display:grid;place-items:center;min-width:40px;min-height:40px;padding:4px;border:1px solid #d8dfd1;border-radius:7px;color:#436045;background:#f5f6f0;cursor:grab;touch-action:none;user-select:none;font-size:1.5rem}
+#operation-view .kanban-drag-handle:active{cursor:grabbing}
+#operation-view .kanban-feedback{margin:0 0 12px;color:#466342;font-size:.82rem;line-height:1.5}
+#operation-view .kanban-feedback:empty{display:none}
+.kanban-drag-ghost{position:fixed;top:0;left:0;width:225px;max-height:230px;overflow:hidden;z-index:2000;padding:12px;border:2px solid #537545;border-radius:12px;background:#fffdf9;box-shadow:0 15px 40px #203b2940;opacity:.9;pointer-events:none;font:14px DM Sans,sans-serif;color:#203b29}
+.kanban-drag-ghost .order-card{display:flex;flex-direction:column;gap:8px;text-align:left;border:0;background:transparent;color:inherit}
+.kanban-drag-ghost .kanban-card__move{display:none}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+#operation-view .supplier-list__actions{display:flex;flex-wrap:wrap;gap:8px}
+#operation-view .supplier-totals{margin-top:22px;padding:20px;border:1px solid #d8dfd1;border-radius:12px;background:#f3f6ed}
+#operation-view .supplier-totals h3,#operation-view .supplier-by-client>h3{color:#243f2c;font-size:1.08rem}
+#operation-view .supplier-totals>p{margin-top:5px;color:#63705d;font-size:.8rem;line-height:1.5}
+#operation-view .supplier-totals li{align-items:flex-start;line-height:1.5}
+#operation-view .supplier-totals li strong{min-width:62px;white-space:nowrap}
+#operation-view .supplier-totals li span{overflow-wrap:anywhere;min-width:0}
+#operation-view .supplier-by-client{margin-top:28px}
+#operation-view .supplier-by-client>.supplier-list__help{margin-top:8px}
+#operation-view #supplier-list-items{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:16px;margin-top:20px;align-items:start}
+#operation-view .supplier-client{overflow:hidden;min-width:0;border:1px solid #d8dfd1;border-radius:12px;background:#fffdf9}
+#operation-view .supplier-client>header{padding:16px;background:#eef2e7}
+#operation-view .supplier-client h3{font-size:1.02rem;color:#243f2c;overflow-wrap:anywhere}
+#operation-view .supplier-client>header p{margin-top:4px;font-size:.8rem;color:#63705d;overflow-wrap:anywhere}
+#operation-view .supplier-order{padding:16px}
+#operation-view .supplier-order+.supplier-order{border-top:1px solid #d8dfd1}
+#operation-view .supplier-order__heading{display:flex;align-items:center;flex-wrap:wrap;gap:8px;color:#315039;font-size:.8rem;cursor:pointer}
+#operation-view .supplier-order__heading>span{font-size:.72rem;color:#6b7769}
+#operation-view .supplier-client input[type=checkbox]{width:18px;height:18px;flex:none;accent-color:#45663d;cursor:pointer}
+#operation-view .supplier-client ul{display:block;margin:10px 0 0;padding:0}
+#operation-view .supplier-client li{display:block;padding:0;border:0}
+#operation-view .supplier-item{display:flex;align-items:flex-start;gap:10px;padding:9px 0;min-height:38px;line-height:1.5;cursor:pointer}
+#operation-view .supplier-item span{overflow-wrap:anywhere}
+#operation-view .supplier-item.is-complete span,#operation-view .supplier-order.is-complete .supplier-order__heading strong{text-decoration:line-through;color:#77836f}
+#operation-view .supplier-order.is-complete{background:#f3f6ed}
+#operation-view .supplier-order__notes{margin-top:8px;padding:10px;border-radius:6px;background:#fbf0d9;color:#725b2d;font-size:.78rem;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
 #operation-view .empty-state{border-color:#bdc7b8;background:#fffdf8}
 #operation-view .empty-state h3{color:#1d3d28;font:600 1.3rem var(--font-ui)}
 #operation-view .empty-state p{color:#657268;font-size:.86rem}

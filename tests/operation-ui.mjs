@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { PDFDocument } from 'pdf-lib';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { browserPath, headlessFlags } from './browser-path.mjs';
@@ -80,7 +81,7 @@ try {
   assert(await evaluate('!!document.querySelector("#catalog-products option[value=Pão]")'), 'Produto não ficou disponível no pedido.');
   await evaluate(`(() => { const f = document.querySelector('#order-form'); const d = new Date(); d.setDate(d.getDate() + 1); f.elements.date.value = [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('-'); f.elements.customer.value='Cliente Teste'; f.elements.customer.dispatchEvent(new Event('change', { bubbles: true })); const name = document.querySelector('.item-name'); name.value='Pão'; name.dispatchEvent(new Event('change', { bubbles: true })); document.querySelector('.item-quantity').value='3'; f.requestSubmit(); })()`);
   const createdOrderDate = await evaluate('document.querySelector("#delivery-date").value');
-  assert(await evaluate('document.querySelectorAll(".kanban-column").length === 3'), 'Kanban não mostrou as três etapas operacionais.');
+  assert(await evaluate('document.querySelectorAll(".kanban-column").length === 5'), 'Kanban não mostrou as cinco etapas operacionais.');
   await evaluate('document.querySelector(".order-card").click()');
   assert(await evaluate('document.querySelector("#order-detail-drawer").open && document.querySelector("#order-detail-content").textContent.includes("Bloco A, ap. 10")'), 'Detalhe lateral não mostrou o endereço reaproveitado.');
   assert(await evaluate('document.querySelector("#total-orders").textContent === "1"'), 'Pedido não foi salvo.');
@@ -101,16 +102,88 @@ try {
   await pause(180);
   assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'), 'Rolagem horizontal no desktop.');
   assert(await evaluate('!document.querySelector("#main-navigation-panel").inert && getComputedStyle(document.querySelector(".mobile-menu-button")).display === "none"'), 'Sidebar desktop não permaneceu acessível sem controle visual.');
+  assert(await evaluate('!document.querySelector("#download-supplier-pdf").disabled && document.querySelector("#supplier-list-items").textContent.includes("4× Pão") && !document.querySelector("#supplier-list-items").textContent.includes("R$")'), 'Repasse não separou o pedido sem preços.');
+  assert(await evaluate('document.querySelector("#supplier-list-totals").textContent.includes("4×Pão") && !document.querySelector("#supplier-list-totals").textContent.includes("R$")'), 'Consolidado de produtos não mostrou a quantidade sem preços.');
+  await evaluate('document.querySelector("[data-supplier-check-item]").click()');
+  assert(await evaluate('document.querySelector(".supplier-order").classList.contains("is-complete") && getComputedStyle(document.querySelector(".supplier-item span")).textDecorationLine.includes("line-through")'), 'Conferência não riscou o pedido completo.');
+  const downloadPath = resolve('tmp/pdfs/ui-download');
+  await mkdir(downloadPath, { recursive: true });
+  await rm(join(downloadPath, `repasse-padaria-${createdOrderDate}.pdf`), { force: true });
+  await send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath });
+  await evaluate('document.querySelector("#download-supplier-pdf").click()');
+  let downloaded;
+  for (let attempt = 0; attempt < 100; attempt++) {
+    try { downloaded = await readFile(join(downloadPath, `repasse-padaria-${createdOrderDate}.pdf`)); break; } catch { await pause(100); }
+  }
+  assert(Boolean(downloaded), 'Botão de PDF não gerou o download no navegador.');
+  const downloadedPdf = await PDFDocument.load(downloaded);
+  assert(downloadedPdf.getForm().getFields().length === 3 && downloadedPdf.getForm().getFields().every(field => field.isChecked()), 'Download não preservou o consolidado, as caixas ou marcações da conferência.');
+  await evaluate('document.querySelector(".order-card").scrollIntoView({block:"center",inline:"center"}); document.querySelector("#orders-list .kanban").scrollLeft = 0');
+  await pause(100);
+  const drag = await evaluate(`(() => { const a=document.querySelector('.order-card').getBoundingClientRect(), b=document.querySelector('[data-drop-status="packing"]').getBoundingClientRect(); return {x:a.x+a.width/2,y:a.y+30,tx:b.x+b.width/2,ty:b.y+90}; })()`);
+  await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: drag.x, y: drag.y });
+  await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: drag.x, y: drag.y, button: 'left', clickCount: 1 });
+  for (let step = 1; step <= 12; step++) {
+    await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: drag.x+(drag.tx-drag.x)*step/12, y: drag.y+(drag.ty-drag.y)*step/12, button: 'left', buttons: 1 });
+    await pause(20);
+  }
+  await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: drag.tx, y: drag.ty, button: 'left', clickCount: 1 });
+  await pause(100);
+  assert(await evaluate('!!document.querySelector(`[data-drop-status="packing"] .order-card`)'), 'Arraste com mouse não moveu o card para Em separação.');
+  assert(await evaluate('!document.querySelector("#order-detail-drawer").open'), 'Arraste abriu os detalhes indevidamente.');
+  await evaluate(`(() => { const select=document.querySelector('[data-move-id]'); select.value='ready'; select.dispatchEvent(new Event('change',{bubbles:true})); })()`);
+  assert(await evaluate('!!document.querySelector(`[data-drop-status="ready"] .order-card`)'), 'Mover para não atualizou a etapa.');
+  await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+  await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
+  await evaluate(`(() => { document.querySelector('[data-drop-status="ready"]').scrollIntoView({block:'center',inline:'center'}); })()`);
+  await pause(100);
+  const touch = await evaluate(`(() => { const a=document.querySelector('[data-drag-id]').getBoundingClientRect();return {x:a.x+a.width/2,y:a.y+a.height/2}; })()`);
+  await send('Input.dispatchTouchEvent', { type:'touchStart', touchPoints:[{x:touch.x,y:touch.y}] });
+  await send('Input.dispatchTouchEvent', { type:'touchMove', touchPoints:[{x:touch.x+30,y:touch.y-35}] });
+  await pause(50);
+  assert(await evaluate('!!document.querySelector(".kanban-drag-ghost")'), 'Arraste por toque não começou pela alça.');
+  await send('Input.dispatchTouchEvent', { type:'touchCancel', touchPoints:[] });
+  assert(await evaluate('!document.querySelector(".kanban-drag-ghost") && !!document.querySelector(`[data-drop-status="ready"] .order-card`)'), 'Cancelar toque alterou o pedido ou deixou uma cópia visível.');
+  const nextTouch = await evaluate(`(() => { const a=document.querySelector('[data-drag-id]').getBoundingClientRect();return {x:a.x+a.width/2,y:a.y+a.height/2}; })()`);
+  await send('Input.dispatchTouchEvent', { type:'touchStart', touchPoints:[{x:nextTouch.x,y:nextTouch.y}] });
+  const boardLeft = await evaluate('document.querySelector(".kanban").getBoundingClientRect().left');
+  await send('Input.dispatchTouchEvent', { type:'touchMove', touchPoints:[{x:boardLeft+8,y:nextTouch.y-35}] });
+  await pause(650);
+  const touchTarget = await evaluate(`(() => { const b=document.querySelector('[data-drop-status="packing"]').getBoundingClientRect();return {x:Math.max(50,b.x+Math.min(b.width/2,150)),y:b.y+100}; })()`);
+  await send('Input.dispatchTouchEvent', { type:'touchMove', touchPoints:[{x:touchTarget.x,y:touchTarget.y}] });
+  await send('Input.dispatchTouchEvent', { type:'touchEnd', touchPoints:[] });
+  assert(await evaluate('!!document.querySelector(`[data-drop-status="packing"] .order-card`)'), `Arraste por toque não moveu para a coluna selecionada: ${JSON.stringify(await evaluate('({feedback:document.querySelector("#kanban-feedback").textContent,stage:document.querySelector(".order-card").closest("[data-drop-status]").dataset.dropStatus,scroll:document.querySelector(".kanban").scrollLeft})'))}`);
+  await evaluate(`(() => { const select=document.querySelector('[data-move-id]'); select.value='ready'; select.dispatchEvent(new Event('change',{bubbles:true})); })()`);
+  await send('Emulation.setTouchEmulationEnabled', { enabled: false });
+  await send('Emulation.setDeviceMetricsOverride', { width: 1350, height: 900, deviceScaleFactor: 1, mobile: false });
+  await evaluate('window.scrollTo(0,0)');
   const desktopImage = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
   await writeFile(desktopShot, Buffer.from(desktopImage.data, 'base64'));
   await send('Page.reload');
   for (let attempt = 0; attempt < 60 && !(await evaluate('document.readyState === "complete" && !!window.TrameliOperation')); attempt++) await pause(100);
   await evaluate(`(() => { const input = document.querySelector('#delivery-date'); input.value = '${createdOrderDate}'; input.dispatchEvent(new Event('change')); })()`);
   assert(await evaluate('document.querySelector("#total-orders").textContent === "1"'), 'Pedido não persistiu após recarga.');
+  assert(await evaluate('!!document.querySelector(`[data-drop-status="ready"] .order-card`) && document.querySelector(".supplier-order").classList.contains("is-complete")'), 'Etapa ou checklist não persistiu após recarga.');
+  await evaluate('document.querySelector(".order-card").click()');
+  await evaluate('document.querySelector("#order-detail-drawer [data-action=edit]").click()');
+  await evaluate(`(() => { document.querySelector('.item-quantity').value='6'; document.querySelector('#order-form').requestSubmit(); })()`);
+  assert(await evaluate('!document.querySelector(".supplier-order").classList.contains("is-complete") && document.querySelector("#supplier-list-items").textContent.includes("6× Pão")'), 'Alterar os itens manteve uma conferência antiga.');
+  assert(await evaluate('document.querySelector("#supplier-list-totals").textContent.includes("6×Pão")'), 'Consolidado não atualizou após editar a quantidade.');
   await evaluate('localStorage.setItem("trameli-operation-draft-v1", "dados-antigos")');
   await send('Page.reload');
   for (let attempt = 0; attempt < 60 && !(await evaluate('document.readyState === "complete" && !!window.TrameliOperation')); attempt++) await pause(100);
   assert(await evaluate('localStorage.getItem("trameli-operation-draft-v1") === null'), 'Dados antigos não foram apagados.');
+  await evaluate(`(() => {
+    const stored=JSON.parse(localStorage.getItem('trameli-operation-draft-v2'))[0];
+    const data=['received','confirmed','packing','ready','delivered'].map((status,index)=>({...stored,id:'visual-'+index,status,customer:['Ana Gonçalves','Bruno Lima','Carla Rodrigues','Daniela Souza','Eduardo Pereira'][index],date:document.querySelector('#delivery-date').value,notes:index===2?'Separar os frios do pão.':'',items:[{name:'Pão francês',quantity:index+2,priceCents:140},{name:'Mussarela',quantity:1,weightGrams:150,priceCents:1050}]}));
+    localStorage.setItem('trameli-operation-draft-v2',JSON.stringify(data));window.dispatchEvent(new Event('trameli:orders-changed'));
+    document.querySelector('.orders-section').scrollIntoView({block:'start'});
+  })()`);
+  await pause(150);
+  await writeFile(new URL('../assets/crops/operation-kanban-five-stages.png', import.meta.url), Buffer.from((await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false})).data,'base64'));
+  await evaluate('document.querySelector(".supplier-list").scrollIntoView({block:"start"})');
+  await pause(150);
+  await writeFile(new URL('../assets/crops/operation-supplier-by-client.png', import.meta.url), Buffer.from((await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false})).data,'base64'));
   process.stdout.write('Operação diária: Kanban, detalhe lateral, conferência, edição, impressão, persistência e layouts 390/1350px OK.\n');
 } finally {
   socket?.close();

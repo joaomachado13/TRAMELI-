@@ -1,3 +1,6 @@
+import { stages, statusPath, progressOrder } from '../src/operation-flow.js';
+import { supplierGroups, supplierTotals, supplierText, downloadSupplierPdf, itemCheckKey } from '../src/supplier-checklist.js';
+
 (() => {
 const live = window.TrameliLive;
 const storageKey = 'trameli-operation-draft-v2';
@@ -31,8 +34,20 @@ const dateInput = document.getElementById('delivery-date');
 const searchInput = document.getElementById('order-search');
 const list = document.getElementById('orders-list');
 const supplierList = document.getElementById('supplier-list-items');
+const supplierTotalsHost = document.getElementById('supplier-list-totals');
 const supplierCopy = document.getElementById('copy-supplier-list');
+const supplierPdf = document.getElementById('download-supplier-pdf');
 const supplierFeedback = document.getElementById('supplier-list-feedback');
+const kanbanFeedback = document.getElementById('kanban-feedback');
+const checklistKey = `trameli-supplier-checks-v1:${live?.user?.id || 'demo'}`;
+let supplierChecks = new Set();
+try {
+  const saved = JSON.parse(localStorage.getItem(checklistKey) || '[]');
+  if (Array.isArray(saved)) supplierChecks = new Set(saved.filter(key => typeof key === 'string'));
+} catch { /* A checklist still works when storage is unavailable. */ }
+const movingOrders = new Set();
+let draggedId = null;
+let suppressClickUntil = 0;
 const dialog = document.getElementById('operation-dialog');
 const detailDrawer = document.getElementById('order-detail-drawer');
 const detailContent = document.getElementById('order-detail-content');
@@ -188,6 +203,29 @@ function selectedOrders() {
   return orders.filter(order => order.date === dateInput.value && orderStatus(order) !== 'cancelled').sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
+function checklistGroups() { return supplierGroups(orders, dateInput.value, supplierChecks); }
+
+function renderSupplierList() {
+  const validKeys = new Set(orders.filter(order => orderStatus(order) !== 'cancelled').flatMap(order => order.items.map((_, index) => itemCheckKey(order, index))));
+  const retained = new Set([...supplierChecks].filter(key => validKeys.has(key)));
+  if (retained.size !== supplierChecks.size) {
+    supplierChecks = retained;
+    try { localStorage.setItem(checklistKey, JSON.stringify([...supplierChecks])); } catch { /* Optional checklist persistence. */ }
+  }
+  const groups = checklistGroups();
+  const totals = supplierTotals(groups);
+  if (supplierTotalsHost) supplierTotalsHost.innerHTML = totals.length
+    ? `<ul>${totals.map(product => `<li><strong>${product.grams ? `${product.grams} g` : `${product.quantity}×`}</strong><span>${escapeHtml(product.name)}</span></li>`).join('')}</ul>`
+    : '<p class="supplier-list__empty">Nenhum item nesta data.</p>';
+  supplierList.innerHTML = groups.length ? groups.map(group => `<section class="supplier-client"><header><h3>${escapeHtml(group.customer)}</h3><p>${escapeHtml(group.address)}</p></header>${group.orders.map(order => `<article class="supplier-order${order.checked ? ' is-complete' : ''}" data-supplier-order="${escapeHtml(order.id)}"><label class="supplier-order__heading"><input type="checkbox" data-supplier-check-order="${escapeHtml(order.id)}" ${order.checked ? 'checked' : ''}><strong>Pedido #${escapeHtml(order.id.slice(0, 8))}</strong><span>${order.lines.filter(line => line.checked).length}/${order.lines.length} itens conferidos</span></label><ul>${order.lines.map((line, index) => `<li><label class="supplier-item${line.checked ? ' is-complete' : ''}"><input type="checkbox" data-supplier-check-item="${index}" data-id="${escapeHtml(order.id)}" ${line.checked ? 'checked' : ''}><span>${escapeHtml(line.label)}</span></label></li>`).join('')}</ul>${order.notes ? `<p class="supplier-order__notes">Observação: ${escapeHtml(order.notes)}</p>` : ''}</article>`).join('')}</section>`).join('') : '<p class="supplier-list__empty">Nenhum pedido nesta data.</p>';
+  supplierList.querySelectorAll('[data-supplier-check-order]').forEach(input => {
+    const order = groups.flatMap(group => group.orders).find(order => order.id === input.dataset.supplierCheckOrder);
+    input.indeterminate = !order.checked && order.lines.some(line => line.checked);
+  });
+  supplierCopy.disabled = !groups.length;
+  if (supplierPdf && !supplierPdf.dataset.busy) supplierPdf.disabled = !groups.length;
+}
+
 function render() {
   const dayOrders = selectedOrders();
   const displayOrders = dayOrders.slice();
@@ -206,12 +244,7 @@ function render() {
   document.getElementById('operation-day-hint').textContent = dateInput.value === suggested
     ? `Dia priorizado pela operação. Virada configurada para ${rollover}.`
     : `Visualizando ${selectedLabel}. Virada configurada para ${rollover}.`;
-  const products = window.TrameliOrderMath.summarizeProducts(orders, dateInput.value);
-  supplierList.innerHTML = products.length
-    ? `<ul>${products.map(item => `<li><strong>${item.grams ? `${item.grams} g` : `${item.quantity}×`}</strong><span>${escapeHtml(item.name)}</span></li>`).join('')}</ul>`
-    : '<p class="supplier-list__empty">Nenhum produto nesta data.</p>';
-  supplierCopy.disabled = !products.length;
-  supplierFeedback.textContent = '';
+  renderSupplierList();
 
   if (!filtered.length && displayOrders.length) {
     list.innerHTML = '<div class="empty-state operation-empty"><span aria-hidden="true">⌕</span><h3>Nenhum pedido encontrado</h3><p>Tente buscar por outro nome, endereço ou produto.</p></div>';
@@ -221,16 +254,15 @@ function render() {
   const card = order => {
     const state = orderStatus(order);
     const itemCount = order.items.reduce((sum, item) => sum + (item.weightGrams ? 1 : item.quantity), 0);
-    return `<button class="order-card order-card--${state}" type="button" data-action="open" data-id="${escapeHtml(order.id)}" aria-label="Abrir pedido de ${escapeHtml(order.customer)}"><span class="order-card__top"><span class="order-card__id">#${escapeHtml(order.id.slice(0, 8))}</span><span class="status status--${state}">${escapeHtml(statusLabels[state])}</span></span><strong class="order-card__customer">${escapeHtml(order.customer)}</strong><span class="order-card__meta">${itemCount} ${itemCount === 1 ? 'item' : 'itens'} · ${money(orderTotal(order))}</span><span class="order-card__delivery">Entrega ${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</span>${order.notes ? '<span class="order-card__alert">Tem observação</span>' : ''}<span class="order-card__open">Ver pedido <span aria-hidden="true">→</span></span></button>`;
+    const busy = movingOrders.has(order.id);
+    const destinations = stages.filter(stage => statusPath(state, stage.key, !live || live.role === 'master').length);
+    const movable = destinations.length > 0 && !busy;
+    return `<article class="kanban-card${busy ? ' is-moving' : ''}" data-card-id="${escapeHtml(order.id)}" aria-busy="${busy}"><button class="order-card order-card--${state}" type="button" data-action="open" data-id="${escapeHtml(order.id)}" draggable="${movable}" aria-label="Abrir pedido de ${escapeHtml(order.customer)}"><span class="order-card__top"><span class="order-card__id">#${escapeHtml(order.id.slice(0, 8))}</span><span class="status status--${state}">${escapeHtml(statusLabels[state])}</span></span><strong class="order-card__customer">${escapeHtml(order.customer)}</strong><span class="order-card__meta">${itemCount} ${itemCount === 1 ? 'item' : 'itens'} · ${money(orderTotal(order))}</span><span class="order-card__delivery">Entrega ${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</span>${order.notes ? '<span class="order-card__alert">Tem observação</span>' : ''}<span class="order-card__open">Ver pedido <span aria-hidden="true">→</span></span></button>${destinations.length ? `<div class="kanban-card__move"><button type="button" class="kanban-drag-handle" data-drag-id="${escapeHtml(order.id)}" aria-label="Arrastar pedido de ${escapeHtml(order.customer)}" aria-describedby="kanban-help" ${busy ? 'disabled' : ''}><span aria-hidden="true">⠿</span></button><label><span class="sr-only">Mover pedido de ${escapeHtml(order.customer)} para</span><select data-move-id="${escapeHtml(order.id)}" ${busy ? 'disabled' : ''}><option value="">${busy ? 'Movendo…' : 'Mover para…'}</option>${destinations.map(stage => `<option value="${stage.key}">${stage.title}</option>`).join('')}</select></label></div>` : ''}</article>`;
   };
-  const columns = [
-    { key: 'new', title: 'Novos', note: 'Aguardando conferência', states: ['received'] },
-    { key: 'checked', title: 'Conferidos', note: 'Em preparação', states: ['confirmed', 'packing', 'ready'] },
-    { key: 'done', title: 'Entregues', note: 'Finalizados', states: ['delivered'] },
-  ];
+  const columns = stages;
   list.innerHTML = `<div class="kanban" aria-label="Pedidos por etapa">${columns.map(column => {
-    const columnOrders = filtered.filter(order => column.states.includes(orderStatus(order)));
-    return `<section class="kanban-column kanban-column--${column.key}" aria-labelledby="kanban-${column.key}"><header><div><h3 id="kanban-${column.key}">${column.title}</h3><p>${column.note}</p></div><strong aria-label="${columnOrders.length} pedidos">${columnOrders.length}</strong></header><div class="kanban-column__cards">${columnOrders.length ? columnOrders.map(card).join('') : `<p class="kanban-empty">${displayOrders.length ? 'Nenhum pedido nesta etapa.' : column.key === 'new' ? 'Os novos pedidos aparecerão aqui.' : 'Nada por aqui ainda.'}</p>`}</div></section>`;
+    const columnOrders = filtered.filter(order => column.key === orderStatus(order));
+    return `<section class="kanban-column kanban-column--${column.key}" data-drop-status="${column.key}" aria-labelledby="kanban-${column.key}"><header><div><h3 id="kanban-${column.key}">${column.title}</h3><p>${column.note}</p></div><strong aria-label="${columnOrders.length} pedidos">${columnOrders.length}</strong></header><div class="kanban-column__cards">${columnOrders.length ? columnOrders.map(card).join('') : `<p class="kanban-empty">${displayOrders.length ? 'Nenhum pedido nesta etapa.' : column.key === 'received' ? 'Os novos pedidos aparecerão aqui.' : 'Nada por aqui ainda.'}</p>`}</div></section>`;
   }).join('')}</div>${displayOrders.length ? '' : '<div class="operation-first-order"><p>O dia ainda está em branco.</p><button class="button button--primary" type="button" data-action="new">+ Lançar primeiro pedido</button></div>'}`;
 
   if (detailDrawer.open) {
@@ -258,6 +290,155 @@ function openOrderDetail(order) {
   if (!detailDrawer.open) detailDrawer.showModal();
 }
 
+async function moveOrder(id, target) {
+  const order = orders.find(item => item.id === id);
+  if (!order || movingOrders.has(id)) return;
+  const master = !live || live.role === 'master';
+  if (!statusPath(orderStatus(order), target, master).length) {
+    kanbanFeedback.textContent = 'Esta mudança não está disponível. Pedidos entregues ficam finalizados; somente Master pode voltar etapas.';
+    return;
+  }
+  movingOrders.add(id);
+  kanbanFeedback.textContent = `Movendo pedido de ${order.customer}…`;
+  render();
+  try {
+    if (live) {
+      await progressOrder(order, target, {
+        master, setStatus: (current, state) => live.setStatus(current, state),
+        getOrder: id => live.orders.find(item => item.id === id),
+      });
+      orders = readOrders();
+    } else {
+      const previous = orders;
+      orders = orders.map(item => item.id === id ? { ...item, status: target, checked: target !== 'received' } : item);
+      if (!saveOrders()) { orders = previous; throw new Error('Não foi possível salvar a movimentação neste navegador.'); }
+    }
+    kanbanFeedback.textContent = `Pedido de ${order.customer} movido para ${statusLabels[target]}.`;
+  } catch (cause) {
+    if (live) {
+      try { await live.load(true); } catch { /* Preserve the last confirmed state. */ }
+      orders = readOrders();
+    }
+    kanbanFeedback.textContent = `A movimentação não foi concluída: ${cause.message} Confira a etapa exibida no card.`;
+  } finally {
+    movingOrders.delete(id);
+    render();
+  }
+}
+
+function clearDrag() {
+  draggedId = null;
+  list.querySelector('.kanban')?.classList.remove('is-drag-active');
+  list.querySelectorAll('.is-dragging,.is-drop-target,.is-drop-allowed').forEach(element => {
+    element.classList.remove('is-dragging', 'is-drop-target', 'is-drop-allowed');
+  });
+}
+
+function beginDrag(id) {
+  const order = orders.find(item => item.id === id);
+  if (!order || movingOrders.has(id)) return false;
+  draggedId = id;
+  list.querySelector('.kanban')?.classList.add('is-drag-active');
+  list.querySelectorAll('[data-drop-status]').forEach(column => {
+    column.classList.toggle('is-drop-allowed', statusPath(orderStatus(order), column.dataset.dropStatus, !live || live.role === 'master').length > 0);
+  });
+  list.querySelectorAll('[data-card-id]').forEach(card => card.classList.toggle('is-dragging', card.dataset.cardId === id));
+  return true;
+}
+
+function dragTarget(element) {
+  const column = element?.closest('[data-drop-status]');
+  list.querySelectorAll('.is-drop-target').forEach(current => current.classList.remove('is-drop-target'));
+  if (!column?.classList.contains('is-drop-allowed')) return null;
+  column.classList.add('is-drop-target');
+  return column.dataset.dropStatus;
+}
+
+list.addEventListener('dragstart', event => {
+  const card = event.target.closest('.order-card[draggable="true"]');
+  if (!card || !beginDrag(card.dataset.id)) { event.preventDefault(); return; }
+  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('text/plain', card.dataset.id);
+});
+list.addEventListener('dragover', event => {
+  if (!draggedId) return;
+  const target = dragTarget(event.target);
+  if (target) { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; }
+});
+list.addEventListener('dragleave', event => {
+  if (!list.contains(event.relatedTarget)) list.querySelectorAll('.is-drop-target').forEach(column => column.classList.remove('is-drop-target'));
+});
+list.addEventListener('drop', event => {
+  if (!draggedId) return;
+  event.preventDefault();
+  const target = dragTarget(event.target);
+  const id = draggedId;
+  const matches = event.dataTransfer.getData('text/plain') === id;
+  clearDrag();
+  suppressClickUntil = Date.now() + 350;
+  if (matches && target) moveOrder(id, target);
+});
+list.addEventListener('dragend', () => { clearDrag(); suppressClickUntil = Date.now() + 350; });
+list.addEventListener('change', event => {
+  const select = event.target.closest('[data-move-id]');
+  if (select?.value) moveOrder(select.dataset.moveId, select.value);
+});
+
+// A dedicated handle lets touch users drag without blocking normal page scrolling.
+list.addEventListener('pointerdown', event => {
+  const handle = event.target.closest('[data-drag-id]');
+  if (!handle || handle.disabled || event.button !== 0) return;
+  const id = handle.dataset.dragId;
+  const pointerId = event.pointerId;
+  const startX = event.clientX, startY = event.clientY;
+  let x = startX, y = startY, ghost = null, frame = null, active = false;
+  handle.setPointerCapture(pointerId);
+  const tick = () => {
+    const board = list.querySelector('.kanban');
+    if (board) {
+      const bounds = board.getBoundingClientRect();
+      if (x < bounds.left + 48) board.scrollLeft -= 12;
+      if (x > bounds.right - 48) board.scrollLeft += 12;
+    }
+    if (y < 70) window.scrollBy(0, -12);
+    if (y > innerHeight - 70) window.scrollBy(0, 12);
+    dragTarget(document.elementFromPoint(x, y));
+    frame = requestAnimationFrame(tick);
+  };
+  const move = current => {
+    if (current.pointerId !== pointerId) return;
+    x = current.clientX; y = current.clientY;
+    if (!active && Math.hypot(x - startX, y - startY) > 8) {
+      if (!beginDrag(id)) return;
+      active = true;
+      ghost = handle.closest('.kanban-card').cloneNode(true);
+      ghost.className = 'kanban-drag-ghost';
+      ghost.setAttribute('aria-hidden', 'true');
+      ghost.inert = true;
+      document.body.append(ghost);
+      frame = requestAnimationFrame(tick);
+    }
+    if (ghost) ghost.style.transform = `translate(${x + 12}px,${y + 12}px)`;
+  };
+  const finish = current => {
+    if (current.pointerId !== pointerId) return;
+    const target = active && current.type === 'pointerup' ? dragTarget(document.elementFromPoint(x, y)) : null;
+    handle.removeEventListener('pointermove', move);
+    handle.removeEventListener('pointerup', finish);
+    handle.removeEventListener('pointercancel', finish);
+    handle.removeEventListener('lostpointercapture', finish);
+    cancelAnimationFrame(frame);
+    ghost?.remove();
+    clearDrag();
+    if (active) suppressClickUntil = Date.now() + 350;
+    if (target) moveOrder(id, target);
+  };
+  handle.addEventListener('pointermove', move);
+  handle.addEventListener('pointerup', finish);
+  handle.addEventListener('pointercancel', finish);
+  handle.addEventListener('lostpointercapture', finish);
+});
+
 async function openHistory(order) {
   if (!live || !historyDialog) return;
   try {
@@ -277,6 +458,7 @@ async function handleOrderAction(button) {
   if (button.dataset.action === 'new') { openForm(); return; }
   const order = orders.find(item => item.id === button.dataset.id);
   if (!order) return;
+  if (movingOrders.has(order.id)) return;
   if (button.dataset.action === 'open') { openOrderDetail(order); return; }
   if (button.dataset.action === 'history') { await openHistory(order); return; }
   if (button.dataset.action === 'edit') { detailDrawer.close(); openForm(order); return; }
@@ -290,6 +472,7 @@ async function handleOrderAction(button) {
   const previous = orders;
   const state = button.dataset.action === 'delete' ? 'cancelled' : button.dataset.action === 'back' ? previousStatus[orderStatus(order)] : nextStatus[orderStatus(order)];
   if (!state || ['cancelled', 'delivered'].includes(orderStatus(order))) return;
+  if (button.dataset.action !== 'delete') { await moveOrder(order.id, state); return; }
   if (live) {
     try { await live.setStatus(order, state); orders = readOrders(); render(); }
     catch (cause) { alert(`O pedido não foi alterado: ${cause.message}`); }
@@ -331,15 +514,51 @@ form.elements.fee.addEventListener('input', updateFormTotal);
 dateInput.addEventListener('change', render);
 searchInput.addEventListener('input', render);
 supplierCopy.addEventListener('click', async () => {
-  const products = window.TrameliOrderMath.summarizeProducts(orders, dateInput.value);
-  if (!products.length) return;
-  const content = `Produtos para ${dateInput.value}\n${products.map(item => `${item.grams ? `${item.grams} g` : `${item.quantity}×`} ${item.name}`).join('\n')}`;
+  const groups = checklistGroups();
+  if (!groups.length) return;
+  const content = supplierText(groups, dateInput.value);
   try {
     await navigator.clipboard.writeText(content);
     supplierFeedback.textContent = 'Lista copiada. Confira as quantidades antes de enviar.';
   } catch {
     supplierFeedback.textContent = 'Não foi possível copiar automaticamente neste navegador.';
   }
+});
+supplierList.addEventListener('change', event => {
+  const input = event.target.closest('input[type="checkbox"]');
+  if (!input) return;
+  const orderId = input.dataset.supplierCheckOrder || input.dataset.id;
+  const order = orders.find(order => order.id === orderId);
+  if (!order) return;
+  const index = input.dataset.supplierCheckItem;
+  const indices = index === undefined ? order.items.map((_, index) => index) : [Number(index)];
+  for (const position of indices) {
+    const key = itemCheckKey(order, position);
+    if (input.checked) supplierChecks.add(key); else supplierChecks.delete(key);
+  }
+  try {
+    const currentKeys = new Set(orders.flatMap(order => order.items.map((_, index) => itemCheckKey(order, index))));
+    supplierChecks = new Set([...supplierChecks].filter(key => currentKeys.has(key)));
+    localStorage.setItem(checklistKey, JSON.stringify([...supplierChecks]));
+    supplierFeedback.textContent = 'Conferência salva neste navegador. Marcar itens não altera a etapa do pedido.';
+  } catch { supplierFeedback.textContent = 'A conferência está marcada, mas este navegador não conseguiu salvá-la. Baixe o PDF antes de sair.'; }
+  renderSupplierList();
+  [...supplierList.querySelectorAll('input')].find(current => index === undefined
+    ? current.dataset.supplierCheckOrder === orderId
+    : current.dataset.id === orderId && current.dataset.supplierCheckItem === index)?.focus({ preventScroll: true });
+});
+supplierPdf?.addEventListener('click', async () => {
+  if (supplierPdf.dataset.busy) return;
+  const groups = checklistGroups();
+  if (!groups.length) return;
+  const exportDate = dateInput.value;
+  supplierPdf.dataset.busy = 'true'; supplierPdf.disabled = true;
+  supplierFeedback.textContent = 'Gerando PDF…';
+  try {
+    await downloadSupplierPdf(groups, exportDate, live?.settings?.business_name || window.TrameliSettings?.businessName || 'Trameli');
+    supplierFeedback.textContent = 'PDF baixado com a lista completa e os pedidos por cliente, sem valores. As marcações no PDF são independentes do site.';
+  } catch (error) { supplierFeedback.textContent = `Não foi possível gerar o PDF: ${error.message}`; }
+  finally { delete supplierPdf.dataset.busy; renderSupplierList(); }
 });
 
 form.addEventListener('submit', async event => {
@@ -390,6 +609,7 @@ form.addEventListener('submit', async event => {
 });
 
 list.addEventListener('click', event => {
+  if (Date.now() < suppressClickUntil) { event.preventDefault(); return; }
   const button = event.target.closest('button[data-action]');
   if (!button) return;
   handleOrderAction(button);
@@ -420,6 +640,9 @@ render();
 window.addEventListener('trameli:orders-changed', () => { orders = readOrders(); render(); });
 window.addEventListener('storage', event => {
   if (event.key === storageKey) { orders = readOrders(); render(); }
+  if (event.key === checklistKey) {
+    try { const saved = JSON.parse(event.newValue || '[]'); supplierChecks = new Set(Array.isArray(saved) ? saved : []); renderSupplierList(); } catch { /* Ignore invalid storage. */ }
+  }
 });
 function openNewOrder(prefill = {}) {
   location.hash = '#operacao';
