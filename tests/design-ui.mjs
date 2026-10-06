@@ -44,6 +44,8 @@ try {
     if (issues.length) identityIssues.push({context,issues});
   };
   const waitFor = async selector => {
+    await pause(40);
+    for (let attempt = 0; attempt < 60 && !(await evaluate('!document.querySelector(".route-transition") || document.querySelector(".route-transition").hidden')); attempt++) await pause(50);
     for (let attempt = 0; attempt < 50 && !(await evaluate(`!!document.querySelector(${JSON.stringify(selector)})`)); attempt++) await pause(100);
     assert(await evaluate(`!!document.querySelector(${JSON.stringify(selector)})`), `Tela não renderizou ${selector}.`);
   };

@@ -1,0 +1,12 @@
+.route-transition {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  pointer-events: none;
+  overflow: hidden;
+}
+.route-transition[hidden] { display: none !important; }
+.route-transition svg { display: block; width: 100%; height: 100%; }
+.route-transition__front { fill: var(--color-primary); }
+@media print { .route-transition { display: none !important; } }
+@media (prefers-reduced-motion: reduce) { .route-transition { display: none !important; } }

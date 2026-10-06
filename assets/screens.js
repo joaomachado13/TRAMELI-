@@ -441,14 +441,15 @@ function animateRouteIn(route) {
 function showRoute(force = false) {
   const requested = decodeURIComponent(location.hash.slice(1)) || 'operacao';
   const route = live && !live.operator ? 'loja' : routes.has(requested) ? requested : 'operacao';
-  if (route === activeRoute && !force) { setMenu(false); return; }
+  if (route === activeRoute && !force) { ++routeRevision; motion.cancelTransition(); setMenu(false); return; }
   const revision = ++routeRevision;
   const previous = activeRoute;
   const finish = () => { if (revision !== routeRevision) return; renderRoute(route, force && previous === route); if (previous !== null && !force && route !== 'loja') animateRouteIn(route); else motion.refresh(); };
   if (previous !== null && previous !== 'loja' && route !== 'loja' && !force && !motionDisabled()) {
     const outgoing = previous === 'inicio' ? homeView : previous === 'operacao' ? operationView : screenView;
-    motion.leave(outgoing, finish);
-  } else finish();
+    const style = ({ inicio: 'curve', operacao: 'swipe', pedidos: 'swipe', clientes: 'swipe', produtos: 'diagonal', agenda: 'wave', financeiro: 'curve', relatorios: 'diagonal', configuracoes: 'wave', pendencias: 'curve' })[route] || 'curve';
+    motion.leave(outgoing, finish, { style });
+  } else { motion.cancelTransition(); finish(); }
 }
 
 function setReportPeriod() {

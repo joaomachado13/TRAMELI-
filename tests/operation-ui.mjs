@@ -46,6 +46,11 @@ try {
     return result.result.value;
   };
   const assert = (condition, message) => { if (!condition) throw new Error(message); };
+  const waitTransition = async () => {
+    await pause(40);
+    for (let i = 0; i < 60 && !(await evaluate('!document.querySelector(".route-transition") || document.querySelector(".route-transition").hidden')); i++) await pause(50);
+    assert(await evaluate('!document.querySelector(".route-transition") || document.querySelector(".route-transition").hidden'), 'Transição não terminou.');
+  };
 
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
   for (let attempt = 0; attempt < 60 && !(await evaluate('!!window.TrameliMenu && !!window.TrameliOperation')); attempt++) await pause(100);
@@ -58,6 +63,7 @@ try {
   await evaluate('document.querySelector(".menu-overlay").click()');
   assert(await evaluate('document.querySelector("#total-orders").textContent === "0"'), 'O dia não começou vazio.');
   await evaluate('location.hash = "#produtos"');
+  await waitTransition();
   for (let attempt = 0; attempt < 40 && !(await evaluate('!!document.querySelector("[data-catalog-action=new]")')); attempt++) await pause(100);
   assert(await evaluate('!!document.querySelector("[data-catalog-action=new]")'), 'Catálogo não ficou disponível após abrir Produtos.');
   const initialProductCount = await evaluate('document.querySelectorAll(".catalog-card").length');
@@ -69,13 +75,13 @@ try {
   const catalogImage = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
   await writeFile(catalogShot, Buffer.from(catalogImage.data, 'base64'));
   await evaluate('location.hash = "#clientes"');
-  await pause(350);
+  await waitTransition();
   await evaluate('document.querySelector("[data-client-action=new]").click()');
   assert(await evaluate('document.querySelector("#client-form").closest("dialog").open'), 'Cadastro de cliente não abriu.');
   await evaluate(`(() => { const f = document.querySelector('#client-form'); f.elements.name.value='Cliente Teste'; f.elements.address.value='Bloco A, ap. 10'; f.requestSubmit(); })()`);
   assert(await evaluate('document.querySelector(".client-row").textContent.includes("Cliente Teste")'), 'Cliente não apareceu no cadastro.');
   await evaluate('location.hash = "#operacao"');
-  await pause(350);
+  await waitTransition();
   await evaluate('document.querySelector("#new-order").click()');
   assert(await evaluate('document.querySelector("#operation-dialog").open'), 'Formulário não abriu.');
   assert(await evaluate('!!document.querySelector("#catalog-products option[value=Pão]")'), 'Produto não ficou disponível no pedido.');
@@ -118,8 +124,9 @@ try {
   assert(Boolean(downloaded), 'Botão de PDF não gerou o download no navegador.');
   const downloadedPdf = await PDFDocument.load(downloaded);
   assert(downloadedPdf.getForm().getFields().length === 3 && downloadedPdf.getForm().getFields().every(field => field.isChecked()), 'Download não preservou o consolidado, as caixas ou marcações da conferência.');
-  await evaluate('document.querySelector(".order-card").scrollIntoView({block:"center",inline:"center"}); document.querySelector("#orders-list .kanban").scrollLeft = 0');
-  await pause(100);
+  await evaluate('window.TrameliMotion.scrollTo(".order-card", false, 180); document.querySelector("#orders-list .kanban").scrollLeft = 0');
+  // Aguarda a suavização terminar antes de medir coordenadas para o arraste real.
+  await pause(750);
   const drag = await evaluate(`(() => { const a=document.querySelector('.order-card').getBoundingClientRect(), b=document.querySelector('[data-drop-status="packing"]').getBoundingClientRect(); return {x:a.x+a.width/2,y:a.y+30,tx:b.x+b.width/2,ty:b.y+90}; })()`);
   await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: drag.x, y: drag.y });
   await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: drag.x, y: drag.y, button: 'left', clickCount: 1 });

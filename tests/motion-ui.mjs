@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { browserPath, headlessFlags } from './browser-path.mjs';
@@ -45,19 +45,61 @@ try {
     if (result.exceptionDetails) throw new Error(JSON.stringify(result.exceptionDetails));
     return result.result.value;
   };
+  const waitTransition = async () => {
+    await pause(40);
+    for (let i = 0; i < 60 && !(await evaluate('!document.querySelector(".route-transition") || document.querySelector(".route-transition").hidden')); i++) await pause(50);
+    assert.ok(await evaluate('!document.querySelector(".route-transition") || document.querySelector(".route-transition").hidden'), 'Transition did not finish');
+  };
   await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
   await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
   for (let i = 0; i < 60 && !(await evaluate('!!window.TrameliMotion && !!document.querySelector("#delivery-date").value')); i++) await pause(100);
+  for (let i = 0; i < 60 && !(await evaluate('window.TrameliMotion.active()')); i++) await pause(100);
   assert.equal(await evaluate('matchMedia("(prefers-reduced-motion: reduce)").matches'), false);
-  assert.equal(await evaluate('window.TrameliMotion.active()'), false, 'Native scroll should not use a transformed smoother');
-  assert.notEqual(await evaluate('getComputedStyle(document.querySelector("#smooth-wrapper")).position'), 'fixed');
-  await evaluate('window.scrollTo(0,600)');
-  await pause(100);
-  assert.equal(await evaluate('getComputedStyle(document.querySelector("#smooth-content")).transform'), 'none');
+  assert.equal(await evaluate('window.TrameliMotion.active()'), true, 'Desktop smoothing did not start');
+  assert.equal(await evaluate('getComputedStyle(document.querySelector("#smooth-wrapper")).position'), 'fixed');
+  await pause(700);
+  await send('Input.dispatchMouseEvent', { type:'mouseWheel', x:900, y:700, deltaX:0, deltaY:600 });
+  await pause(120);
+  const midScroll = await evaluate('({native:scrollY,visual:window.TrameliMotion.scrollTop()})');
+  assert.ok(midScroll.visual > 0 && midScroll.visual < midScroll.native - 1, `Scroll did not interpolate between positions: ${JSON.stringify(midScroll)}`);
+  await pause(650);
+  assert.ok(await evaluate('Math.abs(window.TrameliMotion.scrollTop() - scrollY) < 2'), 'Scroll did not settle');
+  assert.ok(await evaluate('document.querySelector(".nav2").getBoundingClientRect().bottom < 0'), 'Header remained fixed during scrolling');
+  assert.equal(await evaluate('getComputedStyle(document.querySelector(".nav2")).position'), 'relative');
+  assert.equal(await evaluate('document.querySelectorAll(".pin-spacer").length'), 0, 'Header kept a pin spacer');
+  await evaluate('document.querySelector("#new-order").click()');
+  await pause(150);
+  const modalPosition = await evaluate('scrollY');
+  await send('Input.dispatchMouseEvent', { type:'mouseWheel', x:20, y:800, deltaX:0, deltaY:300 });
+  await pause(120);
+  assert.equal(await evaluate('scrollY'), modalPosition, 'Background scrolled behind a modal');
+  await evaluate('document.querySelector("#close-dialog").click()');
 
   await send('Emulation.setDeviceMetricsOverride', { width: 1366, height: 900, deviceScaleFactor: 1, mobile: false });
+  await mkdir(new URL('../assets/crops/', import.meta.url), { recursive: true });
+  for (const [route, style] of [['inicio','curve'],['clientes','swipe'],['relatorios','diagonal'],['agenda','wave']]) {
+    await evaluate(`location.hash='#${route}'`);
+    await pause(160);
+    assert.equal(await evaluate('document.querySelector(".route-transition").hidden'), false, 'Swipe did not appear');
+    assert.equal(await evaluate('document.querySelector(".route-transition").dataset.style'), style);
+    const firstShape = await evaluate('document.querySelector(".route-transition__front").getAttribute("d")');
+    await pause(100);
+    assert.notEqual(await evaluate('document.querySelector(".route-transition__front").getAttribute("d")'), firstShape, 'MorphSVG did not animate the path');
+    const image = await send('Page.captureScreenshot', {format:'png',captureBeyondViewport:false});
+    await writeFile(new URL(`../assets/crops/transition-${style}.png`, import.meta.url), Buffer.from(image.data,'base64'));
+    await waitTransition();
+    assert.equal(await evaluate('document.querySelector(".route-transition").hidden'), true, 'Swipe remained over the content');
+  }
+  await evaluate('location.hash="#clientes"'); await pause(50);
+  await evaluate('location.hash="#produtos"'); await pause(30);
+  await evaluate('location.hash="#agenda"'); await waitTransition();
+  assert.equal(await evaluate('document.querySelector("#screen-view h1").textContent'), 'Agenda', 'Rapid navigation rendered an older route');
+  assert.equal(await evaluate('document.querySelector(".route-transition").hidden'), true, 'Rapid navigation left a swipe visible');
+  await evaluate('location.hash="#clientes"'); await pause(40);
+  await evaluate('location.hash="#agenda"'); await waitTransition();
+  assert.equal(await evaluate('document.querySelector("#screen-view h1").textContent'), 'Agenda', 'Returning to the current route did not cancel navigation');
   await evaluate('location.hash="#inicio"');
-  await pause(250);
+  await waitTransition();
   assert.equal(await evaluate('document.querySelector("#home-view").hidden'), false);
   assert.equal(await evaluate('getComputedStyle(document.querySelector("#home-view")).transform'), 'none');
   assert.ok(await evaluate('document.querySelector(".orders-panel").getBoundingClientRect().width >= 650'), 'Orders panel is too narrow for its table');
@@ -65,7 +107,7 @@ try {
   assert.ok(await evaluate(`(() => { const cell = document.querySelector('#home-recent-orders td:nth-child(2)'); const range = document.createRange(); range.selectNodeContents(cell); return [...range.getClientRects()].every(rect => rect.right <= cell.getBoundingClientRect().right + 1); })()`), 'Customer name overlaps the delivery column');
 
   await evaluate('location.hash="#financeiro"');
-  await pause(300);
+  await waitTransition();
   assert.equal(await evaluate('document.querySelectorAll("[data-finance-days]").length'), 3);
   await evaluate(`document.querySelector('[data-finance-days="7"]').click()`);
   assert.equal(await evaluate('(Date.parse(document.querySelector("#finance-to").value)-Date.parse(document.querySelector("#finance-from").value))/86400000'), 6);
@@ -89,15 +131,22 @@ try {
   assert.equal(await evaluate('document.querySelector("#portal-checkout-form [name=customer]").value'), 'Nome em andamento');
 
   await evaluate('location.hash="#configuracoes"');
-  await pause(400);
+  await waitTransition();
   await evaluate('document.querySelector(".motion-toggle").click()');
   assert.equal(await evaluate('document.body.classList.contains("motion-off")'), true, 'Reduced motion was not enabled');
+  assert.equal(await evaluate('window.TrameliMotion.active()'), false, 'Reduced motion did not stop smoothing');
+  await evaluate('location.hash="#clientes"'); await pause(60);
+  assert.ok(await evaluate('!!document.querySelector(".record-list--clients")'), 'Reduced motion delayed navigation');
+  assert.equal(await evaluate('document.querySelector(".route-transition").hidden'), true, 'Reduced motion retained a swipe');
+  await evaluate('location.hash="#configuracoes"'); await pause(80);
   await evaluate('document.querySelector(".motion-toggle").click()');
   assert.equal(await evaluate('document.body.classList.contains("motion-off")'), false, 'Motion did not resume');
+  assert.equal(await evaluate('window.TrameliMotion.active()'), true, 'Smoothing did not resume');
   await evaluate('window.dispatchEvent(new Event("beforeprint"))');
   assert.equal(await evaluate('window.TrameliMotion.active()'), false, 'Print should retain native scroll');
   await evaluate('window.dispatchEvent(new Event("afterprint"))');
-  assert.equal(await evaluate('window.TrameliMotion.active()'), false, 'Print restored a transformed smoother');
+  await pause(150);
+  assert.equal(await evaluate('window.TrameliMotion.active()'), true, 'Smoothing did not resume after printing');
 
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
   await pause(400);
@@ -112,7 +161,7 @@ try {
   assert.equal(await evaluate('getComputedStyle(document.querySelector(".nav")).touchAction'), 'pan-y', 'Menu should only pan vertically on touch');
   await evaluate('document.querySelector(".menu-overlay").click()');
   assert.equal(await evaluate('document.body.classList.contains("menu-open")'), false, 'Portal menu did not close');
-  console.log('Rolagem, transições, períodos financeiros, portal, redução de movimento e mobile: OK');
+  console.log('ScrollSmoother, cabeçalho no fluxo da página, MorphSVG suave, modais, impressão, redução de movimento e toque nativo: OK');
 } finally {
   socket?.close();
   browser.kill();

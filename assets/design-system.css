@@ -102,8 +102,7 @@ summary {
 }
 
 .nav2 {
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 18;
   min-height: 72px;
   margin: 0 -40px;
