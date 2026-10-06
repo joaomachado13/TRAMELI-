@@ -30,8 +30,8 @@ const changed = { ...first, items: [{ ...first.items[0], quantity: 6 }, first.it
 assert(!supplierGroups([changed], date, checks)[0].orders[0].checked, 'Mudanças nos itens devem invalidar a conferência anterior.');
 assert.equal(itemCheckKey(first, 0), itemCheckKey({ ...first, items: first.items.map(item => ({ ...item, priceCents: 999 })) }, 0));
 
-const regular = await readFile(new URL('../assets/dm-sans-400.ttf', import.meta.url));
-const bold = await readFile(new URL('../assets/dm-sans-600.ttf', import.meta.url));
+const regular = await readFile(new URL('../assets/manrope-400.ttf', import.meta.url));
+const bold = await readFile(new URL('../assets/manrope-600.ttf', import.meta.url));
 const bytes = await createSupplierPdf(groups, date, { regular, bold, businessName: 'Trameli' });
 const loaded = await PDFDocument.load(bytes);
 const fields = loaded.getForm().getFields();

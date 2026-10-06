@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { auditIdentity } from './identity-audit.mjs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { browserPath, headlessFlags } from './browser-path.mjs';
@@ -47,6 +48,7 @@ try {
   await evaluate(`const select=document.querySelector('[data-payment-group]');select.value=paymentFixture.account;select.dispatchEvent(new Event('change',{bubbles:true}));document.querySelector('[data-pay-account]').click()`);
   for(let i=0;i<40&&!await evaluate('document.querySelector(".payment-dialog").open');i++)await pause(100);
   assert.match(await evaluate('document.querySelector(".payment-dialog").textContent'),/Em aberto/);
+  assert.deepEqual(await evaluate(`(${auditIdentity.toString()})()`), [], 'Modal pagamento: fonte e contraste');
   await evaluate(`const f=document.querySelector('[data-payment-form]');f.querySelector('[data-allocation]').checked=true;f.querySelector('input[type=checkbox][required]').checked=true;f.requestSubmit();f.requestSubmit();`);
   for(let i=0;i<40&&await evaluate('document.querySelector(".payment-dialog").open');i++)await pause(100);
   assert.equal(await evaluate('paymentFixture.state.calls.filter(c=>c.name==="trameli_record_payment").length'),1);
@@ -82,6 +84,7 @@ try {
   assert.match(await evaluate('document.querySelector(".pix-dialog").textContent'),/não pague de novo/);
   assert.ok(await evaluate('document.querySelector(".pix-dialog").scrollWidth<=document.querySelector(".pix-dialog").clientWidth'),'QR dialog fits mobile');
   const pixShot=await send('Page.captureScreenshot',{format:'png'});
+  assert.deepEqual(await evaluate(`(${auditIdentity.toString()})()`), [], 'Modal Pix: fonte e contraste');
   await writeFile(new URL('../assets/crops/pix-390.png',import.meta.url),Buffer.from(pixShot.data,'base64'));
   await evaluate('document.querySelector("[data-pix-close]").click();paymentFixture.state.balances[0].due_cents=0;document.querySelector(`[data-pix-order="${paymentFixture.order}"]`).click()');
   await pause(150);

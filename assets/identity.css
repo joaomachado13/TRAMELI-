@@ -1,0 +1,175 @@
+@import "./identity-tokens.css";
+
+/* Apenas apresentação: nenhuma regra de grade, posição, dimensão ou responsividade. */
+html, body, body.portal-mode, .app-shell, .portal, body .live-gate {
+  color: var(--color-text-primary);
+  background: var(--color-background);
+  font-family: var(--font-interface);
+}
+body :is(button, input, textarea, select, option), body :is(h1, h2, h3, h4) { font-family: var(--font-interface); }
+body :is(h1, h2, h3, h4) { font-weight: 700 !important; }
+body :is(h1, h2, h3, h4, .h1, .h2, .h3) { color: var(--color-text-primary) !important; }
+body :is(p, small, time) { color: var(--color-text-secondary) !important; }
+body :is(#home-view, #screen-view) :is(.t1, .t2) { color: var(--color-text-secondary); }
+body :is(button, .screen-primary, .portal-primary, .button) { font-weight: 600; }
+body :is(.brand__name, .portal-brand, .wordmark, .auth-brand, .live-gate__brand) { color: var(--color-primary); font-family: var(--font-interface); font-weight: 700; }
+body :is(.brand__tagline, .portal-brand small) { color: var(--color-text-muted) !important; }
+body .portal-brand__dot { color: var(--color-primary); }
+
+body :is(.nav, .nav2, .portal-header) { color: var(--color-text-primary); background: var(--color-surface); border-color: var(--color-border); }
+body .brand__name { color: var(--color-primary) !important; }
+body :is(.nav__item, .nav__item--operation, .profile-button, .notification-button, .mobile-menu-button, .nav__close, .live-account, .live-logout) {
+  color: var(--color-text-primary); background: transparent; border-color: var(--color-border);
+}
+body :is(.nav__item, .profile-button, .notification-button, .mobile-menu-button, .nav__close, .live-account, .live-logout):hover {
+  color: var(--color-primary); background: var(--color-primary-subtle); border-color: var(--color-primary);
+}
+body :is(.nav__item.btn, .nav__item[aria-current="page"]) { color: var(--color-on-primary) !important; background: var(--color-primary) !important; }
+body :is(.nav__item.btn, .nav__item[aria-current="page"]) > :is(.nav__label, .ico) { color: var(--color-on-primary) !important; }
+body :is(.nav__item.btn, .nav__item[aria-current="page"]):hover { background: var(--color-primary-hover) !important; }
+body :is(.nav__item.btn, .nav__item[aria-current="page"]):active { background: var(--color-primary-active) !important; }
+body .nav__item.btn::before { background: var(--color-primary); }
+body .nav__footer .t2 { color: var(--color-text-muted); }
+body :is(.nav__count, #portal-cart-count, #portal-bottom-count) { color: var(--color-primary-active); background: var(--color-primary-subtle); }
+body .av { color: var(--color-primary-active); background: var(--color-primary-subtle); border-color: var(--color-border-secondary); }
+body .notification-dot { background: var(--color-warning-text); box-shadow: 0 0 0 2px var(--color-surface); }
+body :is(.mobile-menu-button, .nav__close) svg { stroke: currentColor; }
+body .portal-menu-button span { background: var(--color-primary); }
+
+/* Cabeçalho terracota: controles claros, com a busca em superfície creme. */
+body .nav2 { color: var(--color-on-primary); background: var(--color-primary); border-color: var(--color-primary); }
+body .nav2 :is(.profile-button, .notification-button, .mobile-menu-button, .live-account, .live-logout) {
+  color: var(--color-on-primary); background: transparent; border-color: var(--color-on-primary-tint-hover);
+}
+body .nav2 :is(.profile-button, .notification-button, .mobile-menu-button, .live-account, .live-logout):hover {
+  color: var(--color-on-primary); background: var(--color-primary-hover); border-color: var(--color-on-primary-tint-hover);
+}
+body .nav2 :is(.profile-button, .notification-button, .mobile-menu-button, .live-account, .live-logout):active { background: var(--color-primary-active); }
+body .nav2 :is(button, a):focus-visible { outline-color: var(--color-on-primary) !important; }
+body .nav2 .search { color: var(--color-text-primary); }
+body .nav2 .notification-dot { background: var(--color-on-primary); box-shadow: 0 0 0 2px var(--color-primary); }
+
+/* SVGs da interface herdam a cor do componente. */
+.ico--brand { --tm-icon-image: url("brand-mark.svg"); }
+.ico--home { --tm-icon-image: url("icon-home.svg"); }
+.ico--orders { --tm-icon-image: url("icon-orders.svg"); }
+.ico--users { --tm-icon-image: url("icon-users.svg"); }
+.ico--box { --tm-icon-image: url("icon-box.svg"); }
+.ico--calendar { --tm-icon-image: url("icon-calendar.svg"); }
+.ico--finance { --tm-icon-image: url("icon-finance.svg"); }
+.ico--report { --tm-icon-image: url("icon-report.svg"); }
+.ico--gear { --tm-icon-image: url("icon-gear.svg"); }
+.ico--search { --tm-icon-image: url("icon-search.svg"); }
+.ico--notification { --tm-icon-image: url("icon-bell.svg"); }
+.ico--chevron { --tm-icon-image: url("icon-chevron.svg"); }
+.ico--arrow { --tm-icon-image: url("icon-arrow.svg"); }
+.ico--cart { --tm-icon-image: url("icon-cart.svg"); }
+.ico--clock { --tm-icon-image: url("icon-clock.svg"); }
+.ico--truck { --tm-icon-image: url("icon-truck.svg"); }
+.ico--currency { --tm-icon-image: url("icon-currency.svg"); }
+body .ico { position: relative; background-image: none !important; color: inherit; }
+body .ico::before { content: ""; position: absolute; inset: 0; background: currentColor; mask: var(--tm-icon-image) center / contain no-repeat; }
+body .ico--brand { color: var(--color-primary); }
+body #home-view .ico--kpi { color: var(--color-primary); background-color: var(--color-primary-subtle); }
+body #home-view .ico--kpi::before { inset: 12px; }
+/* A dimensão existente em cada breakpoint continua definindo o ícone. */
+body #home-view .ico--kpi::before { mask-size: min(28px, 70%) min(28px, 70%); inset: 0; }
+body #home-view .card2 .ico--kpi { color: var(--color-warning-text); background: var(--color-warning-background); }
+
+body :is(.screen-eyebrow, .portal-eyebrow), body #operation-view .eyebrow { color: var(--color-primary) !important; }
+body :is(.panel__link, .portal-link, .portal-back, .text-button, .auth-text, .record-chevron, .catalog-toolbar__actions a) { color: var(--color-primary); }
+body :is(.panel__link, .portal-link, .portal-back, .text-button, .auth-text, .catalog-toolbar__actions a):hover { color: var(--color-primary-active); }
+body :is(.portal-link, .portal-back, .text-button, .auth-text):hover { background: var(--color-primary-subtle); }
+body :is(.panel__link, .portal-link, .portal-back, .catalog-toolbar__actions a):visited { color: var(--color-primary-hover); }
+body :is(.screen-description, .data-empty, .friendly-empty, .dialog-help, .auth-description, .auth-hint) { color: var(--color-text-secondary) !important; }
+body #operation-view .intro p:last-child { color: var(--color-text-secondary) !important; }
+
+/* Primeiro plano explícito para os controles primários, inclusive módulos tardios. */
+body :is(.screen-primary, .button--primary, .portal-primary, .auth-submit, .pix-copy-button, .pix-receipt-form > button, .account-panel button:not(.account-signout):not(.account-dialog__close), .catalog-toolbar [data-catalog-action="new"], .catalog-actions button:last-child, #portal-cart-link, .portal-header__actions button:last-child, .portal-stepper button, .portal-floating > button) {
+  color: var(--color-on-primary) !important; background: var(--color-primary) !important; border-color: var(--color-primary) !important;
+}
+body :is(.screen-primary, .button--primary, .portal-primary, .auth-submit, .pix-copy-button, .pix-receipt-form > button, .account-panel button:not(.account-signout):not(.account-dialog__close), .catalog-toolbar [data-catalog-action="new"], .catalog-actions button:last-child, #portal-cart-link, .portal-stepper button):hover {
+  color: var(--color-on-primary) !important; background: var(--color-primary-hover) !important; border-color: var(--color-primary-hover) !important;
+}
+body :is(.screen-primary, .button--primary, .portal-primary, .auth-submit, .pix-copy-button, .pix-receipt-form > button, .catalog-toolbar [data-catalog-action="new"], #portal-cart-link, .portal-stepper button):active {
+  color: var(--color-on-primary) !important; background: var(--color-primary-active) !important; border-color: var(--color-primary-active) !important;
+}
+body :is(.button--quiet, .entity-detail__actions button:not(.screen-primary), .report-actions > button:not(.screen-primary), .catalog-actions button:not(:last-child), .auth-google, .pix-afterpay__actions > button, .pix-whatsapp) {
+  color: var(--color-primary-hover); background: var(--color-surface); border-color: var(--color-border-secondary);
+}
+body :is(.button--quiet, .entity-detail__actions button:not(.screen-primary), .auth-google, .pix-afterpay__actions > button, .pix-whatsapp):hover {
+  color: var(--color-primary-active); background: var(--color-primary-subtle); border-color: var(--color-primary);
+}
+body .pix-whatsapp { color: var(--color-primary-hover) !important; }
+body :is(button, .button):disabled {
+  color: var(--color-on-disabled) !important; background: var(--color-disabled) !important; border-color: var(--color-disabled) !important; opacity: 1 !important;
+}
+/* Os seletores existentes da operação têm um ID; os estados usam a mesma precedência. */
+body #operation-view .button--primary:hover, body #screen-view .screen-primary:hover {
+  background: var(--color-primary-hover) !important; border-color: var(--color-primary-hover) !important; color: var(--color-on-primary) !important;
+}
+body #operation-view .button--primary:active, body #screen-view .screen-primary:active {
+  background: var(--color-primary-active) !important; border-color: var(--color-primary-active) !important; color: var(--color-on-primary) !important;
+}
+body #operation-view .button:disabled, body #screen-view button:disabled, body .live-gate button:disabled, body .portal button:disabled {
+  background: var(--color-disabled) !important; border-color: var(--color-disabled) !important; color: var(--color-on-disabled) !important;
+}
+body :is(.screen-primary, .portal-primary, .button--primary)::before { color: inherit; background: transparent; }
+
+body :is(.settings-tabs button, .auth-tabs button, .auth-methods button, .portal-categories button, .portal-personal-filters button, .portal-favorite, .portal-week__days button, .finance-presets button)[aria-pressed="true"],
+body .agenda-calendar button[aria-current="date"], body .motion-toggle[aria-pressed="true"] {
+  color: var(--color-primary) !important; background: var(--color-primary-subtle) !important; border-color: var(--color-primary) !important;
+}
+
+body :is(input:not([type="checkbox"]):not([type="radio"]):not([type="color"]), select, textarea), body .nav2 .search {
+  color: var(--color-text-primary); background: var(--color-surface); border-color: var(--color-border-control);
+}
+body .nav2 .search .in { color: var(--color-text-primary); }
+body :is(input, textarea)::placeholder, body .nav2 .search .in::placeholder { color: var(--color-text-muted); opacity: 1; }
+body label { color: var(--color-label); }
+body :is(input, select, textarea):focus, body .nav2 .search:focus-within { border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-focus-ring); }
+body :is(input[type="checkbox"], input[type="radio"]) { accent-color: var(--color-primary); }
+body :is(button, a, input, select, textarea, summary):focus-visible { outline-color: var(--color-primary) !important; }
+body option { color: var(--color-text-primary); background: var(--color-surface); }
+body option:checked { color: var(--color-on-primary); background: var(--color-primary); }
+
+body :is(.portal-welcome, .portal-hero, .auth-story) { background: var(--color-primary); color: var(--color-on-primary); }
+body .live-gate .auth-story { background: var(--color-primary); color: var(--color-on-primary); }
+body :is(.portal-welcome, .portal-hero, .auth-story) :is(h1, h2, p, em, .auth-brand, .auth-brand span, .auth-eyebrow) { color: var(--color-on-primary) !important; }
+body :is(.portal-welcome, .portal-hero, .auth-story) :is(h1, h2) { color: var(--color-on-primary) !important; }
+body :is(.portal-welcome, .portal-hero) .portal-eyebrow { color: var(--color-on-primary) !important; }
+body :is(.portal-welcome, .portal-hero) li { color: var(--color-on-primary); background: var(--color-on-primary-tint); border-color: var(--color-on-primary-tint-hover); }
+body :is(.portal-welcome, .portal-hero) li:hover { background: var(--color-on-primary-tint-hover); }
+body :is(.portal-welcome, .portal-hero) li strong { color: var(--color-primary-active); background: var(--color-primary-subtle); }
+body :is(.portal-welcome__action, .portal-hero a) { color: var(--color-primary-active); background: var(--color-on-primary); border-color: transparent; }
+body :is(.portal-welcome__action, .portal-hero a):hover { color: var(--color-primary-active); background: var(--color-primary-subtle); }
+body :is(.portal-welcome__action, .portal-hero a):active { background: var(--color-hero-button-active); }
+body :is(.portal-prototype, .pix-flow__receiver) { background: var(--color-surface-secondary); color: var(--color-text-secondary); }
+body .auth-story__line { border-color: var(--color-on-primary-tint-hover); }
+
+body :is(.orders-table, .report-table, .payment-table) th { color: var(--color-label) !important; background: var(--color-surface-secondary); border-color: var(--color-border) !important; }
+body :is(.orders-table, .report-table, .payment-table) td { color: var(--color-text-primary); background: var(--color-surface); border-color: var(--color-border) !important; }
+body :is(.orders-table, .report-table, .payment-table) tr:hover td { background: var(--color-table-hover); }
+body :is(.orders-browser__head, .payment-table__head) { color: var(--color-label); background: var(--color-surface-secondary); }
+body :is(.record-row, .orders-browser__row, .catalog-card, .portal-product, .order-card):hover { border-color: var(--color-border-secondary); background: var(--color-on-primary); }
+body :is(dialog, .entity-drawer, .order-drawer) { color: var(--color-text-primary); background: var(--color-surface); border-color: var(--color-border); }
+body dialog::backdrop { background: var(--color-overlay); }
+body :is(.entity-detail__header, .order-detail__header, .entity-detail__actions, .order-detail__actions) { background: var(--color-surface-alternate); border-color: var(--color-border); }
+
+/* Cores de estado são independentes da marca. */
+body :is(.status--green, .status--delivered, .status--checked, .screen-badge--green, .screen-badge--delivered, .screen-badge--paid, .portal-success__icon, .pix-receipt-success, .payment-status.is-done, .catalog-card__state:not(.catalog-card__state--off)) { color: var(--color-success-text) !important; background: var(--color-success-background) !important; }
+body :is(.status--received, .screen-badge--amber, .screen-badge--received, .screen-badge--pending, .payment-status.is-open, .attention-center, .prototype-note, .pix-confirm-note, .catalog-cost-state.is-missing) { color: var(--color-warning-text) !important; background: var(--color-warning-background) !important; }
+body .catalog-alert { color: var(--color-warning-text) !important; background: var(--color-warning-background) !important; }
+body .attention-center :is(.screen-eyebrow, .attention-strip__symbol, h2) { color: var(--color-warning-text) !important; }
+body :is(.status--cancelled, .screen-badge--cancelled, .payment-status.is-refund, .catalog-card__state--off, .live-gate__message.is-error) { color: var(--color-error-text) !important; background: var(--color-error-background) !important; }
+body :is(.form-error, .portal-error, .pix-dialog [role="alert"]) { color: var(--color-input-error) !important; }
+body :is(.status--confirmed, .status--packing, .status--ready, .screen-badge--confirmed, .screen-badge--packing, .screen-badge--ready, .payment-status.is-partial, .payment-notice) { color: var(--color-info-text) !important; background: var(--color-info-background) !important; }
+body #operation-view .kanban-column--done { background: var(--color-success-background); }
+body #operation-view .kanban-column--new { background: var(--color-warning-background); }
+body #operation-view .kanban-column { color: var(--color-text-primary); }
+body ::selection { color: var(--color-primary-active); background: var(--color-primary-subtle); }
+
+@media print {
+  html, body { color: var(--color-text-primary); background: var(--color-surface); }
+  body .print-label { font-family: var(--font-interface); }
+}

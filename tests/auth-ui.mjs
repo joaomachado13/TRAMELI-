@@ -5,6 +5,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { browserPath, headlessFlags } from './browser-path.mjs';
+import { auditIdentity } from './identity-audit.mjs';
 
 const url = process.env.TRAMELI_TEST_URL;
 if (!url?.startsWith('http://127.0.0.1:')) throw new Error('Provide a local Vite server in TRAMELI_TEST_URL.');
@@ -84,6 +85,7 @@ try {
   await evaluate('document.querySelector(".auth-google").click()');
   await until('authFixture.log.includes("google")');
   await evaluate('document.querySelector("[data-method=phone]").click(); document.querySelector("[data-mode=signup]").click()');
+  assert.deepEqual(await evaluate(`(${auditIdentity.toString()})()`), [], 'Cadastro: fonte e contraste');
   await submit({ identity: '(34) 99999-9999', name: 'Cliente Teste', phone: '(34) 99999-9999', address: 'Bloco A, ap. 10', password: 'correct-password', confirmation: 'correct-password' });
   await until('!!document.querySelector("[name=code]")');
   await submit({ code: '123456' });
@@ -101,6 +103,7 @@ try {
     await send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: width < 600 });
     await until(`innerWidth === ${width}`);
     assert.ok(await evaluate('document.documentElement.scrollWidth <= innerWidth'), 'Login must not overflow horizontally');
+    assert.deepEqual(await evaluate(`(${auditIdentity.toString()})()`), [], `Login ${width}: fonte e contraste`);
     const shot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
     await writeFile(new URL(`../assets/crops/login-${width}.png`, import.meta.url), Buffer.from(shot.data, 'base64'));
   }

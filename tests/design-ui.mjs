@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { browserPath, headlessFlags } from './browser-path.mjs';
+import { auditIdentity } from './identity-audit.mjs';
 
 const url = process.env.TRAMELI_TEST_URL;
 if (!url?.startsWith('http://127.0.0.1:')) throw new Error('Provide a local Vite server in TRAMELI_TEST_URL.');
@@ -37,6 +38,11 @@ try {
     return result.result.value;
   };
   const assert = (condition, message) => { if (!condition) throw new Error(message); };
+  const identityIssues = [];
+  const audit = async context => {
+    const issues = await evaluate(`(${auditIdentity.toString()})()`);
+    if (issues.length) identityIssues.push({context,issues});
+  };
   const waitFor = async selector => {
     for (let attempt = 0; attempt < 50 && !(await evaluate(`!!document.querySelector(${JSON.stringify(selector)})`)); attempt++) await pause(100);
     assert(await evaluate(`!!document.querySelector(${JSON.stringify(selector)})`), `Tela não renderizou ${selector}.`);
@@ -86,7 +92,7 @@ try {
     dispatchEvent(new Event('trameli:orders-changed'));
   })()`);
   await pause(180);
-  assert(await evaluate('getComputedStyle(document.body).backgroundColor === "rgb(244, 240, 231)"'), 'Canvas Master não usa o creme do design system.');
+  assert(await evaluate('getComputedStyle(document.body).backgroundColor === "rgb(247, 242, 234)"'), 'Canvas Master não usa o creme do design system.');
   assert(await evaluate('!document.querySelector("#main-navigation-panel").inert'), 'Sidebar desktop não está acessível.');
   assert(await evaluate('document.querySelector(".app-shell").getBoundingClientRect().left >= 250'), 'Conteúdo não respeita a sidebar desktop.');
   await evaluate('document.querySelector("#home-view").click()');
@@ -101,8 +107,11 @@ try {
   assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'), 'Visão Geral criou rolagem horizontal.');
   assert(await evaluate('getComputedStyle(document.querySelector(".attention-strip__heading h2")).color !== "rgb(238, 232, 215)"'), 'Aviso principal permaneceu com baixo contraste.');
   assert(!(await findLightOnLightText()).length, `início contém texto claro sobre fundo claro: ${JSON.stringify(await findLightOnLightText())}`);
+  await audit('início desktop');
 
   const routes = [
+    ['operacao', '.kanban'],
+    ['pendencias', '.screen-hero'],
     ['pedidos', '.orders-browser'],
     ['clientes', '.record-list--clients'],
     ['produtos', '.catalog-grid--compact'],
@@ -116,10 +125,11 @@ try {
   for (const [route, selector] of routes) {
     await evaluate(`location.hash=${JSON.stringify(`#${route}`)}`);
     await waitFor(selector);
-    await pause(80);
+    await pause(250);
     assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'), `${route} criou rolagem horizontal no desktop.`);
     const contrastProblems = await findLightOnLightText();
     assert(!contrastProblems.length, `${route} contém texto claro sobre fundo claro: ${JSON.stringify(contrastProblems)}`);
+    await audit(`${route} desktop`);
     if (route === 'produtos') {
       await evaluate('document.querySelector("[data-catalog-action=\\"view\\"]").click()');
       await waitFor('.product-drawer[open]');
@@ -129,6 +139,7 @@ try {
       await waitFor('.catalog-dialog[open]');
       const formProblems = await findLightOnLightText();
       assert(!formProblems.length, `edição do produto contém texto claro sobre fundo claro: ${JSON.stringify(formProblems)}`);
+      await audit('modal produto');
       await evaluate('document.querySelector(".catalog-dialog[open] .catalog-close").click()');
     }
     if (['produtos', 'financeiro', 'loja'].includes(route)) {
@@ -136,6 +147,25 @@ try {
       await writeFile(new URL(`../assets/crops/design-${route}-1440.png`, import.meta.url), Buffer.from(image.data, 'base64'));
     }
   }
+
+  await evaluate('location.hash="#operacao"');
+  await waitFor('#new-order');
+  await pause(250);
+  await send('DOM.enable'); await send('CSS.enable');
+  const documentNode = await send('DOM.getDocument');
+  const primaryNode = (await send('DOM.querySelector', {nodeId:documentNode.root.nodeId,selector:'#new-order'})).nodeId;
+  for (const [state, expected] of [['hover','rgb(135, 56, 35)'],['active','rgb(113, 48, 29)'],['focus-visible','rgb(158, 67, 44)']]) {
+    await send('CSS.forcePseudoState', {nodeId:primaryNode,forcedPseudoClasses:[state]});
+    await pause(180);
+    assert(await evaluate(`getComputedStyle(document.querySelector('#new-order')).${state==='focus-visible'?'outlineColor':'backgroundColor'} === '${expected}'`), `Estado ${state} não usa a paleta oficial.`);
+  }
+  await send('CSS.forcePseudoState', {nodeId:primaryNode,forcedPseudoClasses:[]});
+  await evaluate('document.querySelector("#new-order").disabled=true');
+  await pause(180);
+  assert(await evaluate('getComputedStyle(document.querySelector("#new-order")).backgroundColor === "rgb(216, 201, 193)"'), 'Estado disabled não usa a paleta oficial.');
+  await evaluate('document.querySelector("#new-order").disabled=false; document.querySelector("#new-order").click()');
+  await waitFor('#operation-dialog[open]'); await pause(250); await audit('formulário pedido');
+  await evaluate('document.querySelector("#close-dialog").click()');
 
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
   await evaluate('location.hash="#produtos"');
@@ -145,7 +175,17 @@ try {
   assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'), 'Produtos criou rolagem horizontal no celular.');
   const mobileContrastProblems = await findLightOnLightText();
   assert(!mobileContrastProblems.length, `produtos mobile contém texto claro sobre fundo claro: ${JSON.stringify(mobileContrastProblems)}`);
-  process.stdout.write('Design system: canvas, sidebar, contraste, oito rotas Master/Portal e responsividade 390/1440px OK.\n');
+  for (const [route, selector] of [['inicio','#home-view:not([hidden])'], ['operacao','#orders-list'], ['pendencias','.screen-hero'], ...routes]) {
+    await evaluate(`location.hash=${JSON.stringify(`#${route}`)}`);
+    await waitFor(selector);
+    await pause(250);
+    assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'), `${route} criou rolagem horizontal no celular.`);
+    await audit(`${route} mobile`);
+    const image = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+    await writeFile(new URL(`../assets/crops/identity-${route}-390.png`, import.meta.url), Buffer.from(image.data, 'base64'));
+  }
+  assert(!identityIssues.length, `Identidade: ${JSON.stringify(identityIssues)}`);
+  process.stdout.write('Identidade: Manrope, contraste, dez rotas Master/Portal, modal e responsividade 390/1440px OK.\n');
 } finally {
   socket?.close();
   browser.kill();

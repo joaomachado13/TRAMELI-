@@ -11,11 +11,20 @@ let userReducedMotion = false;
 try { userReducedMotion = localStorage.getItem('trameli-reduced-motion') === 'true'; } catch { /* Storage may be unavailable on file URLs. */ }
 const motionDisabled = () => systemReducedMotion.matches || userReducedMotion;
 const motion = window.TrameliMotion;
-const settingsDefaults = { businessName: 'Trameli', contact: '', primaryColor: '#244d32', accentColor: '#b6c780', surfaceColor: '#f5f1e8', rolloverTime: '13:30', cutoffTime: '22:30', deliveryFeeCents: 200 };
+const settingsDefaults = { businessName: 'Trameli', contact: '', primaryColor: '#9E432C', accentColor: '#E8B8A6', surfaceColor: '#F7F2EA', rolloverTime: '13:30', cutoffTime: '22:30', deliveryFeeCents: 200 };
+// Atualiza apenas a apresentação dos valores oficiais antigos, sem gravar dados.
+function identitySettings(settings) {
+  const colors = { primaryColor: ['#244d32', '#9E432C'], accentColor: ['#b6c780', '#E8B8A6'], surfaceColor: ['#f5f1e8', '#F7F2EA'] };
+  const result = { ...settings };
+  for (const [key, [previous, current]] of Object.entries(colors)) {
+    if (String(result[key]).toLowerCase() === previous) result[key] = current;
+  }
+  return result;
+}
 function readSettings() {
   const remote = live?.settings;
-  if (remote) return { businessName: remote.business_name, contact: remote.contact, primaryColor: remote.primary_color, accentColor: remote.accent_color, surfaceColor: remote.surface_color, rolloverTime: String(remote.rollover_time).slice(0, 5), cutoffTime: String(remote.cutoff_time).slice(0, 5), deliveryFeeCents: Number(remote.delivery_fee_cents) };
-  try { return { ...settingsDefaults, ...JSON.parse(localStorage.getItem('trameli-operation-settings-v1') || '{}') }; } catch { return { ...settingsDefaults }; }
+  if (remote) return identitySettings({ businessName: remote.business_name, contact: remote.contact, primaryColor: remote.primary_color, accentColor: remote.accent_color, surfaceColor: remote.surface_color, rolloverTime: String(remote.rollover_time).slice(0, 5), cutoffTime: String(remote.cutoff_time).slice(0, 5), deliveryFeeCents: Number(remote.delivery_fee_cents) });
+  try { return identitySettings({ ...settingsDefaults, ...JSON.parse(localStorage.getItem('trameli-operation-settings-v1') || '{}') }); } catch { return { ...settingsDefaults }; }
 }
 function applySettings() {
   const settings = readSettings();
@@ -23,6 +32,9 @@ function applySettings() {
   document.documentElement.style.setProperty('--trameli-primary', settings.primaryColor);
   document.documentElement.style.setProperty('--trameli-accent', settings.accentColor);
   document.documentElement.style.setProperty('--trameli-surface', settings.surfaceColor);
+  document.documentElement.style.setProperty('--color-primary', settings.primaryColor);
+  document.documentElement.style.setProperty('--color-primary-soft', settings.accentColor);
+  document.documentElement.style.setProperty('--color-background', settings.surfaceColor);
   document.querySelectorAll('.brand__name').forEach(node => { node.textContent = settings.businessName; });
   const portalBrand = document.querySelector('.portal-brand');
   if (portalBrand?.firstChild) portalBrand.firstChild.nodeValue = settings.businessName;

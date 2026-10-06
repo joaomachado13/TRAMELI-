@@ -51,11 +51,11 @@ export function supplierText(groups, date) {
 export async function downloadSupplierPdf(groups, date, businessName) {
   const { createSupplierPdf } = await import('./supplier-pdf.js');
   const [regular, bold] = await Promise.all([
-    fetch(new URL('../assets/dm-sans-400.ttf', import.meta.url)).then(response => {
+    fetch(new URL('../assets/manrope-400.ttf', import.meta.url)).then(response => {
       if (!response.ok) throw new Error('Não foi possível carregar a fonte do PDF.');
       return response.arrayBuffer();
     }),
-    fetch(new URL('../assets/dm-sans-600.ttf', import.meta.url)).then(response => {
+    fetch(new URL('../assets/manrope-600.ttf', import.meta.url)).then(response => {
       if (!response.ok) throw new Error('Não foi possível carregar a fonte do PDF.');
       return response.arrayBuffer();
     }),

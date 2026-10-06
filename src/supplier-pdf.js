@@ -14,9 +14,10 @@ export async function createSupplierPdf(groups, date, { businessName = 'Trameli'
   const font = await pdf.embedFont(regular, { subset: true });
   const strong = await pdf.embedFont(bold, { subset: true });
   const form = pdf.getForm();
-  const ink = rgb(0.13, 0.24, 0.17);
-  const muted = rgb(0.38, 0.43, 0.40);
-  const pale = rgb(0.93, 0.95, 0.91);
+  const ink = rgb(43 / 255, 39 / 255, 36 / 255);
+  const muted = rgb(98 / 255, 90 / 255, 85 / 255);
+  const pale = rgb(244 / 255, 222 / 255, 213 / 255);
+  const primary = rgb(158 / 255, 67 / 255, 44 / 255);
   const dateLabel = new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR');
   pdf.setTitle(`Repasse da padaria - ${dateLabel}`);
   pdf.setAuthor(businessName);
@@ -50,7 +51,7 @@ export async function createSupplierPdf(groups, date, { businessName = 'Trameli'
     page = pdf.addPage([WIDTH, HEIGHT]);
     y = HEIGHT - MARGIN;
     for (const line of wrap(businessName, 10, WIDTH - 2 * MARGIN, strong)) {
-      page.drawText(line, { x: MARGIN, y, size: 10, font: strong, color: muted }); y -= 14;
+      page.drawText(line, { x: MARGIN, y, size: 10, font: strong, color: primary }); y -= 14;
     }
     page.drawText('Repasse da padaria', { x: MARGIN, y: y - 10, size: 21, font: strong, color: ink });
     y -= 34;

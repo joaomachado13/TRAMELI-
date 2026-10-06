@@ -1,0 +1,49 @@
+/* Trameli — paleta oficial terracota + creme e tipografia local Manrope. */
+@font-face { font-family: "Manrope"; src: url("manrope-400.ttf") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Manrope"; src: url("manrope-500.ttf") format("truetype"); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: "Manrope"; src: url("manrope-600.ttf") format("truetype"); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: "Manrope"; src: url("manrope-700.ttf") format("truetype"); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "Manrope"; src: url("manrope-800.ttf") format("truetype"); font-weight: 800; font-style: normal; font-display: swap; }
+
+:root {
+  --color-primary: #9E432C;
+  --color-primary-hover: #873823;
+  --color-primary-active: #71301D;
+  --color-primary-secondary: #B95A3E;
+  --color-primary-soft: #E8B8A6;
+  --color-primary-subtle: #F4DED5;
+  --color-background: #F7F2EA;
+  --color-surface: #FFFDF9;
+  --color-surface-secondary: #EFE6DA;
+  --color-surface-alternate: #F9F4ED;
+  --color-text-primary: #2B2724;
+  --color-text-secondary: #625A55;
+  --color-text-muted: #7A706A;
+  --color-label: #443D39;
+  --color-border: #DDD0C5;
+  --color-border-strong: #C9B6A8;
+  --color-border-control: #CFC1B6;
+  --color-border-secondary: #C9A491;
+  --color-border-unchecked: #BFAEA2;
+  --color-on-primary: #FFF9F5;
+  --color-on-primary-soft: #F4C9B8;
+  --color-on-primary-tint: rgba(255, 249, 245, .12);
+  --color-on-primary-tint-hover: rgba(255, 249, 245, .18);
+  --color-hero-button-active: #E8C8BB;
+  --color-disabled: #D8C9C1;
+  --color-on-disabled: #8E817A;
+  --color-focus-ring: rgba(158, 67, 44, .15);
+  --color-overlay: rgba(43, 39, 36, .55);
+  --color-shadow: rgba(43, 39, 36, .12);
+  --color-table-hover: #F9EEE8;
+  --color-success-background: #E7F3EA;
+  --color-success-text: #285C35;
+  --color-warning-background: #FFF1D6;
+  --color-warning-text: #795000;
+  --color-error-background: #FDE8E7;
+  --color-error-text: #A32620;
+  --color-input-error: #B42318;
+  --color-info-background: #E8EFF7;
+  --color-info-text: #315A7A;
+  --font-interface: "Manrope", sans-serif;
+}
