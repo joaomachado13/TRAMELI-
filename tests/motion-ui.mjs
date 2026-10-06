@@ -79,10 +79,14 @@ try {
   await evaluate('document.querySelector("#close-dialog").click()');
 
   await send('Emulation.setDeviceMetricsOverride', { width: 1366, height: 900, deviceScaleFactor: 1, mobile: false });
+  await evaluate('document.querySelector("#main-navigation-panel").click()');
+  await evaluate('document.querySelector(".nav__close").click()');
+  assert.ok(await evaluate('document.body.classList.contains("sidebar-collapsed")'), 'Collapse button reopened the sidebar');
   await mkdir(new URL('../assets/crops/', import.meta.url), { recursive: true });
   for (const [route, style] of [['inicio','curve'],['clientes','swipe'],['relatorios','diagonal'],['agenda','wave']]) {
-    await evaluate(`location.hash='#${route}'`);
+    await evaluate(`document.querySelector('.nav__item[href="#${route}"] .ico').click()`);
     await pause(160);
+    assert.ok(await evaluate('document.body.classList.contains("sidebar-collapsed")'), 'Navigation icon expanded the sidebar during the transition');
     assert.equal(await evaluate('document.querySelector(".route-transition").hidden'), false, 'Swipe did not appear');
     assert.equal(await evaluate('document.querySelector(".route-transition").dataset.style'), style);
     const firstShape = await evaluate('document.querySelector(".route-transition__front").getAttribute("d")');
@@ -92,7 +96,10 @@ try {
     await writeFile(new URL(`../assets/crops/transition-${style}.png`, import.meta.url), Buffer.from(image.data,'base64'));
     await waitTransition();
     assert.equal(await evaluate('document.querySelector(".route-transition").hidden'), true, 'Swipe remained over the content');
+    assert.ok(await evaluate('document.body.classList.contains("sidebar-collapsed")'), 'Navigation changed the collapsed sidebar preference');
   }
+  await evaluate('document.querySelector("#main-navigation-panel").click()');
+  assert.ok(await evaluate('!document.body.classList.contains("sidebar-collapsed")'), 'Empty sidebar area did not expand the menu');
   await evaluate('location.hash="#clientes"'); await pause(50);
   await evaluate('location.hash="#produtos"'); await pause(30);
   await evaluate('location.hash="#agenda"'); await waitTransition();

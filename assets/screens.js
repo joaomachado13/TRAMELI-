@@ -493,7 +493,8 @@ appShell.addEventListener('click', event => {
   if (!navigationIsPersistent() || sidebarIsCollapsed() || event.target.closest('.mobile-menu-button')) return;
   setSidebarCollapsed(true);
 });
-menuPanel.addEventListener('click', () => {
+menuPanel.addEventListener('click', event => {
+  if (event.target.closest('a, button, input, select, textarea, [role="button"]')) return;
   if (navigationIsPersistent() && sidebarIsCollapsed()) setSidebarCollapsed(false);
 });
 window.addEventListener('hashchange', () => showRoute());
