@@ -11,6 +11,8 @@ if (!url?.startsWith('http://127.0.0.1:')) throw new Error('Provide a localhost 
 const profile = await mkdtemp(join(tmpdir(), 'trameli-motion-'));
 const port = 9367;
 const browser = spawn(browserPath(), [...headlessFlags, '--force-prefers-reduced-motion=no-preference',
+  // CI Linux has no physical mouse; make this desktop scenario explicit.
+  '--blink-settings=primaryPointerType=4,availablePointerTypes=4,primaryHoverType=2,availableHoverTypes=2',
   `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, `${url}#operacao`], { windowsHide: true, stdio: 'ignore' });
 const pause = ms => new Promise(done => setTimeout(done, ms));
 let socket;
@@ -52,6 +54,7 @@ try {
   };
   await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
   await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
+  assert.equal(await evaluate('matchMedia("(hover: hover) and (pointer: fine)").matches'), true, 'Desktop mouse emulation is missing');
   for (let i = 0; i < 60 && !(await evaluate('!!window.TrameliMotion && !!document.querySelector("#delivery-date").value')); i++) await pause(100);
   for (let i = 0; i < 60 && !(await evaluate('window.TrameliMotion.active()')); i++) await pause(100);
   assert.equal(await evaluate('matchMedia("(prefers-reduced-motion: reduce)").matches'), false);
@@ -149,6 +152,7 @@ try {
   assert.equal(await evaluate('window.TrameliMotion.active()'), true, 'Smoothing did not resume after printing');
 
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+  await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
   await pause(400);
   assert.equal(await evaluate('window.TrameliMotion.active()'), false, 'Touch-sized layout should use native scroll');
   assert.ok(await evaluate('document.documentElement.scrollWidth <= innerWidth'), 'Mobile horizontal overflow');
