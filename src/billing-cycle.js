@@ -30,10 +30,11 @@ export function billingReminder(rows, today) {
   const open = (rows || []).filter(row => Number(row.due_cents || 0) > 0 && row.delivery_date);
   if (!open.length) return { state: 'clear', days: null, deadline: null, dueCents: 0, message: 'Nenhum pagamento pendente.' };
 
-  const deadlines = open.map(row => billingDeadlineForDelivery(row.delivery_date)).sort();
-  const deadline = deadlines[0];
+  const scheduled = open.map(row => ({ row, deadline: billingDeadlineForDelivery(row.delivery_date) }));
+  const deadline = scheduled.map(item => item.deadline).sort()[0];
   const days = daysUntil(deadline, today);
-  const dueCents = open.reduce((sum, row) => sum + Number(row.due_cents || 0), 0);
+  const dueCents = scheduled.filter(item => item.deadline === deadline)
+    .reduce((sum, item) => sum + Number(item.row.due_cents || 0), 0);
 
   if (days < 0) return { state: 'overdue', days, deadline, dueCents, message: 'Seu pagamento está em atraso.' };
   if (days === 0) return { state: 'today', days, deadline, dueCents, message: 'Hoje é o dia do seu pagamento.' };
