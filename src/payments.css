@@ -430,3 +430,27 @@
   color:var(--color-on-primary)!important;
   font-size:.85rem!important;
 }
+
+/* Operação financeira: cliente primeiro, exceções por último */
+#screen-view .payment-client-first{display:flex;align-items:center;justify-content:space-between;gap:20px;margin:8px 0 16px;padding:18px;border:1px solid var(--color-border);border-radius:13px;background:var(--color-surface-alternate)}
+#screen-view .payment-client-first>div{display:grid;gap:4px;max-width:680px}
+#screen-view .payment-client-first h3{margin:0;color:var(--color-text-primary);font-size:1rem}
+#screen-view .payment-client-first p{margin:0;color:var(--color-text-secondary);font-size:.78rem}
+#screen-view .payment-exception-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:12px}
+#screen-view .payment-exception-summary article{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:14px 16px;border:1px solid var(--color-border);border-radius:11px;background:var(--color-surface)}
+#screen-view .payment-exception-summary span{color:var(--color-text-primary);font-size:.75rem;font-weight:700}
+#screen-view .payment-exception-summary strong{grid-row:1/3;grid-column:2;align-self:center;font-size:1.35rem}
+#screen-view .payment-exception-summary small{color:var(--color-text-secondary);font-size:.68rem}
+#screen-view .payment-manual-entry{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:12px;padding:12px 14px;border:1px dashed var(--color-border);border-radius:10px;color:var(--color-text-secondary);font-size:.74rem}
+.payment-dialog__heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin:0 36px 18px 0}
+.payment-dialog__heading h2{margin:3px 0 4px}
+.payment-dialog__heading p{margin:0;color:var(--color-text-secondary)}
+.payment-register-total{padding:10px 12px;border-radius:8px;background:var(--color-surface-alternate)}
+.payment-confirm-check{padding:12px;border:1px solid var(--color-border);border-radius:9px;background:var(--color-success-background)}
+@media(max-width:760px){
+  #screen-view .payment-client-first{align-items:stretch;flex-direction:column}
+  #screen-view .payment-client-first button{width:100%}
+  #screen-view .payment-exception-summary{grid-template-columns:1fr}
+  #screen-view .payment-manual-entry{align-items:stretch;flex-direction:column}
+  .payment-dialog__heading{flex-direction:column}
+}
