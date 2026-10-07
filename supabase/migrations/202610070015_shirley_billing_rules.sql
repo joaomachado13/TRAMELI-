@@ -107,7 +107,7 @@ end;
 $$;
 
 create or replace function public.trameli_cancel_customer_order(p_order_id uuid, p_expected_version integer)
-returns void language plpgsql security definer set search_path = '' as $
+returns void language plpgsql security definer set search_path = '' as $$
 declare
   v_cutoff time := coalesce((select cutoff_time from public.trameli_settings where singleton), time '21:00');
 begin
