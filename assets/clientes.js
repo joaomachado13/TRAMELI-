@@ -285,7 +285,7 @@
       </div>
       <footer class="entity-detail__actions"><button class="screen-primary" type="button" data-client-action="new-order" data-key="${escapeHtml(client.key)}">+ Novo pedido</button>${client.id && !live ? `<button type="button" data-client-action="edit" data-id="${escapeHtml(client.id)}">Editar dados</button>` : ''}</footer>
     </div>`;
-    detailDrawer.showModal();
+    if (!detailDrawer.open) detailDrawer.showModal();
   }
 
   document.addEventListener('input', event => {
