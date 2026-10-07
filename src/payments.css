@@ -400,3 +400,33 @@
   .portal-page .payment-selection-bar{align-items:stretch;flex-direction:column}
   .portal-page .payment-selection-bar button{width:100%}
 }
+
+/* Fechamento quinzenal mostrado ao cliente */
+.portal-page .payment-deadline{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin:18px 0 0;
+  padding:15px 17px;
+  border:1px solid var(--color-border);
+  border-radius:14px;
+  background:var(--color-surface-alternate);
+}
+.portal-page .payment-deadline>div{display:grid;gap:3px}
+.portal-page .payment-deadline span{color:var(--color-primary);font-size:.65rem;font-weight:800;letter-spacing:.1em}
+.portal-page .payment-deadline strong{color:var(--color-text-primary);font-size:.92rem}
+.portal-page .payment-deadline small{color:var(--color-primary);font-size:.72rem}
+.portal-page .payment-deadline.is-today{background:var(--color-warning-background)}
+.portal-page .payment-deadline.is-overdue{background:var(--color-error-background);border-color:var(--color-error-border)}
+.portal-page .payment-deadline__pulse{
+  display:grid;
+  place-items:center;
+  flex:0 0 32px;
+  width:32px;
+  height:32px;
+  border-radius:50%;
+  background:var(--color-primary);
+  color:var(--color-on-primary)!important;
+  font-size:.85rem!important;
+}

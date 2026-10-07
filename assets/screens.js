@@ -1,3 +1,4 @@
+import { billingDeadlineForDelivery } from '../src/billing-cycle.js';
 const homeView = document.getElementById('home-view');
 const live = window.TrameliLive;
 const operationView = document.getElementById('operation-view');
@@ -11,7 +12,7 @@ let userReducedMotion = false;
 try { userReducedMotion = localStorage.getItem('trameli-reduced-motion') === 'true'; } catch { /* Storage may be unavailable on file URLs. */ }
 const motionDisabled = () => systemReducedMotion.matches || userReducedMotion;
 const motion = window.TrameliMotion;
-const settingsDefaults = { businessName: 'Trameli', contact: '', primaryColor: '#9E432C', accentColor: '#E8B8A6', surfaceColor: '#F7F2EA', rolloverTime: '13:30', cutoffTime: '22:30', deliveryFeeCents: 200 };
+const settingsDefaults = { businessName: 'Trameli', contact: '', primaryColor: '#9E432C', accentColor: '#E8B8A6', surfaceColor: '#F7F2EA', rolloverTime: '13:30', cutoffTime: '21:00', deliveryFeeCents: 200 };
 // Atualiza apenas a apresentação dos valores oficiais antigos, sem gravar dados.
 function identitySettings(settings) {
   const colors = { primaryColor: ['#244d32', '#9E432C'], accentColor: ['#b6c780', '#E8B8A6'], surfaceColor: ['#f5f1e8', '#F7F2EA'] };
@@ -206,7 +207,7 @@ const pages = {
   pedidos: () => {
     const all = storedOrders();
     const customers = [...new Set(all.map(order => order.customer))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
-    const paymentLabels = { pix_manual: 'Pix', cash: 'Dinheiro', other: 'A combinar', bank: 'Transferência', unspecified: 'Não informado' };
+    const paymentLabels = { pix_manual: 'Pix', cash: 'Dinheiro', other: 'Acordado com a proprietária', bank: 'Transferência', unspecified: 'Não informado' };
     const normalized = orderFilters.query.trim().toLocaleLowerCase('pt-BR');
     const orders = all.filter(order => (!normalized || [order.id, order.customer, order.address, ...order.items.map(item => item.name)].some(value => String(value).toLocaleLowerCase('pt-BR').includes(normalized)))
       && (orderFilters.customer === 'all' || order.customer === orderFilters.customer)
@@ -239,7 +240,7 @@ const pages = {
     <div class="report-filters"><label>De<input id="finance-from" type="date" value="${financeRange.from}"></label><label>Até<input id="finance-to" type="date" value="${financeRange.to}"></label></div>
     <div id="finance-cost-summary" aria-live="polite"></div>`,
   relatorios: () => `${intro('Documentos', 'Relatórios', 'Escolha o que precisa, gere um resumo e salve em PDF.')}
-    <section class="report-generator"><div class="report-generator__form"><label>Tipo de relatório<select id="report-type"><option value="financial" ${reportState.type === 'financial' ? 'selected' : ''}>Resumo financeiro</option><option value="sales" ${reportState.type === 'sales' ? 'selected' : ''}>Vendas</option><option value="customers" ${reportState.type === 'customers' ? 'selected' : ''}>Clientes</option><option value="products" ${reportState.type === 'products' ? 'selected' : ''}>Produtos</option><option value="orders" ${reportState.type === 'orders' ? 'selected' : ''}>Pedidos</option><option value="deliveries" ${reportState.type === 'deliveries' ? 'selected' : ''}>Entregas</option></select></label><label>Período<select id="report-period"><option value="today">Hoje</option><option value="week">Últimos 7 dias</option><option value="month" ${reportState.period === 'month' ? 'selected' : ''}>Últimos 30 dias</option><option value="custom" ${reportState.period === 'custom' ? 'selected' : ''}>Personalizado</option></select></label><div class="report-custom-dates" ${reportState.period === 'custom' ? '' : 'hidden'}><label>De<input id="report-from" type="date" value="${reportRange.from}"></label><label>Até<input id="report-to" type="date" value="${reportRange.to}"></label></div><button class="screen-primary" type="button" data-report-generate>Gerar relatório</button></div><div id="report-results" class="report-preview" aria-live="polite">${reportState.generated ? '' : '<div class="friendly-empty"><strong>Nenhum relatório gerado.</strong><span>Escolha um tipo e um período para começar.</span></div>'}</div></section>`,
+    <section class="report-generator"><div class="report-generator__form"><label>Tipo de relatório<select id="report-type"><option value="financial" ${reportState.type === 'financial' ? 'selected' : ''}>Resumo financeiro</option><option value="sales" ${reportState.type === 'sales' ? 'selected' : ''}>Vendas</option><option value="customers" ${reportState.type === 'customers' ? 'selected' : ''}>Clientes</option><option value="billing" ${reportState.type === 'billing' ? 'selected' : ''}>Cobrança detalhada</option><option value="products" ${reportState.type === 'products' ? 'selected' : ''}>Produtos</option><option value="orders" ${reportState.type === 'orders' ? 'selected' : ''}>Pedidos</option><option value="deliveries" ${reportState.type === 'deliveries' ? 'selected' : ''}>Entregas</option></select></label><label>Período<select id="report-period"><option value="today">Hoje</option><option value="week">Últimos 7 dias</option><option value="fortnight" ${reportState.period === 'fortnight' ? 'selected' : ''}>Últimos 15 dias</option><option value="month" ${reportState.period === 'month' ? 'selected' : ''}>Últimos 30 dias</option><option value="custom" ${reportState.period === 'custom' ? 'selected' : ''}>Personalizado</option></select></label><div class="report-custom-dates" ${reportState.period === 'custom' ? '' : 'hidden'}><label>De<input id="report-from" type="date" value="${reportRange.from}"></label><label>Até<input id="report-to" type="date" value="${reportRange.to}"></label></div><button class="screen-primary" type="button" data-report-generate>Gerar relatório</button></div><div id="report-results" class="report-preview" aria-live="polite">${reportState.generated ? '' : '<div class="friendly-empty"><strong>Nenhum relatório gerado.</strong><span>Escolha um tipo e um período para começar.</span></div>'}</div></section>`,
   configuracoes: () => {
     const operation = readSettings(); let print = {};
     try { print = JSON.parse(localStorage.getItem('trameli-print-settings-70x33-v1') || '{}'); } catch { /* Defaults below. */ }
@@ -247,9 +248,9 @@ const pages = {
     const content = {
       geral: `<form class="settings-form" data-settings-form="general"><label>Nome da operação<input name="businessName" value="${escapeHtml(operation.businessName || 'Trameli')}" maxlength="80"></label><label>WhatsApp da loja<input name="contact" type="tel" value="${escapeHtml(operation.contact || '')}" maxlength="24" placeholder="(34) 99999-9999"></label><small>Usado em dúvidas e comprovantes dos clientes.</small><div class="settings-row settings-row--motion"><span>Movimento da interface</span><button type="button" class="motion-toggle" aria-pressed="${!motionDisabled()}" ${systemReducedMotion.matches ? 'disabled' : ''}>${systemReducedMotion.matches ? 'Reduzido pelo sistema' : motionDisabled() ? 'Desativado' : 'Ativado'}</button></div><button class="screen-primary" type="submit">Salvar</button></form>`,
       aparencia: `<form class="settings-form settings-colors" data-settings-form="appearance"><label>Cor principal<input name="primaryColor" type="color" value="${escapeHtml(operation.primaryColor)}"></label><label>Cor de destaque<input name="accentColor" type="color" value="${escapeHtml(operation.accentColor)}"></label><label>Fundo claro<input name="surfaceColor" type="color" value="${escapeHtml(operation.surfaceColor)}"></label><button class="screen-primary" type="submit">Salvar aparência</button></form>`,
-      pedidos: `<form class="settings-form" data-settings-form="orders"><label>Horário de virada operacional<input name="rolloverTime" type="time" value="${escapeHtml(operation.rolloverTime)}" required></label><p>A tela passa a priorizar o próximo dia somente quando os pedidos de hoje estiverem resolvidos.</p><label>Horário de corte do cliente<input type="time" value="22:30" disabled></label><small>Regra protegida pelo cálculo dos pedidos.</small><button class="screen-primary" type="submit">Salvar</button></form>`,
+      pedidos: `<form class="settings-form" data-settings-form="orders"><label>Horário de virada operacional<input name="rolloverTime" type="time" value="${escapeHtml(operation.rolloverTime)}" required></label><p>A tela passa a priorizar o próximo dia somente quando os pedidos de hoje estiverem resolvidos.</p><label>Horário de corte do cliente<input name="cutoffTime" type="time" value="${escapeHtml(operation.cutoffTime || '21:00')}" required></label><small>O cliente pode criar, alterar ou cancelar pedidos até este horário no dia anterior à entrega.</small><button class="screen-primary" type="submit">Salvar</button></form>`,
       entregas: `<div class="settings-form"><label>Taxa padrão<input value="R$ 2,00" disabled></label><p>A taxa está protegida pelo cálculo dos pedidos para impedir divergências.</p></div>`,
-      pagamentos: `<div class="settings-form"><h3>Meios aceitos</h3><label class="settings-check"><input type="checkbox" checked disabled> Pix</label><label class="settings-check"><input type="checkbox" checked disabled> Dinheiro</label><label class="settings-check"><input type="checkbox" checked disabled> A combinar</label><p>Transferência bancária não aparece mais no checkout.</p></div>`,
+      pagamentos: `<div class="settings-form"><h3>Meios aceitos</h3><label class="settings-check"><input type="checkbox" checked disabled> Pix</label><label class="settings-check"><input type="checkbox" checked disabled> Dinheiro</label><label class="settings-check"><input type="checkbox" checked disabled> Acordado com a proprietária</label><p>Transferência bancária não aparece mais no checkout.</p></div>`,
       catalogo: `<div class="settings-form"><p>Categorias, preços, custos, fotos e disponibilidade são gerenciados diretamente em Produtos.</p><a class="screen-primary" href="#produtos">Abrir produtos</a>${live?.role === 'master' ? '<button class="entity-danger" type="button" data-purge-orders>Excluir todos os pedidos de teste</button><small>Remove pedidos, pagamentos e fechamentos. Produtos e clientes permanecem.</small>' : ''}</div>`,
       impressao: `<form class="settings-form" data-settings-form="print"><label>Deslocamento horizontal (mm)<input name="offsetX" type="number" min="-3" max="3" step="0.5" value="${Number(print.offsetX || 0)}"></label><label>Deslocamento vertical (mm)<input name="offsetY" type="number" min="-3" max="3" step="0.5" value="${Number(print.offsetY || 0)}"></label><p>Etiqueta atual: 70 × 33 mm, folha A4.</p><button class="screen-primary" type="submit">Salvar</button></form>`,
       acessos: '<div class="settings-slot" data-account-slot="team"><div class="friendly-empty"><strong>Equipe disponível na versão conectada.</strong><span>Entre como Master para administrar acessos.</span></div></div>',
@@ -269,13 +270,41 @@ function renderReportResults() {
   }
   const orders = inRange(activeOrders(), from, to);
   const total = orders.reduce((sum, order) => sum + orderTotal(order), 0);
-  const title = ({ financial: 'Resumo financeiro', sales: 'Vendas', customers: 'Clientes', products: 'Produtos', orders: 'Pedidos', deliveries: 'Entregas' })[reportState.type];
+  const title = ({ financial: 'Resumo financeiro', sales: 'Vendas', customers: 'Clientes', billing: 'Cobrança detalhada', products: 'Produtos', orders: 'Pedidos', deliveries: 'Entregas' })[reportState.type];
   const period = `${from ? new Date(`${from}T12:00:00`).toLocaleDateString('pt-BR') : 'Início'} — ${to ? new Date(`${to}T12:00:00`).toLocaleDateString('pt-BR') : 'Hoje'}`;
   let detail = '';
   if (reportState.type === 'customers') {
     const rows = new Map();
     orders.forEach(order => { const row = rows.get(order.customer) || { count: 0, total: 0 }; row.count++; row.total += orderTotal(order); rows.set(order.customer, row); });
     detail = `<div class="report-table">${[...rows.entries()].sort((a, b) => b[1].total - a[1].total).map(([name, row]) => `<div><strong>${escapeHtml(name)}</strong><span>${row.count} pedidos</span><strong>${currency(row.total)}</strong></div>`).join('')}</div>`;
+  } else if (reportState.type === 'billing') {
+    const balances = window.TrameliPayments?.api?.balances || [];
+    const balanceByOrder = new Map(balances.map(row => [row.order_id, row]));
+    const customers = new Map();
+    orders.forEach(order => {
+      const key = order.customerId || `local:${String(order.customer).trim().toLocaleLowerCase('pt-BR')}`;
+      const entry = customers.get(key) || { key, name: order.customer, orders: [], total: 0, paid: 0, due: 0, reconciled: true };
+      const balance = balanceByOrder.get(order.id);
+      const orderValue = orderTotal(order);
+      const paid = balance ? Number(balance.paid_cents || 0) : 0;
+      const due = balance ? Number(balance.due_cents || 0) : orderValue;
+      entry.orders.push({ order, paid, due, reconciled: Boolean(balance) });
+      entry.total += orderValue; entry.paid += paid; entry.due += due;
+      if (!balance) entry.reconciled = false;
+      customers.set(key, entry);
+    });
+    const cards = [...customers.values()].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map(customer => {
+      const orderRows = customer.orders.slice().sort((a, b) => a.order.date.localeCompare(b.order.date)).map(({ order, paid, due, reconciled }) => {
+        const paymentStatus = !reconciled ? 'A conferir' : due <= 0 ? 'Pago' : paid > 0 ? 'Parcial' : 'Em aberto';
+        const items = order.items.map(item => {
+          const lineTotal = item.weightGrams ? Number(item.priceCents || 0) : Number(item.quantity || 0) * Number(item.priceCents || 0);
+          return `<li><span>${escapeHtml(window.TrameliOrderMath.itemLabel(item))}</span><strong>${currency(lineTotal)}</strong></li>`;
+        }).join('');
+        return `<section class="billing-order"><header><div><strong>${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR')}</strong><small>#${escapeHtml(order.id.slice(0, 8))} · vence ${new Date(`${billingDeadlineForDelivery(order.date)}T12:00:00`).toLocaleDateString('pt-BR')}</small></div><span class="screen-badge ${due <= 0 ? 'screen-badge--green' : 'screen-badge--amber'}">${paymentStatus}</span></header><ul>${items}</ul><footer><span>Total <strong>${currency(orderTotal(order))}</strong></span><span>Pago <strong>${currency(paid)}</strong></span><span>Em aberto <strong>${currency(due)}</strong></span></footer></section>`;
+      }).join('');
+      return `<article class="billing-customer" data-billing-customer="${escapeHtml(customer.key)}"><header class="billing-customer__head"><label><input type="checkbox" data-billing-select value="${escapeHtml(customer.key)}" checked> <span><strong>${escapeHtml(customer.name)}</strong><small>${customer.orders.length} ${customer.orders.length === 1 ? 'pedido' : 'pedidos'} no período</small></span></label><button type="button" data-billing-only="${escapeHtml(customer.key)}">PDF deste cliente</button></header><div class="billing-customer__totals"><span>Compras <strong>${currency(customer.total)}</strong></span><span>Pago <strong>${currency(customer.paid)}</strong></span><span>Em aberto <strong>${currency(customer.due)}</strong></span></div>${customer.reconciled ? '' : '<p class="report-note">Há pedido sem saldo conciliado; confira o Financeiro antes de cobrar.</p>'}${orderRows}</article>`;
+    }).join('');
+    detail = `<div class="billing-toolbar"><div><strong>Quem vai no PDF?</strong><span>Marque um, vários ou todos os clientes.</span></div><button type="button" data-billing-select-all>Selecionar todos</button><button type="button" data-billing-clear>Limpar seleção</button></div><div class="billing-report-customers">${cards}</div>`;
   } else if (reportState.type === 'products') {
     const rows = new Map();
     orders.forEach(order => order.items.forEach(item => { const row = rows.get(item.name) || { quantity: 0, total: 0 }; row.quantity += item.weightGrams ? 1 : item.quantity; row.total += item.quantity * item.priceCents; rows.set(item.name, row); }));
@@ -456,6 +485,7 @@ function setReportPeriod() {
   const to = saoPauloToday();
   if (reportState.period === 'today') reportRange.from = reportRange.to = to;
   if (reportState.period === 'week') { reportRange.from = shiftDate(to, -6); reportRange.to = to; }
+  if (reportState.period === 'fortnight') { reportRange.from = shiftDate(to, -14); reportRange.to = to; }
   if (reportState.period === 'month') { reportRange.from = shiftDate(to, -29); reportRange.to = to; }
 }
 
@@ -519,7 +549,29 @@ document.addEventListener('click', event => {
     renderReportResults();
     return;
   }
+  const billingAll = event.target.closest('[data-billing-select-all]');
+  if (billingAll) { document.querySelectorAll('[data-billing-select]').forEach(input => { input.checked = true; }); return; }
+  const billingClear = event.target.closest('[data-billing-clear]');
+  if (billingClear) { document.querySelectorAll('[data-billing-select]').forEach(input => { input.checked = false; }); return; }
+  const billingOnly = event.target.closest('[data-billing-only]');
+  if (billingOnly) {
+    document.querySelectorAll('[data-billing-select]').forEach(input => { input.checked = input.value === billingOnly.dataset.billingOnly; });
+    document.querySelector('[data-report-print]')?.click();
+    return;
+  }
   if (event.target.closest('[data-report-print]')) {
+    if (reportState.type === 'billing') {
+      const selected = new Set([...document.querySelectorAll('[data-billing-select]:checked')].map(input => input.value));
+      if (!selected.size) { alert('Selecione ao menos um cliente para gerar o PDF.'); return; }
+      const preview = document.querySelector('#report-results .generated-report');
+      const sheet = document.getElementById('report-print-sheet');
+      if (preview && sheet) {
+        const clone = preview.cloneNode(true);
+        clone.querySelectorAll('[data-billing-customer]').forEach(card => { if (!selected.has(card.dataset.billingCustomer)) card.remove(); });
+        clone.querySelectorAll('.billing-toolbar, [data-billing-only], [data-billing-select]').forEach(node => node.remove());
+        sheet.innerHTML = ''; sheet.append(clone);
+      }
+    }
     document.body.classList.add('report-printing');
     addEventListener('afterprint', () => document.body.classList.remove('report-printing'), { once: true });
     window.print();
@@ -589,7 +641,7 @@ document.addEventListener('submit', async event => {
       localStorage.setItem('trameli-print-settings-70x33-v1', JSON.stringify({ offsetX: Number(data.get('offsetX')), offsetY: Number(data.get('offsetY')) }));
     } else {
       const current = readSettings();
-      const values = form.dataset.settingsForm === 'orders' ? { rolloverTime: data.get('rolloverTime') }
+      const values = form.dataset.settingsForm === 'orders' ? { rolloverTime: data.get('rolloverTime'), cutoffTime: data.get('cutoffTime') }
         : form.dataset.settingsForm === 'appearance' ? { primaryColor: data.get('primaryColor'), accentColor: data.get('accentColor'), surfaceColor: data.get('surfaceColor') }
           : { businessName: data.get('businessName'), contact: data.get('contact') };
       if (form.dataset.settingsForm === 'general' && values.contact) {
