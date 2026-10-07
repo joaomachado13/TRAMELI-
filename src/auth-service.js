@@ -115,7 +115,8 @@ export class AuthService {
   async enrollTotp() {
     const { data, error } = await this.client.auth.mfa.enroll({
       factorType: 'totp',
-      friendlyName: 'Trameli Master',
+      friendlyName: 'Trameli - Administrador',
+      issuer: 'Trameli',
     });
     if (error) throw error;
     return data;
