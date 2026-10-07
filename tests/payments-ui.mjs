@@ -45,7 +45,7 @@ try {
   for(let i=0;i<80 && !await evaluate('!!window.paymentFixtureReady');i++)await pause(100);
   assert.equal(await evaluate('!!window.paymentFixtureReady'),true);
   assert.match(await evaluate('document.body.textContent'),/Em aberto/);
-  await evaluate(`const select=document.querySelector('[data-payment-group]');select.value=paymentFixture.account;select.dispatchEvent(new Event('change',{bubbles:true}));document.querySelector('[data-pay-account]').click()`);
+  await evaluate(`window.TrameliPayments.openForCustomer({ customerId: paymentFixture.state.balances[0].customer_id, customerName: paymentFixture.state.balances[0].customer_name })`);
   for(let i=0;i<40&&!await evaluate('document.querySelector(".payment-dialog").open');i++)await pause(100);
   assert.match(await evaluate('document.querySelector(".payment-dialog").textContent'),/Em aberto/);
   assert.deepEqual(await evaluate(`(${auditIdentity.toString()})()`), [], 'Modal pagamento: fonte e contraste');
@@ -57,7 +57,8 @@ try {
   await evaluate('document.querySelector("[data-pay-unknown]").click()');
   await evaluate(`{const form=document.querySelector('[data-payment-form]');form.elements.amount.value='3,00';form.querySelector('[type=checkbox]').checked=true;form.requestSubmit();}`);
   for(let i=0;i<40&&await evaluate('document.querySelector(".payment-dialog").open');i++)await pause(100);
-  assert.match(await evaluate('document.querySelector("[data-payment-content]").textContent'),/Não identificados \(1\)/);
+  assert.match(await evaluate('document.querySelector("[data-payment-content]").textContent'),/Sem cliente vinculado/);
+  assert.match(await evaluate('document.querySelector("[data-payment-content]").textContent'),/1/);
   await evaluate('window.confirm=()=>true;document.querySelector("[data-day-close]").click()');
   for(let i=0;i<40&&!await evaluate('paymentFixture.state.closings.length');i++)await pause(100);
   await pause(100);
@@ -107,7 +108,7 @@ try {
   assert.equal(await evaluate('document.querySelector("[data-day-close]").disabled'),true);
   await evaluate('paymentFixture.state.missing=false;paymentFixture.state.fail=true;paymentFixture.render()');
   assert.equal(await evaluate('!!document.querySelector("[data-pay-account]")'),false);
-  console.log('UI pagamentos: quitação integral, envio duplo bloqueado, não identificado, fechamento, extrato, falha de conexão e mobile OK.');
+  console.log('UI pagamentos: fluxo por cliente, quitação integral, envio duplo bloqueado, exceção sem cliente, fechamento, extrato, falha de conexão e mobile OK.');
   console.log('UI Pix: seleção de pedidos, saldo atualizado, QR local, sem baixa automática, bloqueio de saldo zero, desativação, conferência obrigatória e layout mobile OK.');
 } finally {
   socket?.close();browser.kill();await pause(400);
