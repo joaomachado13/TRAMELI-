@@ -18,6 +18,12 @@ const calls = [];
 const auth = Object.fromEntries(['signInWithPassword', 'signUp', 'signInWithOAuth', 'resetPasswordForEmail', 'signInWithOtp', 'verifyOtp', 'updateUser', 'resend'].map(name => [name, async (...args) => {
   calls.push({ name, args }); return { data: { session: { user: { id: 'example' } } }, error: null };
 }]));
+auth.mfa = {
+  enroll: async params => {
+    calls.push({ name: 'mfa.enroll', args: [params] });
+    return { data: { id: 'factor-1', totp: { qr_code: 'data:image/svg+xml,test', secret: 'SECRET' } }, error: null };
+  },
+};
 globalThis.location = { origin: 'http://127.0.0.1:4173', pathname: '/', hash: '#loja' };
 globalThis.fetch = async url => {
   if (String(url).startsWith('https://api.pwnedpasswords.com/range/')) {
@@ -43,6 +49,11 @@ await service.verifyPhone('(34) 99999-9999', '123456');
 assert.deepEqual(calls.at(-1).args[0], { phone: '+5534999999999', token: '123456', type: 'sms' });
 await service.setPassword('test-password', 'test-password');
 assert.deepEqual(calls.at(-1).args[0], { password: 'test-password' });
+await service.enrollTotp();
+assert.deepEqual(calls.at(-1), {
+  name: 'mfa.enroll',
+  args: [{ factorType: 'totp', friendlyName: 'Trameli - Administrador', issuer: 'Trameli' }],
+});
 auth.signInWithPassword = async () => ({ error: { code: 'invalid_credentials' } });
 await assert.rejects(service.signIn('email', 'a@example.com', 'wrong'), { code: 'invalid_credentials' });
 console.log('Autenticação: credenciais, Google, telefone e recuperação OK');
