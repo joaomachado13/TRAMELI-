@@ -2527,3 +2527,16 @@ body.motion-off *, body.motion-off *::before, body.motion-off *::after {
   .client-payment-alert__actions{justify-content:flex-start}
   .client-payment-alert__actions button{width:100%}
 }
+
+/* Bloqueio manual de novos pedidos — somente pós-vencimento */
+.client-order-access{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center}
+.client-order-access>div{display:grid;gap:5px}
+.client-order-access h3{margin:0}
+.client-order-access p{margin:0;color:var(--color-text-secondary);font-size:.78rem}
+.client-order-access small{color:var(--color-text-muted);font-size:.68rem}
+.client-order-access button{min-height:40px;padding:9px 12px;border:1px solid var(--color-border);border-radius:9px;background:var(--color-surface);color:var(--color-text-primary);font:inherit;font-size:.75rem;font-weight:700;cursor:pointer}
+.client-order-access.is-overdue{border-color:var(--color-warning-text);background:var(--color-warning-background)}
+.client-order-access.is-blocked{border-color:var(--color-error-text);background:var(--color-error-background)}
+.client-order-access .client-block-button{border-color:var(--color-error-text);background:var(--color-error-text);color:#fff}
+.client-order-access button:disabled{opacity:.55;cursor:wait}
+@media(max-width:760px){.client-order-access{grid-template-columns:1fr}.client-order-access button{width:100%}}

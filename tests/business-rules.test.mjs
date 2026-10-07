@@ -34,12 +34,14 @@ try {
     updated_at timestamptz not null default now()
   ); insert into public.trameli_settings(singleton) values(true);`);
   await db.exec(await readFile(new URL('../supabase/migrations/202610070015_shirley_billing_rules.sql', import.meta.url), 'utf8'));
+  await db.exec(await readFile(new URL('../supabase/migrations/202610071858_customer_manual_order_block.sql', import.meta.url), 'utf8'));
   assert.equal((await db.query("select cutoff_time::text value from public.trameli_settings where singleton")).rows[0].value, '21:00:00');
   await db.query('insert into auth.users(id) values($1),($2),($3)', [master, operator, customer]);
   await db.query("insert into public.trameli_operators(user_id,role) values($1,'master'),($2,'operator')", [master, operator]);
   const dates = (await db.query(`select
     (now() at time zone 'America/Sao_Paulo')::date::text today,
-    ((now() at time zone 'America/Sao_Paulo')::date + 2)::text future`)).rows[0];
+    ((now() at time zone 'America/Sao_Paulo')::date + 2)::text future,
+    ((now() at time zone 'America/Sao_Paulo')::date - 40)::text overdue`)).rows[0];
   const productId = (await db.query("select id from public.trameli_products where name='Pão de queijo'")).rows[0].id;
   const customerLines = JSON.stringify([{ product_id: productId, quantity: 2 }]);
   const manualItems = JSON.stringify([{ name: 'Item manual', quantity: 1, priceCents: 1000 }]);
@@ -64,8 +66,28 @@ try {
   assert.equal(stored.payment_method_preference, 'pix_manual');
 
   const cancellable = (await customerOrder(randomUUID(), dates.future)).rows[0].id;
+  await asUser(operator);
+  await assert.rejects(
+    db.query('select public.trameli_set_customer_order_block($1,true,$2)', [customer, 'Ainda não venceu']),
+    /ainda não possui pagamento vencido/i
+  );
+  await db.exec('reset role');
+  await db.query('update public.trameli_orders set delivery_date=$2 where id=$1', [customerOrderId, dates.overdue]);
+  await asUser(operator);
+  await db.query('select public.trameli_set_customer_order_block($1,true,$2)', [customer, 'Pagamento vencido']);
+  assert.equal((await db.query('select order_blocked from public.trameli_profiles where user_id=$1', [customer])).rows[0].order_blocked, true);
+  await asUser(customer);
+  await assert.rejects(customerOrder(randomUUID(), dates.future), /Novos pedidos estão bloqueados/);
   await db.query('select public.trameli_cancel_customer_order($1,1)', [cancellable]);
+  await asUser(operator);
+  await db.query('select public.trameli_set_customer_order_block($1,false,$2)', [customer, '']);
+  await asUser(customer);
+  await customerOrder(randomUUID(), dates.future);
+
+  const cancellable2 = (await customerOrder(randomUUID(), dates.future)).rows[0].id;
   assert.equal((await db.query('select status from public.trameli_orders where id=$1', [cancellable])).rows[0].status, 'cancelled');
+  await db.query('select public.trameli_cancel_customer_order($1,1)', [cancellable2]);
+  assert.equal((await db.query('select status from public.trameli_orders where id=$1', [cancellable2])).rows[0].status, 'cancelled');
 
   const expired = (await customerOrder(randomUUID(), dates.future)).rows[0].id;
   await db.exec('reset role');
@@ -97,7 +119,7 @@ try {
   await assert.rejects(db.query(`select public.trameli_customer_order(
     null,null,null,$1::date,'Cliente','','Bloco 1','','pix_manual',$2::jsonb)`,
     [dates.future, customerLines]), /permission denied/);
-  console.log('Regras de negócio: corte configurável iniciado em 21h, taxa fixa, forma pretendida e autoridade do master OK.');
+  console.log('Regras de negócio: corte 21h, bloqueio manual somente pós-vencimento, taxa fixa e autoridade da operação OK.');
 } finally {
   await db.close();
 }
