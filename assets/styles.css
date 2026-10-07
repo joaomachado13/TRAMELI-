@@ -2493,7 +2493,7 @@ body.motion-off *, body.motion-off *::before, body.motion-off *::after {
 .client-payment-badge.is-open{background:var(--color-error-background);color:var(--color-error-text)}
 .client-payment-badge.is-partial{background:var(--color-info-background);color:var(--color-info-text)}
 .client-payment-badge.is-paid{background:var(--color-success-background);color:var(--color-success-text)}
-.client-payment-badge.is-neutral{background:var(--color-surface-alternate);color:var(--color-text-muted)}
+.client-payment-badge.is-neutral{background:var(--color-surface-alternate);color:var(--color-text-primary)}
 .client-profile__header{align-items:flex-start}
 .client-profile__header-actions{display:flex;align-items:center;gap:9px}
 .client-summary{grid-template-columns:repeat(4,minmax(0,1fr))}
