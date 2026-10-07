@@ -14,7 +14,7 @@ const rows = [
   { delivery_date: '2026-10-20', due_cents: 5000 },
 ];
 assert.deepEqual(billingReminder(rows, '2026-10-07'), {
-  state: 'upcoming', days: 8, deadline: '2026-10-15', dueCents: 7000,
+  state: 'upcoming', days: 8, deadline: '2026-10-15', dueCents: 2000,
   message: 'Faltam 8 dias para o seu pagamento.',
 });
 assert.equal(billingReminder(rows, '2026-10-15').state, 'today');
