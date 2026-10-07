@@ -87,7 +87,7 @@ const statusLabels = { received: 'A conferir', confirmed: 'Conferido', packing: 
 const nextStatus = { received: 'confirmed', confirmed: 'packing', packing: 'ready', ready: 'delivered' };
 const previousStatus = { confirmed: 'received', packing: 'confirmed', ready: 'packing' };
 const orderStatus = order => order.status || (order.checked ? 'confirmed' : 'received');
-const paymentLabels = { pix_manual: 'Pix', cash: 'Dinheiro', bank: 'Transferência', other: 'A combinar', unspecified: 'Não informado' };
+const paymentLabels = { pix_manual: 'Pix', cash: 'Dinheiro', bank: 'Transferência', other: 'Acordado com a proprietária', unspecified: 'Não informado' };
 const operationSettingsKey = 'trameli-operation-settings-v1';
 
 function operationRolloverTime() {
