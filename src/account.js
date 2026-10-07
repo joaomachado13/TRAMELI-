@@ -1,5 +1,7 @@
 import { authError, displayName, escapeHtml, roleLabel } from './auth-utils.js';
 
+const MASTER_MFA_REQUIRED = false; // Estrutura mantida pronta para reativação futura.
+
 export function initAccount(live) {
   let name = displayName(live.user, live.profile);
   let mfaState = null;
@@ -18,7 +20,7 @@ export function initAccount(live) {
     method.method === 'totp' && Number(method.timestamp) * 1000 >= Date.now() - 30 * 60 * 1000
   ));
   const mfaPanel = () => {
-    if (live.role !== 'master') return '';
+    if (!MASTER_MFA_REQUIRED || live.role !== 'master') return '';
     const verified = mfaState?.totp?.find(factor => factor.status === 'verified');
     const active = mfaState?.currentLevel === 'aal2' && hasRecentTotp(mfaState);
     const enroll = mfaEnrollment?.totp;
@@ -40,12 +42,13 @@ export function initAccount(live) {
     host.innerHTML = error ? `<li>${escapeHtml(authError(error))}</li>` : data.map(member => `<li><span>${escapeHtml(member.email || member.phone || member.user_id)}${member.user_id === live.user.id ? ' (você)' : ''}</span><strong>${roleLabel(member.role)}</strong></li>`).join('');
   }
   async function refreshMfa() {
-    if (live.role !== 'master') return null;
+    if (!MASTER_MFA_REQUIRED || live.role !== 'master') return null;
     mfaState = await live.auth.mfaStatus();
     return mfaState;
   }
   async function ensureMasterAal2() {
     if (live.role !== 'master') throw new Error('Apenas Master pode executar esta ação.');
+    if (!MASTER_MFA_REQUIRED) return true;
     const status = await refreshMfa();
     if (status.currentLevel === 'aal2' && hasRecentTotp(status)) return true;
     const factor = status.totp.find(item => item.status === 'verified');
@@ -76,7 +79,7 @@ export function initAccount(live) {
   dialog.setAttribute('aria-label', 'Minha conta');
   document.body.append(dialog);
   accountButton.addEventListener('click', async () => {
-    if (live.role === 'master') { try { await refreshMfa(); } catch { mfaState = null; } }
+    if (MASTER_MFA_REQUIRED && live.role === 'master') { try { await refreshMfa(); } catch { mfaState = null; } }
     dialog.innerHTML = `<button type="button" class="account-dialog__close" aria-label="Fechar">×</button><h2>Minha conta</h2>${identity()}<p>Crie ou altere a senha da sua conta.</p>${live.role === 'master' ? mfaPanel() : ''}${passwordForm()}<button type="button" class="account-signout">Sair deste aparelho</button>`;
     dialog.querySelector('.account-dialog__close').addEventListener('click', () => dialog.close());
     dialog.querySelector('.account-signout').addEventListener('click', () => logout.click());

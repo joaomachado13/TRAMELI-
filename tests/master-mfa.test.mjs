@@ -85,6 +85,7 @@ try {
   `);
 
   await db.exec(await readFile(new URL('../supabase/migrations/202610050011_master_mfa_hardening.sql', import.meta.url), 'utf8'));
+  await db.exec(await readFile(new URL('../supabase/migrations/202610070014_pause_master_mfa.sql', import.meta.url), 'utf8'));
 
   const master = randomUUID();
   const operator = randomUUID();
@@ -120,22 +121,15 @@ try {
   await assume(operator, 'aal2', nowSeconds());
   await assert.rejects(savePix(0), /Master/);
 
+  // MFA is temporarily paused: Master actions work at AAL1,
+  // while non-Master accounts remain blocked and the wrapper structure stays intact.
   await assume(master, 'aal1');
-  await assert.rejects(savePix(0), /duas etapas/);
+  await savePix(0);
+  assert.equal((await db.query('select count(*)::int n from public.trameli_pix_settings_events')).rows[0].n, 1);
 
-  await assume(master, 'aal2', nowSeconds() - 1801);
-  await assert.rejects(savePix(0), /novamente o código/);
-
-  await assume(master, 'aal1');
-  await assert.rejects(
-    db.query("select public.trameli_set_team_role('customer@example.test','operator')"),
-    /duas etapas/,
-  );
-  await assert.rejects(
-    db.query("select public.trameli_save_settings('Trameli','', '#244d32','#b6c780','#f5f1e8','13:30','22:30',200)"),
-    /duas etapas/,
-  );
-  await assert.rejects(db.query('select public.trameli_master_purge_test_orders()'), /duas etapas/);
+  await db.query("select public.trameli_set_team_role('customer@example.test','operator')");
+  await db.query("select public.trameli_save_settings('Trameli','', '#244d32','#b6c780','#f5f1e8','13:30','22:30',200)");
+  assert.equal((await db.query('select public.trameli_master_purge_test_orders() as n')).rows[0].n, 7);
 
   // Internal pre-MFA implementations must not be callable by browser roles.
   await assert.rejects(
@@ -148,18 +142,10 @@ try {
   );
   await assert.rejects(db.query('select public.trameli_require_master_aal2()'), /permission denied/);
 
-  await assume(master, 'aal2', nowSeconds());
-  await savePix(0);
-  assert.equal((await db.query('select count(*)::int n from public.trameli_pix_settings_events')).rows[0].n, 1);
-
-  await db.query("select public.trameli_set_team_role('customer@example.test','operator')");
-  await db.query("select public.trameli_save_settings('Trameli','', '#244d32','#b6c780','#f5f1e8','13:30','22:30',200)");
-  assert.equal((await db.query('select public.trameli_master_purge_test_orders() as n')).rows[0].n, 7);
-
   await assume(customer, 'aal2', nowSeconds());
   assert.equal((await db.query('select public.trameli_access_role() as role')).rows[0].role, 'operator');
 
-  console.log('MFA Master: ações críticas exigem Master + AAL2 + TOTP confirmado nos últimos 30 minutos.');
+  console.log('MFA Master pausado: ações críticas exigem Master; estrutura AAL2/TOTP permanece pronta para reativação.');
 } finally {
   await db.close();
 }
