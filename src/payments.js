@@ -115,13 +115,18 @@ export function initPayments(live) {
     const allocated=new Set(api.allocations.map(a=>a.payment_id));
     const unknown=api.payments.filter(p=>p.kind==='receipt'&&!allocated.has(p.id)&&!reversed.has(p.id));
     const receipts=api.payments.filter(p=>p.kind==='receipt').sort((a,b)=>b.recorded_at.localeCompare(a.recorded_at));
-    const intents=(api.intents||[]).filter(item=>item.status==='pending').sort((a,b)=>b.created_at.localeCompare(a.created_at));
-    const uploaded=api.receipts||[];
-    const uploadedByIntent=new Map(uploaded.map(item=>[item.intent_id,item]));
-    return `<div class="payment-attention"><article><span>Já paguei</span><strong>${intents.length}</strong><small>aguardando conferência</small></article><article><span>Comprovantes</span><strong>${uploaded.filter(item=>intents.some(intent=>intent.id===item.intent_id)).length}</strong><small>enviados pelo site</small></article><article><span>Não identificados</span><strong>${unknown.length}</strong><small>precisam de vínculo</small></article></div><div class="payment-actions"><label>Conta do cliente<select data-payment-group><option value="">Selecione uma conta ou pedido manual</option>${options()}</select></label><button type="button" data-pay-account>Ver conta</button><button type="button" data-pay-unknown>Novo recebimento</button></div>
-      <details class="payment-worklist" ${intents.length?'open':''}><summary>Avisos “já paguei” (${intents.length})</summary>${intents.length?`<ul class="payment-log">${intents.map(item=>{const proof=uploadedByIntent.get(item.id);return `<li><span>${timestamp(item.created_at)} · ${money(item.amount_cents)}<small>Pedidos ${item.order_ids.map(id=>`#${short(id)}`).join(' · ')} · ${proof?'comprovante recebido':'sem comprovante'}</small></span><span>${proof?`<button type="button" data-receipt-open="${proof.id}">Ver comprovante</button>`:''}<button type="button" data-intent-open="${item.customer_id}">Conferir conta</button><button type="button" data-intent-dismiss="${item.id}">Encerrar aviso</button></span></li>`}).join('')}</ul>`:'<p>Nenhum aviso pendente.</p>'}</details>
-      <details class="payment-worklist" ${unknown.length?'open':''}><summary>Não identificados (${unknown.length})</summary>${unknown.length?`<ul class="payment-log">${unknown.map(p=>`<li><span>${timestamp(p.recorded_at)} · ${money(p.amount_cents)}<small>${esc(p.reference || 'Sem referência')} · ${esc(p.note)}</small></span><button type="button" data-pay-identify="${p.id}">Vincular à conta selecionada</button></li>`).join('')}</ul>`:'<p>Nenhum recebimento aguardando identificação.</p>'}</details>
-      <details class="payment-worklist"><summary>Visão completa das contas e recebimentos</summary>${accountSummary(api.balances)}<p>Pedidos manuais sem conta ficam separados por pedido. O Pix é conferido manualmente.</p><h3>Recebimentos registrados (${receipts.length})</h3><ul class="payment-log">${receipts.map(p=>`<li><span>${timestamp(p.recorded_at)} · ${money(p.amount_cents)}<small>${methods[p.method]} · ${esc(p.reference || 'Sem referência')} · ${esc(p.note)}</small><small>${api.allocations.filter(a=>a.payment_id===p.id).map(a=>`#${short(a.order_id)}: ${money(a.amount_cents)}`).join(' · ') || 'Sem pedido identificado'}</small></span>${reversed.has(p.id)?'<strong>Estornado</strong>':`<button type="button" data-pay-refund="${p.id}">Registrar devolução integral</button>`}</li>`).join('')}</ul></details>`;
+    const intents=(api.intents||[]).filter(item=>item.status==='pending');
+    return `<div class="payment-client-first">
+      <div><span class="screen-eyebrow">FLUXO PRINCIPAL</span><h3>Conferência por cliente</h3><p>Quando um cliente informa que pagou ou envia comprovante, a Trameli já sabe quem é. A conferência agora fica no perfil dele em <strong>Clientes</strong>.</p></div>
+      <button class="screen-primary" type="button" data-payment-go-clients>Ir para Clientes${intents.length ? ` · ${intents.length} para conferir` : ''}</button>
+    </div>
+    <div class="payment-exception-summary">
+      <article><span>Aguardando conferência</span><strong>${intents.length}</strong><small>identificados e organizados por cliente</small></article>
+      <article><span>Sem cliente vinculado</span><strong>${unknown.length}</strong><small>somente lançamentos realmente sem identificação</small></article>
+    </div>
+    ${unknown.length ? `<details class="payment-worklist"><summary>Recebimentos sem cliente vinculado (${unknown.length})</summary><p>Use esta área apenas quando o dinheiro entrou fora do fluxo normal e ainda não sabemos de qual cliente é.</p><div class="payment-actions"><label>Vincular à conta<select data-payment-group><option value="">Selecione o cliente</option>${options()}</select></label></div><ul class="payment-log">${unknown.map(p=>`<li><span>${timestamp(p.recorded_at)} · ${money(p.amount_cents)}<small>${esc(p.reference || 'Sem referência')} · ${esc(p.note)}</small></span><button type="button" data-pay-identify="${p.id}">Vincular</button></li>`).join('')}</ul></details>` : ''}
+    <details class="payment-worklist"><summary>Histórico financeiro</summary>${accountSummary(api.balances)}<h3>Recebimentos registrados (${receipts.length})</h3><ul class="payment-log">${receipts.map(p=>`<li><span>${timestamp(p.recorded_at)} · ${money(p.amount_cents)}<small>${methods[p.method]} · ${esc(p.reference || 'Sem referência')} · ${esc(p.note)}</small><small>${api.allocations.filter(a=>a.payment_id===p.id).map(a=>`#${short(a.order_id)}: ${money(a.amount_cents)}`).join(' · ') || 'Sem pedido vinculado'}</small></span>${reversed.has(p.id)?'<strong>Estornado</strong>':`<button type="button" data-pay-refund="${p.id}">Registrar devolução</button>`}</li>`).join('')}</ul></details>
+    <div class="payment-manual-entry"><span>Recebeu um valor fora do portal e ainda não sabe de quem é?</span><button type="button" data-pay-unknown>Registrar valor sem cliente</button></div>`;
   }
   function render() {
     return `${window.TrameliPix?.render() || ''}<section class="screen-panel payment-panel"><div class="screen-panel__heading"><div><span class="screen-eyebrow">PENDÊNCIAS</span><h2>Recebimentos</h2></div></div><div data-payment-content="operator">${operatorContent()}</div></section>
@@ -133,19 +138,57 @@ export function initPayments(live) {
     updateCustomerSelection();
   }
   async function refresh() { if(api) await api.load(); refreshContent(); }
+  async function openReceipt(receiptId) {
+    if(!api || !live?.operator){notify('Comprovante disponível somente para a operação.');return;}
+    const receipt=api.receipts.find(item=>item.id===receiptId);
+    if(!receipt){notify('Comprovante não encontrado.');return;}
+    try {
+      const {data,error}=await live.client.storage.from('trameli-payment-receipts').createSignedUrl(receipt.storage_path,300);
+      if(error)throw error;
+      window.open(data.signedUrl,'_blank','noopener,noreferrer');
+    } catch(error) { notify(error.message||'Não foi possível abrir o comprovante.'); }
+  }
+  async function openForCustomer({customerId=null,customerName='',intentId=null}={}) {
+    await refresh();
+    if(warning()){notify(warning());return;}
+    const row=api.balances.find(item=>customerId&&item.customer_id===customerId)
+      || api.balances.find(item=>String(item.customer_name||'').trim().toLocaleLowerCase('pt-BR')===String(customerName||'').trim().toLocaleLowerCase('pt-BR'));
+    if(!row){notify('Este cliente ainda não tem pedidos com saldo financeiro.');return;}
+    selectedGroup=groupKey(row);
+    await openAccount(null,intentId);
+  }
   function open(body) { dialog.innerHTML=`<button type="button" data-payment-close class="payment-close" aria-label="Fechar">×</button>${body}`; dialog.showModal(); }
   const formFooter = label => `<p class="payment-error" role="alert"></p><button type="submit">${label}</button>`;
-  async function openAccount(paymentId=null) {
+  async function openAccount(paymentId=null,intentId=null) {
     await refresh();
     if(warning()) {notify(warning());return;}
     const rows=api.balances.filter(row=>groupKey(row)===selectedGroup);
-    if(!rows.length) {notify('Selecione primeiro uma conta ou pedido manual.');return;}
+    if(!rows.length) {notify('Não encontrei pedidos financeiros para este cliente.');return;}
     const existing=paymentId?api.payments.find(p=>p.id===paymentId):null;
-    open(`<h2>${esc(groupLabel(rows[0]))}</h2>${accountSummary(rows)}<form data-payment-form="${existing?'identify':'receipt'}" data-payment-id="${existing?.id||''}">
-      <p>${existing?`Selecione pedidos completos até totalizar exatamente ${money(existing.amount_cents)}.`:'Selecione um ou mais pedidos. Cada pedido será quitado pelo saldo integral atual.'}</p>
-      ${orderTable(rows,true)}<button type="button" data-fill-balances>Selecionar todos os saldos em aberto</button><p>Total a registrar: <strong data-allocation-total>R$ 0,00</strong></p>
-      ${existing?'':`<label>Forma de recebimento<select name="method">${methodOptions}</select></label><label>Referência / comprovante (opcional)<input name="reference" maxlength="120"></label><label>Observação interna (opcional)<textarea name="note" maxlength="280"></textarea></label>`}
-      <label class="payment-check"><input type="checkbox" required> Conferi o recebimento fora da Trameli.</label>${formFooter(existing?'Vincular recebimento':'Registrar pagamento')}</form>${statement(rows)}`);
+    const intent=intentId?(api.intents||[]).find(item=>item.id===intentId&&item.status==='pending'):null;
+    const proof=intent?(api.receipts||[]).find(item=>item.intent_id===intent.id):null;
+    const title=intent?'Conferir pagamento':existing?'Vincular recebimento':'Registrar pagamento';
+    const intro=intent
+      ? `O cliente informou um pagamento de <strong>${money(intent.amount_cents)}</strong>. Confira o comprovante ou o recebimento no banco e confirme abaixo.`
+      : existing
+        ? `Este valor entrou sem cliente vinculado. Selecione os pedidos corretos até totalizar ${money(existing.amount_cents)}.`
+        : 'Selecione os pedidos quitados e confirme o recebimento.';
+    open(`<div class="payment-dialog__heading"><div><span class="screen-eyebrow">CLIENTE</span><h2>${esc(rows[0].customer_name)}</h2><p>${intro}</p></div>${proof?`<button type="button" data-receipt-open="${proof.id}">Abrir comprovante</button>`:''}</div>
+      ${accountSummary(rows)}
+      <form data-payment-form="${existing?'identify':'receipt'}" data-payment-id="${existing?.id||''}" data-intent-id="${intent?.id||''}">
+        <h3>${title}</h3>
+        ${orderTable(rows,true)}
+        <button type="button" data-fill-balances>Selecionar todo o saldo em aberto</button>
+        <p class="payment-register-total">Total que será baixado: <strong data-allocation-total>R$ 0,00</strong></p>
+        ${existing?'':`<label>Forma de recebimento<select name="method">${methodOptions}</select></label><label>Referência (opcional)<input name="reference" maxlength="120" value="${intent?'Pagamento informado pelo cliente':''}"></label><label>Observação interna (opcional)<textarea name="note" maxlength="280"></textarea></label>`}
+        <label class="payment-check payment-confirm-check"><input type="checkbox" required> Conferi no banco/comprovante e este valor foi realmente recebido.</label>
+        ${formFooter(existing?'Vincular e dar baixa':intent?'Confirmar e dar baixa':'Registrar e dar baixa')}
+      </form>${statement(rows)}`);
+    if(intent){
+      const orderIds=new Set(intent.order_ids||[]);
+      dialog.querySelectorAll('[data-allocation]').forEach(input=>{input.checked=orderIds.has(input.dataset.allocation);});
+      dialog.dispatchEvent(new Event('change'));
+    }
   }
   function snapshotHtml(s) {
     return `<p>${s.orders} pedidos · ${s.delivered} entregues · ${s.cancelled} cancelados · ${s.pending} pendentes</p><div class="payment-metrics">${metric('Produtos',s.products_cents)}${metric('Entregas (separadas)',s.delivery_cents)}${metric('Total dos pedidos',s.total_cents)}${metric('Recebido para estes pedidos',s.paid_for_orders_cents)}${metric('Em aberto nestes pedidos',s.due_cents)}${metric('A devolver',s.refund_due_cents)}${metric('Padaria — custo conhecido',s.supplier_cents)}<div><span>${s.estimated_cost_items?'Lucro provisório dos produtos':'Lucro bruto dos produtos'}</span><strong>${s.profit_cents==null?'Pendente':money(s.profit_cents)}</strong></div>${metric('Recebimentos registrados nesta data',s.received_on_day_cents)}${metric('Destes, Pix manual',s.pix_manual_on_day_cents)}${metric('Devoluções registradas nesta data',s.refunded_on_day_cents)}${metric('Recebimentos líquidos nesta data',s.net_received_on_day_cents)}</div><p>${s.missing_cost_items} itens sem custo; ${s.estimated_cost_items} com custo estimado. Recebimentos por data de registro podem pertencer a pedidos de outras datas. Todos os recebimentos desta versão são manuais.</p>`;
@@ -190,7 +233,10 @@ export function initPayments(live) {
       }
       form.dataset.busy='true';button.disabled=true;
       await api.call(name,args);
-      dialog.close();notify('Registro salvo no banco.');
+      if(form.dataset.intentId) {
+        await api.call('trameli_resolve_payment_intent',{p_intent_id:form.dataset.intentId,p_status:'reviewed'});
+      }
+      dialog.close();notify(form.dataset.intentId?'Pagamento conferido e baixado.':'Registro salvo no banco.');
       await api.load(true);refreshContent();await previewDay();
     } catch(error){errorHost.textContent=error.message||'Não foi possível registrar. Verifique a conexão.';}
     finally{delete form.dataset.busy;button.disabled=false;}
@@ -209,21 +255,11 @@ export function initPayments(live) {
     if(button.matches('[data-payment-close]')){if(!dialog.querySelector('[data-busy]'))dialog.close();return;}
     if(button.matches('[data-fill-balances]')){dialog.querySelectorAll('[data-allocation]').forEach(input=>input.checked=true);dialog.dispatchEvent(new Event('change'));return;}
     if(button.matches('[data-pay-refresh]')){await refresh();await previewDay();return;}
+    if(button.matches('[data-payment-go-clients]')){location.hash='#clientes';return;}
     if(!button.matches('[data-pay-account],[data-pay-identify],[data-pay-unknown],[data-pay-refund],[data-day-preview],[data-day-close],[data-intent-open],[data-intent-dismiss],[data-receipt-open]'))return;
     if(warning()){notify(warning());return;}
     if(!live.operator)return;
-    if(button.matches('[data-receipt-open]')){
-      const receipt=api.receipts.find(item=>item.id===button.dataset.receiptOpen);
-      if(!receipt){notify('Comprovante não encontrado.');return;}
-      button.disabled=true;
-      try{
-        const {data,error}=await live.client.storage.from('trameli-payment-receipts').createSignedUrl(receipt.storage_path,300);
-        if(error)throw error;
-        window.open(data.signedUrl,'_blank','noopener,noreferrer');
-      }catch(error){notify(error.message||'Não foi possível abrir o comprovante.');}
-      finally{button.disabled=false;}
-      return;
-    }
+    if(button.matches('[data-receipt-open]')){button.disabled=true;try{await openReceipt(button.dataset.receiptOpen);}finally{button.disabled=false;}return;}
     if(button.matches('[data-intent-open]')){const row=api.balances.find(item=>item.customer_id===button.dataset.intentOpen);if(!row){notify('A conta deste cliente não foi encontrada.');return;}selectedGroup=groupKey(row);await openAccount();return;}
     if(button.matches('[data-intent-dismiss]')){if(!confirm('Encerrar este aviso sem confirmar automaticamente o pagamento?'))return;try{await api.call('trameli_resolve_payment_intent',{p_intent_id:button.dataset.intentDismiss,p_status:'dismissed'});await api.load(true);refreshContent();notify('Aviso encerrado. Nenhum pagamento foi criado.');}catch(error){notify(error.message);}return;}
     if(button.matches('[data-pay-account]')){await openAccount();return;}
@@ -241,7 +277,7 @@ export function initPayments(live) {
     }
   });
   dialog.addEventListener('cancel',event=>{if(dialog.querySelector('[data-busy]'))event.preventDefault();});
-  window.TrameliPayments={render,customerRender,refresh,previewDay,api};
+  window.TrameliPayments={render,customerRender,refresh,previewDay,openForCustomer,openReceipt,api};
   window.addEventListener('trameli:orders-changed',()=>{if(document.querySelector('[data-payment-content]'))refresh();});
   window.addEventListener('trameli:payments-refresh',()=>refresh());
   refresh();
