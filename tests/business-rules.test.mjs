@@ -27,6 +27,14 @@ try {
   for (const file of migrations) {
     await db.exec(await readFile(new URL(`../supabase/migrations/${file}`, import.meta.url), 'utf8'));
   }
+  // Minimal settings fixture used by the later configurable-cutoff migration.
+  await db.exec(`create table public.trameli_settings(
+    singleton boolean primary key default true check(singleton),
+    cutoff_time time not null default '22:30',
+    updated_at timestamptz not null default now()
+  ); insert into public.trameli_settings(singleton) values(true);`);
+  await db.exec(await readFile(new URL('../supabase/migrations/202610070015_shirley_billing_rules.sql', import.meta.url), 'utf8'));
+  assert.equal((await db.query("select cutoff_time::text value from public.trameli_settings where singleton")).rows[0].value, '21:00:00');
   await db.query('insert into auth.users(id) values($1),($2),($3)', [master, operator, customer]);
   await db.query("insert into public.trameli_operators(user_id,role) values($1,'master'),($2,'operator')", [master, operator]);
   const dates = (await db.query(`select
@@ -89,7 +97,7 @@ try {
   await assert.rejects(db.query(`select public.trameli_customer_order(
     null,null,null,$1::date,'Cliente','','Bloco 1','','pix_manual',$2::jsonb)`,
     [dates.future, customerLines]), /permission denied/);
-  console.log('Regras de negócio: corte 22h30, taxa fixa, forma pretendida e autoridade do master OK.');
+  console.log('Regras de negócio: corte configurável iniciado em 21h, taxa fixa, forma pretendida e autoridade do master OK.');
 } finally {
   await db.close();
 }
