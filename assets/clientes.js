@@ -7,6 +7,19 @@
   const normalize = value => String(value || '').trim().toLocaleLowerCase('pt-BR');
   const dateLabel = value => new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR');
   const timestamp = value => new Date(value).toLocaleString('pt-BR');
+  const saoPauloToday = () => {
+    const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).formatToParts(new Date()).filter(part => part.type !== 'literal').map(part => [part.type, part.value]));
+    return `${parts.year}-${parts.month}-${parts.day}`;
+  };
+  const billingDeadline = deliveryDate => {
+    const [year, month, day] = String(deliveryDate || '').split('-').map(Number);
+    if (!year || !month || !day) return '';
+    if (day <= 15) return `${year}-${String(month).padStart(2, '0')}-15`;
+    const last = new Date(Date.UTC(year, month, 0));
+    return `${last.getUTCFullYear()}-${String(last.getUTCMonth() + 1).padStart(2, '0')}-${String(last.getUTCDate()).padStart(2, '0')}`;
+  };
   const formatPhone = value => {
     const digits = String(value || '').replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, '');
     if (digits.length === 11) return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
@@ -93,12 +106,16 @@
     const dueCents = rows.reduce((sum, row) => sum + Number(row.due_cents || 0), 0);
     const pendingIntents = customerId ? (api?.intents || []).filter(intent => intent.customer_id === customerId && intent.status === 'pending') : [];
     const receiptByIntent = new Map((api?.receipts || []).filter(receipt => !customerId || receipt.customer_id === customerId).map(receipt => [receipt.intent_id, receipt]));
+    const profile = customerId ? (api?.profiles || []).find(item => item.user_id === customerId) || null : null;
+    const today = saoPauloToday();
+    const overdueRows = rows.filter(row => Number(row.due_cents || 0) > 0 && billingDeadline(row.delivery_date) < today);
+    const overdueCents = overdueRows.reduce((sum, row) => sum + Number(row.due_cents || 0), 0);
     let status = 'none';
     if (pendingIntents.length) status = 'review';
     else if (dueCents > 0 && paidCents > 0) status = 'partial';
     else if (dueCents > 0) status = 'open';
     else if (totalCents > 0) status = 'paid';
-    return { api, rows, customerId, totalCents, paidCents, dueCents, pendingIntents, receiptByIntent, status };
+    return { api, rows, customerId, totalCents, paidCents, dueCents, pendingIntents, receiptByIntent, profile, overdueRows, overdueCents, status };
   }
 
   const statusLabel = status => ({
@@ -232,10 +249,29 @@
     else if (payment.dueCents > 0) empty = `<div class="client-payment-open"><strong>${money(payment.dueCents)} em aberto</strong><span>O cliente ainda não informou um pagamento para conferência.</span><button type="button" data-client-open-finance data-customer-id="${escapeHtml(payment.customerId || '')}" data-customer-name="${escapeHtml(client.name)}">Registrar pagamento</button></div>`;
     else empty = '<p class="entity-muted">Nenhuma movimentação financeira registrada.</p>';
 
+    const orderAccess = payment.customerId && (payment.profile?.order_blocked || payment.overdueRows.length)
+      ? `<section class="entity-block client-order-access ${payment.profile?.order_blocked ? 'is-blocked' : 'is-overdue'}">
+          <div>
+            <span class="screen-eyebrow">NOVOS PEDIDOS</span>
+            <h3>${payment.profile?.order_blocked ? 'Cliente bloqueado manualmente' : 'Pagamento vencido'}</h3>
+            <p>${payment.profile?.order_blocked
+              ? 'Novos pedidos pelo portal estão bloqueados. Pedidos já existentes continuam acessíveis para ajuste ou cancelamento dentro das regras normais.'
+              : `${money(payment.overdueCents)} continuam vencidos. Só bloqueie depois de conferir que o pagamento realmente não entrou.`}</p>
+            ${payment.profile?.order_blocked_at ? `<small>Bloqueado em ${escapeHtml(timestamp(payment.profile.order_blocked_at))}</small>` : ''}
+          </div>
+          <button type="button" class="${payment.profile?.order_blocked ? '' : 'client-block-button'}"
+            data-client-order-block="${payment.profile?.order_blocked ? 'false' : 'true'}"
+            data-customer-id="${escapeHtml(payment.customerId)}"
+            data-client-key="${escapeHtml(client.key)}">
+            ${payment.profile?.order_blocked ? 'Liberar novos pedidos' : 'Bloquear novos pedidos'}
+          </button>
+        </section>`
+      : '';
+
     return `<section class="entity-block client-finance">
       <div class="entity-block__heading"><div><h3>Pagamento</h3><p>Conferência, comprovante e baixa ficam centralizados neste cliente.</p></div><span>${statusLabel(payment.status)}</span></div>
       ${pending || empty}
-    </section>`;
+    </section>${orderAccess}`;
   }
 
   function orderHistory(client, payment) {
@@ -298,6 +334,33 @@
   document.addEventListener('click', async event => {
     const filter = event.target.closest('[data-client-filter]');
     if (filter) { paymentFilter = filter.dataset.clientFilter; rerender(); return; }
+
+    const orderBlock = event.target.closest('[data-client-order-block]');
+    if (orderBlock) {
+      const blocked = orderBlock.dataset.clientOrderBlock === 'true';
+      const message = blocked
+        ? 'Bloquear novos pedidos deste cliente? Isso é manual e não altera pedidos que já existem.'
+        : 'Liberar novos pedidos deste cliente?';
+      if (!confirm(message)) return;
+      orderBlock.disabled = true;
+      try {
+        const api = window.TrameliPayments?.api;
+        if (!api) throw new Error('Financeiro indisponível.');
+        await api.call('trameli_set_customer_order_block', {
+          p_customer_id: orderBlock.dataset.customerId,
+          p_blocked: blocked,
+          p_reason: blocked ? 'Pagamento vencido — bloqueio manual pela operação.' : '',
+        });
+        await api.load(true);
+        rerender();
+        openDetail(orderBlock.dataset.clientKey);
+      } catch (cause) {
+        alert(cause.message || 'Não foi possível alterar o bloqueio.');
+      } finally {
+        orderBlock.disabled = false;
+      }
+      return;
+    }
 
     const receipt = event.target.closest('[data-client-receipt]');
     if (receipt) {
