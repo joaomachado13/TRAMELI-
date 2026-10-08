@@ -480,3 +480,9 @@
   .payment-review-order>strong{grid-column:2}
   .payment-dialog__heading--clean{margin-right:0}
 }
+
+.payment-proof-optional{padding:0;border-top:1px solid var(--color-border)}
+.payment-proof-optional summary{padding:10px 0;color:var(--color-text-secondary);font-size:.74rem;font-weight:700;cursor:pointer}
+.payment-proof-optional label{margin-top:4px}
+.payment-proof-optional small{color:var(--color-text-muted);font-size:.68rem}
+.payment-history-actions{display:flex;align-items:center;gap:6px}
