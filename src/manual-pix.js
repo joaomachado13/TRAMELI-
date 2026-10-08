@@ -11,7 +11,7 @@ const whatsappNumber=value=>{
   return /^55\d{10,11}$/.test(digits)?digits:'';
 };
 export function initManualPix(live) {
-  let config=null, problem='', loading=null, opening=false, expires=null, shownOrderIds=[], shownAmount=0, intentRequestId=null;
+  let config=null, problem='', loading=null, opening=false, expires=null, shownOrderIds=[], shownAmount=0, intentRequestId=null, shownWhatsappHref='';
   const dialog=document.createElement('dialog');dialog.className='payment-dialog pix-dialog';
   dialog.setAttribute('aria-label','Pix manual');document.body.append(dialog);
   function adminBody() {
@@ -66,6 +66,7 @@ export function initManualPix(live) {
       const orderText=rows.map(row=>`#${row.order_id.slice(0,8)}`).join(', ');
       const waMessage=`Olá! Fiz o pagamento via Pix do pedido ${orderText}, no valor de ${money(amount)}. Vou enviar o comprovante por aqui.`;
       const waHref=phone?`https://wa.me/${phone}?text=${encodeURIComponent(waMessage)}`:'';
+      shownWhatsappHref=waHref;
       // Do not reopen a dialog that the customer closed while the requests ran.
       if(!dialog.open)return;
       open(`<div class="pix-flow">
@@ -100,7 +101,7 @@ export function initManualPix(live) {
         const {error}=await live.client.rpc('trameli_signal_pix_payment',{p_request_id:intentRequestId,p_order_ids:shownOrderIds});
         if(error)throw error;
         await window.TrameliPayments?.api?.load(true);
-        open(`<div class="pix-signal-success"><span class="pix-afterpay__eyebrow">AVISO ENVIADO</span><h2>Agora é com a Shirley.</h2><p>Seu pagamento entrou na fila de conferência. Ele só será marcado como pago depois que ela conferir.</p>${waHref?`<a class="pix-whatsapp pix-whatsapp--wide" href="${waHref}" target="_blank" rel="noopener noreferrer">${whatsappIcon}<span>Enviar comprovante no WhatsApp</span></a>`:''}</div>`);
+        open(`<div class="pix-signal-success"><span class="pix-afterpay__eyebrow">AVISO ENVIADO</span><h2>Agora é com a Shirley.</h2><p>Seu pagamento entrou na fila de conferência. Ele só será marcado como pago depois que ela conferir.</p>${shownWhatsappHref?`<a class="pix-whatsapp pix-whatsapp--wide" href="${shownWhatsappHref}" target="_blank" rel="noopener noreferrer">${whatsappIcon}<span>Enviar comprovante no WhatsApp</span></a>`:''}</div>`);
       }catch(error){button.disabled=false;const host=dialog.querySelector('[data-pix-copy-status]');if(host)host.textContent=error.message||'Não foi possível enviar o aviso.';}
       return;
     }
