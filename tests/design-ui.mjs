@@ -183,7 +183,7 @@ try {
         return [base.getUTCFullYear(),String(base.getUTCMonth()+1).padStart(2,'0'),String(base.getUTCDate()).padStart(2,'0')].join('-');
       })()`);
       assert(weekDates[0] === expectedFirst, 'A semana não começou na primeira data permitida pelo horário de corte.');
-      await evaluate('document.querySelector("[data-week-qty=\"1\"]").click()');
+      await evaluate('document.querySelector("[data-week-qty=\\\"1\\\"]").click()');
       await pause(80);
       await evaluate('document.querySelectorAll("[data-week-day]")[1].click()');
       await pause(80);
