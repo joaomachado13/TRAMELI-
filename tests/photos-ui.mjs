@@ -55,7 +55,8 @@ try {
     await writeFile(new URL(`../assets/crops/photos-${width}.png`, import.meta.url), Buffer.from(shot.data, 'base64'));
   }
   await evaluate(`[...document.querySelectorAll('[data-qty]')].find(button => button.dataset.id === '20260924-0000-4000-8000-000000000002' && button.dataset.qty === '1').click()`);
-  assert.match(await evaluate('document.querySelector(".portal-floating strong").textContent'), /1,40/);
+  await waitFor('.portal-catalog__footer');
+  assert.match(await evaluate('document.querySelector(".portal-catalog__footer small").textContent'), /1,40/);
   await evaluate('document.getElementById("portal-cart-link").click()');
   assert.equal(await evaluate('document.querySelector(".portal-cart-line__photo img").getAttribute("src")'), 'assets/products/oficiais/pao-frances.jpeg');
   assert.match(await evaluate('document.querySelector(".portal-totals").textContent'), /Subtotal dos produtos.*1,40/);
