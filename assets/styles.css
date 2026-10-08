@@ -2558,6 +2558,7 @@ body.motion-off *, body.motion-off *::before, body.motion-off *::after {
 }
 .nav__close svg,.mobile-menu-button svg{width:22px!important;height:22px!important;display:block}
 .mobile-menu-button{align-items:center!important;justify-content:center!important}
+.mobile-menu-button span{background:var(--color-text-primary)!important}
 @media(max-width:760px){
   .entity-detail__header h2,.order-detail__header h2{font-size:1.45rem!important}
 }
