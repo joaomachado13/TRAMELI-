@@ -241,6 +241,7 @@ export function initPayments(live) {
     errorHost.textContent='';
     try {
       if(!form.reportValidity())return;
+      form.dataset.busy='true';button.disabled=true;
       let name,args;
       if(form.dataset.paymentForm==='refund') {
         name='trameli_refund_payment';args=requestArgs(form,{p_payment_id:form.dataset.paymentId,p_reason:form.elements.reason.value.trim()});
@@ -255,7 +256,6 @@ export function initPayments(live) {
           name='trameli_record_payment';args=requestArgs(form,{p_amount_cents:amount,p_method:isIntent?'pix_manual':(form.elements.method?.value||'pix_manual'),p_reference:attachment?`receipt:${attachment}`:(isIntent?'Pagamento informado pelo cliente':''),p_note:'',p_lines:lines});
         }
       }
-      form.dataset.busy='true';button.disabled=true;
       await api.call(name,args);
       if(form.dataset.intentId) {
         await api.call('trameli_resolve_payment_intent',{p_intent_id:form.dataset.intentId,p_status:'reviewed'});
