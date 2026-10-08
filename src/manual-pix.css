@@ -44,3 +44,12 @@
   .pix-afterpay__actions{grid-template-columns:1fr}
   .pix-flow__head h2{font-size:1.8rem}
 }
+
+/* Comprovante: cliente avisa no site e envia o arquivo somente pelo WhatsApp. */
+.pix-afterpay>p{margin:0 0 12px;color:var(--color-text-secondary);font-size:.76rem;line-height:1.45}
+.pix-signal-primary{width:100%;min-height:48px;border:0!important;border-radius:10px;background:var(--color-primary)!important;color:var(--color-on-primary)!important;font-weight:800}
+.pix-signal-success{display:grid;gap:12px;text-align:center}
+.pix-signal-success h2{margin:0}
+.pix-signal-success p{margin:0;color:var(--color-text-secondary)}
+.pix-whatsapp--wide{width:100%;min-height:48px;box-sizing:border-box}
+.pix-receipt-form,.pix-receipt-file,.pix-signal-link{display:none!important}
