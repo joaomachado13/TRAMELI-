@@ -89,7 +89,8 @@ try {
     localStorage.setItem('trameli-operation-draft-v2', JSON.stringify([
       {...base,id:'design-1',customer:'Ana Ferreira',date:key(today),status:'received',items:[{name:'Pão francês',quantity:5,priceCents:140}]},
       {...base,id:'design-2',customer:'João Lima',date:key(tomorrow),status:'confirmed',items:[{name:'Pão de queijo',quantity:3,priceCents:130}]},
-      {...base,id:'design-3',customer:'Marina Costa',date:key(tomorrow),status:'delivered',items:[{name:'Rosca caseira',quantity:1,priceCents:1000}]}
+      {...base,id:'design-3',customer:'Marina Costa',date:key(tomorrow),status:'delivered',items:[{name:'Rosca caseira',quantity:1,priceCents:1000}]},
+      {...base,id:'design-4',customer:'Ana Ferreira',address:'Outro endereço usado em outro dia',date:key(tomorrow),status:'confirmed',items:[{name:'Pão de queijo',quantity:2,priceCents:130}]}
     ]));
     dispatchEvent(new Event('trameli:orders-changed'));
   })()`);
@@ -132,6 +133,13 @@ try {
     const contrastProblems = await findLightOnLightText();
     assert(!contrastProblems.length, `${route} contém texto claro sobre fundo claro: ${JSON.stringify(contrastProblems)}`);
     await audit(`${route} desktop`);
+    if (route === 'clientes') {
+      assert.equal(await evaluate('document.querySelectorAll(".client-row").length'), 3, 'Pedidos de dias/endereço diferentes duplicaram o mesmo cliente.');
+      await evaluate('[...document.querySelectorAll(".client-row")].find(row=>row.textContent.includes("Ana Ferreira")).click()');
+      await waitFor('.client-drawer[open]');
+      assert.match(await evaluate('document.querySelector(".client-drawer").textContent'), /2 pedidos/i);
+      await evaluate('document.querySelector(".client-drawer [data-client-action=\"close\"]").click()');
+    }
     if (route === 'produtos') {
       await evaluate('document.querySelector("[data-catalog-action=\\"view\\"]").click()');
       await waitFor('.product-drawer[open]');
