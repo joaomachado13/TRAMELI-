@@ -103,6 +103,7 @@
   let weeklyDay = null;
   let checkoutDeliveryDate = null;
   let weeklySuccessCount = 0;
+  let weeklyRequestIds = {};
   let view = 'catalog';
   let renderedView = null;
   let portalVisible = false;
@@ -212,12 +213,12 @@
     const unavailable = allProducts().filter(item => unavailableFor(item));
     const categories = ['Todos', ...new Set(all.map(product => product.category || 'Outros'))];
     const visible = filteredProducts();
-    const notice=unavailable.length?`<aside class="portal-review-notice" role="status"><strong>Indisponíveis para amanhã</strong><ul>${unavailable.map(item=>{const substitute=allProducts().find(candidate=>candidate.id===item.substituteProductId&&!unavailableFor(candidate));return `<li>${escapeHtml(item.name)}${substitute?` — sugestão: ${escapeHtml(substitute.name)}`:''}</li>`;}).join('')}</ul><p>A troca não é automática; escolha a sugestão no catálogo se desejar.</p></aside>`:'';
+    const notice=unavailable.length?`<aside class="portal-review-notice" role="status"><strong>Indisponíveis para a próxima entrega</strong><ul>${unavailable.map(item=>{const substitute=allProducts().find(candidate=>candidate.id===item.substituteProductId&&!unavailableFor(candidate));return `<li>${escapeHtml(item.name)}${substitute?` — sugestão: ${escapeHtml(substitute.name)}`:''}</li>`;}).join('')}</ul><p>A troca não é automática; escolha a sugestão no catálogo se desejar.</p></aside>`:'';
     return `<section class="portal-welcome"><span class="portal-eyebrow">${greeting().toLocaleUpperCase('pt-BR')}${firstName() ? `, ${escapeHtml(firstName()).toLocaleUpperCase('pt-BR')}` : ''}</span><h1>${greeting()}${firstName() ? `, ${escapeHtml(firstName())}` : ''}.</h1><p>Seu pedido em três passos simples.</p><ol><li><strong>1</strong> Escolha os produtos</li><li><strong>2</strong> Revise a sacola</li><li><strong>3</strong> Confirme entrega e pagamento</li></ol><a class="portal-welcome__action" href="#portal-products">Escolher produtos ↓</a></section><section class="portal-quick-actions">${lastOrderCard()}<article><span>PLANEJE COM CALMA</span><strong>Pedidos da semana</strong><p>Organize cada dia sem confirmar nada automaticamente.</p><button type="button" data-view="week">Montar minha semana</button></article></section><section id="portal-products" class="portal-section">${notice}<div class="portal-section__head"><div><span class="portal-eyebrow">FEITO PARA O SEU DIA</span><h2>Produtos da padaria</h2></div><span>${all.length} opções</span></div><label class="portal-search">Buscar produto<input id="portal-search" type="search" value="${escapeHtml(query)}" placeholder="Pão, bolo, suco..."></label><div class="portal-categories" aria-label="Categorias">${categories.map(item => `<button type="button" data-category="${escapeHtml(item)}" aria-pressed="${String(item === category)}">${escapeHtml(item)}</button>`).join('')}</div>${personalFilters()}<div class="portal-grid" id="portal-grid">${visible.length ? visible.map(card).join('') : '<p class="portal-empty">Não encontramos produtos nessa busca.</p>'}</div></section>`;
   }
   function cartView() {
     const lines = cartLines();
-    return `<section class="portal-page"><button class="portal-back" type="button" data-view="catalog">← Continuar escolhendo</button><span class="portal-eyebrow">QUASE LÁ</span><h1>Sua sacola</h1>${reviewNotice()}<p>Confira quantidades e valores antes de seguir.</p>${lines.length ? `<div class="portal-cart-lines">${lines.map(({ product, quantity }) => `<article class="portal-cart-line"><div class="portal-cart-line__photo">${photo(product)}</div><div><h2>${escapeHtml(product.name)}</h2><p>${money(product.priceCents)} / ${escapeHtml(product.unit)}</p>${stepper(product)}</div><strong>${money(linePrice(product, quantity))}</strong></article>`).join('')}</div><div class="portal-totals"><div class="portal-totals__final"><span>Subtotal dos produtos</span><strong>${money(subtotal())}</strong></div></div><p class="portal-payment-note">A entrega de ${money(200)} será somada na próxima etapa, antes de confirmar.</p><button class="portal-primary" type="button" data-view="checkout">Continuar para entrega</button>` : `<div class="portal-empty"><h2>Sua sacola está vazia</h2><p>Escolha algo gostoso para amanhã.</p><button type="button" data-view="catalog">Ver produtos</button></div>`}</section>`;
+    return `<section class="portal-page"><button class="portal-back" type="button" data-view="catalog">← Continuar escolhendo</button><span class="portal-eyebrow">QUASE LÁ</span><h1>Sua sacola</h1>${reviewNotice()}<p>Confira quantidades e valores antes de seguir.</p>${lines.length ? `<div class="portal-cart-lines">${lines.map(({ product, quantity }) => `<article class="portal-cart-line"><div class="portal-cart-line__photo">${photo(product)}</div><div><h2>${escapeHtml(product.name)}</h2><p>${money(product.priceCents)} / ${escapeHtml(product.unit)}</p>${stepper(product)}</div><strong>${money(linePrice(product, quantity))}</strong></article>`).join('')}</div><div class="portal-totals"><div class="portal-totals__final"><span>Subtotal dos produtos</span><strong>${money(subtotal())}</strong></div></div><p class="portal-payment-note">A entrega de ${money(200)} será somada na próxima etapa, antes de confirmar.</p><button class="portal-primary" type="button" data-view="checkout">Continuar para entrega</button>` : `<div class="portal-empty"><h2>Sua sacola está vazia</h2><p>Escolha algo gostoso para a próxima entrega disponível.</p><button type="button" data-view="catalog">Ver produtos</button></div>`}</section>`;
   }
   function checkout() {
     if (!count()) { view = 'cart'; return cartView(); }
@@ -280,7 +281,8 @@
         const lines=planLines(day);
         const order={ id:null, version:null, createdAt:new Date().toISOString(), checked:false, customer,address,phone,date:day.date,feeCents:200,items:lines.map(orderItem),notes,paymentMethod,source:'portal',customerToken:token };
         if (live) {
-          const saved=await live.saveCustomerOrder(order,lines.map(({product,quantity})=>weighted(product)?{product_id:product.id,grams:quantity*50}:{product_id:product.id,quantity}),crypto.randomUUID());
+          weeklyRequestIds[day.date] ||= crypto.randomUUID();
+          const saved=await live.saveCustomerOrder(order,lines.map(({product,quantity})=>weighted(product)?{product_id:product.id,grams:quantity*50}:{product_id:product.id,quantity}),weeklyRequestIds[day.date]);
           created.push(saved);
         } else {
           created.push({ ...order, id:crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}` });
@@ -293,7 +295,7 @@
         window.dispatchEvent(new Event('trameli:orders-changed'));
       }
       Object.assign(profile,{name:customer,phone,address});
-      days.forEach(day=>{delete weeklyPlan[day.date]; delete weeklyPlan[day.key];});
+      days.forEach(day=>{delete weeklyPlan[day.date]; delete weeklyPlan[day.key]; delete weeklyRequestIds[day.date];});
       persistWeeklyPlan();
       weeklySuccessCount=created.length;
       error='';
@@ -361,7 +363,7 @@
     const previous = oldOrders.find(order => order.id === editingOrderId && owns(order) && editable(order));
     if (editingOrderId && !previous) { error = 'Este pedido não pode mais ser alterado. Confira em Meus pedidos.'; render(true); return; }
     const deliveryDate = previous?.date || checkoutDeliveryDate || nextDeliveryDate();
-    if (!beforeCustomerCutoff(deliveryDate)) { error = 'O prazo das ${cutoffLabel()} para esta entrega já terminou.'; render(true); return; }
+    if (!beforeCustomerCutoff(deliveryDate)) { error = `O prazo das ${cutoffLabel()} para esta entrega já terminou.`; render(true); return; }
     const nextOrder = {
       id: previous?.id || (crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`),
       createdAt: previous?.createdAt || new Date().toISOString(),
@@ -423,8 +425,6 @@
     }
     const weekDayButton = event.target.closest('[data-week-day]');
     if (weekDayButton) { weeklyDay = weekDayButton.dataset.weekDay; render(true); return; }
-    const weekCopySource = event.target.closest('[data-week-copy-source]');
-    if (weekCopySource) { const button=host.querySelector('[data-week-copy]'); if(button) button.disabled=!weekCopySource.value; return; }
     if (event.target.closest('[data-week-repeat-prev]')) {
       const days=rollingWeek(), index=days.findIndex(day=>day.date===weeklyDay), source=index>0?days[index-1]:null, target=days[index];
       if(source&&target){weeklyPlan={...weeklyPlan,[target.date]:planFor(source)};delete weeklyPlan[target.key];persistWeeklyPlan();render(true);} return;
@@ -435,9 +435,9 @@
     }
     const weekQuantity = event.target.closest('[data-week-qty]');
     if (weekQuantity) {
-      const product = products().find(item => item.id === weekQuantity.dataset.id);
-      if (!product) return;
       const selectedDay = rollingWeek().find(day => day.date === weeklyDay) || rollingWeek()[0];
+      const product = allProducts().find(item => item.id === weekQuantity.dataset.id && !unavailableFor(item, selectedDay.date));
+      if (!product) return;
       const plan = planFor(selectedDay);
       const next = Math.max(0, Math.min(99, Number(plan[product.id] || 0) + Number(weekQuantity.dataset.weekQty)));
       if (next) plan[product.id] = next; else delete plan[product.id];
@@ -518,6 +518,12 @@
       window.dispatchEvent(new Event('trameli:orders-changed'));
       render(true);
     }
+  });
+  host.addEventListener('change', event => {
+    const weekCopySource = event.target.closest('[data-week-copy-source]');
+    if (!weekCopySource) return;
+    const button = host.querySelector('[data-week-copy]');
+    if (button) button.disabled = !weekCopySource.value;
   });
   host.addEventListener('input', event => {
     if (event.target.id !== 'portal-search') return;
