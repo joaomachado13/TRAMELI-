@@ -119,3 +119,9 @@ body:not(.portal-mode) #portal-floating-host,body:not(.portal-mode) .portal-bott
   .portal-week__footer>div{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .portal-week__footer>div>button,.portal-week__footer .portal-primary{width:100%;min-height:44px}
 }
+
+/* A barra semanal vive fora do container de scroll suave para ficar realmente presa ao viewport. */
+#portal-floating-host .portal-week__footer{z-index:40}
+@media(max-width:640px){
+  #portal-floating-host .portal-week__footer{bottom:calc(68px + env(safe-area-inset-bottom))}
+}
