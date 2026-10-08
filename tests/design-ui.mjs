@@ -189,14 +189,17 @@ try {
       await waitFor('.portal-week__footer');
       assert(await evaluate('matchMedia("(prefers-reduced-motion: reduce)").matches || document.querySelector("#portal-floating-host").classList.contains("is-week-entering")'), 'Barra semanal não iniciou a animação de entrada.');
       assert(await evaluate('matchMedia("(prefers-reduced-motion: reduce)").matches || getComputedStyle(document.querySelector(".portal-week__footer")).animationDuration === "0.58s"'), 'Entrada da barra semanal não respeitou os 580 ms.');
+      await evaluate('document.querySelector("[data-week-qty=\\\"1\\\"]").click();document.querySelector("[data-week-qty=\\\"1\\\"]").click()');
+      assert((await evaluate('document.querySelector(".portal-week__footer strong").textContent')).startsWith('1 item'), 'Barra semanal atualizou no meio da primeira animação e voltou a engasgar.');
+      await pause(700);
+      assert((await evaluate('document.querySelector(".portal-week__footer strong").textContent')).startsWith('3 itens'), 'Barra semanal não sincronizou a quantidade real ao terminar a entrada.');
       assert(await evaluate('document.querySelector(".portal-week__footer").parentElement.id === "portal-floating-host"'), 'Resumo semanal continuou preso dentro do container de scroll.');
       assert(await evaluate('getComputedStyle(document.querySelector(".portal-week__footer")).position === "fixed"'), 'Resumo semanal não ficou fixo no rodapé da tela.');
       assert(await evaluate('parseFloat(getComputedStyle(document.querySelector(".portal-week")).paddingBottom) >= 100'), 'Planejamento não reservou espaço inferior para a barra flutuante.');
       assert(await evaluate('document.querySelector(".portal-week__footer").getBoundingClientRect().bottom <= innerHeight && document.querySelector(".portal-week__footer").getBoundingClientRect().bottom >= innerHeight - 40'), 'Barra semanal não ficou ancorada ao rodapé visível.');
       assert((await evaluate('document.querySelector(".portal-week__line-total")?.textContent || ""')).includes('Total:'), 'Produto selecionado não mostrou o valor total na semana.');
       assert((await evaluate('document.querySelector(".portal-week__footer small")?.textContent || ""')).length > 10, 'Resumo semanal não mostrou os totais do planejamento.');
-      await pause(700);
-      await evaluate('document.querySelector("[data-week-qty=\\\"-1\\\"]").click()');
+      await evaluate('document.querySelector("[data-week-qty=\\\"-1\\\"]").click();document.querySelector("[data-week-qty=\\\"-1\\\"]").click();document.querySelector("[data-week-qty=\\\"-1\\\"]").click()');
       await pause(30);
       assert(await evaluate('matchMedia("(prefers-reduced-motion: reduce)").matches || document.querySelector("#portal-floating-host").classList.contains("is-week-leaving")'), 'Barra semanal não iniciou a animação de saída.');
       assert(await evaluate('matchMedia("(prefers-reduced-motion: reduce)").matches || getComputedStyle(document.querySelector(".portal-week__footer")).animationDuration === "0.48s"'), 'Saída da barra semanal não respeitou os 480 ms.');
@@ -225,6 +228,19 @@ try {
       assert(plannedDates[0] === weekDates[0] && plannedDates[1] === weekDates[1], 'Pedidos da semana caíram em datas diferentes das planejadas.');
       await evaluate('document.querySelector("[data-view=\\\"catalog\\\"]").click()');
       await waitFor('.portal-welcome');
+
+      await evaluate('document.querySelector("[data-qty=\\\"1\\\"]").click()');
+      await waitFor('.portal-catalog__footer');
+      assert(await evaluate('matchMedia("(prefers-reduced-motion: reduce)").matches || document.querySelector("#portal-floating-host").classList.contains("is-cart-entering")'), 'Catálogo normal não recebeu a nova animação de entrada.');
+      assert((await evaluate('document.querySelector(".portal-catalog__footer").textContent')).includes('Continuar para a sacola'), 'Catálogo normal perdeu a ação de continuar para a sacola.');
+      assert((await evaluate('document.querySelector(".portal-catalog__footer small").textContent')).length > 6, 'Catálogo normal perdeu o subtotal em dinheiro.');
+      await evaluate('document.querySelector("[data-qty=\\\"1\\\"]").click();document.querySelector("[data-qty=\\\"1\\\"]").click()');
+      assert((await evaluate('document.querySelector(".portal-catalog__footer strong").textContent')).startsWith('1 item'), 'Barra do catálogo atualizou durante a primeira cortina.');
+      await pause(700);
+      assert((await evaluate('document.querySelector(".portal-catalog__footer strong").textContent')).startsWith('3 itens'), 'Barra do catálogo não sincronizou o valor final após a animação.');
+      await evaluate('document.querySelector("[data-qty=\\\"-1\\\"]").click();document.querySelector("[data-qty=\\\"-1\\\"]").click();document.querySelector("[data-qty=\\\"-1\\\"]").click()');
+      await pause(560);
+      assert(await evaluate('document.querySelector("#portal-floating-host").hidden'), 'Barra do catálogo não encerrou a animação ao esvaziar a sacola.');
     }
     if (['produtos', 'financeiro', 'loja'].includes(route)) {
       const image = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });

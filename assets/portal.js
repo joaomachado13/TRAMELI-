@@ -6,6 +6,9 @@
   const weekExitMs = 480;
   let floatingMode = 'none';
   let floatingTimer = null;
+  let floatingPendingMode = 'none';
+  let floatingPendingHtml = '';
+  let floatingSyncTimer = null;
   const supportLink = document.createElement('a');
   supportLink.className = 'portal-support-whatsapp';
   supportLink.target = '_blank';
@@ -159,6 +162,7 @@
     const isPortal = location.hash === '#loja';
     const cartVisible = isPortal && view === 'catalog' && count() > 0;
     let weekHtml = '';
+
     if (isPortal && view === 'week') {
       const days = rollingWeek();
       if (!weeklyDay || !days.some(day => day.date === weeklyDay)) weeklyDay = days[0]?.date || null;
@@ -171,58 +175,98 @@
         weekHtml = `<div class="portal-week__footer portal-week__footer--viewport"><span><strong>${selectedCount} ${selectedCount === 1 ? 'item' : 'itens'} para ${selectedDay.label}</strong><small>${selectedCount ? `${money(selectedSubtotal)} em produtos neste dia · ` : ''}${plannedDays.length} ${plannedDays.length===1?'dia planejado':'dias planejados'} · ${money(weekSubtotal)} na semana</small></span><div><button type="button" data-week-to-cart ${selectedCount ? '' : 'disabled'}>Revisar este dia</button><button class="portal-primary" type="button" data-week-all>Revisar semana · ${plannedDays.length} ${plannedDays.length===1?'dia':'dias'}</button></div></div>`;
       }
     }
-    const cartHtml = cartVisible ? `<div class="portal-floating"><div><small>${count()} ${count() === 1 ? 'item' : 'itens'} · só produtos</small><strong>${money(subtotal())}</strong></div><button type="button" data-view="cart">Ver sacola →</button></div>` : '';
-    const nextMode = weekHtml ? 'week' : cartHtml ? 'cart' : 'none';
 
-    if (nextMode === 'week') {
-      const alreadyEntering = floatingMode === 'week-entering';
-      const alreadyVisible = floatingMode === 'week' || alreadyEntering;
-      if (!alreadyVisible) {
-        clearTimeout(floatingTimer);
-        floatingHost.classList.remove('is-week-leaving');
-        floatingHost.classList.add('is-week-entering');
-        floatingHost.hidden = false;
-        floatingMode = 'week-entering';
-        floatingTimer = setTimeout(() => {
-          floatingHost.classList.remove('is-week-entering');
-          if (floatingMode === 'week-entering') floatingMode = 'week';
-        }, weekEnterMs + 80);
-      } else {
-        floatingHost.hidden = false;
+    const cartHtml = cartVisible
+      ? `<div class="portal-week__footer portal-catalog__footer"><span><strong>${count()} ${count() === 1 ? 'item' : 'itens'} na sacola</strong><small>${money(subtotal())} em produtos</small></span><div><button class="portal-primary" type="button" data-view="cart">Continuar para a sacola →</button></div></div>`
+      : '';
+
+    const nextMode = weekHtml ? 'week' : cartHtml ? 'cart' : 'none';
+    const targetHtml = weekHtml || cartHtml;
+    const enteringMode = mode => floatingMode === `${mode}-entering`;
+    const visibleMode = mode => floatingMode === mode;
+    const leavingMode = mode => floatingMode === `${mode}-leaving`;
+    const enterClass = mode => mode === 'week' ? 'is-week-entering' : 'is-cart-entering';
+    const leaveClass = mode => mode === 'week' ? 'is-week-leaving' : 'is-cart-leaving';
+
+    const syncPending = mode => {
+      if (floatingPendingMode !== mode || !floatingPendingHtml || floatingHost.innerHTML === floatingPendingHtml) {
+        floatingPendingMode = 'none';
+        floatingPendingHtml = '';
+        return;
       }
-      floatingHost.innerHTML = weekHtml;
-    } else if (nextMode === 'none' && (floatingMode === 'week' || floatingMode === 'week-entering')) {
+      floatingHost.innerHTML = floatingPendingHtml;
+      floatingPendingMode = 'none';
+      floatingPendingHtml = '';
+      clearTimeout(floatingSyncTimer);
+      floatingHost.classList.remove('is-floating-syncing');
+      void floatingHost.offsetWidth;
+      floatingHost.classList.add('is-floating-syncing');
+      floatingSyncTimer = setTimeout(() => floatingHost.classList.remove('is-floating-syncing'), 220);
+    };
+
+    const beginEnter = (mode, html) => {
       clearTimeout(floatingTimer);
-      floatingHost.classList.remove('is-week-entering');
-      floatingHost.classList.add('is-week-leaving');
-      floatingMode = 'week-leaving';
+      clearTimeout(floatingSyncTimer);
+      floatingPendingMode = mode;
+      floatingPendingHtml = html;
+      floatingHost.classList.remove('is-week-entering','is-week-leaving','is-cart-entering','is-cart-leaving','is-floating-syncing');
+      floatingHost.classList.add(enterClass(mode));
+      floatingHost.hidden = false;
+      floatingHost.innerHTML = html;
+      floatingMode = `${mode}-entering`;
       floatingTimer = setTimeout(() => {
-        if (floatingMode !== 'week-leaving') return;
-        floatingHost.classList.remove('is-week-leaving');
+        floatingHost.classList.remove(enterClass(mode));
+        if (floatingMode !== `${mode}-entering`) return;
+        floatingMode = mode;
+        syncPending(mode);
+      }, weekEnterMs + 80);
+    };
+
+    const beginLeave = mode => {
+      clearTimeout(floatingTimer);
+      clearTimeout(floatingSyncTimer);
+      floatingPendingMode = 'none';
+      floatingPendingHtml = '';
+      floatingHost.classList.remove('is-week-entering','is-cart-entering','is-floating-syncing');
+      floatingHost.classList.add(leaveClass(mode));
+      floatingMode = `${mode}-leaving`;
+      floatingTimer = setTimeout(() => {
+        if (floatingMode !== `${mode}-leaving`) return;
+        floatingHost.classList.remove(leaveClass(mode));
         floatingHost.hidden = true;
         floatingHost.innerHTML = '';
         floatingMode = 'none';
       }, weekExitMs + 40);
-    } else if (nextMode === 'week' && floatingMode === 'week-leaving') {
-      clearTimeout(floatingTimer);
-      floatingHost.classList.remove('is-week-leaving');
-      floatingHost.classList.add('is-week-entering');
-      floatingHost.hidden = false;
-      floatingHost.innerHTML = weekHtml;
-      floatingMode = 'week-entering';
-      floatingTimer = setTimeout(() => {
-        floatingHost.classList.remove('is-week-entering');
-        if (floatingMode === 'week-entering') floatingMode = 'week';
-      }, weekEnterMs + 80);
+    };
+
+    if (nextMode === 'week' || nextMode === 'cart') {
+      if (enteringMode(nextMode)) {
+        // A entrada mostra somente o primeiro estado. Cliques extras ficam pendentes
+        // e entram de uma vez quando a cortina termina.
+        floatingPendingMode = nextMode;
+        floatingPendingHtml = targetHtml;
+        floatingHost.hidden = false;
+      } else if (visibleMode(nextMode)) {
+        if (floatingHost.innerHTML !== targetHtml) floatingHost.innerHTML = targetHtml;
+        floatingHost.hidden = false;
+      } else if (leavingMode(nextMode)) {
+        beginEnter(nextMode, targetHtml);
+      } else {
+        beginEnter(nextMode, targetHtml);
+      }
+    } else if (floatingMode.startsWith('week')) {
+      beginLeave('week');
+    } else if (floatingMode.startsWith('cart')) {
+      beginLeave('cart');
     } else {
-      clearTimeout(floatingTimer);
-      floatingHost.classList.remove('is-week-entering', 'is-week-leaving');
-      floatingHost.hidden = nextMode === 'none';
-      floatingHost.innerHTML = cartHtml;
-      floatingMode = nextMode;
+      floatingHost.hidden = true;
+      floatingHost.innerHTML = '';
+      floatingMode = 'none';
     }
+
     renderSupport();
   }
+
   function rememberFocus() {
     const element = document.activeElement;
     if (!host.contains(element)) return null;

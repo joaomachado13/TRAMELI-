@@ -172,3 +172,54 @@ body:not(.portal-mode) #portal-floating-host,body:not(.portal-mode) .portal-bott
     animation:none!important;
   }
 }
+
+/* Catálogo usa a mesma linguagem da barra semanal. */
+#portal-floating-host .portal-catalog__footer{width:min(700px,calc(100vw - 28px))}
+.portal-catalog__footer>div{display:block}
+.portal-catalog__footer>div>.portal-primary{width:auto;min-height:45px;margin:0}
+
+/* A cortina é compartilhada pela semana e pelo catálogo. */
+#portal-floating-host.is-cart-entering .portal-catalog__footer{
+  animation:trameli-week-curtain-in 580ms cubic-bezier(.16,.8,.24,1) both;
+  transform-origin:center center;
+}
+#portal-floating-host.is-cart-entering .portal-catalog__footer>span,
+#portal-floating-host.is-cart-entering .portal-catalog__footer>div{
+  animation:trameli-week-content-in 360ms cubic-bezier(.2,.75,.25,1) 150ms both;
+}
+#portal-floating-host.is-cart-leaving .portal-catalog__footer{
+  pointer-events:none;
+  animation:trameli-week-curtain-out 480ms cubic-bezier(.55,.02,.78,.32) both;
+  transform-origin:center center;
+}
+#portal-floating-host.is-cart-leaving .portal-catalog__footer>span,
+#portal-floating-host.is-cart-leaving .portal-catalog__footer>div{
+  animation:trameli-week-content-out 250ms ease-in both;
+}
+
+/* Quando a entrada termina, números/preços saltam uma única vez para o valor real. */
+#portal-floating-host.is-floating-syncing .portal-week__footer>span,
+#portal-floating-host.is-floating-syncing .portal-week__footer>div{
+  animation:trameli-floating-sync 190ms ease-out both;
+}
+@keyframes trameli-floating-sync{
+  0%{opacity:.45;transform:translateY(3px)}
+  100%{opacity:1;transform:translateY(0)}
+}
+@media(max-width:640px){
+  #portal-floating-host .portal-catalog__footer{width:calc(100vw - 16px)}
+  .portal-catalog__footer>div{display:block!important}
+  .portal-catalog__footer>div>.portal-primary{width:100%}
+}
+@media(prefers-reduced-motion:reduce){
+  #portal-floating-host.is-cart-entering .portal-catalog__footer,
+  #portal-floating-host.is-cart-entering .portal-catalog__footer>span,
+  #portal-floating-host.is-cart-entering .portal-catalog__footer>div,
+  #portal-floating-host.is-cart-leaving .portal-catalog__footer,
+  #portal-floating-host.is-cart-leaving .portal-catalog__footer>span,
+  #portal-floating-host.is-cart-leaving .portal-catalog__footer>div,
+  #portal-floating-host.is-floating-syncing .portal-week__footer>span,
+  #portal-floating-host.is-floating-syncing .portal-week__footer>div{
+    animation:none!important;
+  }
+}
