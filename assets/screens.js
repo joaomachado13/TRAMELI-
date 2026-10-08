@@ -123,9 +123,9 @@ function updateOverview() {
   document.getElementById('home-order-total').textContent = balances ? currency(due) : '—';
   document.getElementById('home-order-total').parentElement.querySelector('.kpi-card__context').textContent = balances ? `${dueOrders} ${dueOrders === 1 ? 'pedido pendente' : 'pedidos pendentes'}` : 'Saldos indisponíveis';
   const count = document.getElementById('nav-pending-count');
-  count.textContent = attentionTotal;
-  count.hidden = attentionTotal === 0;
-  count.setAttribute('aria-label', `${attentionTotal} pendências precisam de atenção`);
+  count.textContent = pending;
+  count.hidden = pending === 0;
+  count.setAttribute('aria-label', pending ? `${pending} ${pending === 1 ? 'pedido aguarda' : 'pedidos aguardam'} conferência` : 'Nenhum pedido aguardando conferência');
   document.querySelector('.notification-button').setAttribute('aria-label', attentionTotal ? `${attentionTotal} pendências precisam de atenção` : 'Nenhuma pendência');
   document.querySelector('.notification-dot').hidden = attentionTotal === 0;
   document.querySelector('.attention-strip').hidden = pending === 0 && !todayDeliveries.length && !dueOrders && !paymentIntents && !!balances;
