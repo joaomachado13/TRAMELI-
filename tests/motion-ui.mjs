@@ -132,7 +132,8 @@ try {
   assert.ok(await evaluate('scrollY > 200'), 'Catalog CTA did not scroll to products');
   await evaluate('document.querySelector(".portal-product .portal-stepper button:last-child").click()');
   assert.equal(await evaluate('document.querySelector("#portal-cart-count").textContent'), '1');
-  assert.equal(await evaluate('getComputedStyle(document.querySelector("#portal-floating-host .portal-floating")).position'), 'fixed');
+  for (let i = 0; i < 20 && !await evaluate('!!document.querySelector("#portal-floating-host .portal-catalog__footer")'); i++) await pause(50);
+  assert.equal(await evaluate('getComputedStyle(document.querySelector("#portal-floating-host .portal-catalog__footer")).position'), 'fixed');
   assert.equal(await evaluate('document.querySelector("#smooth-content").contains(document.querySelector("#portal-floating-host"))'), false);
   await evaluate('document.querySelector("#portal-floating-host button").click()');
   assert.ok(await evaluate('document.querySelector(".portal-cart-line")'), 'Floating cart did not open cart');
