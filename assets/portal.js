@@ -174,36 +174,49 @@
     const cartHtml = cartVisible ? `<div class="portal-floating"><div><small>${count()} ${count() === 1 ? 'item' : 'itens'} · só produtos</small><strong>${money(subtotal())}</strong></div><button type="button" data-view="cart">Ver sacola →</button></div>` : '';
     const nextMode = weekHtml ? 'week' : cartHtml ? 'cart' : 'none';
 
-    clearTimeout(floatingTimer);
-
     if (nextMode === 'week') {
-      const shouldAnimateIn = floatingMode !== 'week';
-      floatingHost.hidden = false;
-      floatingHost.innerHTML = weekHtml;
-      floatingMode = 'week';
-      const bar = floatingHost.querySelector('.portal-week__footer');
-      if (bar && shouldAnimateIn) {
-        bar.classList.add('is-entering');
-        floatingTimer = setTimeout(() => bar.classList.remove('is-entering'), weekEnterMs + 80);
-      }
-    } else if (nextMode === 'none' && floatingMode === 'week') {
-      const bar = floatingHost.querySelector('.portal-week__footer');
-      if (bar) {
-        bar.classList.remove('is-entering');
-        bar.classList.add('is-leaving');
-        floatingMode = 'week-leaving';
+      const alreadyEntering = floatingMode === 'week-entering';
+      const alreadyVisible = floatingMode === 'week' || alreadyEntering;
+      if (!alreadyVisible) {
+        clearTimeout(floatingTimer);
+        floatingHost.classList.remove('is-week-leaving');
+        floatingHost.classList.add('is-week-entering');
+        floatingHost.hidden = false;
+        floatingMode = 'week-entering';
         floatingTimer = setTimeout(() => {
-          if (floatingMode !== 'week-leaving') return;
-          floatingHost.hidden = true;
-          floatingHost.innerHTML = '';
-          floatingMode = 'none';
-        }, weekExitMs + 40);
+          floatingHost.classList.remove('is-week-entering');
+          if (floatingMode === 'week-entering') floatingMode = 'week';
+        }, weekEnterMs + 80);
       } else {
+        floatingHost.hidden = false;
+      }
+      floatingHost.innerHTML = weekHtml;
+    } else if (nextMode === 'none' && (floatingMode === 'week' || floatingMode === 'week-entering')) {
+      clearTimeout(floatingTimer);
+      floatingHost.classList.remove('is-week-entering');
+      floatingHost.classList.add('is-week-leaving');
+      floatingMode = 'week-leaving';
+      floatingTimer = setTimeout(() => {
+        if (floatingMode !== 'week-leaving') return;
+        floatingHost.classList.remove('is-week-leaving');
         floatingHost.hidden = true;
         floatingHost.innerHTML = '';
         floatingMode = 'none';
-      }
+      }, weekExitMs + 40);
+    } else if (nextMode === 'week' && floatingMode === 'week-leaving') {
+      clearTimeout(floatingTimer);
+      floatingHost.classList.remove('is-week-leaving');
+      floatingHost.classList.add('is-week-entering');
+      floatingHost.hidden = false;
+      floatingHost.innerHTML = weekHtml;
+      floatingMode = 'week-entering';
+      floatingTimer = setTimeout(() => {
+        floatingHost.classList.remove('is-week-entering');
+        if (floatingMode === 'week-entering') floatingMode = 'week';
+      }, weekEnterMs + 80);
     } else {
+      clearTimeout(floatingTimer);
+      floatingHost.classList.remove('is-week-entering', 'is-week-leaving');
       floatingHost.hidden = nextMode === 'none';
       floatingHost.innerHTML = cartHtml;
       floatingMode = nextMode;
