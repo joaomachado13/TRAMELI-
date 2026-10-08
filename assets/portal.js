@@ -152,9 +152,24 @@
   }
   function renderFloating() {
     if (!floatingHost) return;
-    const visible = location.hash === '#loja' && view === 'catalog' && count() > 0;
+    const isPortal = location.hash === '#loja';
+    const cartVisible = isPortal && view === 'catalog' && count() > 0;
+    let weekHtml = '';
+    if (isPortal && view === 'week') {
+      const days = rollingWeek();
+      if (!weeklyDay || !days.some(day => day.date === weeklyDay)) weeklyDay = days[0]?.date || null;
+      const selectedDay = days.find(day => day.date === weeklyDay) || days[0];
+      const plannedDays = days.filter(day => planCount(day) > 0);
+      if (selectedDay && plannedDays.length) {
+        const selectedCount = planCount(selectedDay);
+        const selectedSubtotal = planLines(selectedDay).reduce((sum, line) => sum + linePrice(line.product, line.quantity), 0);
+        const weekSubtotal = plannedDays.reduce((sum, day) => sum + planLines(day).reduce((daySum, line) => daySum + linePrice(line.product, line.quantity), 0), 0);
+        weekHtml = `<div class="portal-week__footer portal-week__footer--viewport"><span><strong>${selectedCount} ${selectedCount === 1 ? 'item' : 'itens'} para ${selectedDay.label}</strong><small>${selectedCount ? `${money(selectedSubtotal)} em produtos neste dia · ` : ''}${plannedDays.length} ${plannedDays.length===1?'dia planejado':'dias planejados'} · ${money(weekSubtotal)} na semana</small></span><div><button type="button" data-week-to-cart ${selectedCount ? '' : 'disabled'}>Revisar este dia</button><button class="portal-primary" type="button" data-week-all>Revisar semana · ${plannedDays.length} ${plannedDays.length===1?'dia':'dias'}</button></div></div>`;
+      }
+    }
+    const visible = cartVisible || Boolean(weekHtml);
     floatingHost.hidden = !visible;
-    floatingHost.innerHTML = visible ? `<div class="portal-floating"><div><small>${count()} ${count() === 1 ? 'item' : 'itens'} · só produtos</small><strong>${money(subtotal())}</strong></div><button type="button" data-view="cart">Ver sacola →</button></div>` : '';
+    floatingHost.innerHTML = weekHtml || (cartVisible ? `<div class="portal-floating"><div><small>${count()} ${count() === 1 ? 'item' : 'itens'} · só produtos</small><strong>${money(subtotal())}</strong></div><button type="button" data-view="cart">Ver sacola →</button></div>` : '');
     renderSupport();
   }
   function rememberFocus() {
@@ -255,8 +270,7 @@
     </div>` : '';
     const cutoffNotice = cutoffWindowNotice();
     const availableProducts = allProducts().filter(product => !unavailableFor(product, selectedDay.date));
-    const footer = plannedDays.length ? `<div class="portal-week__footer"><span><strong>${selectedCount} ${selectedCount === 1 ? 'item' : 'itens'} para ${selectedDay.label}</strong><small>${selectedCount ? `${money(selectedSubtotal)} em produtos neste dia · ` : ''}${plannedDays.length} ${plannedDays.length===1?'dia planejado':'dias planejados'} · ${money(weekSubtotal)} na semana</small></span><div><button type="button" data-week-to-cart ${selectedCount ? '' : 'disabled'}>Revisar este dia</button><button class="portal-primary" type="button" data-week-all>Revisar semana · ${plannedDays.length} ${plannedDays.length===1?'dia':'dias'}</button></div></div>` : '';
-    return `<section class="portal-page portal-week ${plannedDays.length ? 'portal-week--has-summary' : ''}"><button class="portal-back" type="button" data-view="catalog">← Voltar aos produtos</button><span class="portal-eyebrow">PLANEJAMENTO, NÃO CONFIRMAÇÃO</span><h1>Minha semana</h1><p>Monte os próximos 7 dias na ordem real de entrega. Você confirma tudo só no final.</p>${cutoffNotice?`<aside class="portal-week__cutoff" role="status"><strong>Prazo encerrado para amanhã</strong><span>${escapeHtml(cutoffNotice)}</span></aside>`:''}<div class="portal-week__days">${days.map(day => `<button type="button" data-week-day="${day.date}" aria-pressed="${selectedDay.date === day.date}"><strong>${day.label}</strong><small>${new Date(`${day.date}T12:00:00`).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} · ${planCount(day)} itens</small></button>`).join('')}</div>${repeat}<div class="portal-week__products">${availableProducts.map(product => { const quantity = Number(plan[product.id] || 0); return `<article><div class="portal-week__photo">${photo(product)}</div><span><strong>${escapeHtml(product.name)}</strong><small>${money(product.priceCents)} / ${escapeHtml(product.unit)}</small>${quantity ? `<small class="portal-week__line-total">Total: ${money(linePrice(product, quantity))}</small>` : ''}</span><div class="portal-stepper"><button type="button" data-week-qty="-1" data-id="${escapeHtml(product.id)}" ${quantity ? '' : 'disabled'}>−</button><span>${weighted(product) ? `${quantity * 50} g` : quantity}</span><button type="button" data-week-qty="1" data-id="${escapeHtml(product.id)}">+</button></div></article>`; }).join('')}</div>${footer}</section>`;
+    return `<section class="portal-page portal-week ${plannedDays.length ? 'portal-week--has-summary' : ''}"><button class="portal-back" type="button" data-view="catalog">← Voltar aos produtos</button><span class="portal-eyebrow">PLANEJAMENTO, NÃO CONFIRMAÇÃO</span><h1>Minha semana</h1><p>Monte os próximos 7 dias na ordem real de entrega. Você confirma tudo só no final.</p>${cutoffNotice?`<aside class="portal-week__cutoff" role="status"><strong>Prazo encerrado para amanhã</strong><span>${escapeHtml(cutoffNotice)}</span></aside>`:''}<div class="portal-week__days">${days.map(day => `<button type="button" data-week-day="${day.date}" aria-pressed="${selectedDay.date === day.date}"><strong>${day.label}</strong><small>${new Date(`${day.date}T12:00:00`).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} · ${planCount(day)} itens</small></button>`).join('')}</div>${repeat}<div class="portal-week__products">${availableProducts.map(product => { const quantity = Number(plan[product.id] || 0); return `<article><div class="portal-week__photo">${photo(product)}</div><span><strong>${escapeHtml(product.name)}</strong><small>${money(product.priceCents)} / ${escapeHtml(product.unit)}</small>${quantity ? `<small class="portal-week__line-total">Total: ${money(linePrice(product, quantity))}</small>` : ''}</span><div class="portal-stepper"><button type="button" data-week-qty="-1" data-id="${escapeHtml(product.id)}" ${quantity ? '' : 'disabled'}>−</button><span>${weighted(product) ? `${quantity * 50} g` : quantity}</span><button type="button" data-week-qty="1" data-id="${escapeHtml(product.id)}">+</button></div></article>`; }).join('')}</div></section>`;
   }
 
   function weekCheckoutView() {
@@ -537,8 +551,19 @@
     motion()?.refresh();
   });
   floatingHost?.addEventListener('click', event => {
-    if (!event.target.closest('[data-view="cart"]')) return;
-    view = 'cart'; error = ''; render();
+    if (event.target.closest('[data-view="cart"]')) {
+      view = 'cart'; error = ''; render(); return;
+    }
+    if (event.target.closest('[data-week-to-cart]')) {
+      const selectedDay=rollingWeek().find(day=>day.date===weeklyDay)||rollingWeek()[0];
+      const plan=planFor(selectedDay);
+      if ((cartLines().length || editingOrderId) && !confirm('Substituir a sacola atual pelo planejamento deste dia?')) return;
+      cart={...plan};editingOrderId=null;checkoutDeliveryDate=selectedDay.date;reorderNotices=[`Planejamento de ${selectedDay.label} carregado. A entrega será em ${formatDate(selectedDay.date)}.`];
+      persistCart();view='cart';render();return;
+    }
+    if (event.target.closest('[data-week-all]')) {
+      error=''; view='weekCheckout'; render();
+    }
   });
   host.addEventListener('submit', event => {
     if (event.target.id === 'portal-checkout-form') { event.preventDefault(); placeOrder(event.target); }
