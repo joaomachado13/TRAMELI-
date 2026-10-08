@@ -213,7 +213,7 @@
     const product = { ...previous, id: productId, name, image, priceCents, unit, category: form.elements.category.value.trim(), active: form.elements.active.checked, costCents, supplierName: form.elements.supplierName?.value.trim() || '', unavailableFrom, unavailableUntil, substituteProductId, ...(previous?.demo ? { demo: true } : {}) };
     if (product.active) product.reviewReason = null;
     const next = editingId ? products.map(item => item.id === editingId ? product : item) : [...products, product];
-    if (await save(next)) dialog.close();
+    if (await save(next)) { products = read(); updateDatalist(); rerender(); dialog.close(); }
   });
 
   if (live) window.addEventListener('trameli:catalog-changed', () => { products = read(); updateDatalist(); });
