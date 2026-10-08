@@ -172,8 +172,10 @@ try {
       assert(await evaluate('!document.querySelector("[data-report-print]").disabled'), 'PDF do relatório permaneceu indisponível com dados.');
     }
     if (route === 'loja') {
+      await evaluate('Object.keys(localStorage).filter(key=>key.startsWith("trameli-weekly-plan-v1:")).forEach(key=>localStorage.removeItem(key))');
       await evaluate('document.querySelector("[data-view=week]").click()');
       await waitFor('.portal-week');
+      assert(await evaluate('!document.querySelector(".portal-week__footer")'), 'Resumo semanal apareceu antes de selecionar um produto.');
       const weekDates = await evaluate('[...document.querySelectorAll("[data-week-day]")].map(button=>button.dataset.weekDay)');
       assert(weekDates.length === 7 && new Set(weekDates).size === 7, 'Planejamento não mostrou sete datas consecutivas.');
       const expectedFirst = await evaluate(`(() => {
@@ -184,6 +186,10 @@ try {
       })()`);
       assert(weekDates[0] === expectedFirst, 'A semana não começou na primeira data permitida pelo horário de corte.');
       await evaluate('document.querySelector("[data-week-qty=\\\"1\\\"]").click()');
+      await waitFor('.portal-week__footer');
+      assert(await evaluate('getComputedStyle(document.querySelector(".portal-week__footer")).position === "static"'), 'Resumo semanal voltou a ficar preso sobre a lista.');
+      assert((await evaluate('document.querySelector(".portal-week__line-total")?.textContent || ""')).includes('Total:'), 'Produto selecionado não mostrou o valor total na semana.');
+      assert((await evaluate('document.querySelector(".portal-week__footer small")?.textContent || ""')).length > 10, 'Resumo semanal não mostrou os totais do planejamento.');
       await pause(80);
       await evaluate('document.querySelectorAll("[data-week-day]")[1].click()');
       await pause(80);
