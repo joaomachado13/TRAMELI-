@@ -112,9 +112,7 @@
       const profile = resolvedAccount ? profileById.get(resolvedAccount) : null;
       const key = resolvedAccount
         ? `account:${resolvedAccount}`
-        : phoneKey
-          ? `phone:${phoneKey}`
-          : `name:${normalizedName}`;
+        : `name:${normalizedName}`;
       const record = grouped.get(key) || {
         key,
         id: saved?.id || null,
@@ -132,8 +130,7 @@
     });
 
     if (!live) clients.forEach(client => {
-      const phoneKey = phoneDigits(client.phone);
-      const key = phoneKey ? `phone:${phoneKey}` : `name:${normalize(client.name)}`;
+      const key = `name:${normalize(client.name)}`;
       if (!grouped.has(key)) grouped.set(key, { key, ...client, customerId: null, orders: [] });
     });
 
