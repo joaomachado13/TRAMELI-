@@ -188,11 +188,11 @@ try {
       await evaluate('document.querySelector("[data-week-qty=\\\"1\\\"]").click()');
       await waitFor('.portal-week__footer');
       assert(await evaluate('matchMedia("(prefers-reduced-motion: reduce)").matches || document.querySelector("#portal-floating-host").classList.contains("is-week-entering")'), 'Barra semanal não iniciou a animação de entrada.');
+      assert(await evaluate('matchMedia("(prefers-reduced-motion: reduce)").matches || getComputedStyle(document.querySelector(".portal-week__footer")).animationDuration === "0.58s"'), 'Entrada da barra semanal não respeitou os 580 ms.');
       await evaluate('document.querySelector("[data-week-qty=\\\"1\\\"]").click();document.querySelector("[data-week-qty=\\\"1\\\"]").click()');
       assert((await evaluate('document.querySelector(".portal-week__footer strong").textContent')).startsWith('1 item'), 'Barra semanal atualizou no meio da primeira animação e voltou a engasgar.');
       await pause(700);
       assert((await evaluate('document.querySelector(".portal-week__footer strong").textContent')).startsWith('3 itens'), 'Barra semanal não sincronizou a quantidade real ao terminar a entrada.');
-      assert(await evaluate('matchMedia("(prefers-reduced-motion: reduce)").matches || getComputedStyle(document.querySelector(".portal-week__footer")).animationDuration === "0.58s"'), 'Entrada da barra semanal não respeitou os 580 ms.');
       assert(await evaluate('document.querySelector(".portal-week__footer").parentElement.id === "portal-floating-host"'), 'Resumo semanal continuou preso dentro do container de scroll.');
       assert(await evaluate('getComputedStyle(document.querySelector(".portal-week__footer")).position === "fixed"'), 'Resumo semanal não ficou fixo no rodapé da tela.');
       assert(await evaluate('parseFloat(getComputedStyle(document.querySelector(".portal-week")).paddingBottom) >= 100'), 'Planejamento não reservou espaço inferior para a barra flutuante.');
