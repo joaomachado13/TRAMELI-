@@ -454,3 +454,35 @@
   #screen-view .payment-manual-entry{align-items:stretch;flex-direction:column}
   .payment-dialog__heading{flex-direction:column}
 }
+
+/* Conferência enxuta: uma tarefa por vez */
+.payment-dialog:has(.payment-review-form){width:min(620px,calc(100% - 24px));padding:22px}
+.payment-review-form{display:grid;gap:14px!important}
+.payment-review-orders{display:grid;gap:8px}
+.payment-review-order{display:grid!important;grid-template-columns:24px minmax(0,1fr) auto;align-items:center;gap:12px;padding:13px 14px;border:1px solid var(--color-border);border-radius:11px;background:var(--color-surface-alternate);cursor:pointer}
+.payment-review-order input{width:20px!important;height:20px!important;margin:0}
+.payment-review-order span{display:grid;gap:3px}
+.payment-review-order span strong{font-size:.83rem}
+.payment-review-order small{color:var(--color-text-secondary);font-size:.7rem}
+.payment-review-order>strong{font-size:.88rem;white-space:nowrap}
+.payment-review-footer{display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border-radius:10px;background:var(--color-primary-subtle)}
+.payment-review-footer span{color:var(--color-text-secondary);font-size:.74rem}
+.payment-review-footer strong{font-size:1.08rem}
+.payment-method-simple{max-width:260px}
+.payment-confirm-primary{min-height:50px!important;border:0!important;background:var(--color-primary)!important;color:var(--color-on-primary)!important;font-weight:800!important}
+.payment-dialog__heading--clean{margin-right:52px}
+.payment-client-first--simple{margin-bottom:10px!important}
+.payment-history-compact{margin-top:10px!important}
+.payment-close{position:sticky;top:10px;z-index:12;display:grid;float:none;width:46px;height:46px;margin-left:auto;padding:0!important;place-items:center;border:1px solid var(--color-border)!important;border-radius:12px!important;background:var(--color-surface)!important;color:var(--color-text-primary)!important;font-size:1.45rem!important;line-height:1;box-shadow:0 5px 20px var(--color-shadow)}
+@media(max-width:600px){
+  .payment-dialog:has(.payment-review-form){width:calc(100% - 12px);padding:14px}
+  .payment-review-order{grid-template-columns:22px minmax(0,1fr);gap:10px}
+  .payment-review-order>strong{grid-column:2}
+  .payment-dialog__heading--clean{margin-right:0}
+}
+
+.payment-proof-optional{padding:0;border-top:1px solid var(--color-border)}
+.payment-proof-optional summary{padding:10px 0;color:var(--color-text-secondary);font-size:.74rem;font-weight:700;cursor:pointer}
+.payment-proof-optional label{margin-top:4px}
+.payment-proof-optional small{color:var(--color-text-muted);font-size:.68rem}
+.payment-history-actions{display:flex;align-items:center;gap:6px}

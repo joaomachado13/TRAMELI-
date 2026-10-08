@@ -51,7 +51,8 @@ if (enabled) {
       await live.load();
     } catch (error) { console.error('Não foi possível atualizar os dados da operação.', error.code || error.name); }
   };
-  setInterval(() => { if (!document.hidden) synchronize(); }, 15000);
+  // Realtime handles normal changes. This is only a quiet fallback and must not keep repainting the UI.
+  setInterval(() => { if (!document.hidden && !document.querySelector('dialog[open]')) synchronize(); }, 60000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) synchronize(); });
 }
 
@@ -64,3 +65,13 @@ await import('../assets/operacao.js');
 await import('../assets/screens.js');
 await import('../assets/portal.js');
 initMotion();
+
+
+/* Modal UX: clicking the backdrop closes any non-busy dialog. */
+document.addEventListener('click', event => {
+  const dialog = event.target instanceof HTMLDialogElement ? event.target : null;
+  if (!dialog || !dialog.open || dialog.querySelector('[data-busy="true"], [data-busy]')) return;
+  const rect = dialog.getBoundingClientRect();
+  const outside = event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom;
+  if (outside) dialog.close();
+});

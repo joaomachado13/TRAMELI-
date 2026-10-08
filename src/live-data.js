@@ -104,17 +104,34 @@ export class LiveData {
       }
       const profileResult = await this.client.from('trameli_profiles').select('*').eq('user_id', this.user.id).maybeSingle();
       if (profileResult.error) throw profileResult.error;
+      const productSignature = value => JSON.stringify((value || []).map(item => ({
+        id:item.id,name:item.name,category:item.category,unit:item.unit,image:item.image,
+        priceCents:item.priceCents,active:item.active,costCents:item.costCents,
+        supplierName:item.supplierName,costEstimated:item.costEstimated,
+        unavailableFrom:item.unavailableFrom,unavailableUntil:item.unavailableUntil,
+        substituteProductId:item.substituteProductId,
+      })));
+      const settingsSignature = value => JSON.stringify(value || null);
+      const productsChanged = productSignature(this.products) !== productSignature(nextProducts);
+      const settingsChanged = settingsSignature(this.settings) !== settingsSignature(settingsResult.data);
+
+      const merged = new Map(this.orders.map(order => [order.id, order]));
+      const actualOrderChanges = changedOrders.filter(order => {
+        const previous = merged.get(order.id);
+        return !previous || previous.version !== order.version || previous.updatedAt !== order.updatedAt;
+      });
+      actualOrderChanges.forEach(order => merged.set(order.id, order));
+
       this.products = nextProducts;
       this.settings = settingsResult.data;
-      window.dispatchEvent(new Event('trameli:settings-changed'));
-      const merged = new Map(this.orders.map(order => [order.id, order]));
-      changedOrders.forEach(order => merged.set(order.id, order));
       this.orders = [...merged.values()];
       if (changedOrders.length) this.lastOrderSync = changedOrders.at(-1).updatedAt;
       this.profile = profileResult.data;
-      if (changedOrders.length) this.costSummaryCache.clear();
-      dispatchEvent(new Event('trameli:catalog-changed'));
-      dispatchEvent(new Event('trameli:orders-changed'));
+
+      if (actualOrderChanges.length) this.costSummaryCache.clear();
+      if (settingsChanged) window.dispatchEvent(new Event('trameli:settings-changed'));
+      if (productsChanged) dispatchEvent(new Event('trameli:catalog-changed'));
+      if (actualOrderChanges.length) dispatchEvent(new Event('trameli:orders-changed'));
     })();
     try { await this.loadingPromise; }
     finally { this.loadingPromise = null; }

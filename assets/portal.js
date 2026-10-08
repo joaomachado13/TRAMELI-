@@ -407,6 +407,8 @@
     view = 'cart'; error = ''; render();
   });
   host.addEventListener('submit', event => { if (event.target.id === 'portal-checkout-form') { event.preventDefault(); placeOrder(event.target); } });
+  const adminLink=document.getElementById('portal-admin-link');
+  if(adminLink){adminLink.hidden=!live?.operator;adminLink.addEventListener('click',()=>{location.hash='#operacao';});}
   document.getElementById('portal-orders-link').addEventListener('click', () => { view = 'orders'; render(); });
   document.getElementById('portal-cart-link').addEventListener('click', () => { view = 'cart'; render(); });
   document.querySelectorAll('[data-portal-nav]').forEach(button => button.addEventListener('click', () => { view = button.dataset.portalNav; render(); }));

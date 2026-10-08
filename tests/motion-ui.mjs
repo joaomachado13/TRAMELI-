@@ -166,12 +166,9 @@ try {
   await evaluate('location.hash="#loja"');
   await pause(250);
   assert.equal(await evaluate('getComputedStyle(document.querySelector(".portal-bottom-nav")).position'), 'fixed');
-  await evaluate('document.querySelector(".portal-menu-button").click()');
-  assert.equal(await evaluate('document.body.classList.contains("menu-open")'), true, 'Portal menu did not open');
+  assert.equal(await evaluate('document.querySelector(".portal-menu-button")'), null, 'Portal do cliente ainda exibiu o botão da sidebar administrativa.');
+  assert.equal(await evaluate('document.body.classList.contains("menu-open")'), false, 'Portal abriu sidebar administrativa sem solicitação.');
   assert.equal(await evaluate('document.querySelector("#smooth-content").contains(document.querySelector(".nav"))'), false);
-  assert.equal(await evaluate('getComputedStyle(document.querySelector(".nav")).touchAction'), 'pan-y', 'Menu should only pan vertically on touch');
-  await evaluate('document.querySelector(".menu-overlay").click()');
-  assert.equal(await evaluate('document.body.classList.contains("menu-open")'), false, 'Portal menu did not close');
   console.log('ScrollSmoother, cabeçalho no fluxo da página, MorphSVG suave, modais, impressão, redução de movimento e toque nativo: OK');
 } finally {
   socket?.close();
