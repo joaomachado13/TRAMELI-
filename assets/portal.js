@@ -2,6 +2,10 @@
   const live = window.TrameliLive;
   const host = document.getElementById('portal-content');
   const floatingHost = document.getElementById('portal-floating-host');
+  const weekEnterMs = 580;
+  const weekExitMs = 480;
+  let floatingMode = 'none';
+  let floatingTimer = null;
   const supportLink = document.createElement('a');
   supportLink.className = 'portal-support-whatsapp';
   supportLink.target = '_blank';
@@ -167,9 +171,56 @@
         weekHtml = `<div class="portal-week__footer portal-week__footer--viewport"><span><strong>${selectedCount} ${selectedCount === 1 ? 'item' : 'itens'} para ${selectedDay.label}</strong><small>${selectedCount ? `${money(selectedSubtotal)} em produtos neste dia · ` : ''}${plannedDays.length} ${plannedDays.length===1?'dia planejado':'dias planejados'} · ${money(weekSubtotal)} na semana</small></span><div><button type="button" data-week-to-cart ${selectedCount ? '' : 'disabled'}>Revisar este dia</button><button class="portal-primary" type="button" data-week-all>Revisar semana · ${plannedDays.length} ${plannedDays.length===1?'dia':'dias'}</button></div></div>`;
       }
     }
-    const visible = cartVisible || Boolean(weekHtml);
-    floatingHost.hidden = !visible;
-    floatingHost.innerHTML = weekHtml || (cartVisible ? `<div class="portal-floating"><div><small>${count()} ${count() === 1 ? 'item' : 'itens'} · só produtos</small><strong>${money(subtotal())}</strong></div><button type="button" data-view="cart">Ver sacola →</button></div>` : '');
+    const cartHtml = cartVisible ? `<div class="portal-floating"><div><small>${count()} ${count() === 1 ? 'item' : 'itens'} · só produtos</small><strong>${money(subtotal())}</strong></div><button type="button" data-view="cart">Ver sacola →</button></div>` : '';
+    const nextMode = weekHtml ? 'week' : cartHtml ? 'cart' : 'none';
+
+    if (nextMode === 'week') {
+      const alreadyEntering = floatingMode === 'week-entering';
+      const alreadyVisible = floatingMode === 'week' || alreadyEntering;
+      if (!alreadyVisible) {
+        clearTimeout(floatingTimer);
+        floatingHost.classList.remove('is-week-leaving');
+        floatingHost.classList.add('is-week-entering');
+        floatingHost.hidden = false;
+        floatingMode = 'week-entering';
+        floatingTimer = setTimeout(() => {
+          floatingHost.classList.remove('is-week-entering');
+          if (floatingMode === 'week-entering') floatingMode = 'week';
+        }, weekEnterMs + 80);
+      } else {
+        floatingHost.hidden = false;
+      }
+      floatingHost.innerHTML = weekHtml;
+    } else if (nextMode === 'none' && (floatingMode === 'week' || floatingMode === 'week-entering')) {
+      clearTimeout(floatingTimer);
+      floatingHost.classList.remove('is-week-entering');
+      floatingHost.classList.add('is-week-leaving');
+      floatingMode = 'week-leaving';
+      floatingTimer = setTimeout(() => {
+        if (floatingMode !== 'week-leaving') return;
+        floatingHost.classList.remove('is-week-leaving');
+        floatingHost.hidden = true;
+        floatingHost.innerHTML = '';
+        floatingMode = 'none';
+      }, weekExitMs + 40);
+    } else if (nextMode === 'week' && floatingMode === 'week-leaving') {
+      clearTimeout(floatingTimer);
+      floatingHost.classList.remove('is-week-leaving');
+      floatingHost.classList.add('is-week-entering');
+      floatingHost.hidden = false;
+      floatingHost.innerHTML = weekHtml;
+      floatingMode = 'week-entering';
+      floatingTimer = setTimeout(() => {
+        floatingHost.classList.remove('is-week-entering');
+        if (floatingMode === 'week-entering') floatingMode = 'week';
+      }, weekEnterMs + 80);
+    } else {
+      clearTimeout(floatingTimer);
+      floatingHost.classList.remove('is-week-entering', 'is-week-leaving');
+      floatingHost.hidden = nextMode === 'none';
+      floatingHost.innerHTML = cartHtml;
+      floatingMode = nextMode;
+    }
     renderSupport();
   }
   function rememberFocus() {
