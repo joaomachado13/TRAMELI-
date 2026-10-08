@@ -2550,3 +2550,14 @@ body.motion-off *, body.motion-off *::before, body.motion-off *::after {
 .entity-drawer::backdrop,.order-drawer::backdrop,.catalog-dialog::backdrop,.payment-dialog::backdrop,#operation-dialog::backdrop{background:rgb(32 24 20 / 34%)!important;backdrop-filter:blur(3px)}
 .entity-detail__header,.order-detail__header{padding-top:18px;padding-bottom:18px}
 .client-profile__header-actions{align-items:flex-start}
+
+/* Controles principais: alvos maiores e alinhamento consistente. */
+.nav__close,.mobile-menu-button{
+  width:46px!important;height:46px!important;min-width:46px!important;min-height:46px!important;
+  padding:0!important;border-radius:12px!important
+}
+.nav__close svg,.mobile-menu-button svg{width:22px!important;height:22px!important;display:block}
+.mobile-menu-button{align-items:center!important;justify-content:center!important}
+@media(max-width:760px){
+  .entity-detail__header h2,.order-detail__header h2{font-size:1.45rem!important}
+}
