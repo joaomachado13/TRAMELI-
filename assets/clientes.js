@@ -379,7 +379,9 @@
     if (event.target.id !== 'client-search') return;
     query = event.target.value;
     rerender();
-    document.getElementById('client-search')?.focus({ preventScroll: true });
+    const input = document.getElementById('client-search');
+    input?.focus({ preventScroll: true });
+    input?.setSelectionRange(query.length, query.length);
   });
 
   document.addEventListener('click', async event => {

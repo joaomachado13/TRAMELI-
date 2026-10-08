@@ -96,7 +96,7 @@ export class LiveData {
       for (let from = 0; ; from += 500) {
         let query = this.client.from('trameli_orders').select('*')
           .order('updated_at', { ascending: true }).order('id', { ascending: true }).range(from, from + 499);
-        if (this.lastOrderSync) query = query.gte('updated_at', this.lastOrderSync);
+        if (this.lastOrderSync && !force) query = query.gte('updated_at', this.lastOrderSync);
         const result = await query;
         if (result.error) throw result.error;
         changedOrders.push(...result.data.map(mapOrder));
@@ -115,23 +115,30 @@ export class LiveData {
       const productsChanged = productSignature(this.products) !== productSignature(nextProducts);
       const settingsChanged = settingsSignature(this.settings) !== settingsSignature(settingsResult.data);
 
-      const merged = new Map(this.orders.map(order => [order.id, order]));
+      const previousOrders = this.orders;
+      const merged = force ? new Map() : new Map(previousOrders.map(order => [order.id, order]));
       const actualOrderChanges = changedOrders.filter(order => {
         const previous = merged.get(order.id);
         return !previous || previous.version !== order.version || previous.updatedAt !== order.updatedAt;
       });
       actualOrderChanges.forEach(order => merged.set(order.id, order));
+      const nextOrders = force ? changedOrders : [...merged.values()];
+      const orderSignature = value => JSON.stringify((value || []).map(order => [order.id,order.version,order.updatedAt]).sort((a,b)=>a[0].localeCompare(b[0])));
+      const ordersChanged = force
+        ? orderSignature(previousOrders) !== orderSignature(nextOrders)
+        : actualOrderChanges.length > 0;
 
       this.products = nextProducts;
       this.settings = settingsResult.data;
-      this.orders = [...merged.values()];
+      this.orders = nextOrders;
       if (changedOrders.length) this.lastOrderSync = changedOrders.at(-1).updatedAt;
+      else if (force) this.lastOrderSync = null;
       this.profile = profileResult.data;
 
-      if (actualOrderChanges.length) this.costSummaryCache.clear();
+      if (ordersChanged) this.costSummaryCache.clear();
       if (settingsChanged) window.dispatchEvent(new Event('trameli:settings-changed'));
       if (productsChanged) dispatchEvent(new Event('trameli:catalog-changed'));
-      if (actualOrderChanges.length) dispatchEvent(new Event('trameli:orders-changed'));
+      if (ordersChanged) dispatchEvent(new Event('trameli:orders-changed'));
     })();
     try { await this.loadingPromise; }
     finally { this.loadingPromise = null; }
