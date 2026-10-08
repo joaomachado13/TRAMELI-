@@ -187,6 +187,7 @@ try {
       assert(weekDates[0] === expectedFirst, 'A semana não começou na primeira data permitida pelo horário de corte.');
       await evaluate('document.querySelector("[data-week-qty=\\\"1\\\"]").click()');
       await waitFor('.portal-week__footer');
+      assert(await evaluate('document.querySelector(".portal-week__footer").parentElement.id === "portal-floating-host"'), 'Resumo semanal continuou preso dentro do container de scroll.');
       assert(await evaluate('getComputedStyle(document.querySelector(".portal-week__footer")).position === "fixed"'), 'Resumo semanal não ficou fixo no rodapé da tela.');
       assert(await evaluate('parseFloat(getComputedStyle(document.querySelector(".portal-week")).paddingBottom) >= 100'), 'Planejamento não reservou espaço inferior para a barra flutuante.');
       assert(await evaluate('document.querySelector(".portal-week__footer").getBoundingClientRect().bottom <= innerHeight && document.querySelector(".portal-week__footer").getBoundingClientRect().bottom >= innerHeight - 40'), 'Barra semanal não ficou ancorada ao rodapé visível.');
