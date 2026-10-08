@@ -461,7 +461,7 @@
     if (!name || !address) { error.textContent = 'Informe nome e endereço.'; error.hidden = false; return; }
     const client = { id: editingId || crypto.randomUUID(), name, address, phone: formatPhone(form.elements.phone.value) };
     const next = editingId ? clients.map(item => item.id === editingId ? client : item) : [...clients, client];
-    if (save(next)) formDialog.close();
+    if (save(next)) { rerender(); formDialog.close(); }
   });
 
   window.addEventListener('trameli:payments-changed', () => {
