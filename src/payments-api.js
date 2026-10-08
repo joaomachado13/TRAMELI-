@@ -2,6 +2,7 @@ export class PaymentsApi {
   constructor(live) {
     this.live = live; this.ready = null; this.error = ''; this.pending = null;
     this.balances = []; this.statement = []; this.payments = []; this.allocations = []; this.intents = []; this.receipts = []; this.profiles = [];
+    this.snapshot = '';
   }
   async rows(factory, sort) {
     const rows = [];
@@ -30,7 +31,7 @@ export class PaymentsApi {
         let profiles = [];
         if (this.live.operator) {
           profiles = await this.rows(
-            () => c.from('trameli_profiles').select('user_id,name,order_blocked,order_blocked_at,order_block_reason'),
+            () => c.from('trameli_profiles').select('user_id,name,phone,address,order_blocked,order_blocked_at,order_block_reason'),
             ['user_id']
           );
           const receiptResult = await c.from('trameli_payment_receipts')
@@ -39,8 +40,11 @@ export class PaymentsApi {
           if (receiptResult.error && receiptResult.error.code !== 'PGRST205') throw receiptResult.error;
           receipts = receiptResult.error ? [] : receiptResult.data;
         }
+        const snapshot = JSON.stringify({ balances, statement, payments, allocations, intents, receipts, profiles });
+        const changed = snapshot !== this.snapshot || this.ready !== true;
+        this.snapshot = snapshot;
         Object.assign(this, { balances, statement, payments, allocations, intents, receipts, profiles, ready: true, error: '' });
-        window.dispatchEvent(new Event('trameli:payments-changed'));
+        if (changed) window.dispatchEvent(new Event('trameli:payments-changed'));
       } catch (error) {
         this.ready = ['PGRST202', 'PGRST205'].includes(error.code) ? false : this.ready;
         this.error = this.ready === false ? 'Falta ativar a migração 007 de pagamentos no Supabase.' : 'Não foi possível atualizar os pagamentos. Tente novamente antes de registrar valores.';
