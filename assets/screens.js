@@ -145,13 +145,39 @@ function updateOverview() {
 }
 updateOverview();
 const canPassiveRefresh = () => !document.querySelector('dialog[open]') && !document.activeElement?.matches('input,select,textarea,[contenteditable="true"]');
+function refreshRouteWhenIdle(routesToRefresh) {
+  if (!routesToRefresh.includes(location.hash)) return;
+  const dialog = document.querySelector('dialog[open]');
+  if (dialog) {
+    if (dialog.dataset.routeRefreshPending !== 'true') {
+      dialog.dataset.routeRefreshPending = 'true';
+      dialog.addEventListener('close', () => {
+        delete dialog.dataset.routeRefreshPending;
+        if (routesToRefresh.includes(location.hash)) showRoute(true);
+      }, { once: true });
+    }
+    return;
+  }
+  const active = document.activeElement;
+  if (active?.matches('input,select,textarea,[contenteditable="true"]')) {
+    if (active.dataset.routeRefreshPending !== 'true') {
+      active.dataset.routeRefreshPending = 'true';
+      active.addEventListener('blur', () => {
+        delete active.dataset.routeRefreshPending;
+        if (routesToRefresh.includes(location.hash)) showRoute(true);
+      }, { once: true });
+    }
+    return;
+  }
+  showRoute(true);
+}
 window.addEventListener('trameli:orders-changed', () => {
   updateOverview();
-  if (canPassiveRefresh() && ['#pendencias', '#pedidos', '#agenda', '#financeiro', '#relatorios'].includes(location.hash)) showRoute(true);
+  refreshRouteWhenIdle(['#pendencias', '#pedidos', '#agenda', '#financeiro', '#relatorios']);
 });
 window.addEventListener('trameli:payments-changed', updateOverview);
-window.addEventListener('trameli:catalog-changed', () => { updateOverview(); if (canPassiveRefresh() && ['#produtos','#pendencias'].includes(location.hash)) showRoute(true); });
-window.addEventListener('trameli:clients-changed', () => { if (canPassiveRefresh() && location.hash === '#clientes') showRoute(true); });
+window.addEventListener('trameli:catalog-changed', () => { updateOverview(); refreshRouteWhenIdle(['#produtos','#pendencias']); });
+window.addEventListener('trameli:clients-changed', () => { refreshRouteWhenIdle(['#clientes']); });
 
 function intro(eyebrow, title, description) {
   return `<header class="screen-hero"><div><p class="screen-eyebrow">${eyebrow}</p><h1 class="h1">${title}</h1><p class="screen-description">${description}</p></div></header>`;
