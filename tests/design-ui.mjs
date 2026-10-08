@@ -5,6 +5,7 @@ import { join, resolve, sep } from 'node:path';
 import { browserPath, headlessFlags } from './browser-path.mjs';
 import { auditIdentity } from './identity-audit.mjs';
 
+// Regressões: busca de clientes e badge de Pedidos.
 const url = process.env.TRAMELI_TEST_URL;
 if (!url?.startsWith('http://127.0.0.1:')) throw new Error('Provide a local Vite server in TRAMELI_TEST_URL.');
 const profile = await mkdtemp(join(tmpdir(), 'trameli-design-'));
