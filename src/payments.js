@@ -20,6 +20,7 @@ const cents = raw => {
 };
 const groupKey = row => row.customer_id || `manual:${row.order_id}`;
 const metric = (label,value) => `<div><span>${label}</span><strong>${money(value)}</strong></div>`;
+const proofPath = reference => String(reference || '').startsWith('receipt:') ? String(reference).slice(8) : '';
 const totals = rows => rows.reduce((sum,row) => {
   for (const key of ['total_cents','paid_cents','due_cents','refund_due_cents']) sum[key] += Number(row[key]);
   return sum;
@@ -120,7 +121,7 @@ export function initPayments(live) {
       <button class="screen-primary" type="button" data-payment-go-clients>Ver clientes</button>
     </div>
     <details class="payment-worklist payment-history-compact"><summary>Histórico de recebimentos</summary>
-      <ul class="payment-log">${receipts.length?receipts.map(p=>`<li><span>${timestamp(p.recorded_at)} · ${money(p.amount_cents)}<small>${methods[p.method]} · ${api.allocations.filter(a=>a.payment_id===p.id).map(a=>`#${short(a.order_id)}`).join(' · ')}</small></span>${reversed.has(p.id)?'<strong>Estornado</strong>':`<button type="button" data-pay-refund="${p.id}">Devolução</button>`}</li>`).join(''):'<li><span>Nenhum recebimento confirmado ainda.</span></li>'}</ul>
+      <ul class="payment-log">${receipts.length?receipts.map(p=>`<li><span>${timestamp(p.recorded_at)} · ${money(p.amount_cents)}<small>${methods[p.method]} · ${api.allocations.filter(a=>a.payment_id===p.id).map(a=>`#${short(a.order_id)}`).join(' · ')}</small></span><span class="payment-history-actions">${proofPath(p.reference)?`<button type="button" data-operator-proof="${esc(proofPath(p.reference))}">Comprovante</button>`:''}${reversed.has(p.id)?'<strong>Estornado</strong>':`<button type="button" data-pay-refund="${p.id}">Devolução</button>`}</span></li>`).join(''):'<li><span>Nenhum recebimento confirmado ainda.</span></li>'}</ul>
     </details>`;
   }
 
@@ -187,6 +188,11 @@ export function initPayments(live) {
           <strong data-allocation-total>R$ 0,00</strong>
         </div>
         ${intent?'':`<label class="payment-method-simple">Recebido por<select name="method"><option value="pix_manual">Pix</option><option value="cash">Dinheiro</option><option value="other">Acordado com a proprietária</option></select></label>`}
+        <details class="payment-proof-optional">
+          <summary>Anexar comprovante (opcional)</summary>
+          <label>Arquivo<input type="file" name="operatorProof" accept="image/jpeg,image/png,application/pdf"></label>
+          <small>JPG, PNG ou PDF · até 5 MB</small>
+        </details>
         <p class="payment-error" role="alert"></p>
         <button class="payment-confirm-primary" type="submit">${intent?'Confirmar pagamento':'Dar baixa'}</button>
       </form>`);
@@ -217,6 +223,17 @@ export function initPayments(live) {
     if(form.dataset.payload!==payload){form.dataset.payload=payload;form.dataset.requestId=crypto.randomUUID();}
     return {p_request_id:form.dataset.requestId,...args};
   };
+  async function uploadOperatorProof(form) {
+    const file=form.elements.operatorProof?.files?.[0];
+    if(!file)return '';
+    if(!live?.operator||!live?.user?.id)throw new Error('Anexo disponível somente para a operação.');
+    if(!['image/jpeg','image/png','application/pdf'].includes(file.type)||file.size>5242880)throw new Error('Use JPG, PNG ou PDF de até 5 MB.');
+    const ext={'image/jpeg':'jpg','image/png':'png','application/pdf':'pdf'}[file.type];
+    const path=`${live.user.id}/operacao/${new Date().toISOString().slice(0,7)}/${crypto.randomUUID()}.${ext}`;
+    const upload=await live.client.storage.from('trameli-payment-receipts').upload(path,file,{contentType:file.type,upsert:false});
+    if(upload.error)throw upload.error;
+    return path;
+  }
   dialog.addEventListener('submit',async event=>{
     const form=event.target.closest('[data-payment-form]'); if(!form)return; event.preventDefault();
     if(form.dataset.busy)return;
@@ -234,7 +251,8 @@ export function initPayments(live) {
           const amount=form.dataset.paymentForm==='unknown'?cents(form.elements.amount.value):lines.reduce((s,l)=>s+l.amount_cents,0);
           if(!amount)throw new Error('Informe um valor maior que zero.');
           const isIntent=Boolean(form.dataset.intentId);
-          name='trameli_record_payment';args=requestArgs(form,{p_amount_cents:amount,p_method:isIntent?'pix_manual':(form.elements.method?.value||'pix_manual'),p_reference:isIntent?'Pagamento informado pelo cliente':'',p_note:'',p_lines:lines});
+          const attachment=await uploadOperatorProof(form);
+          name='trameli_record_payment';args=requestArgs(form,{p_amount_cents:amount,p_method:isIntent?'pix_manual':(form.elements.method?.value||'pix_manual'),p_reference:attachment?`receipt:${attachment}`:(isIntent?'Pagamento informado pelo cliente':''),p_note:'',p_lines:lines});
         }
       }
       form.dataset.busy='true';button.disabled=true;
@@ -262,6 +280,14 @@ export function initPayments(live) {
     if(button.matches('[data-fill-balances]')){dialog.querySelectorAll('[data-allocation]').forEach(input=>input.checked=true);dialog.dispatchEvent(new Event('change'));return;}
     if(button.matches('[data-pay-refresh]')){await refresh();await previewDay();return;}
     if(button.matches('[data-payment-go-clients]')){location.hash='#clientes';return;}
+    if(button.matches('[data-operator-proof]')){
+      try{
+        const {data,error}=await live.client.storage.from('trameli-payment-receipts').createSignedUrl(button.dataset.operatorProof,300);
+        if(error)throw error;
+        window.open(data.signedUrl,'_blank','noopener,noreferrer');
+      }catch(error){notify(error.message||'Não foi possível abrir o comprovante.');}
+      return;
+    }
     if(!button.matches('[data-pay-refund],[data-day-preview],[data-day-close]'))return;
     if(warning()){notify(warning());return;}
     if(!live.operator)return;
