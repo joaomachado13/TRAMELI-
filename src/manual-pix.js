@@ -72,17 +72,16 @@ export function initManualPix(live) {
       open(`<div class="pix-flow">
         <div class="pix-flow__head"><span>PAGAMENTO VIA PIX</span><h2 class="pix-amount">${money(amount)}</h2><p>${rows.length===1?`Pedido ${orderText}`:`${rows.length} pedidos · ${orderText}`}</p></div>
         <div class="pix-flow__receiver">Recebedor: <strong>${esc(config.receiver_label)}</strong></div>
+        <section class="pix-signal-reminder" aria-label="Aviso após o pagamento">
+          <span>DEPOIS DE PAGAR</span>
+          <strong>Não esqueça de avisar a Shirley</strong>
+          <button type="button" class="pix-signal-primary" data-pix-signal>Já paguei</button>
+        </section>
         <img class="pix-qr" src="${dataUrl}" width="320" height="320" alt="QR Code Pix para o saldo em aberto">
         <label class="pix-copy-field"><span>Pix Copia e Cola</span><textarea data-pix-payload readonly rows="3">${esc(payload)}</textarea></label>
         <button type="button" class="pix-copy-button" data-pix-copy>Copiar código Pix</button>
         <p class="pix-copy-status" data-pix-copy-status role="status"></p>
-        <section class="pix-afterpay" data-pix-afterpay>
-          <span class="pix-afterpay__eyebrow">DEPOIS DE PAGAR</span>
-          <h3>Avise que o Pix foi feito</h3>
-          <p>A Trameli não consulta o banco automaticamente. Toque abaixo para colocar seu pagamento na fila de conferência.</p>
-          <button type="button" class="pix-signal-primary" data-pix-signal>Já paguei</button>
-        </section>
-        <p class="pix-confirm-note">O pagamento só será marcado como confirmado depois da conferência da loja. Se já pagou, não pague de novo.</p>
+        <p class="pix-confirm-note">A Trameli não consulta o banco automaticamente. Depois de pagar, toque em <strong>“Já paguei”</strong> para entrar na fila de conferência. Se já pagou, não pague de novo.</p>
       </div>`);
       expires=setTimeout(()=>{if(dialog.open)fail('Consulte novamente o saldo antes de pagar. Esta tela foi ocultada, mas isso não invalida uma cópia antiga do Pix.');},300000);
     }catch(error){if(dialog.open)fail(error.message||'Não foi possível preparar o Pix.');}
