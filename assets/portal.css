@@ -125,3 +125,50 @@ body:not(.portal-mode) #portal-floating-host,body:not(.portal-mode) .portal-bott
 @media(max-width:640px){
   #portal-floating-host .portal-week__footer{bottom:calc(68px + env(safe-area-inset-bottom))}
 }
+
+/* Entrada/saída da barra semanal: cortina do centro para fora. */
+#portal-floating-host.is-week-entering .portal-week__footer{
+  animation:trameli-week-curtain-in 580ms cubic-bezier(.16,.8,.24,1) both;
+  transform-origin:center center;
+}
+#portal-floating-host.is-week-entering .portal-week__footer>span,
+#portal-floating-host.is-week-entering .portal-week__footer>div{
+  animation:trameli-week-content-in 360ms cubic-bezier(.2,.75,.25,1) 150ms both;
+}
+#portal-floating-host.is-week-leaving .portal-week__footer{
+  pointer-events:none;
+  animation:trameli-week-curtain-out 480ms cubic-bezier(.55,.02,.78,.32) both;
+  transform-origin:center center;
+}
+#portal-floating-host.is-week-leaving .portal-week__footer>span,
+#portal-floating-host.is-week-leaving .portal-week__footer>div{
+  animation:trameli-week-content-out 250ms ease-in both;
+}
+@keyframes trameli-week-curtain-in{
+  0%{clip-path:inset(0 49.5% 0 49.5% round 16px);opacity:.72;transform:translateX(-50%) translateY(12px) scaleY(.92)}
+  38%{opacity:1}
+  100%{clip-path:inset(0 0 0 0 round 16px);opacity:1;transform:translateX(-50%) translateY(0) scaleY(1)}
+}
+@keyframes trameli-week-content-in{
+  0%{opacity:0;transform:translateY(9px)}
+  100%{opacity:1;transform:translateY(0)}
+}
+@keyframes trameli-week-curtain-out{
+  0%{clip-path:inset(0 0 0 0 round 16px);opacity:1;transform:translateX(-50%) translateY(0) scaleY(1)}
+  66%{opacity:.96}
+  100%{clip-path:inset(0 49.5% 0 49.5% round 16px);opacity:0;transform:translateX(-50%) translateY(8px) scaleY(.94)}
+}
+@keyframes trameli-week-content-out{
+  0%{opacity:1;transform:translateY(0)}
+  100%{opacity:0;transform:translateY(5px)}
+}
+@media(prefers-reduced-motion:reduce){
+  #portal-floating-host.is-week-entering .portal-week__footer,
+  #portal-floating-host.is-week-entering .portal-week__footer>span,
+  #portal-floating-host.is-week-entering .portal-week__footer>div,
+  #portal-floating-host.is-week-leaving .portal-week__footer,
+  #portal-floating-host.is-week-leaving .portal-week__footer>span,
+  #portal-floating-host.is-week-leaving .portal-week__footer>div{
+    animation:none!important;
+  }
+}
