@@ -63,28 +63,78 @@
   }
 
   function buildCards(orders) {
+    const profiles = live ? (window.TrameliPayments?.api?.profiles || []) : [];
     const grouped = new Map();
+    const accountByPhone = new Map();
+    const accountByName = new Map();
+    const ambiguousNames = new Set();
+    const phoneDigits = value => String(value || '').replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, '');
+
+    const registerIdentity = (id, name, phone) => {
+      if (!id) return;
+      const phoneKey = phoneDigits(phone);
+      if (phoneKey) accountByPhone.set(phoneKey, id);
+      const nameKey = normalize(name);
+      if (!nameKey) return;
+      if (accountByName.has(nameKey) && accountByName.get(nameKey) !== id) {
+        accountByName.delete(nameKey);
+        ambiguousNames.add(nameKey);
+      } else if (!ambiguousNames.has(nameKey)) accountByName.set(nameKey, id);
+    };
+
+    profiles.forEach(profile => registerIdentity(profile.user_id, profile.name, profile.phone));
+    orders.filter(order => order.customerId).forEach(order => registerIdentity(order.customerId, order.customer, order.phone));
+
+    const profileById = new Map(profiles.map(profile => [profile.user_id, profile]));
+    const savedByName = new Map(clients.map(client => [normalize(client.name), client]));
+
+    profiles.forEach(profile => {
+      const key = `account:${profile.user_id}`;
+      grouped.set(key, {
+        key,
+        id: null,
+        customerId: profile.user_id,
+        name: profile.name,
+        phone: profile.phone || '',
+        address: profile.address || '',
+        orders: [],
+      });
+    });
+
     orders.forEach(order => {
       const normalizedName = normalize(order.customer);
-      const saved = clients.find(client => normalize(client.name) === normalizedName);
-      const key = order.customerId || saved?.id || `order:${normalizedName}|${normalize(order.address)}`;
+      const saved = savedByName.get(normalizedName);
+      const phoneKey = phoneDigits(order.phone);
+      const resolvedAccount = order.customerId
+        || (phoneKey ? accountByPhone.get(phoneKey) : null)
+        || accountByName.get(normalizedName)
+        || null;
+      const profile = resolvedAccount ? profileById.get(resolvedAccount) : null;
+      const key = resolvedAccount
+        ? `account:${resolvedAccount}`
+        : phoneKey
+          ? `phone:${phoneKey}`
+          : `name:${normalizedName}`;
       const record = grouped.get(key) || {
         key,
         id: saved?.id || null,
-        customerId: order.customerId || null,
-        name: saved?.name || order.customer,
-        phone: saved?.phone || order.phone || '',
-        address: saved?.address || order.address || '',
+        customerId: resolvedAccount,
+        name: profile?.name || saved?.name || order.customer,
+        phone: profile?.phone || saved?.phone || order.phone || '',
+        address: profile?.address || saved?.address || order.address || '',
         orders: [],
       };
       record.orders.push(order);
-      if (!record.customerId && order.customerId) record.customerId = order.customerId;
+      if (!record.customerId && resolvedAccount) record.customerId = resolvedAccount;
       if (!record.phone && order.phone) record.phone = order.phone;
       if (!record.address && order.address) record.address = order.address;
       grouped.set(key, record);
     });
-    clients.forEach(client => {
-      if (!grouped.has(client.id)) grouped.set(client.id, { key: client.id, ...client, customerId: null, orders: [] });
+
+    if (!live) clients.forEach(client => {
+      const phoneKey = phoneDigits(client.phone);
+      const key = phoneKey ? `phone:${phoneKey}` : `name:${normalize(client.name)}`;
+      if (!grouped.has(key)) grouped.set(key, { key, ...client, customerId: null, orders: [] });
     });
 
     return [...grouped.values()].map(client => {
@@ -92,20 +142,25 @@
       const spent = active.reduce((sum, order) => sum + total(order), 0);
       const recent = active.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] || null;
       return { ...client, active, spent, recent, average: active.length ? Math.round(spent / active.length) : 0 };
-    }).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+    }).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
   }
 
   function paymentData(client) {
     const api = window.TrameliPayments?.api;
     const balances = api?.balances || [];
     const ids = new Set([client.customerId, ...client.active.map(order => order.customerId)].filter(Boolean));
-    const rows = balances.filter(row => ids.has(row.customer_id) || (!ids.size && normalize(row.customer_name) === normalize(client.name)));
+    const orderIds = new Set(client.active.map(order => order.id));
+    const rows = balances.filter(row =>
+      orderIds.has(row.order_id)
+      || ids.has(row.customer_id)
+      || (!ids.size && normalize(row.customer_name) === normalize(client.name))
+    );
     const customerId = client.customerId || rows.find(row => row.customer_id)?.customer_id || null;
     const totalCents = rows.reduce((sum, row) => sum + Number(row.total_cents || 0), 0);
     const paidCents = rows.reduce((sum, row) => sum + Number(row.paid_cents || 0), 0);
     const dueCents = rows.reduce((sum, row) => sum + Number(row.due_cents || 0), 0);
     const pendingIntents = customerId ? (api?.intents || []).filter(intent => intent.customer_id === customerId && intent.status === 'pending') : [];
-    const receiptByIntent = new Map((api?.receipts || []).filter(receipt => !customerId || receipt.customer_id === customerId).map(receipt => [receipt.intent_id, receipt]));
+    const receiptByIntent = new Map();
     const profile = customerId ? (api?.profiles || []).find(item => item.user_id === customerId) || null : null;
     const today = saoPauloToday();
     const overdueRows = rows.filter(row => Number(row.due_cents || 0) > 0 && billingDeadline(row.delivery_date) < today);
@@ -228,25 +283,24 @@
       return `<section class="entity-block client-finance"><div class="entity-block__heading"><h3>Pagamento</h3></div><p class="entity-muted">Os dados financeiros aparecem aqui quando a conexão de pagamentos estiver disponível.</p></section>`;
     }
 
-    const pending = payment.pendingIntents.map(intent => {
-      const receipt = payment.receiptByIntent.get(intent.id);
-      return `<article class="client-payment-alert">
-        <div class="client-payment-alert__main">
-          <span class="client-payment-badge is-review">Aguardando conferência</span>
-          <strong>${money(intent.amount_cents)}</strong>
-          <small>Cliente informou pagamento em ${escapeHtml(timestamp(intent.created_at))}</small>
-          <small>${receipt ? 'Comprovante enviado pelo cliente.' : 'Sem comprovante anexado.'}</small>
-        </div>
-        <div class="client-payment-alert__actions">
-          ${receipt ? `<button type="button" data-client-receipt="${escapeHtml(receipt.id)}">Abrir comprovante</button>` : ''}
-          <button class="screen-primary" type="button" data-client-confirm-intent="${escapeHtml(intent.id)}" data-customer-id="${escapeHtml(payment.customerId || '')}" data-customer-name="${escapeHtml(client.name)}">Conferir pagamento</button>
-        </div>
-      </article>`;
-    }).join('');
+    const pending = payment.pendingIntents.map(intent => `<article class="client-payment-alert">
+      <div class="client-payment-alert__main">
+        <span class="client-payment-badge is-review">Pagamento informado</span>
+        <strong>${money(intent.amount_cents)}</strong>
+        <small>${escapeHtml(timestamp(intent.created_at))}</small>
+      </div>
+      <div class="client-payment-alert__actions">
+        <button class="screen-primary" type="button"
+          data-client-confirm-intent="${escapeHtml(intent.id)}"
+          data-customer-id="${escapeHtml(payment.customerId || '')}"
+          data-customer-name="${escapeHtml(client.name)}"
+          data-client-key="${escapeHtml(client.key)}">Conferir</button>
+      </div>
+    </article>`).join('');
 
     let empty;
     if (payment.status === 'paid') empty = '<div class="client-payment-ok"><strong>Conta em dia.</strong><span>Não há saldo pendente para este cliente.</span></div>';
-    else if (payment.dueCents > 0) empty = `<div class="client-payment-open"><strong>${money(payment.dueCents)} em aberto</strong><span>O cliente ainda não informou um pagamento para conferência.</span><button type="button" data-client-open-finance data-customer-id="${escapeHtml(payment.customerId || '')}" data-customer-name="${escapeHtml(client.name)}">Registrar pagamento</button></div>`;
+    else if (payment.dueCents > 0) empty = `<div class="client-payment-open"><strong>${money(payment.dueCents)} em aberto</strong><span>Nenhum pagamento informado ainda.</span><button type="button" data-client-open-finance data-customer-id="${escapeHtml(payment.customerId || '')}" data-customer-name="${escapeHtml(client.name)}" data-client-key="${escapeHtml(client.key)}">Dar baixa manual</button></div>`;
     else empty = '<p class="entity-muted">Nenhuma movimentação financeira registrada.</p>';
 
     const orderAccess = payment.customerId && (payment.profile?.order_blocked || payment.overdueRows.length)
@@ -269,7 +323,7 @@
       : '';
 
     return `<section class="entity-block client-finance">
-      <div class="entity-block__heading"><div><h3>Pagamento</h3><p>Conferência, comprovante e baixa ficam centralizados neste cliente.</p></div><span>${statusLabel(payment.status)}</span></div>
+      <div class="entity-block__heading"><div><h3>Pagamento</h3><p>Saldo e conferência deste cliente.</p></div><span>${statusLabel(payment.status)}</span></div>
       ${pending || empty}
     </section>${orderAccess}`;
   }
@@ -362,27 +416,25 @@
       return;
     }
 
-    const receipt = event.target.closest('[data-client-receipt]');
-    if (receipt) {
-      await window.TrameliPayments?.openReceipt?.(receipt.dataset.clientReceipt);
-      return;
-    }
-
     const confirmIntent = event.target.closest('[data-client-confirm-intent]');
     if (confirmIntent) {
+      const client = lastCards.find(item => item.key === confirmIntent.dataset.clientKey);
       await window.TrameliPayments?.openForCustomer?.({
         customerId: confirmIntent.dataset.customerId || null,
         customerName: confirmIntent.dataset.customerName,
         intentId: confirmIntent.dataset.clientConfirmIntent,
+        orderIds: client?.active.map(order => order.id) || [],
       });
       return;
     }
 
     const openFinance = event.target.closest('[data-client-open-finance]');
     if (openFinance) {
+      const client = lastCards.find(item => item.key === openFinance.dataset.clientKey);
       await window.TrameliPayments?.openForCustomer?.({
         customerId: openFinance.dataset.customerId || null,
         customerName: openFinance.dataset.customerName,
+        orderIds: client?.active.map(order => order.id) || [],
       });
       return;
     }
