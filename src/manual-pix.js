@@ -77,18 +77,9 @@ export function initManualPix(live) {
         <p class="pix-copy-status" data-pix-copy-status role="status"></p>
         <section class="pix-afterpay" data-pix-afterpay>
           <span class="pix-afterpay__eyebrow">DEPOIS DE PAGAR</span>
-          <h3>Envie o comprovante</h3>
-          <div class="pix-afterpay__actions">
-            <button type="button" data-pix-upload-toggle>Enviar pelo site</button>
-            ${waHref?`<a class="pix-whatsapp" href="${waHref}" target="_blank" rel="noopener noreferrer">${whatsappIcon}<span>Enviar no WhatsApp</span></a>`:''}
-          </div>
-          <form class="pix-receipt-form" data-pix-receipt hidden>
-            <label>Comprovante<input type="file" name="receipt" accept="image/jpeg,image/png,application/pdf" required></label>
-            <p class="pix-receipt-file" data-pix-receipt-file>JPG, PNG ou PDF · até 5 MB</p>
-            <p class="payment-error" data-pix-receipt-status role="status"></p>
-            <button type="submit">Enviar comprovante</button>
-          </form>
-          <button type="button" class="pix-signal-link" data-pix-signal>Já paguei, sem comprovante</button>
+          <h3>Avise que o Pix foi feito</h3>
+          <p>A Trameli não consulta o banco automaticamente. Toque abaixo para colocar seu pagamento na fila de conferência.</p>
+          <button type="button" class="pix-signal-primary" data-pix-signal>Já paguei</button>
         </section>
         <p class="pix-confirm-note">O pagamento só será marcado como confirmado depois da conferência da loja. Se já pagou, não pague de novo.</p>
       </div>`);
@@ -102,11 +93,6 @@ export function initManualPix(live) {
     if(button.matches('[data-pix-config]')){await refresh();configure();return;}
     if(button.matches('[data-pix-refresh]')){await refresh();return;}
     if(button.matches('[data-pix-order]')){await pay(button.dataset.pixOrder);return;}
-    if(button.matches('[data-pix-upload-toggle]')){
-      const form=dialog.querySelector('[data-pix-receipt]');
-      if(form){form.hidden=!form.hidden;if(!form.hidden)form.elements.receipt?.focus();}
-      return;
-    }
     if(button.matches('[data-pix-signal]')){
       if(!intentRequestId||!shownOrderIds.length)return;
       button.disabled=true;
@@ -114,7 +100,7 @@ export function initManualPix(live) {
         const {error}=await live.client.rpc('trameli_signal_pix_payment',{p_request_id:intentRequestId,p_order_ids:shownOrderIds});
         if(error)throw error;
         await window.TrameliPayments?.api?.load(true);
-        open('<h2>Aviso enviado</h2><p>A operação recebeu seu aviso e ainda conferirá o banco. <strong>Seu pagamento ainda não está marcado como confirmado.</strong></p>');
+        open(`<div class="pix-signal-success"><span class="pix-afterpay__eyebrow">AVISO ENVIADO</span><h2>Agora é com a Shirley.</h2><p>Seu pagamento entrou na fila de conferência. Ele só será marcado como pago depois que ela conferir.</p>${waHref?`<a class="pix-whatsapp pix-whatsapp--wide" href="${waHref}" target="_blank" rel="noopener noreferrer">${whatsappIcon}<span>Enviar comprovante no WhatsApp</span></a>`:''}</div>`);
       }catch(error){button.disabled=false;const host=dialog.querySelector('[data-pix-copy-status]');if(host)host.textContent=error.message||'Não foi possível enviar o aviso.';}
       return;
     }
@@ -122,46 +108,14 @@ export function initManualPix(live) {
       const input=dialog.querySelector('[data-pix-payload]'),status=dialog.querySelector('[data-pix-copy-status]');
       try{
         await navigator.clipboard.writeText(input.value);
-        status.textContent='Código copiado. Depois de pagar, envie o comprovante abaixo.';
-        const form=dialog.querySelector('[data-pix-receipt]');
-        if(form)form.hidden=false;
+        status.textContent='Código copiado. Faça o pagamento e depois toque em “Já paguei”.';
       }catch{
         input.focus();input.select();
-        status.textContent='Selecione e copie o código. Depois de pagar, envie o comprovante abaixo.';
+        status.textContent='Selecione e copie o código. Depois de pagar, toque em “Já paguei”.';
       }
     }
   });
   dialog.addEventListener('submit',async event=>{
-    const receiptForm=event.target.closest('[data-pix-receipt]');
-    if(receiptForm){
-      event.preventDefault();
-      if(receiptForm.dataset.busy||!intentRequestId||!shownOrderIds.length)return;
-      const file=receiptForm.elements.receipt.files?.[0];
-      const status=receiptForm.querySelector('[data-pix-receipt-status]');
-      const button=receiptForm.querySelector('[type=submit]');
-      let path='';
-      try{
-        if(!file)throw new Error('Selecione o comprovante.');
-        if(!['image/jpeg','image/png','application/pdf'].includes(file.type)||file.size>5242880)throw new Error('Use JPG, PNG ou PDF de até 5 MB.');
-        const ext={'image/jpeg':'jpg','image/png':'png','application/pdf':'pdf'}[file.type];
-        path=`${live.user.id}/${new Date().toISOString().slice(0,7)}/${crypto.randomUUID()}.${ext}`;
-        receiptForm.dataset.busy='true';button.disabled=true;status.textContent='Enviando…';
-        const upload=await live.client.storage.from('trameli-payment-receipts').upload(path,file,{contentType:file.type,upsert:false});
-        if(upload.error)throw upload.error;
-        const {error}=await live.client.rpc('trameli_submit_payment_receipt',{
-          p_request_id:intentRequestId,p_order_ids:shownOrderIds,p_storage_path:path,
-          p_file_name:file.name.slice(0,180),p_mime_type:file.type
-        });
-        if(error)throw error;
-        await window.TrameliPayments?.api?.load(true);
-        receiptForm.innerHTML='<div class="pix-receipt-success"><strong>Comprovante enviado ✓</strong><span>A loja já recebeu o aviso para conferir.</span></div>';
-      }catch(error){
-        if(path)await live.client.storage.from('trameli-payment-receipts').remove([path]).catch(()=>{});
-        status.textContent=error.message||'Não foi possível enviar o comprovante.';
-        button.disabled=false;delete receiptForm.dataset.busy;
-      }
-      return;
-    }
     const form=event.target.closest('[data-pix-form]');if(!form)return;event.preventDefault();
     if(form.dataset.busy)return;
     const errorHost=form.querySelector('[data-pix-error]'),button=form.querySelector('[type=submit]');errorHost.textContent='';
