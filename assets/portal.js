@@ -29,7 +29,7 @@
   const formatDate = value => new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
   const readJson = (key, fallback) => { try { return JSON.parse(localStorage.getItem(key) || 'null') ?? fallback; } catch { return fallback; } };
   const allProducts = () => window.TrameliCatalog?.list().filter(item => item.active && Number.isSafeInteger(item.priceCents) && item.priceCents >= 0) || [];
-  const unavailableFor = (item, date = tomorrow()) => Boolean(item.unavailableFrom && item.unavailableUntil && date >= item.unavailableFrom && date <= item.unavailableUntil);
+  const unavailableFor = (item, date = nextDeliveryDate()) => Boolean(item.unavailableFrom && item.unavailableUntil && date >= item.unavailableFrom && date <= item.unavailableUntil);
   const products = () => allProducts().filter(item => !unavailableFor(item));
   const weighted = product => product.unit === 'kg';
   const linePrice = (product, quantity) => weighted(product)
@@ -52,6 +52,40 @@
   }).formatToParts(value).filter(part => part.type !== 'literal').map(part => [part.type, Number(part.value)]));
   const cutoffTime = () => String(live?.settings?.cutoff_time || window.TrameliSettings?.cutoffTime || '21:00').slice(0, 5);
   const cutoffLabel = () => cutoffTime().replace(':', 'h');
+  const shiftDateKey = (value, days) => {
+    const [year, month, day] = String(value).split('-').map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day + days));
+    return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+  };
+  const dayMeta = [
+    ['sunday','Domingo'],['monday','Segunda'],['tuesday','Terça'],['wednesday','Quarta'],
+    ['thursday','Quinta'],['friday','Sexta'],['saturday','Sábado'],
+  ];
+  const todayInSaoPaulo = () => {
+    const clock = saoPauloClock();
+    return `${clock.year}-${String(clock.month).padStart(2, '0')}-${String(clock.day).padStart(2, '0')}`;
+  };
+  const nextDeliveryDate = () => {
+    const clock = saoPauloClock();
+    const [cutoffHour, cutoffMinute] = cutoffTime().split(':').map(Number);
+    const cutoffPassed = clock.hour * 60 + clock.minute > cutoffHour * 60 + cutoffMinute;
+    return shiftDateKey(todayInSaoPaulo(), cutoffPassed ? 2 : 1);
+  };
+  const rollingWeek = () => Array.from({ length: 7 }, (_, index) => {
+    const date = shiftDateKey(nextDeliveryDate(), index);
+    const jsDay = new Date(`${date}T12:00:00Z`).getUTCDay();
+    const [key, label] = dayMeta[jsDay];
+    return { key, label, date };
+  });
+  const cutoffWindowNotice = () => {
+    const clock = saoPauloClock();
+    const [cutoffHour, cutoffMinute] = cutoffTime().split(':').map(Number);
+    if (clock.hour * 60 + clock.minute <= cutoffHour * 60 + cutoffMinute) return '';
+    const missed = shiftDateKey(todayInSaoPaulo(), 1);
+    const first = nextDeliveryDate();
+    return `O horário para pedir para ${formatDate(missed)} terminou às ${cutoffLabel()}. A primeira entrega disponível agora é ${formatDate(first)}.`;
+  };
+
   const beforeCustomerCutoff = deliveryDate => {
     const [year, month, day] = String(deliveryDate).split('-').map(Number);
     if (!year || !month || !day) return false;
@@ -66,7 +100,10 @@
   if (!cart || typeof cart !== 'object' || Array.isArray(cart)) cart = {};
   let favoriteOrders = new Set(readJson(favoriteOrdersKey, []));
   let weeklyPlan = readJson(weeklyPlanKey, {});
-  let weeklyDay = 'monday';
+  let weeklyDay = null;
+  let checkoutDeliveryDate = null;
+  let weeklySuccessCount = 0;
+  let weeklyRequestIds = {};
   let view = 'catalog';
   let renderedView = null;
   let portalVisible = false;
@@ -86,9 +123,18 @@
     catch { checkoutRequestId = crypto.randomUUID(); }
   }
 
-  function cartLines() {
-    return products().filter(product => Number.isInteger(cart[product.id]) && cart[product.id] > 0).map(product => ({ product, quantity: Math.min(99, cart[product.id]) }));
+  function cartLines(deliveryDate = checkoutDeliveryDate || nextDeliveryDate()) {
+    return allProducts().filter(product => !unavailableFor(product, deliveryDate) && Number.isInteger(cart[product.id]) && cart[product.id] > 0)
+      .map(product => ({ product, quantity: Math.min(99, cart[product.id]) }));
   }
+  const planFor = day => ({ ...(weeklyPlan[day?.date] || weeklyPlan[day?.key] || {}) });
+  const planLines = day => {
+    const plan = planFor(day);
+    return allProducts().filter(product => !unavailableFor(product, day.date) && Number.isInteger(Number(plan[product.id])) && Number(plan[product.id]) > 0)
+      .map(product => ({ product, quantity: Math.min(99, Number(plan[product.id])) }));
+  };
+  const planCount = day => planLines(day).reduce((sum, line) => sum + (weighted(line.product) ? 1 : line.quantity), 0);
+  const persistWeeklyPlan = () => { try { localStorage.setItem(weeklyPlanKey, JSON.stringify(weeklyPlan)); } catch { /* Plan remains for this session. */ } };
   const subtotal = () => cartLines().reduce((sum, line) => sum + linePrice(line.product, line.quantity), 0);
   const count = () => cartLines().reduce((sum, line) => sum + (weighted(line.product) ? 1 : line.quantity), 0);
   function persistCart() { try { localStorage.setItem(cartKey, JSON.stringify(cart)); } catch { /* Still usable this session. */ } }
@@ -167,17 +213,17 @@
     const unavailable = allProducts().filter(item => unavailableFor(item));
     const categories = ['Todos', ...new Set(all.map(product => product.category || 'Outros'))];
     const visible = filteredProducts();
-    const notice=unavailable.length?`<aside class="portal-review-notice" role="status"><strong>Indisponíveis para amanhã</strong><ul>${unavailable.map(item=>{const substitute=allProducts().find(candidate=>candidate.id===item.substituteProductId&&!unavailableFor(candidate));return `<li>${escapeHtml(item.name)}${substitute?` — sugestão: ${escapeHtml(substitute.name)}`:''}</li>`;}).join('')}</ul><p>A troca não é automática; escolha a sugestão no catálogo se desejar.</p></aside>`:'';
+    const notice=unavailable.length?`<aside class="portal-review-notice" role="status"><strong>Indisponíveis para a próxima entrega</strong><ul>${unavailable.map(item=>{const substitute=allProducts().find(candidate=>candidate.id===item.substituteProductId&&!unavailableFor(candidate));return `<li>${escapeHtml(item.name)}${substitute?` — sugestão: ${escapeHtml(substitute.name)}`:''}</li>`;}).join('')}</ul><p>A troca não é automática; escolha a sugestão no catálogo se desejar.</p></aside>`:'';
     return `<section class="portal-welcome"><span class="portal-eyebrow">${greeting().toLocaleUpperCase('pt-BR')}${firstName() ? `, ${escapeHtml(firstName()).toLocaleUpperCase('pt-BR')}` : ''}</span><h1>${greeting()}${firstName() ? `, ${escapeHtml(firstName())}` : ''}.</h1><p>Seu pedido em três passos simples.</p><ol><li><strong>1</strong> Escolha os produtos</li><li><strong>2</strong> Revise a sacola</li><li><strong>3</strong> Confirme entrega e pagamento</li></ol><a class="portal-welcome__action" href="#portal-products">Escolher produtos ↓</a></section><section class="portal-quick-actions">${lastOrderCard()}<article><span>PLANEJE COM CALMA</span><strong>Pedidos da semana</strong><p>Organize cada dia sem confirmar nada automaticamente.</p><button type="button" data-view="week">Montar minha semana</button></article></section><section id="portal-products" class="portal-section">${notice}<div class="portal-section__head"><div><span class="portal-eyebrow">FEITO PARA O SEU DIA</span><h2>Produtos da padaria</h2></div><span>${all.length} opções</span></div><label class="portal-search">Buscar produto<input id="portal-search" type="search" value="${escapeHtml(query)}" placeholder="Pão, bolo, suco..."></label><div class="portal-categories" aria-label="Categorias">${categories.map(item => `<button type="button" data-category="${escapeHtml(item)}" aria-pressed="${String(item === category)}">${escapeHtml(item)}</button>`).join('')}</div>${personalFilters()}<div class="portal-grid" id="portal-grid">${visible.length ? visible.map(card).join('') : '<p class="portal-empty">Não encontramos produtos nessa busca.</p>'}</div></section>`;
   }
   function cartView() {
     const lines = cartLines();
-    return `<section class="portal-page"><button class="portal-back" type="button" data-view="catalog">← Continuar escolhendo</button><span class="portal-eyebrow">QUASE LÁ</span><h1>Sua sacola</h1>${reviewNotice()}<p>Confira quantidades e valores antes de seguir.</p>${lines.length ? `<div class="portal-cart-lines">${lines.map(({ product, quantity }) => `<article class="portal-cart-line"><div class="portal-cart-line__photo">${photo(product)}</div><div><h2>${escapeHtml(product.name)}</h2><p>${money(product.priceCents)} / ${escapeHtml(product.unit)}</p>${stepper(product)}</div><strong>${money(linePrice(product, quantity))}</strong></article>`).join('')}</div><div class="portal-totals"><div class="portal-totals__final"><span>Subtotal dos produtos</span><strong>${money(subtotal())}</strong></div></div><p class="portal-payment-note">A entrega de ${money(200)} será somada na próxima etapa, antes de confirmar.</p><button class="portal-primary" type="button" data-view="checkout">Continuar para entrega</button>` : `<div class="portal-empty"><h2>Sua sacola está vazia</h2><p>Escolha algo gostoso para amanhã.</p><button type="button" data-view="catalog">Ver produtos</button></div>`}</section>`;
+    return `<section class="portal-page"><button class="portal-back" type="button" data-view="catalog">← Continuar escolhendo</button><span class="portal-eyebrow">QUASE LÁ</span><h1>Sua sacola</h1>${reviewNotice()}<p>Confira quantidades e valores antes de seguir.</p>${lines.length ? `<div class="portal-cart-lines">${lines.map(({ product, quantity }) => `<article class="portal-cart-line"><div class="portal-cart-line__photo">${photo(product)}</div><div><h2>${escapeHtml(product.name)}</h2><p>${money(product.priceCents)} / ${escapeHtml(product.unit)}</p>${stepper(product)}</div><strong>${money(linePrice(product, quantity))}</strong></article>`).join('')}</div><div class="portal-totals"><div class="portal-totals__final"><span>Subtotal dos produtos</span><strong>${money(subtotal())}</strong></div></div><p class="portal-payment-note">A entrega de ${money(200)} será somada na próxima etapa, antes de confirmar.</p><button class="portal-primary" type="button" data-view="checkout">Continuar para entrega</button>` : `<div class="portal-empty"><h2>Sua sacola está vazia</h2><p>Escolha algo gostoso para a próxima entrega disponível.</p><button type="button" data-view="catalog">Ver produtos</button></div>`}</section>`;
   }
   function checkout() {
     if (!count()) { view = 'cart'; return cartView(); }
     const previous = readOrders().find(order => order.id === editingOrderId && owns(order) && editable(order));
-    const deliveryDate = previous?.date || tomorrow();
+    const deliveryDate = previous?.date || checkoutDeliveryDate || nextDeliveryDate();
     const selectedPayment = paymentLabels[previous?.paymentMethod] ? previous.paymentMethod : 'pix_manual';
     return `<section class="portal-page"><button class="portal-back" type="button" data-view="cart">← Voltar à sacola</button><span class="portal-eyebrow">ENTREGA EM ${escapeHtml(formatDate(deliveryDate).toLocaleUpperCase('pt-BR'))}</span><h1>Entrega e pagamento</h1>${reviewNotice()}<p>Seus dados ficam salvos para os próximos pedidos.</p><form id="portal-checkout-form"><label>Seu nome<input name="customer" autocomplete="name" maxlength="90" value="${escapeHtml(previous?.customer || profile.name || '')}" required></label><label>Telefone<input name="phone" type="tel" autocomplete="tel" maxlength="25" value="${escapeHtml(previous?.phone || profile.phone || '')}" required></label><label>Endereço e referência<input name="address" autocomplete="street-address" maxlength="180" value="${escapeHtml(previous?.address || profile.address || '')}" placeholder="Bloco, apartamento ou ponto de encontro" required></label><fieldset class="portal-payment-options"><legend>Como pretende pagar?</legend>${Object.entries(paymentLabels).filter(([key]) => key !== 'unspecified').map(([key, label]) => `<label><input type="radio" name="paymentMethod" value="${key}" ${key === selectedPayment ? 'checked' : ''} required><span>${key === 'pix_manual' ? '◇' : key === 'cash' ? 'R$' : '•••'}</span><strong>${label}</strong></label>`).join('')}</fieldset><label>Observação <span>(opcional)</span><textarea name="notes" maxlength="280" rows="3" placeholder="Ex.: deixar na portaria">${escapeHtml(previous?.notes || '')}</textarea></label><div class="portal-order-summary"><h2>Resumo do pedido</h2>${cartLines().map(({ product, quantity }) => `<div><span>${escapeHtml(lineLabel(product, quantity))}</span><strong>${money(linePrice(product, quantity))}</strong></div>`).join('')}<div><span>Subtotal dos produtos</span><strong>${money(subtotal())}</strong></div><div><span>Taxa de entrega</span><strong>${money(200)}</strong></div><div class="portal-order-summary__total"><span>Total para ${formatDate(deliveryDate)}</span><strong>${money(subtotal() + 200)}</strong></div></div><p class="portal-payment-note">A forma escolhida ainda não confirma o recebimento. Alterações são permitidas até ${cutoffLabel()} do dia anterior.</p>${!beforeCustomerCutoff(deliveryDate) ? '<p class="portal-error" role="alert">O prazo das ${cutoffLabel()} para esta entrega já terminou.</p>' : ''}${error ? `<p class="portal-error" role="alert">${escapeHtml(error)}</p>` : ''}<button class="portal-primary" type="submit" ${beforeCustomerCutoff(deliveryDate) ? '' : 'disabled'}>${previous ? 'Salvar alterações' : 'Confirmar pedido'} · ${money(subtotal() + 200)}</button></form></section>`;
   }
@@ -190,12 +236,77 @@
     return `<section class="portal-page portal-orders-page"><button class="portal-back" type="button" data-view="catalog">← Voltar aos produtos</button><span class="portal-eyebrow">SEUS PEDIDOS</span><h1>Meus pedidos</h1>${error ? `<p class="portal-error" role="alert">${escapeHtml(error)}</p>` : ''}${reviewNotice()}${orders.length ? `<div class="portal-history portal-history--clean">${orders.map(order => { const state = order.status || (order.checked ? 'confirmed' : 'received'); const favorite = favoriteOrders.has(order.id); return `<article><div><span>${formatDate(order.date)}</span><strong>${labels[state] || 'A conferir'}</strong></div><h2>${order.items.slice(0, 3).map(item => escapeHtml(window.TrameliOrderMath.itemLabel(item))).join(' · ')}${order.items.length > 3 ? ` +${order.items.length - 3}` : ''}</h2><p>#${escapeHtml(order.id.slice(0, 8))} · ${escapeHtml(paymentLabels[order.paymentMethod] || paymentLabels.unspecified)}</p><footer><strong>${money(orderValue(order))}</strong><button type="button" data-favorite-order="${escapeHtml(order.id)}" aria-pressed="${favorite}">${favorite ? '♥ Favorito' : '♡ Favoritar'}</button>${shopping() ? `<button type="button" data-reorder="${escapeHtml(order.id)}">Pedir novamente</button>` : ''}${editable(order) ? `<span><button type="button" data-edit-order="${escapeHtml(order.id)}">Alterar</button><button type="button" data-cancel-order="${escapeHtml(order.id)}">Cancelar</button></span>` : ''}</footer></article>`; }).join('')}</div>` : `<div class="portal-empty"><h2>Nenhum pedido por aqui</h2><p>Quando você confirmar um pedido, ele aparecerá nesta lista.</p><button type="button" data-view="catalog">Escolher produtos</button></div>`}</section>`;
   }
   function weekView() {
-    const days = [['monday','Segunda'],['tuesday','Terça'],['wednesday','Quarta'],['thursday','Quinta'],['friday','Sexta'],['saturday','Sábado']];
-    if (weeklyDay === 'sunday') weeklyDay = 'monday';
-    const plan = weeklyPlan[weeklyDay] || {};
-    const selectedCount = Object.values(plan).reduce((sum, value) => sum + Number(value || 0), 0);
-    return `<section class="portal-page portal-week"><button class="portal-back" type="button" data-view="catalog">← Voltar aos produtos</button><span class="portal-eyebrow">PLANEJAMENTO, NÃO CONFIRMAÇÃO</span><h1>Minha semana</h1><p>Organize o que pretende pedir em cada dia. Nada será enviado automaticamente.</p><div class="portal-week__days">${days.map(([value, label]) => `<button type="button" data-week-day="${value}" aria-pressed="${weeklyDay === value}">${label}<small>${Object.values(weeklyPlan[value] || {}).reduce((sum, quantity) => sum + Number(quantity || 0), 0)} itens</small></button>`).join('')}</div><div class="portal-week__products">${products().map(product => { const quantity = Number(plan[product.id] || 0); return `<article><div class="portal-week__photo">${photo(product)}</div><span><strong>${escapeHtml(product.name)}</strong><small>${money(product.priceCents)} / ${escapeHtml(product.unit)}</small></span><div class="portal-stepper"><button type="button" data-week-qty="-1" data-id="${escapeHtml(product.id)}" ${quantity ? '' : 'disabled'}>−</button><span>${weighted(product) ? `${quantity * 50} g` : quantity}</span><button type="button" data-week-qty="1" data-id="${escapeHtml(product.id)}">+</button></div></article>`; }).join('')}</div><div class="portal-week__footer"><span>${selectedCount} ${selectedCount === 1 ? 'item planejado' : 'itens planejados'} para ${days.find(([value]) => value === weeklyDay)[1]}</span><button class="portal-primary" type="button" data-week-to-cart ${selectedCount ? '' : 'disabled'}>Revisar este dia na sacola</button></div></section>`;
+    const days = rollingWeek();
+    if (!weeklyDay || !days.some(day => day.date === weeklyDay)) weeklyDay = days[0].date;
+    const selectedDay = days.find(day => day.date === weeklyDay) || days[0];
+    const plan = planFor(selectedDay);
+    const selectedCount = planCount(selectedDay);
+    const plannedDays = days.filter(day => planCount(day) > 0);
+    const selectedIndex = days.findIndex(day => day.date === selectedDay.date);
+    const previousDay = selectedIndex > 0 ? days[selectedIndex - 1] : null;
+    const copySources = days.filter(day => day.date !== selectedDay.date && planCount(day) > 0);
+    const repeat = !selectedCount && copySources.length ? `<div class="portal-week__repeat">
+      <span><strong>Quer ganhar tempo?</strong><small>Copie um pedido já montado.</small></span>
+      ${previousDay && planCount(previousDay) ? `<button type="button" data-week-repeat-prev>Repetir ${previousDay.label}</button>` : ''}
+      <label>Outro dia<select data-week-copy-source><option value="">Escolher...</option>${copySources.map(day => `<option value="${day.date}">${day.label} · ${new Date(`${day.date}T12:00:00`).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}</option>`).join('')}</select></label>
+      <button type="button" data-week-copy disabled>Copiar</button>
+    </div>` : '';
+    const cutoffNotice = cutoffWindowNotice();
+    const availableProducts = allProducts().filter(product => !unavailableFor(product, selectedDay.date));
+    return `<section class="portal-page portal-week"><button class="portal-back" type="button" data-view="catalog">← Voltar aos produtos</button><span class="portal-eyebrow">PLANEJAMENTO, NÃO CONFIRMAÇÃO</span><h1>Minha semana</h1><p>Monte os próximos 7 dias na ordem real de entrega. Você confirma tudo só no final.</p>${cutoffNotice?`<aside class="portal-week__cutoff" role="status"><strong>Prazo encerrado para amanhã</strong><span>${escapeHtml(cutoffNotice)}</span></aside>`:''}<div class="portal-week__days">${days.map(day => `<button type="button" data-week-day="${day.date}" aria-pressed="${selectedDay.date === day.date}"><strong>${day.label}</strong><small>${new Date(`${day.date}T12:00:00`).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} · ${planCount(day)} itens</small></button>`).join('')}</div>${repeat}<div class="portal-week__products">${availableProducts.map(product => { const quantity = Number(plan[product.id] || 0); return `<article><div class="portal-week__photo">${photo(product)}</div><span><strong>${escapeHtml(product.name)}</strong><small>${money(product.priceCents)} / ${escapeHtml(product.unit)}</small></span><div class="portal-stepper"><button type="button" data-week-qty="-1" data-id="${escapeHtml(product.id)}" ${quantity ? '' : 'disabled'}>−</button><span>${weighted(product) ? `${quantity * 50} g` : quantity}</span><button type="button" data-week-qty="1" data-id="${escapeHtml(product.id)}">+</button></div></article>`; }).join('')}</div><div class="portal-week__footer"><span><strong>${selectedCount} ${selectedCount === 1 ? 'item' : 'itens'} para ${selectedDay.label}</strong><small>${plannedDays.length} ${plannedDays.length===1?'dia planejado':'dias planejados'} no total</small></span><div><button type="button" data-week-to-cart ${selectedCount ? '' : 'disabled'}>Revisar este dia</button><button class="portal-primary" type="button" data-week-all ${plannedDays.length ? '' : 'disabled'}>Revisar semana · ${plannedDays.length} ${plannedDays.length===1?'dia':'dias'}</button></div></div></section>`;
   }
+
+  function weekCheckoutView() {
+    const days = rollingWeek().filter(day => planCount(day) > 0);
+    if (!days.length) { view = 'week'; return weekView(); }
+    const total = days.reduce((sum, day) => sum + planLines(day).reduce((lineSum,line)=>lineSum+linePrice(line.product,line.quantity),0) + 200, 0);
+    return `<section class="portal-page portal-week-checkout"><button class="portal-back" type="button" data-view="week">← Voltar à semana</button><span class="portal-eyebrow">REVISÃO DA SEMANA</span><h1>Confirmar ${days.length} ${days.length===1?'pedido':'pedidos'}</h1><p>Cada dia vira um pedido separado, com a data correta.</p><div class="portal-week-review">${days.map(day=>{const lines=planLines(day);const subtotal=lines.reduce((sum,line)=>sum+linePrice(line.product,line.quantity),0);return `<article><header><div><strong>${day.label}</strong><small>${formatDate(day.date)}</small></div><strong>${money(subtotal+200)}</strong></header><p>${lines.slice(0,4).map(line=>escapeHtml(lineLabel(line.product,line.quantity))).join(' · ')}${lines.length>4?` · +${lines.length-4}`:''}</p></article>`;}).join('')}</div><form id="portal-week-checkout-form"><label>Seu nome<input name="customer" autocomplete="name" maxlength="90" value="${escapeHtml(profile.name || '')}" required></label><label>Telefone<input name="phone" type="tel" autocomplete="tel" maxlength="25" value="${escapeHtml(profile.phone || '')}" required></label><label>Endereço e referência<input name="address" autocomplete="street-address" maxlength="180" value="${escapeHtml(profile.address || '')}" required></label><fieldset class="portal-payment-options"><legend>Como pretende pagar?</legend>${Object.entries(paymentLabels).filter(([key])=>key!=='unspecified').map(([key,label])=>`<label><input type="radio" name="paymentMethod" value="${key}" ${key==='pix_manual'?'checked':''} required><span>${key==='pix_manual'?'◇':key==='cash'?'R$':'•••'}</span><strong>${label}</strong></label>`).join('')}</fieldset><label>Observação para todos <span>(opcional)</span><textarea name="notes" maxlength="280" rows="3"></textarea></label>${error?`<p class="portal-error" role="alert">${escapeHtml(error)}</p>`:''}<button class="portal-primary" type="submit">Confirmar ${days.length} ${days.length===1?'pedido':'pedidos'} · ${money(total)}</button></form></section>`;
+  }
+
+  function weekSuccessView() {
+    return `<section class="portal-page portal-success"><span class="portal-success__icon" aria-hidden="true">✓</span><span class="portal-eyebrow">SEMANA REGISTRADA</span><h1>${weeklySuccessCount} ${weeklySuccessCount===1?'pedido confirmado':'pedidos confirmados'}.</h1><p>Cada pedido foi criado na data planejada e seguirá para conferência da operação.</p><button class="portal-primary" type="button" data-view="orders">Ver meus pedidos</button><button class="portal-link" type="button" data-view="catalog">Voltar aos produtos</button></section>`;
+  }
+
+  async function placeWeeklyOrders(form) {
+    if (submitting) return;
+    const days = rollingWeek().filter(day => planCount(day) > 0);
+    const customer = form.elements.customer.value.trim(), phone = form.elements.phone.value.trim(), address = form.elements.address.value.trim();
+    if (!days.length || !customer || !phone || !address) { error='Preencha seus dados e planeje ao menos um dia.'; render(true); return; }
+    if (days.some(day => !beforeCustomerCutoff(day.date))) { error='Um dos dias planejados já passou do horário de corte. Volte à semana para atualizar as datas.'; render(true); return; }
+    const notes=form.elements.notes.value.trim(), paymentMethod=form.elements.paymentMethod.value;
+    submitting=true; form.querySelector('[type="submit"]').disabled=true;
+    try {
+      const created=[];
+      for (const day of days) {
+        const lines=planLines(day);
+        const order={ id:null, version:null, createdAt:new Date().toISOString(), checked:false, customer,address,phone,date:day.date,feeCents:200,items:lines.map(orderItem),notes,paymentMethod,source:'portal',customerToken:token };
+        if (live) {
+          weeklyRequestIds[day.date] ||= crypto.randomUUID();
+          const saved=await live.saveCustomerOrder(order,lines.map(({product,quantity})=>weighted(product)?{product_id:product.id,grams:quantity*50}:{product_id:product.id,quantity}),weeklyRequestIds[day.date]);
+          created.push(saved);
+        } else {
+          created.push({ ...order, id:crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}` });
+        }
+      }
+      if (!live) {
+        const old=readOrders();
+        localStorage.setItem(orderKey,JSON.stringify([...old,...created]));
+        localStorage.setItem(profileKey,JSON.stringify({name:customer,phone,address}));
+        window.dispatchEvent(new Event('trameli:orders-changed'));
+      }
+      Object.assign(profile,{name:customer,phone,address});
+      days.forEach(day=>{delete weeklyPlan[day.date]; delete weeklyPlan[day.key]; delete weeklyRequestIds[day.date];});
+      persistWeeklyPlan();
+      weeklySuccessCount=created.length;
+      error='';
+      view='weekSuccess';
+      render();
+    } catch (cause) {
+      error=`Não foi possível concluir a semana: ${cause.message}`;
+      render(true);
+    } finally { submitting=false; }
+  }
+
   function render(preserveScroll = false) {
     if (location.hash !== '#loja') return;
     const scroll = motion()?.scrollTop() ?? scrollY;
@@ -204,7 +315,7 @@
     const draft = preserveScroll && view === 'checkout' && host.querySelector('#portal-checkout-form')
       ? Object.fromEntries(new FormData(host.querySelector('#portal-checkout-form'))) : null;
     motion()?.reset(host);
-    host.innerHTML = ({ catalog, cart: cartView, checkout, success, orders: ordersView, week: weekView })[view]();
+    host.innerHTML = ({ catalog, cart: cartView, checkout, success, orders: ordersView, week: weekView, weekCheckout: weekCheckoutView, weekSuccess: weekSuccessView })[view]();
     if (view === 'orders' && window.TrameliPayments) {
       host.querySelector('.portal-page').insertAdjacentHTML('beforeend', window.TrameliPayments.customerRender());
       window.TrameliPayments.refresh();
@@ -251,8 +362,8 @@
     const oldOrders = readOrders();
     const previous = oldOrders.find(order => order.id === editingOrderId && owns(order) && editable(order));
     if (editingOrderId && !previous) { error = 'Este pedido não pode mais ser alterado. Confira em Meus pedidos.'; render(true); return; }
-    const deliveryDate = previous?.date || tomorrow();
-    if (!beforeCustomerCutoff(deliveryDate)) { error = 'O prazo das ${cutoffLabel()} para esta entrega já terminou.'; render(true); return; }
+    const deliveryDate = previous?.date || checkoutDeliveryDate || nextDeliveryDate();
+    if (!beforeCustomerCutoff(deliveryDate)) { error = `O prazo das ${cutoffLabel()} para esta entrega já terminou.`; render(true); return; }
     const nextOrder = {
       id: previous?.id || (crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`),
       createdAt: previous?.createdAt || new Date().toISOString(),
@@ -274,6 +385,7 @@
         try { sessionStorage.setItem(requestKey, checkoutRequestId); } catch { /* A new request still works in this tab. */ }
         cart = {};
         editingOrderId = null;
+        checkoutDeliveryDate = null;
         persistCart();
         error = '';
         view = 'success';
@@ -292,6 +404,7 @@
     reorderNotices = [];
     cart = {};
     editingOrderId = null;
+    checkoutDeliveryDate = null;
     persistCart();
     error = '';
     view = 'success';
@@ -312,24 +425,36 @@
     }
     const weekDayButton = event.target.closest('[data-week-day]');
     if (weekDayButton) { weeklyDay = weekDayButton.dataset.weekDay; render(true); return; }
+    if (event.target.closest('[data-week-repeat-prev]')) {
+      const days=rollingWeek(), index=days.findIndex(day=>day.date===weeklyDay), source=index>0?days[index-1]:null, target=days[index];
+      if(source&&target){weeklyPlan={...weeklyPlan,[target.date]:planFor(source)};delete weeklyPlan[target.key];persistWeeklyPlan();render(true);} return;
+    }
+    if (event.target.closest('[data-week-copy]')) {
+      const sourceDate=host.querySelector('[data-week-copy-source]')?.value, days=rollingWeek(), source=days.find(day=>day.date===sourceDate), target=days.find(day=>day.date===weeklyDay);
+      if(source&&target){weeklyPlan={...weeklyPlan,[target.date]:planFor(source)};delete weeklyPlan[target.key];persistWeeklyPlan();render(true);} return;
+    }
     const weekQuantity = event.target.closest('[data-week-qty]');
     if (weekQuantity) {
-      const product = products().find(item => item.id === weekQuantity.dataset.id);
+      const selectedDay = rollingWeek().find(day => day.date === weeklyDay) || rollingWeek()[0];
+      const product = allProducts().find(item => item.id === weekQuantity.dataset.id && !unavailableFor(item, selectedDay.date));
       if (!product) return;
-      const plan = { ...(weeklyPlan[weeklyDay] || {}) };
+      const plan = planFor(selectedDay);
       const next = Math.max(0, Math.min(99, Number(plan[product.id] || 0) + Number(weekQuantity.dataset.weekQty)));
       if (next) plan[product.id] = next; else delete plan[product.id];
-      weeklyPlan = { ...weeklyPlan, [weeklyDay]: plan };
-      try { localStorage.setItem(weeklyPlanKey, JSON.stringify(weeklyPlan)); } catch { /* Plan remains for this session. */ }
+      weeklyPlan = { ...weeklyPlan, [selectedDay.date]: plan };
+      delete weeklyPlan[selectedDay.key];
+      persistWeeklyPlan();
       render(true);
       return;
     }
     if (event.target.closest('[data-week-to-cart]')) {
-      const plan = weeklyPlan[weeklyDay] || {};
+      const selectedDay=rollingWeek().find(day=>day.date===weeklyDay)||rollingWeek()[0];
+      const plan=planFor(selectedDay);
       if ((cartLines().length || editingOrderId) && !confirm('Substituir a sacola atual pelo planejamento deste dia?')) return;
-      cart = { ...plan }; editingOrderId = null; reorderNotices = ['Planejamento carregado. Revise a sacola antes de confirmar o pedido.'];
-      persistCart(); view = 'cart'; render(); return;
+      cart={...plan};editingOrderId=null;checkoutDeliveryDate=selectedDay.date;reorderNotices=[`Planejamento de ${selectedDay.label} carregado. A entrega será em ${formatDate(selectedDay.date)}.`];
+      persistCart();view='cart';render();return;
     }
+    if (event.target.closest('[data-week-all]')) { error=''; view='weekCheckout'; render(); return; }
     const filter = event.target.closest('[data-personal-filter]');
     if (filter) { personalFilter = filter.dataset.personalFilter; render(true); return; }
     const reorder = event.target.closest('[data-reorder]');
@@ -347,8 +472,8 @@
           view = 'orders'; render(); return;
         }
         if ((cartLines().length || editingOrderId) && !confirm('Substituir a sacola atual por uma nova cópia deste pedido?')) return;
-        cart = result.cart; editingOrderId = null; error = '';
-        reorderNotices = ['Nova compra com os preços atuais e entrega para amanhã. O pedido anterior não foi alterado.', ...result.notices];
+        cart = result.cart; editingOrderId = null; checkoutDeliveryDate = nextDeliveryDate(); error = '';
+        reorderNotices = [`Nova compra com os preços atuais e entrega em ${formatDate(checkoutDeliveryDate)}. O pedido anterior não foi alterado.`, ...result.notices];
         if (live) {
           checkoutRequestId = crypto.randomUUID();
           try { sessionStorage.setItem(requestKey, checkoutRequestId); } catch { /* Current tab keeps the new request ID. */ }
@@ -394,6 +519,12 @@
       render(true);
     }
   });
+  host.addEventListener('change', event => {
+    const weekCopySource = event.target.closest('[data-week-copy-source]');
+    if (!weekCopySource) return;
+    const button = host.querySelector('[data-week-copy]');
+    if (button) button.disabled = !weekCopySource.value;
+  });
   host.addEventListener('input', event => {
     if (event.target.id !== 'portal-search') return;
     query = event.target.value;
@@ -406,7 +537,10 @@
     if (!event.target.closest('[data-view="cart"]')) return;
     view = 'cart'; error = ''; render();
   });
-  host.addEventListener('submit', event => { if (event.target.id === 'portal-checkout-form') { event.preventDefault(); placeOrder(event.target); } });
+  host.addEventListener('submit', event => {
+    if (event.target.id === 'portal-checkout-form') { event.preventDefault(); placeOrder(event.target); }
+    if (event.target.id === 'portal-week-checkout-form') { event.preventDefault(); placeWeeklyOrders(event.target); }
+  });
   const adminLink=document.getElementById('portal-admin-link');
   if(adminLink){adminLink.hidden=!live?.operator;adminLink.addEventListener('click',()=>{location.hash='#operacao';});}
   document.getElementById('portal-orders-link').addEventListener('click', () => { view = 'orders'; render(); });

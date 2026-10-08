@@ -262,7 +262,7 @@ const pages = {
     <div class="report-filters"><label>De<input id="finance-from" type="date" value="${financeRange.from}"></label><label>Até<input id="finance-to" type="date" value="${financeRange.to}"></label></div>
     <div id="finance-cost-summary" aria-live="polite"></div>`,
   relatorios: () => `${intro('Documentos', 'Relatórios', 'Escolha o que precisa, gere um resumo e salve em PDF.')}
-    <section class="report-generator"><div class="report-generator__form"><label>Tipo de relatório<select id="report-type"><option value="financial" ${reportState.type === 'financial' ? 'selected' : ''}>Resumo financeiro</option><option value="sales" ${reportState.type === 'sales' ? 'selected' : ''}>Vendas</option><option value="customers" ${reportState.type === 'customers' ? 'selected' : ''}>Clientes</option><option value="billing" ${reportState.type === 'billing' ? 'selected' : ''}>Cobrança detalhada</option><option value="products" ${reportState.type === 'products' ? 'selected' : ''}>Produtos</option><option value="orders" ${reportState.type === 'orders' ? 'selected' : ''}>Pedidos</option><option value="deliveries" ${reportState.type === 'deliveries' ? 'selected' : ''}>Entregas</option></select></label><label>Período<select id="report-period"><option value="today">Hoje</option><option value="week">Últimos 7 dias</option><option value="fortnight" ${reportState.period === 'fortnight' ? 'selected' : ''}>Últimos 15 dias</option><option value="month" ${reportState.period === 'month' ? 'selected' : ''}>Últimos 30 dias</option><option value="custom" ${reportState.period === 'custom' ? 'selected' : ''}>Personalizado</option></select></label><div class="report-custom-dates" ${reportState.period === 'custom' ? '' : 'hidden'}><label>De<input id="report-from" type="date" value="${reportRange.from}"></label><label>Até<input id="report-to" type="date" value="${reportRange.to}"></label></div><button class="screen-primary" type="button" data-report-generate>Gerar relatório</button></div><div id="report-results" class="report-preview" aria-live="polite">${reportState.generated ? '' : '<div class="friendly-empty"><strong>Nenhum relatório gerado.</strong><span>Escolha um tipo e um período para começar.</span></div>'}</div></section>`,
+    <section class="report-generator"><div class="report-generator__form"><label>Tipo de relatório<select id="report-type"><option value="financial" ${reportState.type === 'financial' ? 'selected' : ''}>Resumo financeiro</option><option value="sales" ${reportState.type === 'sales' ? 'selected' : ''}>Vendas</option><option value="customers" ${reportState.type === 'customers' ? 'selected' : ''}>Clientes</option><option value="billing" ${reportState.type === 'billing' ? 'selected' : ''}>Cobrança detalhada</option><option value="products" ${reportState.type === 'products' ? 'selected' : ''}>Produtos</option><option value="orders" ${reportState.type === 'orders' ? 'selected' : ''}>Pedidos</option><option value="deliveries" ${reportState.type === 'deliveries' ? 'selected' : ''}>Entregas</option></select></label><label>Período<select id="report-period"><option value="today" ${reportState.period === 'today' ? 'selected' : ''}>Hoje</option><option value="week" ${reportState.period === 'week' ? 'selected' : ''}>Últimos 7 dias</option><option value="fortnight" ${reportState.period === 'fortnight' ? 'selected' : ''}>Últimos 15 dias</option><option value="month" ${reportState.period === 'month' ? 'selected' : ''}>Últimos 30 dias</option><option value="custom" ${reportState.period === 'custom' ? 'selected' : ''}>Personalizado</option></select></label><div class="report-custom-dates" ${reportState.period === 'custom' ? '' : 'hidden'}><label>De<input id="report-from" type="date" value="${reportRange.from}"></label><label>Até<input id="report-to" type="date" value="${reportRange.to}"></label></div><button class="screen-primary" type="button" data-report-generate>Gerar relatório</button></div><div id="report-results" class="report-preview" aria-live="polite">${reportState.generated ? '' : '<div class="friendly-empty"><strong>Nenhum relatório gerado.</strong><span>Escolha um tipo e um período para começar.</span></div>'}</div></section>`,
   configuracoes: () => {
     const operation = readSettings(); let print = {};
     try { print = JSON.parse(localStorage.getItem('trameli-print-settings-70x33-v1') || '{}'); } catch { /* Defaults below. */ }
@@ -551,7 +551,7 @@ menuPanel.addEventListener('click', event => {
 });
 window.addEventListener('hashchange', () => showRoute());
 document.querySelector('.notification-button').addEventListener('click', () => { location.hash = 'pendencias'; });
-document.addEventListener('click', event => {
+document.addEventListener('click', async event => {
   const openOrder = event.target.closest('[data-open-order]');
   if (openOrder) { window.TrameliOperation?.openOrder(openOrder.dataset.openOrder); return; }
   if (event.target.closest('[data-new-order]')) { window.TrameliOperation?.openNew(); return; }
@@ -563,12 +563,25 @@ document.addEventListener('click', event => {
   if (settingsButton) { settingsTab = settingsButton.dataset.settingsTab; showRoute(true); return; }
   const reportGenerate = event.target.closest('[data-report-generate]');
   if (reportGenerate) {
-    reportState.type = document.getElementById('report-type')?.value || reportState.type;
-    reportState.period = document.getElementById('report-period')?.value || reportState.period;
-    if (reportState.period !== 'custom') setReportPeriod();
-    else { reportRange.from = document.getElementById('report-from')?.value || ''; reportRange.to = document.getElementById('report-to')?.value || ''; }
-    reportState.generated = true;
-    renderReportResults();
+    reportGenerate.disabled = true;
+    const originalLabel = reportGenerate.textContent;
+    reportGenerate.textContent = 'Gerando...';
+    try {
+      reportState.type = document.getElementById('report-type')?.value || reportState.type;
+      reportState.period = document.getElementById('report-period')?.value || reportState.period;
+      if (reportState.period !== 'custom') setReportPeriod();
+      else { reportRange.from = document.getElementById('report-from')?.value || ''; reportRange.to = document.getElementById('report-to')?.value || ''; }
+      if (live) await live.load(true);
+      if (reportState.type === 'billing') await window.TrameliPayments?.refresh?.();
+      reportState.generated = true;
+      renderReportResults();
+    } catch (cause) {
+      const host = document.getElementById('report-results');
+      if (host) host.innerHTML = `<p class="report-note">Não foi possível gerar o relatório: ${escapeHtml(cause.message || 'erro inesperado')}.</p>`;
+    } finally {
+      reportGenerate.disabled = false;
+      reportGenerate.textContent = originalLabel;
+    }
     return;
   }
   const billingAll = event.target.closest('[data-billing-select-all]');
@@ -581,22 +594,37 @@ document.addEventListener('click', event => {
     document.querySelector('[data-report-print]')?.click();
     return;
   }
-  if (event.target.closest('[data-report-print]')) {
+  const reportPrint = event.target.closest('[data-report-print]');
+  if (reportPrint) {
+    let preview = document.querySelector('#report-results .generated-report');
+    if (!preview) return;
+    let clone = preview.cloneNode(true);
     if (reportState.type === 'billing') {
       const selected = new Set([...document.querySelectorAll('[data-billing-select]:checked')].map(input => input.value));
       if (!selected.size) { alert('Selecione ao menos um cliente para gerar o PDF.'); return; }
-      const preview = document.querySelector('#report-results .generated-report');
-      const sheet = document.getElementById('report-print-sheet');
-      if (preview && sheet) {
-        const clone = preview.cloneNode(true);
-        clone.querySelectorAll('[data-billing-customer]').forEach(card => { if (!selected.has(card.dataset.billingCustomer)) card.remove(); });
-        clone.querySelectorAll('.billing-toolbar, [data-billing-only], [data-billing-select]').forEach(node => node.remove());
-        sheet.innerHTML = ''; sheet.append(clone);
-      }
+      clone.querySelectorAll('[data-billing-customer]').forEach(card => { if (!selected.has(card.dataset.billingCustomer)) card.remove(); });
+      clone.querySelectorAll('.billing-toolbar, [data-billing-only], [data-billing-select]').forEach(node => node.remove());
     }
-    document.body.classList.add('report-printing');
-    addEventListener('afterprint', () => document.body.classList.remove('report-printing'), { once: true });
-    window.print();
+    reportPrint.disabled = true;
+    const originalLabel = reportPrint.textContent;
+    reportPrint.textContent = 'Preparando PDF...';
+    try {
+      const title = ({ financial: 'Resumo financeiro', sales: 'Vendas', customers: 'Clientes', billing: 'Cobrança detalhada', products: 'Produtos', orders: 'Pedidos', deliveries: 'Entregas' })[reportState.type];
+      const period = `${reportRange.from ? new Date(`${reportRange.from}T12:00:00`).toLocaleDateString('pt-BR') : 'Início'} — ${reportRange.to ? new Date(`${reportRange.to}T12:00:00`).toLocaleDateString('pt-BR') : 'Hoje'}`;
+      const { downloadReportPdf } = await import('../src/report-pdf.js');
+      await downloadReportPdf({
+        title,
+        period,
+        text: clone.innerText,
+        businessName: readSettings().businessName || 'Trameli',
+        filename: `trameli-${reportState.type}-${reportRange.from || 'inicio'}-${reportRange.to || saoPauloToday()}`,
+      });
+    } catch (cause) {
+      alert(`Não foi possível baixar o PDF: ${cause.message || 'erro inesperado'}`);
+    } finally {
+      reportPrint.disabled = false;
+      reportPrint.textContent = originalLabel;
+    }
     return;
   }
   const globalOrder = event.target.closest('[data-global-order]');

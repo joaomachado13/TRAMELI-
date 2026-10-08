@@ -85,3 +85,32 @@ body:not(.portal-mode) #portal-floating-host,body:not(.portal-mode) .portal-bott
   .portal-support-whatsapp{right:12px;bottom:82px;padding:10px 12px}
   .portal-support-whatsapp span{display:none}
 }
+
+/* Semana rolante: datas reais, repetição e confirmação em lote. */
+.portal-week__cutoff{display:grid;gap:4px;margin:16px 0 4px;padding:14px 16px;border:1px solid var(--color-border);border-radius:14px;background:var(--color-warning-background);color:var(--color-warning-text);font-size:.78rem;line-height:1.45}
+.portal-week__cutoff strong{font-size:.82rem}
+.portal-week__days button strong{font-size:.84rem}
+.portal-week__repeat{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(180px,auto) auto;align-items:end;gap:10px;margin:-8px 0 18px;padding:12px 14px;border:1px solid var(--color-border);border-radius:14px;background:var(--color-surface-alternate)}
+.portal-week__repeat>span{display:grid;gap:2px}
+.portal-week__repeat>span small{color:var(--color-text-muted);font-size:.68rem}
+.portal-week__repeat label{display:grid;gap:5px;color:var(--color-text-secondary);font-size:.68rem;font-weight:700}
+.portal-week__repeat select{min-height:39px;padding:0 10px;border:1px solid var(--color-border);border-radius:9px;background:var(--color-surface);color:var(--color-text-primary)}
+.portal-week__repeat button{min-height:39px;padding:0 13px;border:1px solid var(--color-border);border-radius:9px;background:var(--color-surface);color:var(--color-text-primary);font-weight:700}
+.portal-week__repeat button:disabled{opacity:.45;cursor:not-allowed}
+.portal-week__footer>span{display:grid;gap:3px}
+.portal-week__footer>span small{color:var(--color-text-muted);font-size:.68rem}
+.portal-week__footer>div{display:flex;align-items:center;gap:9px}
+.portal-week__footer>div>button:first-child{min-height:45px;padding:0 15px;border:1px solid var(--color-border);border-radius:11px;background:var(--color-surface);color:var(--color-text-primary);font-weight:700}
+.portal-week-review{display:grid;gap:10px;margin:22px 0}
+.portal-week-review article{padding:15px 16px;border:1px solid var(--color-border);border-radius:14px;background:var(--color-surface-alternate)}
+.portal-week-review article header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.portal-week-review article header div{display:grid;gap:2px}
+.portal-week-review article header small{color:var(--color-text-muted)}
+.portal-week-review article p{margin:9px 0 0;color:var(--color-text-secondary);font-size:.76rem;line-height:1.45}
+.portal-week-checkout{max-width:760px}
+@media(max-width:640px){
+  .portal-week__repeat{grid-template-columns:1fr 1fr}
+  .portal-week__repeat>span{grid-column:1/-1}
+  .portal-week__repeat label{grid-column:1/-1}
+  .portal-week__footer>div{display:grid}
+}

@@ -158,6 +158,54 @@ try {
       await audit('modal produto');
       await evaluate('document.querySelector(".catalog-dialog[open] .catalog-close").click()');
     }
+    if (route === 'relatorios') {
+      await evaluate(`(() => {
+        const period=document.querySelector('#report-period');
+        period.value='custom';
+        period.dispatchEvent(new Event('change',{bubbles:true}));
+        document.querySelector('#report-from').value='2020-01-01';
+        document.querySelector('#report-to').value='2099-12-31';
+        document.querySelector('[data-report-generate]').click();
+      })()`);
+      await waitFor('.generated-report');
+      assert((await evaluate('document.querySelector(".generated-report").textContent')).includes('4 pedidos'), 'Relatório não reuniu os pedidos do período.');
+      assert(await evaluate('!document.querySelector("[data-report-print]").disabled'), 'PDF do relatório permaneceu indisponível com dados.');
+    }
+    if (route === 'loja') {
+      await evaluate('document.querySelector("[data-view=week]").click()');
+      await waitFor('.portal-week');
+      const weekDates = await evaluate('[...document.querySelectorAll("[data-week-day]")].map(button=>button.dataset.weekDay)');
+      assert(weekDates.length === 7 && new Set(weekDates).size === 7, 'Planejamento não mostrou sete datas consecutivas.');
+      const expectedFirst = await evaluate(`(() => {
+        const parts=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date()).filter(p=>p.type!=='literal').map(p=>[p.type,Number(p.value)]));
+        const [h,m]=String(window.TrameliSettings?.cutoffTime||'21:00').split(':').map(Number);
+        const base=new Date(Date.UTC(parts.year,parts.month-1,parts.day+(parts.hour*60+parts.minute>h*60+m?2:1)));
+        return [base.getUTCFullYear(),String(base.getUTCMonth()+1).padStart(2,'0'),String(base.getUTCDate()).padStart(2,'0')].join('-');
+      })()`);
+      assert(weekDates[0] === expectedFirst, 'A semana não começou na primeira data permitida pelo horário de corte.');
+      await evaluate('document.querySelector("[data-week-qty=\\\"1\\\"]").click()');
+      await pause(80);
+      await evaluate('document.querySelectorAll("[data-week-day]")[1].click()');
+      await pause(80);
+      assert(await evaluate('!!document.querySelector("[data-week-repeat-prev]")'), 'Segundo dia não ofereceu repetir o dia anterior.');
+      await evaluate('document.querySelector("[data-week-repeat-prev]").click()');
+      await pause(80);
+      await evaluate('document.querySelector("[data-week-all]").click()');
+      await waitFor('#portal-week-checkout-form');
+      await evaluate(`(() => {
+        const form=document.querySelector('#portal-week-checkout-form');
+        form.elements.customer.value='Cliente Semana';
+        form.elements.phone.value='34999999999';
+        form.elements.address.value='Rua da Semana, 10';
+        form.requestSubmit();
+      })()`);
+      await waitFor('.portal-success');
+      const plannedDates = await evaluate(`JSON.parse(localStorage.getItem('trameli-operation-draft-v2')||'[]').filter(order=>order.source==='portal'&&order.customer==='Cliente Semana').map(order=>order.date).sort()`);
+      assert(plannedDates.length === 2, 'Confirmação da semana não criou um pedido por dia planejado.');
+      assert(plannedDates[0] === weekDates[0] && plannedDates[1] === weekDates[1], 'Pedidos da semana caíram em datas diferentes das planejadas.');
+      await evaluate('document.querySelector("[data-view=\\\"catalog\\\"]").click()');
+      await waitFor('.portal-welcome');
+    }
     if (['produtos', 'financeiro', 'loja'].includes(route)) {
       const image = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
       await writeFile(new URL(`../assets/crops/design-${route}-1440.png`, import.meta.url), Buffer.from(image.data, 'base64'));
