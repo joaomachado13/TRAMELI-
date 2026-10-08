@@ -233,7 +233,15 @@ try {
       await waitFor('.portal-catalog__footer');
       assert(await evaluate('matchMedia("(prefers-reduced-motion: reduce)").matches || document.querySelector("#portal-floating-host").classList.contains("is-cart-entering")'), 'Catálogo normal não recebeu a nova animação de entrada.');
       assert((await evaluate('document.querySelector(".portal-catalog__footer").textContent')).includes('Continuar para a sacola'), 'Catálogo normal perdeu a ação de continuar para a sacola.');
-      assert((await evaluate('document.querySelector(".portal-catalog__footer small").textContent')).includes('R
+      assert((await evaluate('document.querySelector(".portal-catalog__footer small").textContent')).length > 6, 'Catálogo normal perdeu o subtotal em dinheiro.');
+      await evaluate('document.querySelector("[data-qty=\\\"1\\\"]").click();document.querySelector("[data-qty=\\\"1\\\"]").click()');
+      assert((await evaluate('document.querySelector(".portal-catalog__footer strong").textContent')).startsWith('1 item'), 'Barra do catálogo atualizou durante a primeira cortina.');
+      await pause(700);
+      assert((await evaluate('document.querySelector(".portal-catalog__footer strong").textContent')).startsWith('3 itens'), 'Barra do catálogo não sincronizou o valor final após a animação.');
+      await evaluate('document.querySelector("[data-qty=\\\"-1\\\"]").click();document.querySelector("[data-qty=\\\"-1\\\"]").click();document.querySelector("[data-qty=\\\"-1\\\"]").click()');
+      await pause(560);
+      assert(await evaluate('document.querySelector("#portal-floating-host").hidden'), 'Barra do catálogo não encerrou a animação ao esvaziar a sacola.');
+    }
     if (['produtos', 'financeiro', 'loja'].includes(route)) {
       const image = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
       await writeFile(new URL(`../assets/crops/design-${route}-1440.png`, import.meta.url), Buffer.from(image.data, 'base64'));
