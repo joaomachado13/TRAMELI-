@@ -137,7 +137,7 @@ try {
       assert.equal(await evaluate('document.querySelectorAll(".client-row").length'), 3, 'Pedidos de dias/endereço diferentes duplicaram o mesmo cliente.');
       await evaluate('[...document.querySelectorAll(".client-row")].find(row=>row.textContent.includes("Ana Ferreira")).click()');
       await waitFor('.client-drawer[open]');
-      assert.match(await evaluate('document.querySelector(".client-drawer").textContent'), /2 pedidos/i);
+      assert.equal(await evaluate('document.querySelectorAll(".client-drawer .client-order-list button").length'), 2, 'Histórico do cliente não reuniu os dois pedidos.');
       await evaluate('document.querySelector(".client-drawer [data-client-action=\"close\"]").click()');
     }
     if (route === 'produtos') {
