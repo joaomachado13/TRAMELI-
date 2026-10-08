@@ -106,6 +106,7 @@ try {
   await pause(180);
   assert(await evaluate('!document.body.classList.contains("sidebar-collapsed")'), 'Sidebar desktop não expandiu ao clicar na barra lateral.');
   assert(await evaluate('getComputedStyle(document.querySelector(".mobile-menu-button")).display === "none"'), 'Controle desktop da sidebar continuou visível.');
+  assert(await evaluate('document.querySelector("#nav-pending-count").textContent') === '1', 'Badge de Pedidos misturou outras pendências com pedidos aguardando conferência.');
   assert(await evaluate('[...document.querySelectorAll("dialog:not([open])")].every(dialog => getComputedStyle(dialog).display === "none")'), 'Um diálogo fechado permaneceu visível no fim da página.');
   assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'), 'Visão Geral criou rolagem horizontal.');
   assert(await evaluate('getComputedStyle(document.querySelector(".attention-strip__heading h2")).color !== "rgb(238, 232, 215)"'), 'Aviso principal permaneceu com baixo contraste.');
@@ -134,6 +135,10 @@ try {
     assert(!contrastProblems.length, `${route} contém texto claro sobre fundo claro: ${JSON.stringify(contrastProblems)}`);
     await audit(`${route} desktop`);
     if (route === 'clientes') {
+      await evaluate('document.querySelector("#client-search").focus()');
+      for (const character of 'Joao Machado') { await send('Input.insertText', { text: character }); await pause(20); }
+      assert(await evaluate('document.querySelector("#client-search").value') === 'Joao Machado', 'Busca de clientes moveu o cursor para o começo durante a digitação.');
+      await evaluate('document.querySelector("#client-search").value="";document.querySelector("#client-search").dispatchEvent(new Event("input",{bubbles:true}))');
       assert(await evaluate('document.querySelectorAll(".client-row").length') === 3, 'Pedidos de dias/endereço diferentes duplicaram o mesmo cliente.');
       await evaluate('[...document.querySelectorAll(".client-row")].find(row=>row.textContent.includes("Ana Ferreira")).click()');
       await waitFor('.client-drawer[open]');
