@@ -188,7 +188,12 @@ try {
       await evaluate('document.querySelector("[data-week-qty=\\\"1\\\"]").click()');
       await waitFor('.portal-week__footer');
       assert(await evaluate('getComputedStyle(document.querySelector(".portal-week__footer")).position === "static"'), 'Resumo semanal voltou a ficar preso sobre a lista.');
-      assert((await evaluate('document.querySelector(".portal-week__line-total")?.textContent || ""')).includes('R
+      assert((await evaluate('document.querySelector(".portal-week__line-total")?.textContent || ""')).includes('Total:'), 'Produto selecionado não mostrou o valor total na semana.');
+      assert((await evaluate('document.querySelector(".portal-week__footer small")?.textContent || ""')).length > 10, 'Resumo semanal não mostrou os totais do planejamento.');
+      await pause(80);
+      await evaluate('document.querySelectorAll("[data-week-day]")[1].click()');
+      await pause(80);
+      assert(await evaluate('!!document.querySelector("[data-week-repeat-prev]")'), 'Segundo dia não ofereceu repetir o dia anterior.');
       await evaluate('document.querySelector("[data-week-repeat-prev]").click()');
       await pause(80);
       await evaluate('document.querySelector("[data-week-all]").click()');
