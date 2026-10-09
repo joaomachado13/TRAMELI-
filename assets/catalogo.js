@@ -329,18 +329,44 @@
     const productId = editingId || crypto.randomUUID();
     let image = photoUrl(form.elements.imageUrl?.value.trim() || previous?.image || '');
     const file = form.elements.imageFile?.files?.[0];
-    if (file) {
-      if (live) {
-        try { image = await live.uploadProductImage(productId, file); }
-        catch (cause) { error.textContent = `Não foi possível enviar a foto: ${cause.message}`; error.hidden = false; return; }
-      } else image = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file); }).catch(() => null);
-      if (!image) { error.textContent = 'Não foi possível ler a foto selecionada.'; error.hidden = false; return; }
+    // Storage policies may require the product row to exist before its photo can be uploaded.
+    // For a new live product, create the row first, then upload and attach the image.
+    const createBeforePhoto = Boolean(live && file && !previous);
+    if (file && live && !createBeforePhoto) {
+      try { image = await live.uploadProductImage(productId, file); }
+      catch (cause) { error.textContent = `Não foi possível enviar a foto: ${cause.message}`; error.hidden = false; return; }
+    } else if (file && !live) {
+      image = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file); }).catch(() => null);
     }
-    image = photoUrlWithFrame(image, photoFrame);
+    if (file && !image && !createBeforePhoto) { error.textContent = 'Não foi possível ler a foto selecionada.'; error.hidden = false; return; }
+    image = createBeforePhoto ? '' : photoUrlWithFrame(image, photoFrame);
     const product = { ...previous, id: productId, name, image, priceCents, unit, category: form.elements.category.value.trim(), active: form.elements.active.checked, costCents, supplierName: form.elements.supplierName?.value.trim() || '', unavailableFrom, unavailableUntil, substituteProductId, ...(previous?.demo ? { demo: true } : {}) };
     if (product.active) product.reviewReason = null;
     const next = editingId ? products.map(item => item.id === editingId ? product : item) : [...products, product];
-    if (await save(next)) { products = read(); updateDatalist(); rerender(); dialog.close(); }
+    if (!(await save(next))) return;
+    if (createBeforePhoto) {
+      // Keep the saved product editable if upload fails; never create a duplicate on retry.
+      editingId = productId;
+      products = read();
+      updateDatalist();
+      try {
+        const uploadedImage = await live.uploadProductImage(productId, file);
+        const updatedProduct = { ...product, image: photoUrlWithFrame(uploadedImage, photoFrame) };
+        await live.saveProduct(updatedProduct);
+      } catch (cause) {
+        products = read();
+        updateDatalist();
+        rerender();
+        error.textContent = `Produto salvo, mas a foto não foi concluída: ${cause.message}. Você pode editar o produto e tentar enviar a foto novamente.`;
+        error.hidden = false;
+        dialog.querySelector('#catalog-dialog-title').textContent = 'Editar produto';
+        return;
+      }
+    }
+    products = read();
+    updateDatalist();
+    rerender();
+    dialog.close();
   });
 
   if (live) window.addEventListener('trameli:catalog-changed', () => { products = read(); updateDatalist(); });
