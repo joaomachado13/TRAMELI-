@@ -91,7 +91,7 @@ try {
   for (let i = 0; i < 20 && !await evaluate('!!document.querySelector(".portal-catalog__footer")'); i++) await pause(50);
   assert.match(await evaluate('document.querySelector(".portal-catalog__footer small").textContent'), /1,40/);
   await evaluate('document.getElementById("portal-cart-link").click()');
-  assert.equal(await evaluate('document.querySelector(".portal-cart-line__photo img").getAttribute("src")'), 'assets/products/oficiais/pao-frances.jpeg');
+  assert.equal(await evaluate('document.querySelector(".portal-cart-line__photo img").getAttribute("src").split("#")[0]'), 'assets/products/oficiais/pao-frances.jpeg');
   assert.match(await evaluate('document.querySelector(".portal-totals").textContent'), /Subtotal dos produtos.*1,40/);
   assert.doesNotMatch(await evaluate('document.querySelector(".portal-totals").textContent'), /3,40/);
   await evaluate(`document.querySelector('[data-view="checkout"]').click()`);
