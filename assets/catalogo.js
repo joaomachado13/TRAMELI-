@@ -132,13 +132,30 @@
   };
   photoStage.addEventListener('pointerup', stopPhotoDrag);
   photoStage.addEventListener('pointercancel', stopPhotoDrag);
+  photoStage.addEventListener('keydown', event => {
+    const step = event.shiftKey ? 10 : 3;
+    if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) return;
+    photoFrame = clampPhotoFrame(
+      photoFrame.x + (event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0),
+      photoFrame.y + (event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0),
+      photoFrame.zoom,
+    );
+    applyPhotoFrame();
+    event.preventDefault();
+  });
   photoZoom.addEventListener('input', () => {
     photoFrame = clampPhotoFrame(photoFrame.x, photoFrame.y, photoZoom.value);
     applyPhotoFrame();
   });
   form.elements.imageFile?.addEventListener('change', () => {
     const file = form.elements.imageFile.files?.[0];
-    if (!file) return;
+    if (!file) {
+      releasePhotoPreviewUrl();
+      const existing = products.find(item => item.id === editingId);
+      photoFrame = photoFrameFromUrl(existing?.image || '');
+      setPhotoPreview(existing?.image || '');
+      return;
+    }
     releasePhotoPreviewUrl();
     photoPreviewObjectUrl = URL.createObjectURL(file);
     photoFrame = clampPhotoFrame();
@@ -230,7 +247,6 @@
   }
 
   document.addEventListener('click', async event => {
-    if (event.target.closest('[data-photo-reset]')) { resetPhotoFrame(); return; }
     if (event.target.closest('[data-product-close]')) { detailDialog.close(); return; }
     if (event.target.closest('[data-catalog-missing]')) { filters.cost = 'missing'; rerender(); return; }
     const button = event.target.closest('[data-catalog-action]');
