@@ -79,13 +79,13 @@ try {
   await evaluate('document.querySelector("#catalog-form").requestSubmit()');
   for (let i = 0; i < 30 && await evaluate('document.querySelector("#catalog-form").closest("dialog").open'); i++) await pause(50);
   const savedFrame = await evaluate(`TrameliCatalog.list().find(item => item.id === window.testPhotoEditorId).image`);
-  assert.match(savedFrame, /#trameli-frame=\\d{1,3},\\d{1,3},150$/, 'Enquadramento e zoom não foram salvos no produto.');
+  assert.match(savedFrame, /#trameli-frame=\d{1,3},\d{1,3},150$/, 'Enquadramento e zoom não foram salvos no produto.');
   const adminImageStyle = await evaluate(`(() => {
     const root = new DOMParser().parseFromString(TrameliCatalog.render(), 'text/html');
     return root.querySelector('.catalog-card[data-id="' + window.testPhotoEditorId + '"] .catalog-card__image')?.getAttribute('style') || '';
   })()`);
   assert.match(adminImageStyle, /object-position:/);
-  assert.match(adminImageStyle, /scale\\(1\\.5\\)/, 'Zoom salvo não foi aplicado no cartão do catálogo.');
+  assert.match(adminImageStyle, /scale\(1\.5\)/, 'Zoom salvo não foi aplicado no cartão do catálogo.');
   console.log('Editor de fotos: arraste, zoom, salvamento do enquadramento e prévia do catálogo OK.');
   await evaluate(`[...document.querySelectorAll('[data-qty]')].find(button => button.dataset.id === '20260924-0000-4000-8000-000000000002' && button.dataset.qty === '1').click()`);
   for (let i = 0; i < 20 && !await evaluate('!!document.querySelector(".portal-catalog__footer")'); i++) await pause(50);
