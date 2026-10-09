@@ -165,6 +165,9 @@ export class LiveData {
     if (error) throw error;
     this.costSummaryCache.clear();
     await this.load(true);
+    return this.products.find(item => item.id === product.id)
+      || this.products.find(item => item.name.toLocaleLowerCase('pt-BR') === product.name.toLocaleLowerCase('pt-BR'))
+      || null;
   }
 
   async confirmProductCost(productId) {
