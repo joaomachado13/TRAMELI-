@@ -12,6 +12,27 @@
     const cents = Number(whole) * 100 + Number(decimals.padEnd(2, '0'));
     return Number.isSafeInteger(cents) && cents <= 100000000 ? cents : null;
   };
+  const clampPhotoFrame = (x = 50, y = 50, zoom = 100) => ({
+    x: Math.round(Math.max(0, Math.min(100, Number(x) || 0))),
+    y: Math.round(Math.max(0, Math.min(100, Number(y) || 0))),
+    zoom: Math.round(Math.max(100, Math.min(220, Number(zoom) || 100)) / 5) * 5,
+  });
+  const photoFrameFromUrl = value => {
+    const match = String(value || '').match(/#trameli-frame=(\d{1,3}),(\d{1,3}),(\d{3})$/);
+    return match ? clampPhotoFrame(match[1], match[2], match[3]) : clampPhotoFrame();
+  };
+  const photoUrl = value => String(value || '').replace(/#trameli-frame=\d{1,3},\d{1,3},\d{3}$/, '');
+  const photoUrlWithFrame = (value, frame) => {
+    const base = photoUrl(value);
+    if (!base || (frame.x === 50 && frame.y === 50 && frame.zoom === 100)) return base;
+    return `${base}#trameli-frame=${frame.x},${frame.y},${frame.zoom}`;
+  };
+  const photoStyle = value => {
+    const frame = photoFrameFromUrl(value);
+    const left = (100 - frame.zoom) * frame.x / 100;
+    const top = (100 - frame.zoom) * frame.y / 100;
+    return `position:absolute;width:${frame.zoom}%;height:${frame.zoom}%;left:${left}%;top:${top}%;object-position:${frame.x}% ${frame.y}%;transform:none;`;
+  };
   const read = () => {
     if (live) return live.products.slice();
     try {
@@ -36,7 +57,7 @@
 
   const dialog = document.createElement('dialog');
   dialog.className = 'catalog-dialog';
-  dialog.innerHTML = `<form id="catalog-form" novalidate><div class="catalog-dialog__heading"><div><p class="screen-eyebrow">CATÁLOGO</p><h2 id="catalog-dialog-title">Novo produto</h2></div><button type="button" class="catalog-close" aria-label="Fechar">×</button></div><label>Nome do produto<input name="name" maxlength="90" required></label><div class="catalog-form-grid"><label>Preço ao cliente (R$)<input name="price" inputmode="decimal" placeholder="0,00" required></label><label>Custo da padaria (R$) <span>(opcional)</span><input name="cost" inputmode="decimal" placeholder="A confirmar"></label></div><div class="catalog-form-grid"><label>Unidade<input name="unit" maxlength="30" placeholder="unidade, pacote, kg..." required></label><label>Categoria <span>(opcional)</span><input name="category" maxlength="50"></label></div><label>Foto do produto${live?.role === 'master' ? '<input name="imageFile" type="file" accept="image/png,image/jpeg,image/webp"><span>PNG, JPEG ou WebP de até 2 MB.</span>' : live ? '<input name="imageUrl" type="url" placeholder="https://..."><span>Use uma URL pública da imagem.</span>' : '<input name="imageFile" type="file" accept="image/png,image/jpeg,image/webp"><span>PNG, JPEG ou WebP de até 1,5 MB.</span>'}</label>${live?.operator ? '<label>Nome no fornecedor <span>(opcional)</span><input name="supplierName" maxlength="90"></label><div class="catalog-form-grid"><label>Indisponível de <span>(opcional)</span><input name="unavailableFrom" type="date"></label><label>Até <span>(inclusive)</span><input name="unavailableUntil" type="date"></label></div><label>Substituto sugerido <span>(opcional)</span><select name="substituteProductId"><option value="">Nenhum</option></select></label>' : ''}<label class="catalog-check"><input name="active" type="checkbox" checked> Disponível para pedidos</label><p class="catalog-error" role="alert" hidden></p><div class="catalog-actions"><button type="button" class="catalog-cancel">Cancelar</button><button type="submit">Salvar produto</button></div></form>`;
+  dialog.innerHTML = `<form id="catalog-form" novalidate><div class="catalog-dialog__heading"><div><p class="screen-eyebrow">CATÁLOGO</p><h2 id="catalog-dialog-title">Novo produto</h2></div><button type="button" class="catalog-close" aria-label="Fechar">×</button></div><label>Nome do produto<input name="name" maxlength="90" required></label><div class="catalog-form-grid"><label>Preço ao cliente (R$)<input name="price" inputmode="decimal" placeholder="0,00" required></label><label>Custo da padaria (R$) <span>(opcional)</span><input name="cost" inputmode="decimal" placeholder="A confirmar"></label></div><div class="catalog-form-grid"><label>Unidade<input name="unit" maxlength="30" placeholder="unidade, pacote, kg..." required></label><label>Categoria <span>(opcional)</span><input name="category" maxlength="50"></label></div><label>Foto do produto${live?.role === 'master' ? '<input name="imageFile" type="file" accept="image/png,image/jpeg,image/webp"><span>PNG, JPEG ou WebP de até 2 MB.</span>' : live ? '<input name="imageUrl" type="url" placeholder="https://..."><span>Use uma URL pública da imagem.</span>' : '<input name="imageFile" type="file" accept="image/png,image/jpeg,image/webp"><span>PNG, JPEG ou WebP de até 1,5 MB.</span>'}</label><section class="catalog-photo-editor" data-photo-editor hidden><div class="catalog-photo-editor__heading"><div><strong>Enquadrar foto</strong><span>Arraste a imagem para mostrar a parte certa.</span></div><button type="button" data-photo-reset>Centralizar</button></div><div class="catalog-photo-editor__stage" data-photo-stage tabindex="0" role="img" aria-label="Prévia da foto. Arraste para reposicionar."><img data-photo-preview alt=""><span data-photo-placeholder>Escolha uma foto para começar.</span><span class="catalog-photo-editor__hint">Arraste para posicionar</span></div><label class="catalog-photo-editor__zoom">Zoom <output data-photo-zoom>100%</output><input name="imageZoom" type="range" min="100" max="220" step="5" value="100"></label><p>O arquivo original é preservado; este ajuste muda apenas o enquadramento no catálogo.</p></section>${live?.operator ? '<label>Nome no fornecedor <span>(opcional)</span><input name="supplierName" maxlength="90"></label><div class="catalog-form-grid"><label>Indisponível de <span>(opcional)</span><input name="unavailableFrom" type="date"></label><label>Até <span>(inclusive)</span><input name="unavailableUntil" type="date"></label></div><label>Substituto sugerido <span>(opcional)</span><select name="substituteProductId"><option value="">Nenhum</option></select></label>' : ''}<label class="catalog-check"><input name="active" type="checkbox" checked> Disponível para pedidos</label><p class="catalog-error" role="alert" hidden></p><div class="catalog-actions"><button type="button" class="catalog-cancel">Cancelar</button><button type="submit">Salvar produto</button></div></form>`;
   document.body.append(dialog);
   const detailDialog = document.createElement('dialog');
   detailDialog.className = 'entity-drawer product-drawer';
@@ -47,9 +68,112 @@
   document.body.append(historyDialog);
   const form = dialog.querySelector('form');
   const error = dialog.querySelector('.catalog-error');
+  const photoEditor = form.querySelector('[data-photo-editor]');
+  const photoStage = form.querySelector('[data-photo-stage]');
+  const photoPreview = form.querySelector('[data-photo-preview]');
+  const photoPlaceholder = form.querySelector('[data-photo-placeholder]');
+  const photoZoom = form.querySelector('[name="imageZoom"]');
+  const photoZoomOutput = form.querySelector('[data-photo-zoom]');
+  let photoFrame = clampPhotoFrame();
+  let photoPreviewObjectUrl = null;
+  let photoDrag = null;
   const datalist = document.createElement('datalist');
   datalist.id = 'catalog-products';
   document.body.append(datalist);
+
+  function releasePhotoPreviewUrl() {
+    if (photoPreviewObjectUrl) URL.revokeObjectURL(photoPreviewObjectUrl);
+    photoPreviewObjectUrl = null;
+  }
+  function applyPhotoFrame() {
+    photoPreview.style.position = 'absolute';
+    photoPreview.style.width = `${photoFrame.zoom}%`;
+    photoPreview.style.height = `${photoFrame.zoom}%`;
+    photoPreview.style.left = `${(100 - photoFrame.zoom) * photoFrame.x / 100}%`;
+    photoPreview.style.top = `${(100 - photoFrame.zoom) * photoFrame.y / 100}%`;
+    photoPreview.style.objectPosition = `${photoFrame.x}% ${photoFrame.y}%`;
+    photoPreview.style.transform = 'none';
+    photoZoom.value = String(photoFrame.zoom);
+    photoZoomOutput.value = `${photoFrame.zoom}%`;
+    photoZoomOutput.textContent = `${photoFrame.zoom}%`;
+  }
+  function setPhotoPreview(source) {
+    const url = photoUrl(source);
+    photoEditor.hidden = !url;
+    if (!url) {
+      photoPreview.removeAttribute('src');
+      photoPlaceholder.hidden = false;
+      return;
+    }
+    if (photoPreview.getAttribute('src') !== url) photoPreview.setAttribute('src', url);
+    photoPlaceholder.hidden = true;
+    applyPhotoFrame();
+  }
+  function resetPhotoFrame() {
+    photoFrame = clampPhotoFrame();
+    applyPhotoFrame();
+  }
+  photoStage.addEventListener('pointerdown', event => {
+    if (photoEditor.hidden || !photoPreview.getAttribute('src')) return;
+    const rect = photoStage.getBoundingClientRect();
+    photoDrag = { pointerId: event.pointerId, clientX: event.clientX, clientY: event.clientY,
+      x: photoFrame.x, y: photoFrame.y, width: Math.max(1, rect.width), height: Math.max(1, rect.height) };
+    photoStage.classList.add('is-dragging');
+    try { photoStage.setPointerCapture(event.pointerId); } catch { /* Synthetic and older pointers may not support capture. */ }
+    event.preventDefault();
+  });
+  photoStage.addEventListener('pointermove', event => {
+    if (!photoDrag || event.pointerId !== photoDrag.pointerId) return;
+    photoFrame = clampPhotoFrame(
+      photoDrag.x - ((event.clientX - photoDrag.clientX) / photoDrag.width) * 100,
+      photoDrag.y - ((event.clientY - photoDrag.clientY) / photoDrag.height) * 100,
+      photoFrame.zoom,
+    );
+    applyPhotoFrame();
+  });
+  const stopPhotoDrag = event => {
+    if (!photoDrag || (event && event.pointerId !== photoDrag.pointerId)) return;
+    photoDrag = null;
+    photoStage.classList.remove('is-dragging');
+  };
+  photoStage.addEventListener('pointerup', stopPhotoDrag);
+  photoStage.addEventListener('pointercancel', stopPhotoDrag);
+  photoStage.addEventListener('keydown', event => {
+    const step = event.shiftKey ? 10 : 3;
+    if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) return;
+    photoFrame = clampPhotoFrame(
+      photoFrame.x + (event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0),
+      photoFrame.y + (event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0),
+      photoFrame.zoom,
+    );
+    applyPhotoFrame();
+    event.preventDefault();
+  });
+  photoZoom.addEventListener('input', () => {
+    photoFrame = clampPhotoFrame(photoFrame.x, photoFrame.y, photoZoom.value);
+    applyPhotoFrame();
+  });
+  form.elements.imageFile?.addEventListener('change', () => {
+    const file = form.elements.imageFile.files?.[0];
+    if (!file) {
+      releasePhotoPreviewUrl();
+      const existing = products.find(item => item.id === editingId);
+      photoFrame = photoFrameFromUrl(existing?.image || '');
+      setPhotoPreview(existing?.image || '');
+      return;
+    }
+    releasePhotoPreviewUrl();
+    photoPreviewObjectUrl = URL.createObjectURL(file);
+    photoFrame = clampPhotoFrame();
+    setPhotoPreview(photoPreviewObjectUrl);
+  });
+  form.elements.imageUrl?.addEventListener('change', () => {
+    releasePhotoPreviewUrl();
+    photoFrame = clampPhotoFrame();
+    setPhotoPreview(form.elements.imageUrl.value.trim());
+  });
+  photoEditor.querySelector('[data-photo-reset]').addEventListener('click', resetPhotoFrame);
+  dialog.addEventListener('close', releasePhotoPreviewUrl);
 
   function updateDatalist() {
     datalist.innerHTML = products.filter(item => item.active).map(item => `<option value="${escapeHtml(item.name)}"></option>`).join('');
@@ -65,7 +189,7 @@
     form.elements.price.value = product ? (product.priceCents / 100).toFixed(2).replace('.', ',') : '';
     form.elements.unit.value = product?.unit || '';
     form.elements.category.value = product?.category || '';
-    if (form.elements.imageUrl) form.elements.imageUrl.value = product?.image || '';
+    if (form.elements.imageUrl) form.elements.imageUrl.value = photoUrl(product?.image || '');
     if (form.elements.cost) form.elements.cost.value = product?.costCents == null ? '' : (product.costCents / 100).toFixed(2).replace('.', ',');
     if (form.elements.supplierName) form.elements.supplierName.value = product?.supplierName || '';
     if (form.elements.unavailableFrom) form.elements.unavailableFrom.value = product?.unavailableFrom || '';
@@ -75,6 +199,8 @@
       form.elements.substituteProductId.value = product?.substituteProductId || '';
     }
     form.elements.active.checked = product?.active ?? true;
+    photoFrame = photoFrameFromUrl(product?.image || '');
+    setPhotoPreview(product?.image || '');
     dialog.querySelector('#catalog-dialog-title').textContent = product ? 'Editar produto' : 'Novo produto';
     dialog.showModal();
     form.elements.name.focus();
@@ -110,7 +236,7 @@
       && (filters.cost === 'all' || (filters.cost === 'known') === (item.costCents != null)))
       .sort((a, b) => filters.sort === 'price-desc' ? b.priceCents - a.priceCents : filters.sort === 'price-asc' ? a.priceCents - b.priceCents : a.name.localeCompare(b.name, 'pt-BR'));
     const missingCosts = products.filter(item => item.active && item.costCents == null).length;
-    return `<div data-catalog-root><div class="catalog-toolbar"><div><p>${sorted.length} de ${products.length} produtos</p>${missingCosts ? `<button class="catalog-alert" type="button" data-catalog-missing>${missingCosts} sem custo</button>` : '<small>Custos ativos preenchidos.</small>'}</div><div class="catalog-toolbar__actions"><a href="#loja">Ver portal ↗</a><button type="button" data-catalog-action="new">+ Produto</button></div></div><div class="catalog-filters"><label>Buscar<input id="catalog-search" type="search" value="${escapeHtml(filters.query)}" placeholder="Nome do produto"></label><label>Categoria<select data-catalog-filter="category"><option value="all">Todas</option>${categories.map(value => `<option value="${escapeHtml(value)}" ${filters.category === value ? 'selected' : ''}>${escapeHtml(value)}</option>`).join('')}</select></label><label>Disponibilidade<select data-catalog-filter="availability"><option value="all">Todas</option><option value="active" ${filters.availability === 'active' ? 'selected' : ''}>Disponíveis</option><option value="inactive" ${filters.availability === 'inactive' ? 'selected' : ''}>Indisponíveis</option></select></label><label>Foto<select data-catalog-filter="photo"><option value="all">Todas</option><option value="with" ${filters.photo === 'with' ? 'selected' : ''}>Com foto</option><option value="without" ${filters.photo === 'without' ? 'selected' : ''}>Sem foto</option></select></label>${live?.operator ? `<label>Custo<select data-catalog-filter="cost"><option value="all">Todos</option><option value="known" ${filters.cost === 'known' ? 'selected' : ''}>Preenchido</option><option value="missing" ${filters.cost === 'missing' ? 'selected' : ''}>Pendente</option></select></label>` : ''}<label>Ordenar<select data-catalog-filter="sort"><option value="name">Nome</option><option value="price-desc" ${filters.sort === 'price-desc' ? 'selected' : ''}>Maior preço</option><option value="price-asc" ${filters.sort === 'price-asc' ? 'selected' : ''}>Menor preço</option></select></label></div>${sorted.length ? `<div class="catalog-grid catalog-grid--compact">${sorted.map(item => `<button type="button" class="catalog-card catalog-card--compact" data-catalog-action="view" data-id="${escapeHtml(item.id)}">${item.image ? `<img class="catalog-card__image" src="${escapeHtml(item.image)}" alt="" loading="lazy">` : '<div class="catalog-card__image catalog-card__image--pending" aria-hidden="true">Foto pendente</div>'}<span class="catalog-card__body"><span><small>${escapeHtml(item.category || 'Sem categoria')}</small><small class="catalog-card__state ${item.active ? '' : 'catalog-card__state--off'}">${item.active ? 'Disponível' : 'Indisponível'}</small></span><strong>${escapeHtml(item.name)}</strong><span>${money(item.priceCents)} / ${escapeHtml(item.unit)}</span>${live?.operator ? `<small class="catalog-cost-state ${item.costCents == null ? 'is-missing' : ''}">${item.costCents == null ? 'Custo pendente' : `Custo ${money(item.costCents)}`}</small>` : ''}</span></button>`).join('')}</div>` : '<div class="friendly-empty"><strong>Nenhum produto encontrado.</strong><span>Ajuste os filtros para visualizar outros itens.</span></div>'}</div>`;
+    return `<div data-catalog-root><div class="catalog-toolbar"><div><p>${sorted.length} de ${products.length} produtos</p>${missingCosts ? `<button class="catalog-alert" type="button" data-catalog-missing>${missingCosts} sem custo</button>` : '<small>Custos ativos preenchidos.</small>'}</div><div class="catalog-toolbar__actions"><a href="#loja">Ver portal ↗</a><button type="button" data-catalog-action="new">+ Produto</button></div></div><div class="catalog-filters"><label>Buscar<input id="catalog-search" type="search" value="${escapeHtml(filters.query)}" placeholder="Nome do produto"></label><label>Categoria<select data-catalog-filter="category"><option value="all">Todas</option>${categories.map(value => `<option value="${escapeHtml(value)}" ${filters.category === value ? 'selected' : ''}>${escapeHtml(value)}</option>`).join('')}</select></label><label>Disponibilidade<select data-catalog-filter="availability"><option value="all">Todas</option><option value="active" ${filters.availability === 'active' ? 'selected' : ''}>Disponíveis</option><option value="inactive" ${filters.availability === 'inactive' ? 'selected' : ''}>Indisponíveis</option></select></label><label>Foto<select data-catalog-filter="photo"><option value="all">Todas</option><option value="with" ${filters.photo === 'with' ? 'selected' : ''}>Com foto</option><option value="without" ${filters.photo === 'without' ? 'selected' : ''}>Sem foto</option></select></label>${live?.operator ? `<label>Custo<select data-catalog-filter="cost"><option value="all">Todos</option><option value="known" ${filters.cost === 'known' ? 'selected' : ''}>Preenchido</option><option value="missing" ${filters.cost === 'missing' ? 'selected' : ''}>Pendente</option></select></label>` : ''}<label>Ordenar<select data-catalog-filter="sort"><option value="name">Nome</option><option value="price-desc" ${filters.sort === 'price-desc' ? 'selected' : ''}>Maior preço</option><option value="price-asc" ${filters.sort === 'price-asc' ? 'selected' : ''}>Menor preço</option></select></label></div>${sorted.length ? `<div class="catalog-grid catalog-grid--compact">${sorted.map(item => `<button type="button" class="catalog-card catalog-card--compact" data-catalog-action="view" data-id="${escapeHtml(item.id)}">${item.image ? `<span class="catalog-card__image-frame"><img class="catalog-card__image" src="${escapeHtml(item.image)}" style="${photoStyle(item.image)}" alt="" loading="lazy"></span>` : '<div class="catalog-card__image catalog-card__image--pending" aria-hidden="true">Foto pendente</div>'}<span class="catalog-card__body"><span><small>${escapeHtml(item.category || 'Sem categoria')}</small><small class="catalog-card__state ${item.active ? '' : 'catalog-card__state--off'}">${item.active ? 'Disponível' : 'Indisponível'}</small></span><strong>${escapeHtml(item.name)}</strong><span>${money(item.priceCents)} / ${escapeHtml(item.unit)}</span>${live?.operator ? `<small class="catalog-cost-state ${item.costCents == null ? 'is-missing' : ''}">${item.costCents == null ? 'Custo pendente' : `Custo ${money(item.costCents)}`}</small>` : ''}</span></button>`).join('')}</div>` : '<div class="friendly-empty"><strong>Nenhum produto encontrado.</strong><span>Ajuste os filtros para visualizar outros itens.</span></div>'}</div>`;
   }
 
   function rerender() {
@@ -122,7 +248,7 @@
     const product = products.find(item => item.id === id);
     if (!product) return;
     const margin = product.costCents == null || !product.priceCents ? null : Math.round(((product.priceCents - product.costCents) / product.priceCents) * 100);
-    detailDialog.innerHTML = `<div class="entity-detail"><header class="entity-detail__header"><div><p class="screen-eyebrow">PRODUTO</p><h2>${escapeHtml(product.name)}</h2><p>${escapeHtml(product.category || 'Sem categoria')} · ${product.active ? 'Disponível' : 'Indisponível'}</p></div><button type="button" data-product-close aria-label="Fechar">×</button></header><div class="entity-detail__body">${product.image ? `<img class="product-detail-photo" src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}">` : '<div class="product-detail-photo product-detail-photo--empty">Foto pendente</div>'}<section class="entity-summary"><div><span>Preço</span><strong>${money(product.priceCents)}</strong></div><div><span>Custo</span><strong>${product.costCents == null ? 'Pendente' : money(product.costCents)}</strong></div><div><span>Margem</span><strong>${margin == null ? '—' : `${margin}%`}</strong></div></section><section class="entity-block"><h3>Cadastro</h3><p>Unidade: ${escapeHtml(product.unit)}</p>${product.supplierName ? `<p>Fornecedor: ${escapeHtml(product.supplierName)}</p>` : ''}${product.unavailableFrom ? `<p>Indisponível de ${escapeHtml(product.unavailableFrom)} até ${escapeHtml(product.unavailableUntil)}</p>` : ''}</section></div><footer class="entity-detail__actions"><button class="screen-primary" type="button" data-catalog-action="edit" data-id="${escapeHtml(product.id)}">Editar produto</button>${live?.operator ? `<button type="button" data-catalog-action="history" data-id="${escapeHtml(product.id)}">Histórico</button>` : ''}<button type="button" class="entity-danger" data-catalog-action="delete" data-id="${escapeHtml(product.id)}">${live?.role === 'master' ? 'Excluir definitivamente' : live ? 'Desativar' : 'Excluir'}</button></footer></div>`;
+    detailDialog.innerHTML = `<div class="entity-detail"><header class="entity-detail__header"><div><p class="screen-eyebrow">PRODUTO</p><h2>${escapeHtml(product.name)}</h2><p>${escapeHtml(product.category || 'Sem categoria')} · ${product.active ? 'Disponível' : 'Indisponível'}</p></div><button type="button" data-product-close aria-label="Fechar">×</button></header><div class="entity-detail__body">${product.image ? `<div class="product-detail-photo-frame"><img class="product-detail-photo" src="${escapeHtml(product.image)}" style="${photoStyle(product.image)}" alt="${escapeHtml(product.name)}"></div>` : '<div class="product-detail-photo product-detail-photo--empty">Foto pendente</div>'}<section class="entity-summary"><div><span>Preço</span><strong>${money(product.priceCents)}</strong></div><div><span>Custo</span><strong>${product.costCents == null ? 'Pendente' : money(product.costCents)}</strong></div><div><span>Margem</span><strong>${margin == null ? '—' : `${margin}%`}</strong></div></section><section class="entity-block"><h3>Cadastro</h3><p>Unidade: ${escapeHtml(product.unit)}</p>${product.supplierName ? `<p>Fornecedor: ${escapeHtml(product.supplierName)}</p>` : ''}${product.unavailableFrom ? `<p>Indisponível de ${escapeHtml(product.unavailableFrom)} até ${escapeHtml(product.unavailableUntil)}</p>` : ''}</section></div><footer class="entity-detail__actions"><button class="screen-primary" type="button" data-catalog-action="edit" data-id="${escapeHtml(product.id)}">Editar produto</button>${live?.operator ? `<button type="button" data-catalog-action="history" data-id="${escapeHtml(product.id)}">Histórico</button>` : ''}<button type="button" class="entity-danger" data-catalog-action="delete" data-id="${escapeHtml(product.id)}">${live?.role === 'master' ? 'Excluir definitivamente' : live ? 'Desativar' : 'Excluir'}</button></footer></div>`;
     detailDialog.showModal();
   }
 
@@ -201,7 +327,7 @@
     }
     const previous = products.find(item => item.id === editingId);
     const productId = editingId || crypto.randomUUID();
-    let image = form.elements.imageUrl?.value.trim() || previous?.image || '';
+    let image = photoUrl(form.elements.imageUrl?.value.trim() || previous?.image || '');
     const file = form.elements.imageFile?.files?.[0];
     if (file) {
       if (live) {
@@ -210,6 +336,7 @@
       } else image = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file); }).catch(() => null);
       if (!image) { error.textContent = 'Não foi possível ler a foto selecionada.'; error.hidden = false; return; }
     }
+    image = photoUrlWithFrame(image, photoFrame);
     const product = { ...previous, id: productId, name, image, priceCents, unit, category: form.elements.category.value.trim(), active: form.elements.active.checked, costCents, supplierName: form.elements.supplierName?.value.trim() || '', unavailableFrom, unavailableUntil, substituteProductId, ...(previous?.demo ? { demo: true } : {}) };
     if (product.active) product.reviewReason = null;
     const next = editingId ? products.map(item => item.id === editingId ? product : item) : [...products, product];

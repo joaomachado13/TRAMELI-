@@ -54,11 +54,44 @@ try {
     const shot = await send('Page.captureScreenshot', { format: 'png' });
     await writeFile(new URL(`../assets/crops/photos-${width}.png`, import.meta.url), Buffer.from(shot.data, 'base64'));
   }
+  const editorProductId = await evaluate(`(() => {
+    const product = TrameliCatalog.list().find(item => item.image);
+    window.testPhotoEditorId = product.id;
+    TrameliCatalog.open(product.id);
+    document.querySelector('.product-drawer [data-catalog-action="edit"]').click();
+    return product.id;
+  })()`);
+  assert.equal(await evaluate('!document.querySelector("[data-photo-editor]").hidden'), true, 'Editor de foto não abriu para um produto com imagem.');
+  const dragResult = await evaluate(`(() => {
+    const zoom = document.querySelector('[name="imageZoom"]');
+    zoom.value = '150'; zoom.dispatchEvent(new Event('input', { bubbles: true }));
+    const stage = document.querySelector('[data-photo-stage]');
+    const rect = stage.getBoundingClientRect();
+    const start = { x: rect.left + rect.width * .5, y: rect.top + rect.height * .5 };
+    const end = { x: rect.left + rect.width * .65, y: rect.top + rect.height * .6 };
+    stage.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 11, clientX: start.x, clientY: start.y }));
+    stage.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 11, clientX: end.x, clientY: end.y }));
+    stage.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 11, clientX: end.x, clientY: end.y }));
+    return { position: stage.querySelector('img').style.objectPosition, zoom: zoom.value };
+  })()`);
+  assert.notEqual(dragResult.position, '50% 50%', 'Arrastar a foto não alterou o enquadramento.');
+  assert.equal(dragResult.zoom, '150', 'Controle de zoom não atualizou a prévia.');
+  await evaluate('document.querySelector("#catalog-form").requestSubmit()');
+  for (let i = 0; i < 30 && await evaluate('document.querySelector("#catalog-form").closest("dialog").open'); i++) await pause(50);
+  const savedFrame = await evaluate(`TrameliCatalog.list().find(item => item.id === window.testPhotoEditorId).image`);
+  assert.match(savedFrame, /#trameli-frame=\d{1,3},\d{1,3},150$/, 'Enquadramento e zoom não foram salvos no produto.');
+  const adminImageStyle = await evaluate(`(() => {
+    const root = new DOMParser().parseFromString(TrameliCatalog.render(), 'text/html');
+    return root.querySelector('.catalog-card[data-id="' + window.testPhotoEditorId + '"] .catalog-card__image')?.getAttribute('style') || '';
+  })()`);
+  assert.match(adminImageStyle, /object-position:/);
+  assert.match(adminImageStyle, /width:150%/, 'Zoom salvo não foi aplicado no cartão do catálogo.');
+  console.log('Editor de fotos: arraste, zoom, salvamento do enquadramento e prévia do catálogo OK.');
   await evaluate(`[...document.querySelectorAll('[data-qty]')].find(button => button.dataset.id === '20260924-0000-4000-8000-000000000002' && button.dataset.qty === '1').click()`);
   for (let i = 0; i < 20 && !await evaluate('!!document.querySelector(".portal-catalog__footer")'); i++) await pause(50);
   assert.match(await evaluate('document.querySelector(".portal-catalog__footer small").textContent'), /1,40/);
   await evaluate('document.getElementById("portal-cart-link").click()');
-  assert.equal(await evaluate('document.querySelector(".portal-cart-line__photo img").getAttribute("src")'), 'assets/products/oficiais/pao-frances.jpeg');
+  assert.equal(await evaluate('document.querySelector(".portal-cart-line__photo img").getAttribute("src").split("#")[0]'), 'assets/products/oficiais/pao-frances.jpeg');
   assert.match(await evaluate('document.querySelector(".portal-totals").textContent'), /Subtotal dos produtos.*1,40/);
   assert.doesNotMatch(await evaluate('document.querySelector(".portal-totals").textContent'), /3,40/);
   await evaluate(`document.querySelector('[data-view="checkout"]').click()`);

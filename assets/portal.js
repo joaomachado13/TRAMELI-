@@ -31,6 +31,15 @@
     return /^55\d{10,11}$/.test(digits) ? digits : '';
   };
   const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
+  const photoStyle = value => {
+    const match = String(value || '').match(/#trameli-frame=(\d{1,3}),(\d{1,3}),(\d{3})$/);
+    const x = match ? Math.max(0, Math.min(100, Number(match[1]))) : 50;
+    const y = match ? Math.max(0, Math.min(100, Number(match[2]))) : 50;
+    const zoom = match ? Math.max(100, Math.min(220, Number(match[3]))) : 100;
+    const left = (100 - zoom) * x / 100;
+    const top = (100 - zoom) * y / 100;
+    return `position:absolute;width:${zoom}%;height:${zoom}%;left:${left}%;top:${top}%;object-position:${x}% ${y}%;transform:none;`;
+  };
   const dateKey = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   const tomorrow = () => { const date = new Date(); date.setDate(date.getDate() + 1); return dateKey(date); };
   const formatDate = value => new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -282,7 +291,7 @@
     element.focus({ preventScroll: true });
     if (typeof saved.start === 'number' && element.setSelectionRange) element.setSelectionRange(saved.start, saved.end);
   }
-  const photo = product => product.image ? `<img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" loading="lazy">` : '<span class="portal-photo-empty" aria-label="Foto em breve">Foto em breve</span>';
+  const photo = product => product.image ? `<img src="${escapeHtml(product.image)}" style="${photoStyle(product.image)}" alt="${escapeHtml(product.name)}" loading="lazy">` : '<span class="portal-photo-empty" aria-label="Foto em breve">Foto em breve</span>';
   function stepper(product) {
     const quantity = cart[product.id] || 0;
     return `<div class="portal-stepper" aria-label="${weighted(product) ? 'Peso' : 'Quantidade'} de ${escapeHtml(product.name)}"><button type="button" data-qty="-1" data-id="${escapeHtml(product.id)}" aria-label="Diminuir ${escapeHtml(product.name)} em ${weighted(product) ? '50 gramas' : 'uma unidade'}" ${quantity ? '' : 'disabled'}>−</button><span>${weighted(product) ? `${quantity * 50} g` : quantity}</span><button type="button" data-qty="1" data-id="${escapeHtml(product.id)}" aria-label="Adicionar ${escapeHtml(product.name)} em ${weighted(product) ? '50 gramas' : 'uma unidade'}" ${quantity >= 99 ? 'disabled' : ''}>+</button></div>`;
