@@ -342,16 +342,24 @@
     image = createBeforePhoto ? '' : photoUrlWithFrame(image, photoFrame);
     const product = { ...previous, id: productId, name, image, priceCents, unit, category: form.elements.category.value.trim(), active: form.elements.active.checked, costCents, supplierName: form.elements.supplierName?.value.trim() || '', unavailableFrom, unavailableUntil, substituteProductId, ...(previous?.demo ? { demo: true } : {}) };
     if (product.active) product.reviewReason = null;
-    const next = editingId ? products.map(item => item.id === editingId ? product : item) : [...products, product];
-    if (!(await save(next))) return;
+    let savedProduct = product;
     if (createBeforePhoto) {
-      // Keep the saved product editable if upload fails; never create a duplicate on retry.
-      editingId = productId;
-      products = read();
+      // Let the database create the ID; a client-generated ID is interpreted as an update by the RPC.
+      try {
+        await live.saveProduct({ ...product, id: null, image: '' });
+        products = read();
+        savedProduct = products.find(item => item.name.toLocaleLowerCase('pt-BR') === name.toLocaleLowerCase('pt-BR'));
+        if (!savedProduct?.id) throw new Error('O produto foi enviado, mas não foi possível recuperar o ID criado pelo banco.');
+      } catch (cause) {
+        error.textContent = `Não foi possível salvar: ${cause.message}`;
+        error.hidden = false;
+        return;
+      }
+      editingId = savedProduct.id;
       updateDatalist();
       try {
-        const uploadedImage = await live.uploadProductImage(productId, file);
-        const updatedProduct = { ...product, image: photoUrlWithFrame(uploadedImage, photoFrame) };
+        const uploadedImage = await live.uploadProductImage(savedProduct.id, file);
+        const updatedProduct = { ...savedProduct, image: photoUrlWithFrame(uploadedImage, photoFrame) };
         await live.saveProduct(updatedProduct);
       } catch (cause) {
         products = read();
@@ -362,6 +370,9 @@
         dialog.querySelector('#catalog-dialog-title').textContent = 'Editar produto';
         return;
       }
+    } else {
+      const next = editingId ? products.map(item => item.id === editingId ? product : item) : [...products, product];
+      if (!(await save(next))) return;
     }
     products = read();
     updateDatalist();
