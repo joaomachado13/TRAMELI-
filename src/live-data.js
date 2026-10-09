@@ -161,13 +161,15 @@ export class LiveData {
     if (result.error?.code === 'PGRST202') result = await this.client.rpc(
       this.catalogUpgradeReady ? 'trameli_save_product_full' : 'trameli_save_product',
       this.catalogUpgradeReady ? { ...args, p_cost_cents: product.costCents ?? null, p_supplier_name: product.supplierName || '' } : args);
-    const { error } = result;
+    const { data, error } = result;
     if (error) throw error;
+    // The RPC returns the canonical database UUID. Keep it even if the refreshed
+    // catalog cache is momentarily stale or filtered by a concurrent refresh.
+    const savedId = data || product.id || null;
     this.costSummaryCache.clear();
     await this.load(true);
-    return this.products.find(item => item.id === product.id)
-      || this.products.find(item => item.name.toLocaleLowerCase('pt-BR') === product.name.toLocaleLowerCase('pt-BR'))
-      || null;
+    return this.products.find(item => item.id === savedId)
+      || { ...product, id: savedId };
   }
 
   async confirmProductCost(productId) {
