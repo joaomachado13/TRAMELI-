@@ -85,7 +85,7 @@ try {
     return root.querySelector('.catalog-card[data-id="' + window.testPhotoEditorId + '"] .catalog-card__image')?.getAttribute('style') || '';
   })()`);
   assert.match(adminImageStyle, /object-position:/);
-  assert.match(adminImageStyle, /scale\(1\.5\)/, 'Zoom salvo não foi aplicado no cartão do catálogo.');
+  assert.match(adminImageStyle, /width:150%/, 'Zoom salvo não foi aplicado no cartão do catálogo.');
   console.log('Editor de fotos: arraste, zoom, salvamento do enquadramento e prévia do catálogo OK.');
   await evaluate(`[...document.querySelectorAll('[data-qty]')].find(button => button.dataset.id === '20260924-0000-4000-8000-000000000002' && button.dataset.qty === '1').click()`);
   for (let i = 0; i < 20 && !await evaluate('!!document.querySelector(".portal-catalog__footer")'); i++) await pause(50);
