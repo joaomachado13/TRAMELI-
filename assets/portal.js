@@ -36,7 +36,9 @@
     const x = match ? Math.max(0, Math.min(100, Number(match[1]))) : 50;
     const y = match ? Math.max(0, Math.min(100, Number(match[2]))) : 50;
     const zoom = match ? Math.max(100, Math.min(220, Number(match[3]))) : 100;
-    return `object-position:${x}% ${y}%;transform:${zoom === 100 ? 'none' : `scale(${zoom / 100})`};transform-origin:center center;`;
+    const left = (100 - zoom) * x / 100;
+    const top = (100 - zoom) * y / 100;
+    return `position:absolute;width:${zoom}%;height:${zoom}%;left:${left}%;top:${top}%;object-position:${x}% ${y}%;transform:none;`;
   };
   const dateKey = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   const tomorrow = () => { const date = new Date(); date.setDate(date.getDate() + 1); return dateKey(date); };
