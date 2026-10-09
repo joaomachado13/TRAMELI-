@@ -346,10 +346,9 @@
     if (createBeforePhoto) {
       // Let the database create the ID; a client-generated ID is interpreted as an update by the RPC.
       try {
-        await live.saveProduct({ ...product, id: null, image: '' });
+        savedProduct = await live.saveProduct({ ...product, id: null, image: '' });
+        if (!savedProduct?.id) throw new Error('O banco não retornou o ID do produto criado.');
         products = read();
-        savedProduct = products.find(item => item.name.toLocaleLowerCase('pt-BR') === name.toLocaleLowerCase('pt-BR'));
-        if (!savedProduct?.id) throw new Error('O produto foi enviado, mas não foi possível recuperar o ID criado pelo banco.');
       } catch (cause) {
         error.textContent = `Não foi possível salvar: ${cause.message}`;
         error.hidden = false;
