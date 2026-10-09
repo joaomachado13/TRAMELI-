@@ -32,7 +32,7 @@
   };
   const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
   const photoStyle = value => {
-    const match = String(value || '').match(/#trameli-frame=(\\d{1,3}),(\\d{1,3}),(\\d{3})$/);
+    const match = String(value || '').match(/#trameli-frame=(\d{1,3}),(\d{1,3}),(\d{3})$/);
     const x = match ? Math.max(0, Math.min(100, Number(match[1]))) : 50;
     const y = match ? Math.max(0, Math.min(100, Number(match[2]))) : 50;
     const zoom = match ? Math.max(100, Math.min(220, Number(match[3]))) : 100;
