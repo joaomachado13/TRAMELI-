@@ -589,7 +589,14 @@ function preparePrint() {
       '</div></article>';
   };
 
-  printHost.innerHTML = '<div class="print-roll">' + prepared.map(renderLabel).join('') + '</div>';
+  const LABELS_PER_SHEET = 27;
+  const sheets = [];
+  for (let index = 0; index < prepared.length; index += LABELS_PER_SHEET) {
+    const sheetNumber = Math.floor(index / LABELS_PER_SHEET) + 1;
+    const labelsHtml = prepared.slice(index, index + LABELS_PER_SHEET).map(renderLabel).join('');
+    sheets.push('<section class="print-sheet" aria-label="Folha ' + sheetNumber + '">' + labelsHtml + '</section>');
+  }
+  printHost.innerHTML = sheets.join('');
   return true;
 }
 
