@@ -498,6 +498,14 @@ function preparePrint() {
   if (!dayOrders.length) { alert('Não há pedidos para imprimir na data selecionada.'); return false; }
   const labels = window.TrameliOrderMath.labelsForPrint(dayOrders);
   const printHost = document.getElementById('print-document');
+  // Settings are edited in the SPA, so reload the saved calibration before every print.
+  try {
+    const saved = JSON.parse(localStorage.getItem(printSettingsKey) || '{}');
+    for (const key of Object.keys(printDefaults)) {
+      const value = Number(saved[key]);
+      if (Number.isFinite(value) && value >= -3 && value <= 3 && value * 2 === Math.trunc(value * 2)) printSettings[key] = value;
+    }
+  } catch { /* Keep the last valid settings. */ }
   printHost.style.setProperty('--print-offset-x', `${printSettings.offsetX}mm`);
   printHost.style.setProperty('--print-offset-y', `${printSettings.offsetY}mm`);
 
@@ -589,7 +597,14 @@ function preparePrint() {
       '</div></article>';
   };
 
-  printHost.innerHTML = '<div class="print-roll">' + prepared.map(renderLabel).join('') + '</div>';
+  const LABELS_PER_SHEET = 27;
+  const sheets = [];
+  for (let index = 0; index < prepared.length; index += LABELS_PER_SHEET) {
+    const sheetNumber = Math.floor(index / LABELS_PER_SHEET) + 1;
+    const labelsHtml = prepared.slice(index, index + LABELS_PER_SHEET).map(renderLabel).join('');
+    sheets.push('<section class="print-sheet" aria-label="Folha ' + sheetNumber + '">' + labelsHtml + '</section>');
+  }
+  printHost.innerHTML = sheets.join('');
   return true;
 }
 
