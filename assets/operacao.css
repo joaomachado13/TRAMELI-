@@ -222,25 +222,25 @@ dialog{width:min(670px,calc(100vw - 24px));max-height:min(90vh,900px);padding:0;
 @media(max-width:900px){#operation-view .kanban{display:grid;grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:minmax(280px,82vw);overflow-x:auto;overscroll-behavior-inline:contain;padding:0 0 10px;scroll-snap-type:x proximity}#operation-view .kanban-column{scroll-snap-align:start}}
 @media(max-width:760px){#operation-view{margin:0 -16px -26px;padding:0 16px 70px}#operation-view .workspace{padding-top:28px}#operation-view .intro{align-items:flex-start}#operation-view .intro h1{font-size:2.45rem}#operation-view .summary{grid-template-columns:repeat(2,minmax(0,1fr))}.order-detail__header,.order-detail__body{padding-right:18px;padding-left:18px}.order-detail__actions{padding-right:18px;padding-left:18px}.order-detail__grid{grid-template-columns:1fr}}
 @media(max-width:420px){#operation-view .summary-card{min-height:96px;padding:14px}#operation-view .summary-card strong{font-size:1.45rem}#operation-view .kanban{grid-auto-columns:88vw}.order-drawer{border-radius:0}.order-detail__actions .button{flex:1 1 calc(50% - 8px)}.order-detail__danger{width:100%;margin-left:0;text-align:center}}
-@page{size:A4;margin:0}
-@page trameli-label-roll{size:70mm 33mm;margin:0}
+@page{size:A4 portrait;margin:0}
 @media print{
-  #smooth-wrapper,#smooth-content{position:static!important;height:auto!important;max-height:none!important;overflow:visible!important;transform:none!important;filter:none!important}
-  #portal-floating-host,.portal-bottom-nav{display:none!important}
-  body:has(#operation-view:not([hidden])){min-width:0;background:var(--color-background);color:var(--color-text-primary)}
+  html,body{width:210mm!important;min-width:0!important;margin:0!important;padding:0!important;background:#fff!important}
   body:has(#operation-view:not([hidden]))::before,body:has(#operation-view:not([hidden]))::after{display:none!important}
-  body:has(#operation-view:not([hidden])) .app-shell{display:block}
-  body:has(#operation-view:not([hidden])) .nav,body:has(#operation-view:not([hidden])) .nav2,body:has(#operation-view:not([hidden])) .workspace{display:none!important}
-  body:has(#operation-view:not([hidden])) .section{width:100%;padding:0}
-  body:has(#operation-view:not([hidden])) .print-document{display:block!important;page:trameli-label-roll;width:70mm;margin:0}
-  .print-roll{display:block;width:70mm;margin:0;padding:0}
-  .print-label{page:trameli-label-roll;display:block;box-sizing:border-box;position:relative;overflow:hidden;width:70mm;height:33mm;min-height:33mm;max-height:33mm;border:.15mm solid #b8aaa1;font:var(--label-body-size,5.8pt) var(--font-interface);break-after:page;page-break-after:always;break-inside:avoid;page-break-inside:avoid}
-  .print-label:last-child{break-after:auto;page-break-after:auto}
-  .print-label__content{position:relative;box-sizing:border-box;width:100%;height:100%;min-height:0;overflow:hidden;padding:1.2mm 1.8mm;transform:translate(var(--print-offset-x,0mm),var(--print-offset-y,0mm))}
+  #smooth-wrapper,#smooth-content{position:static!important;width:210mm!important;height:auto!important;min-height:0!important;max-height:none!important;margin:0!important;padding:0!important;overflow:visible!important;transform:none!important;filter:none!important}
+  #portal-floating-host,.portal-bottom-nav,.ambient-field,.menu-overlay{display:none!important}
+  body:has(#operation-view:not([hidden])) .app-shell{display:block!important;width:210mm!important;margin:0!important;padding:0!important}
+  body:has(#operation-view:not([hidden])) .nav,body:has(#operation-view:not([hidden])) .nav2,body:has(#operation-view:not([hidden])) .workspace,body:has(#operation-view:not([hidden])) #operation-dialog,body:has(#operation-view:not([hidden])) #order-detail-drawer{display:none!important}
+  body:has(#operation-view:not([hidden])) .section{display:block!important;width:210mm!important;max-width:none!important;margin:0!important;padding:0!important}
+  body:has(#operation-view:not([hidden])) #operation-view{display:block!important;width:210mm!important;max-width:none!important;margin:0!important;padding:0!important}
+  body:has(#operation-view:not([hidden])) .print-document{display:block!important;width:210mm!important;max-width:none!important;margin:0!important;padding:0!important;overflow:visible!important}
+  .print-sheet{display:grid;box-sizing:border-box;width:210mm;height:297mm;min-height:297mm;max-height:297mm;margin:0;padding:0;overflow:hidden;grid-template-columns:repeat(3,70mm);grid-template-rows:repeat(9,33mm);grid-auto-flow:row;gap:0;align-content:start;justify-content:start;break-after:page;page-break-after:always;break-inside:avoid;page-break-inside:avoid}
+  .print-sheet:last-child{break-after:auto;page-break-after:auto}
+  .print-label{display:block;box-sizing:border-box;position:relative;width:70mm;height:33mm;min-width:70mm;min-height:33mm;max-width:70mm;max-height:33mm;margin:0;padding:0;overflow:hidden;border:0;background:transparent;color:#111;font:var(--label-body-size,5.8pt) var(--font-interface);break-inside:avoid;page-break-inside:avoid}
+  .print-label__content{position:relative;box-sizing:border-box;width:70mm;height:33mm;min-width:0;min-height:0;margin:0;padding:1.2mm 1.8mm;overflow:hidden;transform:translate(var(--print-offset-x,0mm),var(--print-offset-y,0mm))}
   .print-label__top{display:flex;align-items:flex-start;justify-content:space-between;gap:1mm;font-size:var(--label-header-size,7pt);line-height:var(--label-line-height,1.05)}
-  .print-label__top strong{max-width:44mm;overflow-wrap:anywhere}
-  .print-label__top span{flex:none;font-size:var(--label-code-size,5.5pt);font-weight:700}
-  .print-label p{margin-top:.4mm;overflow-wrap:anywhere;font-size:var(--label-body-size,5.8pt);line-height:var(--label-line-height,1.05)}
+  .print-label__top strong{display:block;min-width:0;max-width:44mm;overflow-wrap:anywhere}
+  .print-label__top span{flex:none;font-size:var(--label-code-size,5.5pt);font-weight:700;white-space:nowrap}
+  .print-label p{margin:.4mm 0 0;overflow-wrap:anywhere;font-size:var(--label-body-size,5.8pt);line-height:var(--label-line-height,1.05)}
   .print-label ul{margin:.4mm 0 0;padding:0;list-style:none}
   .print-label li{margin:0;overflow-wrap:anywhere;font-size:var(--label-body-size,5.8pt);line-height:var(--label-line-height,1.05)}
   .print-label small{display:block;margin-top:.4mm;font-size:var(--label-small-size,5.3pt);line-height:var(--label-line-height,1.05);overflow-wrap:anywhere}
