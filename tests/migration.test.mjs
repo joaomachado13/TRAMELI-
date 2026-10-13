@@ -44,6 +44,7 @@ try {
   await assert.rejects(db.query('select public.trameli_is_operator()'), /permission denied/);
   await assert.rejects(db.query('select public.trameli_audit_order()'), /permission denied/);
   await assert.rejects(db.query('select public.trameli_snapshot_order_costs()'), /permission denied/);
+  await assert.rejects(db.query('select private.trameli_assign_order_public_code()'), /permission denied/);
   await db.exec('reset role');
   const customerA = '11111111-1111-4111-8111-111111111111';
   const customerB = '22222222-2222-4222-8222-222222222222';
