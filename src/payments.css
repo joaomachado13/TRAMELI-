@@ -486,3 +486,24 @@
 .payment-proof-optional label{margin-top:4px}
 .payment-proof-optional small{color:var(--color-text-muted);font-size:.68rem}
 .payment-history-actions{display:flex;align-items:center;gap:6px}
+
+
+/* Histórico financeiro visível: cada baixa fica fácil de localizar depois. */
+#screen-view .payment-ledger-history{margin-top:16px;padding:17px;border:1px solid var(--color-border);border-radius:12px;background:var(--color-background);color:var(--color-text-primary)}
+#screen-view .payment-ledger-history__heading{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:12px}
+#screen-view .payment-ledger-history__heading h3{margin:0;font-size:.95rem}
+#screen-view .payment-ledger-history__heading p{margin-top:4px;color:var(--color-text-secondary);font-size:.75rem}
+#screen-view .payment-ledger-history__heading button{flex:none;padding:8px 11px;border:1px solid var(--color-border);border-radius:8px;background:var(--color-surface);color:var(--color-text-primary);font:inherit;font-size:.72rem}
+#screen-view .payment-ledger-history .payment-log{display:grid;gap:0;margin:0;padding:0;list-style:none}
+#screen-view .payment-ledger-entry{display:grid;grid-template-columns:minmax(150px,.8fr) minmax(220px,1.6fr) auto;align-items:center;gap:14px;padding:13px 0;border-top:1px solid var(--color-border)}
+#screen-view .payment-ledger-entry__top{display:grid;gap:4px}
+#screen-view .payment-ledger-entry__top strong:first-child{color:var(--color-text-secondary);font-size:.72rem;font-weight:500}
+#screen-view .payment-ledger-entry__top strong:last-child{font-size:.95rem}
+#screen-view .payment-ledger-entry__details{display:grid;gap:4px;min-width:0}
+#screen-view .payment-ledger-entry__details>span:first-child{font-size:.8rem;font-weight:650;overflow-wrap:anywhere}
+#screen-view .payment-ledger-entry__details small{color:var(--color-text-secondary);font-size:.69rem;line-height:1.4;overflow-wrap:anywhere}
+#screen-view .payment-ledger-entry__status{justify-self:start;color:var(--color-success-text);font-size:.68rem;font-weight:700}
+#screen-view .payment-ledger-entry__status.is-unidentified{color:var(--color-warning-text)}
+#screen-view .payment-ledger-entry .payment-history-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}
+#screen-view .payment-ledger-entry .payment-history-actions button{padding:6px 8px;border:1px solid var(--color-border);border-radius:7px;background:var(--color-surface);color:var(--color-text-primary);font:inherit;font-size:.67rem}
+@media(max-width:900px){#screen-view .payment-ledger-entry{grid-template-columns:1fr auto}#screen-view .payment-ledger-entry__details{grid-column:1/-1;grid-row:2}#screen-view .payment-ledger-entry .payment-history-actions{grid-column:1/-1;justify-content:flex-start}}
