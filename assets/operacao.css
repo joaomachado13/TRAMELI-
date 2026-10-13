@@ -232,9 +232,9 @@ dialog{width:min(670px,calc(100vw - 24px));max-height:min(90vh,900px);padding:0;
   body:has(#operation-view:not([hidden])) .nav,body:has(#operation-view:not([hidden])) .nav2,body:has(#operation-view:not([hidden])) .workspace{display:none!important}
   body:has(#operation-view:not([hidden])) .section{width:100%;padding:0}
   body:has(#operation-view:not([hidden])) .print-document{display:block!important}
-  .print-page{box-sizing:border-box;width:210mm;height:297mm;padding:0;break-after:page;page-break-after:always}.print-page:last-child{break-after:auto;page-break-after:auto}
-  .print-grid{display:grid;width:210mm;height:297mm;grid-template-columns:repeat(3,70mm);grid-template-rows:repeat(9,33mm);gap:0}
-  .print-label{box-sizing:border-box;position:relative;overflow:hidden;width:70mm;height:33mm;font:7pt var(--font-interface);break-inside:avoid}
-  .print-label__content{position:relative;box-sizing:border-box;width:70mm;height:33mm;padding:4mm;transform:translate(var(--print-offset-x,0mm),var(--print-offset-y,0mm))}
-  .print-label__top{display:flex;justify-content:space-between;gap:2mm;font-size:9pt;line-height:1.1}.print-label__top strong{max-width:54mm;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.print-label p{margin-top:1mm;overflow-wrap:anywhere;font-size:7pt;line-height:1.1}.print-label ul{margin:1mm 0 0;padding:0;list-style:none}.print-label li{margin-bottom:.3mm;overflow-wrap:anywhere;line-height:1.1}.print-label small{display:block;margin-top:.5mm;font-size:6pt;line-height:1.1}.print-label footer{position:absolute;bottom:3.6mm;right:4mm;font-weight:600;font-size:7pt}
+  .print-page{box-sizing:border-box;width:210mm;height:297mm;padding:10mm;break-after:page;page-break-after:always}.print-page:last-child{break-after:auto;page-break-after:auto}
+  .print-grid{display:flex;flex-direction:column;align-items:flex-start;gap:3mm;width:70mm}
+  .print-label{box-sizing:border-box;position:relative;overflow:visible;width:70mm;height:var(--label-height,33mm);min-height:33mm;border:.2mm solid #b8aaa1;font:7pt var(--font-interface);break-inside:avoid;page-break-inside:avoid}
+  .print-label__content{position:relative;box-sizing:border-box;width:70mm;height:100%;min-height:33mm;padding:3.5mm;transform:translate(var(--print-offset-x,0mm),var(--print-offset-y,0mm))}
+  .print-label__top{display:flex;align-items:flex-start;justify-content:space-between;gap:2mm;font-size:8pt;line-height:1.15}.print-label__top strong{max-width:40mm;overflow-wrap:anywhere}.print-label__top span{flex:none;font-size:6.5pt;font-weight:700}.print-label p{margin-top:1mm;overflow-wrap:anywhere;font-size:6.5pt;line-height:1.2}.print-label ul{margin:1.5mm 0 0;padding:0;list-style:none}.print-label li{margin-bottom:.5mm;overflow-wrap:anywhere;line-height:1.2}.print-label small{display:block;margin-top:1mm;font-size:6pt;line-height:1.2;overflow-wrap:anywhere}.print-label footer{margin-top:2mm;text-align:right;font-weight:700;font-size:7pt}
 }
