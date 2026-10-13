@@ -28,9 +28,11 @@ try {
   await db.exec(provisionalMigration);
   const hardeningMigration = await readFile(new URL('../supabase/migrations/202610010010_security_hardening.sql', import.meta.url), 'utf8');
   await db.exec(hardeningMigration);
+  const publicCodeMigration = await readFile(new URL('../supabase/migrations/202610130016_order_public_codes.sql', import.meta.url), 'utf8');
+  await db.exec(publicCodeMigration);
   const tables = await db.query(`select tablename from pg_tables where schemaname = 'public' and tablename like 'trameli_%' order by tablename`);
   assert.deepEqual(tables.rows.map(row => row.tablename), [
-    'trameli_operators', 'trameli_order_costs', 'trameli_order_events', 'trameli_orders',
+    'trameli_operators', 'trameli_order_code_counters', 'trameli_order_costs', 'trameli_order_events', 'trameli_orders',
     'trameli_product_costs', 'trameli_products', 'trameli_profiles',
   ]);
   await db.exec('set role anon');
@@ -38,6 +40,7 @@ try {
   assert.equal(publicProducts.rows[0].count, 79);
   await assert.rejects(db.query('select count(*) from public.trameli_orders'), /permission denied/);
   await assert.rejects(db.query('select count(*) from public.trameli_product_costs'), /permission denied/);
+  await assert.rejects(db.query('select count(*) from public.trameli_order_code_counters'), /permission denied/);
   await assert.rejects(db.query('select public.trameli_is_operator()'), /permission denied/);
   await assert.rejects(db.query('select public.trameli_audit_order()'), /permission denied/);
   await assert.rejects(db.query('select public.trameli_snapshot_order_costs()'), /permission denied/);
@@ -64,6 +67,8 @@ try {
     JSON.stringify([{ product_id: productId, quantity: 5, priceCents: 1 }]),
   ]);
   const orderId = placed.rows[0].id;
+  const firstCode = await db.query('select public_code from public.trameli_orders where id = $1', [orderId]);
+  assert.match(firstCode.rows[0].public_code, /^TR-\\d{6}-001$/);
   const totals = await db.query('select subtotal_cents,fee_cents,total_cents from public.trameli_orders where id = $1', [orderId]);
   assert.equal(Number(totals.rows[0].subtotal_cents), 650);
   assert.equal(Number(totals.rows[0].total_cents), 850);
@@ -83,6 +88,8 @@ try {
     'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', JSON.stringify([{ product_id: productId, quantity: 5 }]),
   ]);
   assert.equal(retry.rows[0].id, orderId);
+  const retryCode = await db.query('select public_code from public.trameli_orders where id = $1', [orderId]);
+  assert.equal(retryCode.rows[0].public_code, firstCode.rows[0].public_code, 'Retry keeps the original human-readable code');
   await db.query("select set_config('request.jwt.claim.sub',$1,false)", [customerB]);
   const invisible = await db.query('select count(*)::integer as count from public.trameli_orders');
   assert.equal(invisible.rows[0].count, 0);
@@ -102,6 +109,8 @@ try {
     'Cliente A', '', 'Bloco 1, apto 10', '', $2::jsonb) as id`, [
     'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', JSON.stringify([{ product_id: productId, quantity: 2 }]),
   ]);
+  const secondCode = await db.query('select public_code from public.trameli_orders where id = $1', [future.rows[0].id]);
+  assert.match(secondCode.rows[0].public_code, /^TR-\\d{6}-002$/);
   const hiddenCosts = await db.query('select count(*)::integer as count from public.trameli_order_costs');
   assert.equal(hiddenCosts.rows[0].count, 0);
   await db.query("select set_config('request.jwt.claim.sub',$1,false)", [operator]);
