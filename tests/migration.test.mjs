@@ -68,7 +68,7 @@ try {
   ]);
   const orderId = placed.rows[0].id;
   const firstCode = await db.query('select public_code from public.trameli_orders where id = $1', [orderId]);
-  assert.match(firstCode.rows[0].public_code, /^TR-\\d{6}-001$/);
+  assert.match(firstCode.rows[0].public_code, /^TR-\d{6}-001$/);
   const totals = await db.query('select subtotal_cents,fee_cents,total_cents from public.trameli_orders where id = $1', [orderId]);
   assert.equal(Number(totals.rows[0].subtotal_cents), 650);
   assert.equal(Number(totals.rows[0].total_cents), 850);
@@ -110,7 +110,7 @@ try {
     'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', JSON.stringify([{ product_id: productId, quantity: 2 }]),
   ]);
   const secondCode = await db.query('select public_code from public.trameli_orders where id = $1', [future.rows[0].id]);
-  assert.match(secondCode.rows[0].public_code, /^TR-\\d{6}-002$/);
+  assert.match(secondCode.rows[0].public_code, /^TR-\d{6}-002$/);
   const hiddenCosts = await db.query('select count(*)::integer as count from public.trameli_order_costs');
   assert.equal(hiddenCosts.rows[0].count, 0);
   await db.query("select set_config('request.jwt.claim.sub',$1,false)", [operator]);
