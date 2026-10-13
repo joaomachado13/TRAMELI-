@@ -83,6 +83,16 @@ const itemTotal = item => item.quantity * item.priceCents;
 const itemLabel = item => window.TrameliOrderMath.itemLabel(item);
 const orderSubtotal = order => window.TrameliOrderMath.subtotalCents(order);
 const orderTotal = order => window.TrameliOrderMath.totalCents(order);
+const orderCode = order => order?.publicCode || String(order?.id || '').slice(0, 8);
+function localOrderCode(createdAt) {
+  const date = new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: '2-digit' }).format(new Date(createdAt)).replace(/\//g, '');
+  const prefix = `TR-${date}-`;
+  const next = orders.reduce((max, order) => {
+    const code = String(order.publicCode || '');
+    return code.startsWith(prefix) ? Math.max(max, Number(code.slice(prefix.length)) || 0) : max;
+  }, 0) + 1;
+  return `${prefix}${String(next).padStart(3, '0')}`;
+}
 const statusLabels = { received: 'A conferir', confirmed: 'Conferido', packing: 'Em separação', ready: 'Pronto', delivered: 'Entregue', cancelled: 'Cancelado' };
 const nextStatus = { received: 'confirmed', confirmed: 'packing', packing: 'ready', ready: 'delivered' };
 const previousStatus = { confirmed: 'received', packing: 'confirmed', ready: 'packing' };
@@ -217,7 +227,7 @@ function renderSupplierList() {
   if (supplierTotalsHost) supplierTotalsHost.innerHTML = totals.length
     ? `<ul>${totals.map(product => `<li><strong>${product.grams ? `${product.grams} g` : `${product.quantity}×`}</strong><span>${escapeHtml(product.name)}</span></li>`).join('')}</ul>`
     : '<p class="supplier-list__empty">Nenhum item nesta data.</p>';
-  supplierList.innerHTML = groups.length ? groups.map(group => `<section class="supplier-client"><header><h3>${escapeHtml(group.customer)}</h3><p>${escapeHtml(group.address)}</p></header>${group.orders.map(order => `<article class="supplier-order${order.checked ? ' is-complete' : ''}" data-supplier-order="${escapeHtml(order.id)}"><label class="supplier-order__heading"><input type="checkbox" data-supplier-check-order="${escapeHtml(order.id)}" ${order.checked ? 'checked' : ''}><strong>Pedido #${escapeHtml(order.id.slice(0, 8))}</strong><span>${order.lines.filter(line => line.checked).length}/${order.lines.length} itens conferidos</span></label><ul>${order.lines.map((line, index) => `<li><label class="supplier-item${line.checked ? ' is-complete' : ''}"><input type="checkbox" data-supplier-check-item="${index}" data-id="${escapeHtml(order.id)}" ${line.checked ? 'checked' : ''}><span>${escapeHtml(line.label)}</span></label></li>`).join('')}</ul>${order.notes ? `<p class="supplier-order__notes">Observação: ${escapeHtml(order.notes)}</p>` : ''}</article>`).join('')}</section>`).join('') : '<p class="supplier-list__empty">Nenhum pedido nesta data.</p>';
+  supplierList.innerHTML = groups.length ? groups.map(group => `<section class="supplier-client"><header><h3>${escapeHtml(group.customer)}</h3><p>${escapeHtml(group.address)}</p></header>${group.orders.map(order => `<article class="supplier-order${order.checked ? ' is-complete' : ''}" data-supplier-order="${escapeHtml(order.id)}"><label class="supplier-order__heading"><input type="checkbox" data-supplier-check-order="${escapeHtml(order.id)}" ${order.checked ? 'checked' : ''}><strong>Pedido #${escapeHtml(orderCode(order))}</strong><span>${order.lines.filter(line => line.checked).length}/${order.lines.length} itens conferidos</span></label><ul>${order.lines.map((line, index) => `<li><label class="supplier-item${line.checked ? ' is-complete' : ''}"><input type="checkbox" data-supplier-check-item="${index}" data-id="${escapeHtml(order.id)}" ${line.checked ? 'checked' : ''}><span>${escapeHtml(line.label)}</span></label></li>`).join('')}</ul>${order.notes ? `<p class="supplier-order__notes">Observação: ${escapeHtml(order.notes)}</p>` : ''}</article>`).join('')}</section>`).join('') : '<p class="supplier-list__empty">Nenhum pedido nesta data.</p>';
   supplierList.querySelectorAll('[data-supplier-check-order]').forEach(input => {
     const order = groups.flatMap(group => group.orders).find(order => order.id === input.dataset.supplierCheckOrder);
     input.indeterminate = !order.checked && order.lines.some(line => line.checked);
@@ -257,7 +267,7 @@ function render() {
     const busy = movingOrders.has(order.id);
     const destinations = stages.filter(stage => statusPath(state, stage.key, !live || live.role === 'master').length);
     const movable = destinations.length > 0 && !busy;
-    return `<article class="kanban-card${busy ? ' is-moving' : ''}" data-card-id="${escapeHtml(order.id)}" aria-busy="${busy}"><button class="order-card order-card--${state}" type="button" data-action="open" data-id="${escapeHtml(order.id)}" draggable="${movable}" aria-label="Abrir pedido de ${escapeHtml(order.customer)}"><span class="order-card__top"><span class="order-card__id">#${escapeHtml(order.id.slice(0, 8))}</span><span class="status status--${state}">${escapeHtml(statusLabels[state])}</span></span><strong class="order-card__customer">${escapeHtml(order.customer)}</strong><span class="order-card__meta">${itemCount} ${itemCount === 1 ? 'item' : 'itens'} · ${money(orderTotal(order))}</span><span class="order-card__delivery">Entrega ${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</span>${order.notes ? '<span class="order-card__alert">Tem observação</span>' : ''}<span class="order-card__open">Ver pedido <span aria-hidden="true">→</span></span></button>${destinations.length ? `<div class="kanban-card__move"><button type="button" class="kanban-drag-handle" data-drag-id="${escapeHtml(order.id)}" aria-label="Arrastar pedido de ${escapeHtml(order.customer)}" aria-describedby="kanban-help" ${busy ? 'disabled' : ''}><span aria-hidden="true">⠿</span></button><label><span class="sr-only">Mover pedido de ${escapeHtml(order.customer)} para</span><select data-move-id="${escapeHtml(order.id)}" ${busy ? 'disabled' : ''}><option value="">${busy ? 'Movendo…' : 'Mover para…'}</option>${destinations.map(stage => `<option value="${stage.key}">${stage.title}</option>`).join('')}</select></label></div>` : ''}</article>`;
+    return `<article class="kanban-card${busy ? ' is-moving' : ''}" data-card-id="${escapeHtml(order.id)}" aria-busy="${busy}"><button class="order-card order-card--${state}" type="button" data-action="open" data-id="${escapeHtml(order.id)}" draggable="${movable}" aria-label="Abrir pedido de ${escapeHtml(order.customer)}"><span class="order-card__top"><span class="order-card__id">#${escapeHtml(orderCode(order))}</span><span class="status status--${state}">${escapeHtml(statusLabels[state])}</span></span><strong class="order-card__customer">${escapeHtml(order.customer)}</strong><span class="order-card__meta">${itemCount} ${itemCount === 1 ? 'item' : 'itens'} · ${money(orderTotal(order))}</span><span class="order-card__delivery">Entrega ${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</span>${order.notes ? '<span class="order-card__alert">Tem observação</span>' : ''}<span class="order-card__open">Ver pedido <span aria-hidden="true">→</span></span></button>${destinations.length ? `<div class="kanban-card__move"><button type="button" class="kanban-drag-handle" data-drag-id="${escapeHtml(order.id)}" aria-label="Arrastar pedido de ${escapeHtml(order.customer)}" aria-describedby="kanban-help" ${busy ? 'disabled' : ''}><span aria-hidden="true">⠿</span></button><label><span class="sr-only">Mover pedido de ${escapeHtml(order.customer)} para</span><select data-move-id="${escapeHtml(order.id)}" ${busy ? 'disabled' : ''}><option value="">${busy ? 'Movendo…' : 'Mover para…'}</option>${destinations.map(stage => `<option value="${stage.key}">${stage.title}</option>`).join('')}</select></label></div>` : ''}</article>`;
   };
   const columns = stages;
   list.innerHTML = `<div class="kanban" aria-label="Pedidos por etapa">${columns.map(column => {
@@ -281,7 +291,7 @@ function detailActions(order) {
 function renderOrderDetail(order) {
   const state = orderStatus(order);
   const itemRows = order.items.map(item => `<li><span><strong>${escapeHtml(itemLabel(item))}</strong><small>${money(item.priceCents)}${item.weightGrams ? '' : ' cada'}</small></span><strong>${money(itemTotal(item))}</strong></li>`).join('');
-  detailContent.innerHTML = `<div class="order-detail"><header class="order-detail__header"><div><p class="eyebrow">PEDIDO #${escapeHtml(order.id.slice(0, 8))}</p><h2 id="order-detail-title">${escapeHtml(order.customer)}</h2><span class="status status--${state}">${escapeHtml(statusLabels[state])}</span></div><button class="order-detail__close" type="button" data-action="close-detail" aria-label="Fechar detalhes">×</button></header><div class="order-detail__body"><section class="order-detail__section"><h3>Entrega</h3><p><strong>${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</strong></p><p>${escapeHtml(order.address)}</p>${order.phone ? `<p><a href="tel:${escapeHtml(order.phone)}">${escapeHtml(order.phone)}</a></p>` : '<p class="order-detail__muted">Telefone não informado</p>'}</section><section class="order-detail__section"><div class="order-detail__section-heading"><h3>Itens</h3><span>${order.items.length} ${order.items.length === 1 ? 'linha' : 'linhas'}</span></div><ul class="order-detail__items">${itemRows}</ul><div class="order-detail__totals"><p><span>Produtos</span><strong>${money(orderSubtotal(order))}</strong></p><p><span>Entrega</span><strong>${money(order.feeCents)}</strong></p><p><span>Total</span><strong>${money(orderTotal(order))}</strong></p></div></section><div class="order-detail__grid"><section class="order-detail__section"><h3>Pagamento</h3><p>${escapeHtml(paymentLabels[order.paymentMethod || 'unspecified'] || order.paymentMethod)}</p><small>A forma escolhida não confirma recebimento.</small></section><section class="order-detail__section"><h3>Observação</h3><p>${order.notes ? escapeHtml(order.notes) : '<span class="order-detail__muted">Nenhuma observação.</span>'}</p></section></div></div>${detailActions(order)}</div>`;
+  detailContent.innerHTML = `<div class="order-detail"><header class="order-detail__header"><div><p class="eyebrow">PEDIDO #${escapeHtml(orderCode(order))}</p><h2 id="order-detail-title">${escapeHtml(order.customer)}</h2><span class="status status--${state}">${escapeHtml(statusLabels[state])}</span></div><button class="order-detail__close" type="button" data-action="close-detail" aria-label="Fechar detalhes">×</button></header><div class="order-detail__body"><section class="order-detail__section"><h3>Entrega</h3><p><strong>${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</strong></p><p>${escapeHtml(order.address)}</p>${order.phone ? `<p><a href="tel:${escapeHtml(order.phone)}">${escapeHtml(order.phone)}</a></p>` : '<p class="order-detail__muted">Telefone não informado</p>'}</section><section class="order-detail__section"><div class="order-detail__section-heading"><h3>Itens</h3><span>${order.items.length} ${order.items.length === 1 ? 'linha' : 'linhas'}</span></div><ul class="order-detail__items">${itemRows}</ul><div class="order-detail__totals"><p><span>Produtos</span><strong>${money(orderSubtotal(order))}</strong></p><p><span>Entrega</span><strong>${money(order.feeCents)}</strong></p><p><span>Total</span><strong>${money(orderTotal(order))}</strong></p></div></section><div class="order-detail__grid"><section class="order-detail__section"><h3>Pagamento</h3><p>${escapeHtml(paymentLabels[order.paymentMethod || 'unspecified'] || order.paymentMethod)}</p><small>A forma escolhida não confirma recebimento.</small></section><section class="order-detail__section"><h3>Observação</h3><p>${order.notes ? escapeHtml(order.notes) : '<span class="order-detail__muted">Nenhuma observação.</span>'}</p></section></div></div>${detailActions(order)}</div>`;
 }
 
 function openOrderDetail(order) {
@@ -443,7 +453,7 @@ async function openHistory(order) {
   if (!live || !historyDialog) return;
   try {
     const events = await live.orderEvents(order.id);
-    historyDialog.innerHTML = `<div class="history-dialog__content"><button type="button" class="history-dialog__close" aria-label="Fechar">×</button><h2>Histórico do pedido</h2><p>${escapeHtml(order.customer)} · #${escapeHtml(order.id.slice(0, 8))}</p><ol>${events.map(entry => {
+    historyDialog.innerHTML = `<div class="history-dialog__content"><button type="button" class="history-dialog__close" aria-label="Fechar">×</button><h2>Histórico do pedido</h2><p>${escapeHtml(order.customer)} · #${escapeHtml(orderCode(order))}</p><ol>${events.map(entry => {
       const before = entry.before_state;
       const after = entry.after_state;
       const change = !before ? 'Pedido criado' : before.status !== after.status ? `Estado: ${statusLabels[before.status] || before.status} → ${statusLabels[after.status] || after.status}` : 'Dados ou valores ajustados';
@@ -487,16 +497,30 @@ function preparePrint() {
   const dayOrders = selectedOrders();
   if (!dayOrders.length) { alert('Não há pedidos para imprimir na data selecionada.'); return false; }
   const labels = window.TrameliOrderMath.labelsForPrint(dayOrders);
-  const slots = 27;
   const printHost = document.getElementById('print-document');
   printHost.style.setProperty('--print-offset-x', `${printSettings.offsetX}mm`);
   printHost.style.setProperty('--print-offset-y', `${printSettings.offsetY}mm`);
-  const pages = [];
-  for (let index = 0; index < labels.length; index += slots) {
-    const pageLabels = labels.slice(index, index + slots);
-    pages.push(`<section class="print-page"><div class="print-grid">${pageLabels.map(({ order, items, part, totalParts }, slot) => `<article class="print-label"><div class="print-label__content"><div class="print-label__top"><strong>${escapeHtml(order.customer)}</strong><span>${totalParts > 1 ? `${part}/${totalParts}` : String(index + slot + 1).padStart(2, '0')}</span></div><p>${escapeHtml(order.address)}</p><ul>${items.map(item => `<li>${escapeHtml(itemLabel(item))}</li>`).join('')}</ul>${order.notes && part === totalParts ? `<small>Obs.: ${escapeHtml(order.notes)}</small>` : ''}<footer>Total: ${money(orderTotal(order))}</footer></div></article>`).join('')}</div></section>`);
-  }
-  printHost.innerHTML = pages.join('');
+  const estimateLines = (value, charsPerLine) => {
+    const text = String(value || '');
+    if (!text) return 0;
+    return text.split(/\r?\n/).reduce((sum, line) => sum + Math.max(1, Math.ceil(line.length / charsPerLine)), 0);
+  };
+  const prepared = labels.map(label => {
+    const customerLines = Math.max(1, estimateLines(label.order.customer, 30));
+    const addressLines = estimateLines(label.order.address, 54);
+    const itemLines = label.items.reduce((sum, item) => sum + Math.max(1, estimateLines(itemLabel(item), 54)), 0);
+    const noteLines = estimateLines(label.order.notes, 54);
+    // Altura variável: uma etiqueta por pedido, sem desperdiçar espaço em folha A4.
+    const height = Math.max(12, Math.ceil(
+      3.2 + customerLines * 2.6 +
+      (addressLines ? 0.4 + addressLines * 2.15 : 0) +
+      0.4 + itemLines * 2.15 +
+      (noteLines ? 0.4 + noteLines * 1.95 : 0) +
+      0.4 + 2.2 + 0.8
+    ));
+    return { ...label, height };
+  });
+  printHost.innerHTML = `<div class="print-roll">${prepared.map(({ order, items, height }) => `<article class="print-label" style="--label-height:${height}mm"><div class="print-label__content"><div class="print-label__top"><strong>${escapeHtml(order.customer)}</strong><span>${escapeHtml(orderCode(order))}</span></div>${order.address ? `<p>${escapeHtml(order.address)}</p>` : ''}<ul>${items.map(item => `<li>${escapeHtml(itemLabel(item))}</li>`).join('')}</ul>${order.notes ? `<small>Obs.: ${escapeHtml(order.notes)}</small>` : ''}<footer>Total: ${money(orderTotal(order))}</footer></div></article>`).join('')}</div>`;
   return true;
 }
 
@@ -574,10 +598,12 @@ form.addEventListener('submit', async event => {
     return;
   }
   const previous = orders.find(order => order.id === editingId);
+  const createdAt = previous?.createdAt || new Date().toISOString();
   const order = {
     id: editingId || (live ? null : (crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`)),
+    publicCode: previous?.publicCode || (live ? '' : localOrderCode(createdAt)),
     version: previous?.version || null,
-    createdAt: previous?.createdAt || new Date().toISOString(),
+    createdAt,
     checked: previous?.checked || false,
     status: previous ? orderStatus(previous) : 'received',
     customer, address, phone: form.elements.phone.value.trim(),

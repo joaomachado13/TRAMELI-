@@ -18,7 +18,7 @@ export function supplierGroups(orders, date, checked = new Set()) {
       key: itemCheckKey(order, index), label: itemLabel(item), checked: checked.has(itemCheckKey(order, index)),
       productId: item.productId || '', name: item.name, quantity: item.quantity, weightGrams: item.weightGrams || 0,
     }));
-    groups.get(key).orders.push({ id: order.id, notes: order.notes || '', lines,
+    groups.get(key).orders.push({ id: order.id, publicCode: order.publicCode || '', notes: order.notes || '', lines,
       checked: lines.length > 0 && lines.every(line => line.checked) });
   }
   return [...groups.values()].sort((a, b) => a.customer.localeCompare(b.customer, 'pt-BR'));
@@ -44,7 +44,7 @@ export function supplierText(groups, date) {
   const totals = supplierTotals(groups);
   return `Repasse da padaria - ${date}\n\n1. LISTA COMPLETA DE ITENS\n${totals.map(product => product.label).join('\n')}\n\n2. PEDIDOS POR CLIENTE\n\n${groups.map(group =>
     `${group.customer}\n${group.address}\n${group.orders.map(order =>
-      `Pedido #${order.id.slice(0, 8)}\n${order.lines.map(line => `[${line.checked ? 'x' : ' '}] ${line.label}`).join('\n')}${order.notes ? `\nObservação: ${order.notes}` : ''}`
+      `Pedido #${order.publicCode || order.id.slice(0, 8)}\n${order.lines.map(line => `[${line.checked ? 'x' : ' '}] ${line.label}`).join('\n')}${order.notes ? `\nObservação: ${order.notes}` : ''}`
     ).join('\n\n')}`).join('\n\n')}`;
 }
 

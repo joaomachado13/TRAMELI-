@@ -86,8 +86,8 @@ export async function createSupplierPdf(groups, date, { businessName = 'Trameli'
   }
 
   function orderHeader(order, continued = false) {
-    if (!continued) checkbox(order.checked, MARGIN + 4, y, `Pedido ${order.id.slice(0, 8)} completo`);
-    page.drawText(`Pedido #${order.id.slice(0, 8)}${continued ? ' - continuação' : ' - pedido completo'}`,
+    if (!continued) checkbox(order.checked, MARGIN + 4, y, `Pedido ${order.publicCode || order.id.slice(0, 8)} completo`);
+    page.drawText(`Pedido #${order.publicCode || order.id.slice(0, 8)}${continued ? ' - continuação' : ' - pedido completo'}`,
       { x: MARGIN + 26, y, size: 10, font: strong, color: ink });
     y -= 24;
   }

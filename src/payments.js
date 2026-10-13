@@ -28,6 +28,7 @@ const totals = rows => rows.reduce((sum,row) => {
 
 export function initPayments(live) {
   const api = live ? new PaymentsApi(live) : null;
+  const orderCode = id => live?.orders?.find(order => order.id === id)?.publicCode || short(id);
   let selectedDay=today(), selectedGroup='', selectedOrderIds=null, dayRevision=0;
   const dialog=document.createElement('dialog'); dialog.className='payment-dialog';
   dialog.setAttribute('aria-label','Recebimentos e conta do cliente'); document.body.append(dialog);
@@ -36,31 +37,31 @@ export function initPayments(live) {
   const warning = () => !api ? 'Pagamentos reais exigem conexão com o Supabase. Este modo local não registra recebimentos.'
     : api.error || (api.ready === null ? 'Carregando pagamentos…' : api.ready === false ? 'Ative a migração 007 para começar a registrar pagamentos.' : '');
   const groups = () => [...new Map((api?.balances || []).map(row=>[groupKey(row),row])).entries()];
-  const groupLabel = row => `${row.customer_name}${row.customer_id ? ` · conta ${short(row.customer_id)}` : ` · pedido manual #${short(row.order_id)} (sem conta vinculada)`}`;
+  const groupLabel = row => `${row.customer_name}${row.customer_id ? ` · conta ${short(row.customer_id)}` : ` · pedido manual #${orderCode(row.order_id)} (sem conta vinculada)`}`;
   const options = () => groups().map(([key,row])=>`<option value="${esc(key)}" ${key===selectedGroup?'selected':''}>${esc(groupLabel(row))}</option>`).join('');
   const methodOptions = Object.entries(methods).map(([key,name])=>`<option value="${key}">${name}</option>`).join('');
   const accountSummary = rows => {
     const t=totals(rows);
     return `<div class="payment-metrics">${metric('Compras (exclui cancelados)',t.total_cents)}${metric('Pago, descontadas devoluções',t.paid_cents)}${metric('Em aberto',t.due_cents)}${metric('A devolver',t.refund_due_cents)}</div>`;
   };
-  const orderTable = (rows, editable=false, selectable=false) => `<div class="payment-table-wrap"><table class="payment-table"><thead><tr><th>Pedido / entrega</th><th>Valor</th><th>Pago</th><th>Em aberto</th><th>Financeiro</th>${editable?'<th>Quitar agora</th>':selectable?'<th>Selecionar</th>':''}</tr></thead><tbody>${rows.map(row=>`<tr><td>#${short(row.order_id)}<small>${dateLabel(row.delivery_date)} · ${esc(orderLabels[row.order_status] || row.order_status)}</small></td><td>${money(row.total_cents)}</td><td>${money(row.paid_cents)}</td><td>${money(row.due_cents)}</td><td>${labels[row.payment_status]}${!editable && window.TrameliPix && row.customer_id===live.user.id && Number(row.due_cents)>0 ? `<button type="button" data-pix-order="${esc(row.order_id)}">Pagar só este com Pix</button>` : ''}${Number(row.refund_due_cents)>0?`<small>A devolver ${money(row.refund_due_cents)}</small>`:''}</td>${editable?`<td>${Number(row.due_cents)>0?`<label class="payment-check"><input type="checkbox" data-allocation="${esc(row.order_id)}" data-due="${row.due_cents}"> ${money(row.due_cents)}</label>`:'—'}</td>`:selectable?`<td>${Number(row.due_cents)>0?`<input type="checkbox" data-pix-select="${esc(row.order_id)}" aria-label="Selecionar pedido ${short(row.order_id)} por ${money(row.due_cents)}">`:'—'}</td>`:''}</tr>`).join('')}</tbody></table></div>`;
+  const orderTable = (rows, editable=false, selectable=false) => `<div class="payment-table-wrap"><table class="payment-table"><thead><tr><th>Pedido / entrega</th><th>Valor</th><th>Pago</th><th>Em aberto</th><th>Financeiro</th>${editable?'<th>Quitar agora</th>':selectable?'<th>Selecionar</th>':''}</tr></thead><tbody>${rows.map(row=>`<tr><td>#${orderCode(row.order_id)}<small>${dateLabel(row.delivery_date)} · ${esc(orderLabels[row.order_status] || row.order_status)}</small></td><td>${money(row.total_cents)}</td><td>${money(row.paid_cents)}</td><td>${money(row.due_cents)}</td><td>${labels[row.payment_status]}${!editable && window.TrameliPix && row.customer_id===live.user.id && Number(row.due_cents)>0 ? `<button type="button" data-pix-order="${esc(row.order_id)}">Pagar só este com Pix</button>` : ''}${Number(row.refund_due_cents)>0?`<small>A devolver ${money(row.refund_due_cents)}</small>`:''}</td>${editable?`<td>${Number(row.due_cents)>0?`<label class="payment-check"><input type="checkbox" data-allocation="${esc(row.order_id)}" data-due="${row.due_cents}"> ${money(row.due_cents)}</label>`:'—'}</td>`:selectable?`<td>${Number(row.due_cents)>0?`<input type="checkbox" data-pix-select="${esc(row.order_id)}" aria-label="Selecionar pedido ${orderCode(row.order_id)} por ${money(row.due_cents)}">`:'—'}</td>`:''}</tr>`).join('')}</tbody></table></div>`;
   const statement = rows => {
     const ids=new Set(rows.map(row=>row.order_id));
     const entries=(api?.statement||[]).filter(entry=>ids.has(entry.order_id)).sort((a,b)=>b.recorded_at.localeCompare(a.recorded_at));
-    return `<h3>Extrato de recebimentos e devoluções</h3>${entries.length?`<ul class="payment-log">${entries.map(entry=>`<li><span>${timestamp(entry.recorded_at)} · #${short(entry.order_id)}<small>${entry.kind==='refund'?'Devolução registrada':'Recebimento'} · ${methods[entry.method]}</small></span><strong>${entry.kind==='refund'?'−':''}${money(entry.amount_cents)}</strong></li>`).join('')}</ul>`:'<p>Nenhum pagamento registrado para estes pedidos.</p>'}`;
+    return `<h3>Extrato de recebimentos e devoluções</h3>${entries.length?`<ul class="payment-log">${entries.map(entry=>`<li><span>${timestamp(entry.recorded_at)} · #${orderCode(entry.order_id)}<small>${entry.kind==='refund'?'Devolução registrada':'Recebimento'} · ${methods[entry.method]}</small></span><strong>${entry.kind==='refund'?'−':''}${money(entry.amount_cents)}</strong></li>`).join('')}</ul>`:'<p>Nenhum pagamento registrado para estes pedidos.</p>'}`;
   };
   const customerStatement = rows => {
     const ids=new Set(rows.map(row=>row.order_id));
     const entries=(api?.statement||[]).filter(entry=>ids.has(entry.order_id)).sort((a,b)=>b.recorded_at.localeCompare(a.recorded_at));
-    return `<details class="payment-customer-history"><summary>Ver histórico de pagamentos e devoluções</summary>${entries.length?`<ul class="payment-log">${entries.map(entry=>`<li><span>${timestamp(entry.recorded_at)} · #${short(entry.order_id)}<small>${entry.kind==='refund'?'Devolução registrada':'Pagamento confirmado'} · ${methods[entry.method]}</small></span><strong>${entry.kind==='refund'?'−':''}${money(entry.amount_cents)}</strong></li>`).join('')}</ul>`:'<p>Ainda não há pagamentos confirmados para estes pedidos.</p>'}</details>`;
+    return `<details class="payment-customer-history"><summary>Ver histórico de pagamentos e devoluções</summary>${entries.length?`<ul class="payment-log">${entries.map(entry=>`<li><span>${timestamp(entry.recorded_at)} · #${orderCode(entry.order_id)}<small>${entry.kind==='refund'?'Devolução registrada':'Pagamento confirmado'} · ${methods[entry.method]}</small></span><strong>${entry.kind==='refund'?'−':''}${money(entry.amount_cents)}</strong></li>`).join('')}</ul>`:'<p>Ainda não há pagamentos confirmados para estes pedidos.</p>'}</details>`;
   };
   const customerStatusClass = status => ['paid','refunded'].includes(status) ? 'is-done' : status==='partial' ? 'is-partial' : status==='refund_due' ? 'is-refund' : 'is-open';
   const customerOrders = (rows, allowSelection=true, allowRowPay=true) => `<div class="payment-customer-orders">${rows.map(row=>{
     const due=Number(row.due_cents), paid=Number(row.paid_cents), refundable=Number(row.refund_due_cents);
     return `<article class="payment-order-card ${due>0?'has-balance':'is-settled'}">
-      <div class="payment-order-card__select">${due>0&&allowSelection?`<input type="checkbox" data-pix-select="${esc(row.order_id)}" data-due="${due}" aria-label="Selecionar pedido ${short(row.order_id)} por ${money(due)}">`:due>0?'<span class="payment-order-card__dot" aria-hidden="true"></span>':'<span aria-hidden="true">✓</span>'}</div>
+      <div class="payment-order-card__select">${due>0&&allowSelection?`<input type="checkbox" data-pix-select="${esc(row.order_id)}" data-due="${due}" aria-label="Selecionar pedido ${orderCode(row.order_id)} por ${money(due)}">`:due>0?'<span class="payment-order-card__dot" aria-hidden="true"></span>':'<span aria-hidden="true">✓</span>'}</div>
       <div class="payment-order-card__main">
-        <div class="payment-order-card__heading"><div><strong>Pedido #${short(row.order_id)}</strong><small>Entrega ${dateLabel(row.delivery_date)} · ${esc(orderLabels[row.order_status] || row.order_status)}</small></div><span class="payment-status ${customerStatusClass(row.payment_status)}">${esc(labels[row.payment_status] || row.payment_status)}</span></div>
+        <div class="payment-order-card__heading"><div><strong>Pedido #${orderCode(row.order_id)}</strong><small>Entrega ${dateLabel(row.delivery_date)} · ${esc(orderLabels[row.order_status] || row.order_status)}</small></div><span class="payment-status ${customerStatusClass(row.payment_status)}">${esc(labels[row.payment_status] || row.payment_status)}</span></div>
         <div class="payment-order-card__values"><div><span>Total</span><strong>${money(row.total_cents)}</strong></div><div><span>Já confirmado</span><strong>${money(paid)}</strong></div><div class="payment-order-card__due"><span>${due>0?'Falta pagar':'Saldo'}</span><strong>${due>0?money(due):'Quitado'}</strong></div></div>
         ${refundable>0?`<p class="payment-refund-note">Há ${money(refundable)} para devolver neste pedido.</p>`:''}
       </div>
@@ -112,17 +113,22 @@ export function initPayments(live) {
   }
   function operatorContent() {
     if (warning()) return `<p role="status">${esc(warning())}</p><button type="button" data-pay-refresh>Verificar novamente</button>`;
-    const allocated=new Set(api.allocations.map(a=>a.payment_id));
     const reversed=new Set(api.payments.map(p=>p.reverses_id).filter(Boolean));
-    const receipts=api.payments.filter(p=>p.kind==='receipt'&&allocated.has(p.id)).sort((a,b)=>b.recorded_at.localeCompare(a.recorded_at));
     const intents=(api.intents||[]).filter(item=>item.status==='pending');
-    return `<div class="payment-client-first payment-client-first--simple">
-      <div><span class="screen-eyebrow">PAGAMENTOS</span><h3>${intents.length ? `${intents.length} ${intents.length===1?'pagamento informado':'pagamentos informados'}` : 'Nenhum pagamento aguardando'}</h3><p>A conferência é feita diretamente no perfil do cliente.</p></div>
-      <button class="screen-primary" type="button" data-payment-go-clients>Ver clientes</button>
-    </div>
-    <details class="payment-worklist payment-history-compact"><summary>Histórico de recebimentos</summary>
-      <ul class="payment-log">${receipts.length?receipts.map(p=>`<li><span>${timestamp(p.recorded_at)} · ${money(p.amount_cents)}<small>${methods[p.method]} · ${api.allocations.filter(a=>a.payment_id===p.id).map(a=>`#${short(a.order_id)}`).join(' · ')}</small></span><span class="payment-history-actions">${proofPath(p.reference)?`<button type="button" data-operator-proof="${esc(proofPath(p.reference))}">Comprovante</button>`:''}${reversed.has(p.id)?'<strong>Estornado</strong>':`<button type="button" data-pay-refund="${p.id}">Devolução</button>`}</span></li>`).join(''):'<li><span>Nenhum recebimento confirmado ainda.</span></li>'}</ul>
-    </details>`;
+    const ledger=api.payments.filter(p=>p.kind==='receipt'||p.kind==='refund').sort((a,b)=>b.recorded_at.localeCompare(a.recorded_at));
+    const unidentified=ledger.filter(p=>p.kind==='receipt'&&!api.allocations.some(a=>a.payment_id===p.id)).length;
+    const history=ledger.map(p=>{
+      const allocations=api.allocations.filter(a=>a.payment_id===p.id);
+      const names=[...new Set(allocations.map(a=>api.balances.find(row=>row.order_id===a.order_id)?.customer_name).filter(Boolean))];
+      const codes=allocations.map(a=>orderCode(a.order_id));
+      const actor=api.profiles.find(profile=>profile.user_id===p.actor_id)?.name||(p.actor_id?'Operação':'Sistema');
+      const isRefund=p.kind==='refund';
+      const isUnidentified=!isRefund&&!allocations.length;
+      const status=isRefund?'Devolução registrada':isUnidentified?'Pagamento não identificado':reversed.has(p.id)?'Estornado':'Recebimento confirmado';
+      return `<li class="payment-ledger-entry"><div class="payment-ledger-entry__top"><strong>${timestamp(p.recorded_at)}</strong><strong>${isRefund?'−':''}${money(p.amount_cents)}</strong></div><div class="payment-ledger-entry__details"><span>${esc(names.join(', ')||'Cliente não identificado')}</span><small>${methods[p.method]||p.method} · ${codes.length?codes.map(code=>`#${esc(code)}`).join(' · '):'Sem pedido vinculado'} · Conferido por ${esc(actor)}</small><span class="payment-ledger-entry__status ${isUnidentified?'is-unidentified':''}">${status}</span></div><div class="payment-history-actions">${proofPath(p.reference)?`<button type="button" data-operator-proof="${esc(proofPath(p.reference))}">Comprovante</button>`:''}${isUnidentified?`<button type="button" data-pay-identify="${p.id}">Vincular a pedido</button>`:''}${!isRefund&&!reversed.has(p.id)?`<button type="button" data-pay-refund="${p.id}">Devolução</button>`:''}</div></li>`;
+    }).join('');
+    return `<div class="payment-client-first payment-client-first--simple"><div><span class="screen-eyebrow">PAGAMENTOS</span><h3>${intents.length ? `${intents.length} ${intents.length===1?'pagamento informado':'pagamentos informados'}` : 'Nenhum pagamento aguardando conferência'}</h3><p>A conferência é feita no perfil do cliente. ${unidentified ? `${unidentified} lançamento(s) ainda sem pedido vinculado.` : ''}</p></div><button class="screen-primary" type="button" data-payment-go-clients>Ver clientes</button></div>
+    <section class="payment-ledger-history"><div class="payment-ledger-history__heading"><div><h3>Histórico de pagamentos</h3><p>Confirmações e devoluções registradas no sistema, com data, valor, pedido e responsável.</p></div><button type="button" data-pay-refresh>Atualizar</button></div><ul class="payment-log">${history||'<li><span>Nenhum pagamento registrado ainda.</span></li>'}</ul></section>`;
   }
 
   function render() {
@@ -162,10 +168,15 @@ export function initPayments(live) {
     const openRows=rows.filter(row=>Number(row.due_cents)>0);
     return `<div class="payment-review-orders">${openRows.map(row=>`<label class="payment-review-order">
       <input type="checkbox" data-allocation="${esc(row.order_id)}" data-due="${Number(row.due_cents)}">
-      <span><strong>Pedido #${short(row.order_id)}</strong><small>${dateLabel(row.delivery_date)} · ${esc(orderLabels[row.order_status] || row.order_status)}</small></span>
+      <span><strong>Pedido #${orderCode(row.order_id)}</strong><small>${dateLabel(row.delivery_date)} · ${esc(orderLabels[row.order_status] || row.order_status)}</small></span>
       <strong>${money(row.due_cents)}</strong>
     </label>`).join('')}</div>`;
   };
+  const identifyOrders = (rows, paymentAmountCents) => `<div class="payment-review-orders">${rows.filter(row=>Number(row.due_cents)>0).map(row=>`<label class="payment-review-order payment-review-order--identify">
+    <input type="checkbox" data-allocation="${esc(row.order_id)}" data-due="${Number(row.due_cents)}">
+    <span><strong>Pedido #${orderCode(row.order_id)}</strong><small>${dateLabel(row.delivery_date)} · saldo ${money(row.due_cents)}</small></span>
+    <span class="payment-identify-amount"><small>Valor vinculado (R$)</small><input type="number" data-identify-amount="${esc(row.order_id)}" min="0.01" max="${(Number(row.due_cents)/100).toFixed(2)}" step="0.01" value="${(Math.min(Number(row.due_cents),Number(paymentAmountCents))/100).toFixed(2)}" disabled></span>
+  </label>`).join('')}</div>`;
   async function openAccount(paymentId=null,intentId=null) {
     await refresh();
     if(warning()) {notify(warning());return;}
@@ -201,6 +212,19 @@ export function initPayments(live) {
     dialog.dispatchEvent(new Event('change'));
   }
 
+  async function openIdentifyPayment(paymentId) {
+    await refresh();
+    if (warning()) { notify(warning()); return; }
+    const payment = api.payments.find(item => item.id === paymentId && item.kind === 'receipt');
+    if (!payment) { notify('Pagamento não encontrado.'); return; }
+    if (api.allocations.some(item => item.payment_id === paymentId)) { notify('Este pagamento já está vinculado a pedidos.'); return; }
+    const openRows = api.balances.filter(row => Number(row.due_cents) > 0);
+    const groups = [...new Map(openRows.map(row => [groupKey(row), row])).entries()];
+    if (!groups.length) { notify('Não há pedidos com saldo em aberto para vincular este pagamento.'); return; }
+    const firstGroup = groups[0][0];
+    open(`<div class="payment-dialog__heading payment-dialog__heading--clean"><div><span class="screen-eyebrow">IDENTIFICAR RECEBIMENTO</span><h2>${money(payment.amount_cents)}</h2><p>Escolha o cliente e selecione pedidos que somem exatamente o valor recebido.</p></div></div><form class="payment-review-form" data-payment-form="identify" data-payment-id="${payment.id}" data-unidentified="true" data-amount-cents="${payment.amount_cents}"><label class="payment-method-simple">Cliente<select name="identifyGroup" data-identify-customer>${groups.map(([key,row])=>`<option value="${esc(key)}">${esc(groupLabel(row))}</option>`).join('')}</select></label><div data-identify-orders>${identifyOrders(openRows.filter(row=>groupKey(row)===firstGroup),payment.amount_cents)}</div><div class="payment-review-footer"><span>Valor selecionado</span><strong data-allocation-total>R$ 0,00</strong></div><p class="payment-error" role="alert"></p><button class="payment-confirm-primary" type="submit">Vincular pagamento</button></form>`);
+    dialog.dispatchEvent(new Event('change'));
+  }
   function snapshotHtml(s) {
     return `<p>${s.orders} pedidos · ${s.delivered} entregues · ${s.cancelled} cancelados · ${s.pending} pendentes</p><div class="payment-metrics">${metric('Produtos',s.products_cents)}${metric('Entregas (separadas)',s.delivery_cents)}${metric('Total dos pedidos',s.total_cents)}${metric('Recebido para estes pedidos',s.paid_for_orders_cents)}${metric('Em aberto nestes pedidos',s.due_cents)}${metric('A devolver',s.refund_due_cents)}${metric('Padaria — custo conhecido',s.supplier_cents)}<div><span>Lucro bruto dos produtos</span><strong>${s.profit_cents==null?'Pendente':money(s.profit_cents)}</strong></div>${metric('Recebimentos registrados nesta data',s.received_on_day_cents)}${metric('Destes, Pix manual',s.pix_manual_on_day_cents)}${metric('Devoluções registradas nesta data',s.refunded_on_day_cents)}${metric('Recebimentos líquidos nesta data',s.net_received_on_day_cents)}</div><p>${s.missing_cost_items} itens sem custo; ${s.estimated_cost_items} com custo estimado. Recebimentos por data de registro podem pertencer a pedidos de outras datas. Todos os recebimentos desta versão são manuais.</p>`;
   }
@@ -246,8 +270,16 @@ export function initPayments(live) {
       if(form.dataset.paymentForm==='refund') {
         name='trameli_refund_payment';args=requestArgs(form,{p_payment_id:form.dataset.paymentId,p_reason:form.elements.reason.value.trim()});
       } else {
-        const lines=[...form.querySelectorAll('[data-allocation]:checked')].map(input=>({order_id:input.dataset.allocation,amount_cents:Number(input.dataset.due)}));
-        if(form.dataset.paymentForm==='identify') {name='trameli_identify_payment';args={p_payment_id:form.dataset.paymentId,p_lines:lines};}
+        const lines=[...form.querySelectorAll('[data-allocation]:checked')].map(input=>{
+        const amountInput=form.dataset.unidentified==='true'?form.querySelector(`[data-identify-amount="${input.dataset.allocation}"]`):null;
+        const amount_cents=amountInput?Math.round(Number(amountInput.value)*100):Number(input.dataset.due);
+        if(!Number.isInteger(amount_cents)||amount_cents<1||amount_cents>Number(input.dataset.due)) throw new Error(`O valor vinculado ao pedido #${orderCode(input.dataset.allocation)} precisa estar entre R$ 0,01 e ${money(Number(input.dataset.due))}.`);
+        return {order_id:input.dataset.allocation,amount_cents};
+      });
+        if(form.dataset.paymentForm==='identify') {
+          if(form.dataset.unidentified==='true' && lines.reduce((sum,line)=>sum+line.amount_cents,0)!==Number(form.dataset.amountCents)) throw new Error(`Os pedidos selecionados precisam totalizar ${money(Number(form.dataset.amountCents))}.`);
+          name='trameli_identify_payment';args={p_payment_id:form.dataset.paymentId,p_lines:lines};
+        }
         else {
           const amount=form.dataset.paymentForm==='unknown'?cents(form.elements.amount.value):lines.reduce((s,l)=>s+l.amount_cents,0);
           if(!amount)throw new Error('Informe um valor maior que zero.');
@@ -260,14 +292,27 @@ export function initPayments(live) {
       if(form.dataset.intentId) {
         await api.call('trameli_resolve_payment_intent',{p_intent_id:form.dataset.intentId,p_status:'reviewed'});
       }
-      dialog.close();notify(form.dataset.intentId?'Pagamento conferido e baixado.':'Registro salvo no banco.');
+      dialog.close();notify(form.dataset.paymentForm==='identify'?'Pagamento identificado e vinculado aos pedidos.':form.dataset.intentId?'Pagamento conferido e baixado.':'Registro salvo no banco.');
       await api.load(true);refreshContent();await previewDay();
     } catch(error){errorHost.textContent=error.message||'Não foi possível registrar. Verifique a conexão.';}
     finally{delete form.dataset.busy;button.disabled=false;}
   });
-  dialog.addEventListener('change',()=>{
+  dialog.addEventListener('change',event=>{
+    if(event.target.matches('[data-identify-customer]')) {
+      const host=dialog.querySelector('[data-identify-orders]');
+      const form=dialog.querySelector('[data-payment-form]');
+      if(host) host.innerHTML=identifyOrders(api.balances.filter(row=>groupKey(row)===event.target.value && Number(row.due_cents)>0),Number(form?.dataset.amountCents||0));
+    }
+    if(event.target.matches('[data-allocation]')) {
+      const amountInput=dialog.querySelector(`[data-identify-amount="${event.target.dataset.allocation}"]`);
+      if(amountInput) amountInput.disabled=!event.target.checked;
+    }
     const total=dialog.querySelector('[data-allocation-total]');if(!total)return;
-    total.textContent=money([...dialog.querySelectorAll('[data-allocation]:checked')].reduce((sum,input)=>sum+Number(input.dataset.due),0));
+    const form=dialog.querySelector('[data-payment-form]');
+    total.textContent=money([...dialog.querySelectorAll('[data-allocation]:checked')].reduce((sum,input)=>{
+      const amountInput=form?.dataset.unidentified==='true'?form.querySelector(`[data-identify-amount="${input.dataset.allocation}"]`):null;
+      return sum+(amountInput?Math.round(Number(amountInput.value)*100):Number(input.dataset.due));
+    },0));
   });
   document.addEventListener('change',event=>{
     if(event.target.matches('[data-payment-group]'))selectedGroup=event.target.value;
@@ -288,6 +333,7 @@ export function initPayments(live) {
       }catch(error){notify(error.message||'Não foi possível abrir o comprovante.');}
       return;
     }
+    if(button.matches('[data-pay-identify]')) { await openIdentifyPayment(button.dataset.payIdentify); return; }
     if(!button.matches('[data-pay-refund],[data-day-preview],[data-day-close]'))return;
     if(warning()){notify(warning());return;}
     if(!live.operator)return;

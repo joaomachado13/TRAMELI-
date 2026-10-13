@@ -60,6 +60,9 @@ const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character =>
 const dateKey = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 const tomorrow = () => { const date = new Date(); date.setDate(date.getDate() + 1); return dateKey(date); };
 const orderTotal = order => window.TrameliOrderMath.totalCents(order);
+const orderCode = order => order?.publicCode || String(order?.id || '').slice(0, 8);
+const paymentOrderCode = id => orderCode((live?.orders || []).find(order => order.id === id) || { id });
+const reportCustomerKey = order => order.customerId || `manual:${String(order.customer || '').trim().toLocaleLowerCase('pt-BR')}`;
 const orderState = order => order.status || (order.checked ? 'confirmed' : 'received');
 const orderStateLabel = order => ({ received: 'A conferir', confirmed: 'Conferido', packing: 'Em separação', ready: 'Pronto', delivered: 'Entregue', cancelled: 'Cancelado' })[orderState(order)] || 'A conferir';
 const activeOrders = () => storedOrders().filter(order => orderState(order) !== 'cancelled');
@@ -68,7 +71,10 @@ const financeRange = { from: '', to: '' };
 const reportRange = { from: '', to: '' };
 const orderFilters = { query: '', customer: 'all', status: 'all', payment: 'all', from: '', to: '', sort: 'newest' };
 const agendaState = { mode: 'calendar', selected: '' };
-const reportState = { type: 'financial', period: 'month', generated: false };
+const reportState = { type: 'financial', period: 'month', customer: 'all', generated: false };
+let reportBillingCustomers = [];
+const reportScopeName = () => reportState.customer === 'all' ? 'Todos os clientes' : activeOrders().find(order => reportCustomerKey(order) === reportState.customer)?.customer || 'Cliente selecionado';
+const reportPeriodLabel = () => `${reportRange.from ? new Date(`${reportRange.from}T12:00:00`).toLocaleDateString('pt-BR') : 'Início'} — ${reportRange.to ? new Date(`${reportRange.to}T12:00:00`).toLocaleDateString('pt-BR') : 'Hoje'} · ${reportScopeName()}`;
 let settingsTab = 'geral';
 const inRange = (orders, from, to) => orders.filter(order => (!from || order.date >= from) && (!to || order.date <= to));
 const saoPauloToday = () => {
@@ -130,9 +136,9 @@ function updateOverview() {
   document.querySelector('.notification-dot').hidden = attentionTotal === 0;
   document.querySelector('.attention-strip').hidden = pending === 0 && !todayDeliveries.length && !dueOrders && !paymentIntents && !!balances;
   const rows = document.getElementById('home-recent-orders');
-  rows.innerHTML = nextDay.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5).map(order => `<tr><td>#${escapeHtml(order.id.slice(0, 8))}</td><td>${escapeHtml(order.customer)}</td><td>${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR')}</td><td>${orderStateLabel(order)}</td><td>${currency(orderTotal(order))}<small>Inclui ${currency(order.feeCents || 0)} de entrega</small></td></tr>`).join('');
+  rows.innerHTML = nextDay.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5).map(order => `<tr><td>#${escapeHtml(orderCode(order))}</td><td>${escapeHtml(order.customer)}</td><td>${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR')}</td><td>${orderStateLabel(order)}</td><td>${currency(orderTotal(order))}<small>Inclui ${currency(order.feeCents || 0)} de entrega</small></td></tr>`).join('');
   document.getElementById('home-orders-empty').hidden = nextDay.length > 0;
-  document.getElementById('home-deliveries').innerHTML = upcoming.slice(0, 4).map(order => `<li><span class="delivery-list__dot" aria-hidden="true"></span><time datetime="${escapeHtml(order.date)}">${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</time><div><strong>${escapeHtml(order.customer)}</strong><small>${escapeHtml(orderStateLabel(order))} · #${escapeHtml(order.id.slice(0, 8))}</small></div></li>`).join('');
+  document.getElementById('home-deliveries').innerHTML = upcoming.slice(0, 4).map(order => `<li><span class="delivery-list__dot" aria-hidden="true"></span><time datetime="${escapeHtml(order.date)}">${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</time><div><strong>${escapeHtml(order.customer)}</strong><small>${escapeHtml(orderStateLabel(order))} · #${escapeHtml(orderCode(order))}</small></div></li>`).join('');
   document.getElementById('home-deliveries-empty').hidden = upcoming.length > 0;
   const actions = [];
   if (pending) actions.push(`<li><a href="#operacao">${pending} ${pending === 1 ? 'pedido para conferir' : 'pedidos para conferir'} →</a></li>`);
@@ -222,8 +228,8 @@ const pages = {
     const list=(items,emptyText)=>items.length?`<ul class="home-next-list">${items.join('')}</ul>`:`<p>${emptyText}</p>`;
     return `${intro('Atenção centralizada','Pendências','Só o que realmente precisa de ação.')}
       <div class="screen-metrics">${metric('Pedidos a conferir',received.length,'Todos os dias')}${metric('Saldos em aberto',due.length,'Pedidos')}${metric('Avisos Pix',intents.length,'Ainda não confirmados')}${metric('Custos pendentes',missing.length,'Produtos ativos')}</div>
-      ${panel('Pedidos a conferir',list(received.map(order=>`<li><a href="#operacao">#${escapeHtml(order.id.slice(0,8))} · ${escapeHtml(order.customer)} · ${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR')} →</a></li>`),'Nenhum pedido aguardando conferência.'))}
-      ${panel('Financeiro',list([...intents.map(item=>`<li><a href="#clientes">Pagamento informado · ${currency(item.amount_cents)} · conferir no cliente →</a></li>`),...due.map(item=>`<li><a href="#clientes">#${escapeHtml(item.order_id.slice(0,8))} · ${escapeHtml(item.customer_name)} · ${currency(item.due_cents)} em aberto →</a></li>`)],'Nenhuma pendência financeira carregada.'))}
+      ${panel('Pedidos a conferir',list(received.map(order=>`<li><a href="#operacao">#${escapeHtml(orderCode(order))} · ${escapeHtml(order.customer)} · ${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR')} →</a></li>`),'Nenhum pedido aguardando conferência.'))}
+      ${panel('Financeiro',list([...intents.map(item=>`<li><a href="#clientes">Pagamento informado · ${currency(item.amount_cents)} · conferir no cliente →</a></li>`),...due.map(item=>`<li><a href="#clientes">#${escapeHtml(paymentOrderCode(item.order_id))} · ${escapeHtml(item.customer_name)} · ${currency(item.due_cents)} em aberto →</a></li>`)],'Nenhuma pendência financeira carregada.'))}
       ${panel('Catálogo',list([...missing.map(item=>`<li><a href="#produtos">${escapeHtml(item.name)} · custo pendente →</a></li>`),...unavailable.map(item=>`<li><a href="#produtos">${escapeHtml(item.name)} · indisponível amanhã →</a></li>`)],'Nenhuma pendência de catálogo para amanhã.'))}`;
   },
   pedidos: () => {
@@ -231,7 +237,7 @@ const pages = {
     const customers = [...new Set(all.map(order => order.customer))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
     const paymentLabels = { pix_manual: 'Pix', cash: 'Dinheiro', other: 'Acordado com a proprietária', bank: 'Transferência', unspecified: 'Não informado' };
     const normalized = orderFilters.query.trim().toLocaleLowerCase('pt-BR');
-    const orders = all.filter(order => (!normalized || [order.id, order.customer, order.address, ...order.items.map(item => item.name)].some(value => String(value).toLocaleLowerCase('pt-BR').includes(normalized)))
+    const orders = all.filter(order => (!normalized || [order.id, orderCode(order), order.customer, order.address, ...order.items.map(item => item.name)].some(value => String(value).toLocaleLowerCase('pt-BR').includes(normalized)))
       && (orderFilters.customer === 'all' || order.customer === orderFilters.customer)
       && (orderFilters.status === 'all' || orderState(order) === orderFilters.status)
       && (orderFilters.payment === 'all' || (order.paymentMethod || 'unspecified') === orderFilters.payment)
@@ -239,7 +245,7 @@ const pages = {
       .sort((a, b) => orderFilters.sort === 'oldest' ? a.date.localeCompare(b.date) : orderFilters.sort === 'value' ? orderTotal(b) - orderTotal(a) : b.date.localeCompare(a.date));
     const active = all.filter(order => orderState(order) !== 'cancelled');
     const pending = active.filter(order => orderState(order) === 'received').length;
-    const rows = orders.length ? `<div class="orders-browser"><div class="orders-browser__head"><span>Pedido</span><span>Cliente</span><span>Entrega</span><span>Itens</span><span>Valor</span><span>Pagamento</span><span>Status</span></div>${orders.map(order => `<button type="button" class="orders-browser__row" data-open-order="${escapeHtml(order.id)}"><span><strong>#${escapeHtml(order.id.slice(0, 8))}</strong><small>${new Date(order.createdAt).toLocaleDateString('pt-BR')}</small></span><strong>${escapeHtml(order.customer)}</strong><span>${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR')}</span><span>${order.items.reduce((sum, item) => sum + (item.weightGrams ? 1 : item.quantity), 0)}</span><strong>${currency(orderTotal(order))}</strong><span>${escapeHtml(paymentLabels[order.paymentMethod || 'unspecified'] || 'Não informado')}</span><span class="screen-badge screen-badge--${orderState(order) === 'received' ? 'amber' : orderState(order) === 'cancelled' ? 'neutral' : 'green'}">${orderStateLabel(order)}</span></button>`).join('')}</div>` : '<div class="friendly-empty"><strong>Nenhum pedido encontrado.</strong><span>Ajuste os filtros ou registre um novo pedido.</span></div>';
+    const rows = orders.length ? `<div class="orders-browser"><div class="orders-browser__head"><span>Pedido</span><span>Cliente</span><span>Entrega</span><span>Itens</span><span>Valor</span><span>Pagamento</span><span>Status</span></div>${orders.map(order => `<button type="button" class="orders-browser__row" data-open-order="${escapeHtml(order.id)}"><span><strong>#${escapeHtml(orderCode(order))}</strong><small>${new Date(order.createdAt).toLocaleDateString('pt-BR')}</small></span><strong>${escapeHtml(order.customer)}</strong><span>${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR')}</span><span>${order.items.reduce((sum, item) => sum + (item.weightGrams ? 1 : item.quantity), 0)}</span><strong>${currency(orderTotal(order))}</strong><span>${escapeHtml(paymentLabels[order.paymentMethod || 'unspecified'] || 'Não informado')}</span><span class="screen-badge screen-badge--${orderState(order) === 'received' ? 'amber' : orderState(order) === 'cancelled' ? 'neutral' : 'green'}">${orderStateLabel(order)}</span></button>`).join('')}</div>` : '<div class="friendly-empty"><strong>Nenhum pedido encontrado.</strong><span>Ajuste os filtros ou registre um novo pedido.</span></div>';
     return `${intro('Acompanhamento', 'Pedidos', 'Encontre um pedido e abra somente o detalhe de que precisa.')}
       <div class="screen-metrics screen-metrics--compact">${metric('Pedidos ativos', active.length, 'Todos os períodos')}${metric('A conferir', pending, 'Pedem ação')}${metric('Valor ativo', currency(active.reduce((sum, order) => sum + orderTotal(order), 0)), 'Exclui cancelados')}</div>
       <section class="screen-panel"><div class="record-toolbar record-toolbar--orders"><label>Buscar<input id="orders-search" type="search" value="${escapeHtml(orderFilters.query)}" placeholder="Cliente, produto ou ID"></label><label>Cliente<select data-order-filter="customer"><option value="all">Todos</option>${customers.map(value => `<option value="${escapeHtml(value)}" ${orderFilters.customer === value ? 'selected' : ''}>${escapeHtml(value)}</option>`).join('')}</select></label><label>Status<select data-order-filter="status"><option value="all">Todos</option>${Object.entries({ received: 'A conferir', confirmed: 'Conferido', packing: 'Em separação', ready: 'Pronto', delivered: 'Entregue', cancelled: 'Cancelado' }).map(([value, label]) => `<option value="${value}" ${orderFilters.status === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label><label>Pagamento<select data-order-filter="payment"><option value="all">Todos</option>${Object.entries(paymentLabels).filter(([value]) => value !== 'bank').map(([value, label]) => `<option value="${value}" ${orderFilters.payment === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label><label>De<input data-order-filter="from" type="date" value="${orderFilters.from}"></label><label>Até<input data-order-filter="to" type="date" value="${orderFilters.to}"></label><label>Ordenar<select data-order-filter="sort"><option value="newest">Mais recentes</option><option value="oldest" ${orderFilters.sort === 'oldest' ? 'selected' : ''}>Mais antigos</option><option value="value" ${orderFilters.sort === 'value' ? 'selected' : ''}>Maior valor</option></select></label><button class="screen-primary" type="button" data-new-order>+ Novo pedido</button></div>${rows}</section>`;
@@ -252,7 +258,7 @@ const pages = {
     const days = [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]));
     if (!agendaState.selected || !groups.has(agendaState.selected)) agendaState.selected = groups.has(saoPauloToday()) ? saoPauloToday() : days[0]?.[0] || '';
     const selectedOrders = groups.get(agendaState.selected) || [];
-    const orderRows = orders => `<div class="agenda-order-list">${orders.map(order => `<button type="button" data-open-order="${escapeHtml(order.id)}"><span><strong>${escapeHtml(order.customer)}</strong><small>#${escapeHtml(order.id.slice(0, 8))} · ${order.items.length} ${order.items.length === 1 ? 'linha' : 'linhas'}</small></span><span>${currency(orderTotal(order))}</span><span class="screen-badge screen-badge--${orderState(order) === 'received' ? 'amber' : 'green'}">${orderStateLabel(order)}</span></button>`).join('')}</div>`;
+    const orderRows = orders => `<div class="agenda-order-list">${orders.map(order => `<button type="button" data-open-order="${escapeHtml(order.id)}"><span><strong>${escapeHtml(order.customer)}</strong><small>#${escapeHtml(orderCode(order))} · ${order.items.length} ${order.items.length === 1 ? 'linha' : 'linhas'}</small></span><span>${currency(orderTotal(order))}</span><span class="screen-badge screen-badge--${orderState(order) === 'received' ? 'amber' : 'green'}">${orderStateLabel(order)}</span></button>`).join('')}</div>`;
     const calendar = days.length ? `<div class="agenda-calendar">${days.map(([date, orders]) => `<button type="button" data-agenda-day="${date}" aria-pressed="${agendaState.selected === date}"><span>${new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'short' })}</span><strong>${new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</strong><small>${orders.length} ${orders.length === 1 ? 'pedido' : 'pedidos'}</small></button>`).join('')}</div><section class="agenda-selected"><div class="screen-panel__heading"><h2>${new Date(`${agendaState.selected}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</h2><span>${selectedOrders.length} pedidos</span></div>${orderRows(selectedOrders)}</section>` : empty('Nenhuma entrega programada.', 'Lançar pedido');
     const list = days.length ? `<div class="agenda-groups">${days.map(([date, orders]) => `<section><div><strong>${new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</strong><span>${orders.length}</span></div>${orderRows(orders)}</section>`).join('')}</div>` : empty('Nenhuma entrega programada.', 'Lançar pedido');
     return `${intro('Planejamento', 'Agenda', 'Escolha um dia e abra apenas o pedido que deseja consultar.')}<div class="view-toggle" aria-label="Visualização da agenda"><button type="button" data-agenda-mode="calendar" aria-pressed="${agendaState.mode === 'calendar'}">Calendário</button><button type="button" data-agenda-mode="list" aria-pressed="${agendaState.mode === 'list'}">Lista</button></div><section class="screen-panel">${agendaState.mode === 'calendar' ? calendar : list}</section>`;
@@ -261,8 +267,11 @@ const pages = {
     <div class="finance-presets" aria-label="Períodos rápidos"><button type="button" data-finance-days="1">Hoje</button><button type="button" data-finance-days="7">Últimos 7 dias</button><button type="button" data-finance-days="15">Últimos 15 dias</button></div>
     <div class="report-filters"><label>De<input id="finance-from" type="date" value="${financeRange.from}"></label><label>Até<input id="finance-to" type="date" value="${financeRange.to}"></label></div>
     <div id="finance-cost-summary" aria-live="polite"></div>`,
-  relatorios: () => `${intro('Documentos', 'Relatórios', 'Escolha o que precisa, gere um resumo e salve em PDF.')}
-    <section class="report-generator"><div class="report-generator__form"><label>Tipo de relatório<select id="report-type"><option value="financial" ${reportState.type === 'financial' ? 'selected' : ''}>Resumo financeiro</option><option value="sales" ${reportState.type === 'sales' ? 'selected' : ''}>Vendas</option><option value="customers" ${reportState.type === 'customers' ? 'selected' : ''}>Clientes</option><option value="billing" ${reportState.type === 'billing' ? 'selected' : ''}>Cobrança detalhada</option><option value="products" ${reportState.type === 'products' ? 'selected' : ''}>Produtos</option><option value="orders" ${reportState.type === 'orders' ? 'selected' : ''}>Pedidos</option><option value="deliveries" ${reportState.type === 'deliveries' ? 'selected' : ''}>Entregas</option></select></label><label>Período<select id="report-period"><option value="today" ${reportState.period === 'today' ? 'selected' : ''}>Hoje</option><option value="week" ${reportState.period === 'week' ? 'selected' : ''}>Últimos 7 dias</option><option value="fortnight" ${reportState.period === 'fortnight' ? 'selected' : ''}>Últimos 15 dias</option><option value="month" ${reportState.period === 'month' ? 'selected' : ''}>Últimos 30 dias</option><option value="custom" ${reportState.period === 'custom' ? 'selected' : ''}>Personalizado</option></select></label><div class="report-custom-dates" ${reportState.period === 'custom' ? '' : 'hidden'}><label>De<input id="report-from" type="date" value="${reportRange.from}"></label><label>Até<input id="report-to" type="date" value="${reportRange.to}"></label></div><button class="screen-primary" type="button" data-report-generate>Gerar relatório</button></div><div id="report-results" class="report-preview" aria-live="polite">${reportState.generated ? '' : '<div class="friendly-empty"><strong>Nenhum relatório gerado.</strong><span>Escolha um tipo e um período para começar.</span></div>'}</div></section>`,
+  relatorios: () => {
+    const customers = [...new Map(activeOrders().map(order => [reportCustomerKey(order), { key: reportCustomerKey(order), name: order.customer }])).values()].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+    return `${intro('Documentos', 'Relatórios', 'Gere relatórios gerais ou filtre por um cliente específico.')}
+      <section class="report-generator"><div class="report-generator__form"><label>Tipo de relatório<select id="report-type"><option value="financial" ${reportState.type === 'financial' ? 'selected' : ''}>Resumo financeiro</option><option value="sales" ${reportState.type === 'sales' ? 'selected' : ''}>Vendas</option><option value="customers" ${reportState.type === 'customers' ? 'selected' : ''}>Clientes</option><option value="billing" ${reportState.type === 'billing' ? 'selected' : ''}>Cobrança detalhada</option><option value="products" ${reportState.type === 'products' ? 'selected' : ''}>Produtos</option><option value="orders" ${reportState.type === 'orders' ? 'selected' : ''}>Pedidos</option><option value="deliveries" ${reportState.type === 'deliveries' ? 'selected' : ''}>Entregas</option></select></label><label>Período<select id="report-period"><option value="today" ${reportState.period === 'today' ? 'selected' : ''}>Hoje</option><option value="week" ${reportState.period === 'week' ? 'selected' : ''}>Últimos 7 dias</option><option value="fortnight" ${reportState.period === 'fortnight' ? 'selected' : ''}>Últimos 15 dias</option><option value="month" ${reportState.period === 'month' ? 'selected' : ''}>Últimos 30 dias</option><option value="custom" ${reportState.period === 'custom' ? 'selected' : ''}>Personalizado</option></select></label><label>Cliente<select id="report-customer"><option value="all" ${reportState.customer === 'all' ? 'selected' : ''}>Todos os clientes</option>${customers.map(customer => `<option value="${escapeHtml(customer.key)}" ${reportState.customer === customer.key ? 'selected' : ''}>${escapeHtml(customer.name)}</option>`).join('')}</select></label><div class="report-custom-dates" ${reportState.period === 'custom' ? '' : 'hidden'}><label>De<input id="report-from" type="date" value="${reportRange.from}"></label><label>Até<input id="report-to" type="date" value="${reportRange.to}"></label></div><button class="screen-primary" type="button" data-report-generate>Gerar relatório</button></div><div id="report-results" class="report-preview" aria-live="polite">${reportState.generated ? '' : '<div class="friendly-empty"><strong>Nenhum relatório gerado.</strong><span>Escolha um tipo, período e cliente para começar.</span></div>'}</div></section>`;
+  },
   configuracoes: () => {
     const operation = readSettings(); let print = {};
     try { print = JSON.parse(localStorage.getItem('trameli-print-settings-70x33-v1') || '{}'); } catch { /* Defaults below. */ }
@@ -274,7 +283,7 @@ const pages = {
       entregas: `<div class="settings-form"><label>Taxa padrão<input value="R$ 2,00" disabled></label><p>A taxa está protegida pelo cálculo dos pedidos para impedir divergências.</p></div>`,
       pagamentos: `<div class="settings-form"><h3>Meios aceitos</h3><label class="settings-check"><input type="checkbox" checked disabled> Pix</label><label class="settings-check"><input type="checkbox" checked disabled> Dinheiro</label><label class="settings-check"><input type="checkbox" checked disabled> Acordado com a proprietária</label><p>Transferência bancária não aparece mais no checkout.</p></div>`,
       catalogo: `<div class="settings-form"><p>Categorias, preços, custos, fotos e disponibilidade são gerenciados diretamente em Produtos.</p><a class="screen-primary" href="#produtos">Abrir produtos</a>${live?.role === 'master' ? '<button class="entity-danger" type="button" data-purge-orders>Excluir todos os pedidos de teste</button><small>Remove pedidos, pagamentos e fechamentos. Produtos e clientes permanecem.</small>' : ''}</div>`,
-      impressao: `<form class="settings-form" data-settings-form="print"><label>Deslocamento horizontal (mm)<input name="offsetX" type="number" min="-3" max="3" step="0.5" value="${Number(print.offsetX || 0)}"></label><label>Deslocamento vertical (mm)<input name="offsetY" type="number" min="-3" max="3" step="0.5" value="${Number(print.offsetY || 0)}"></label><p>Etiqueta atual: 70 × 33 mm, folha A4.</p><button class="screen-primary" type="submit">Salvar</button></form>`,
+      impressao: `<form class="settings-form" data-settings-form="print"><label>Deslocamento horizontal (mm)<input name="offsetX" type="number" min="-3" max="3" step="0.5" value="${Number(print.offsetX || 0)}"></label><label>Deslocamento vertical (mm)<input name="offsetY" type="number" min="-3" max="3" step="0.5" value="${Number(print.offsetY || 0)}"></label><p>Rolo contínuo de 70 mm: uma etiqueta compacta por pedido, com altura variável para incluir todos os produtos. Na impressão, selecione a impressora de etiquetas e a mídia contínua.</p><button class="screen-primary" type="submit">Salvar</button></form>`,
       acessos: '<div class="settings-slot" data-account-slot="team"><div class="friendly-empty"><strong>Equipe disponível na versão conectada.</strong><span>Entre como Master para administrar acessos.</span></div></div>',
       conta: '<div class="settings-slot" data-account-slot="account"><div class="friendly-empty"><strong>Perfil disponível após o login.</strong><span>Nome, telefone, endereço e senha ficam reunidos aqui.</span></div></div>',
     };
@@ -290,21 +299,23 @@ function renderReportResults() {
     host.innerHTML = '<p class="report-note">A data inicial precisa ser anterior à data final.</p>';
     return;
   }
-  const orders = inRange(activeOrders(), from, to);
+  const rangedOrders = inRange(activeOrders(), from, to);
+  const orders = rangedOrders.filter(order => reportState.customer === 'all' || reportCustomerKey(order) === reportState.customer);
   const total = orders.reduce((sum, order) => sum + orderTotal(order), 0);
   const title = ({ financial: 'Resumo financeiro', sales: 'Vendas', customers: 'Clientes', billing: 'Cobrança detalhada', products: 'Produtos', orders: 'Pedidos', deliveries: 'Entregas' })[reportState.type];
-  const period = `${from ? new Date(`${from}T12:00:00`).toLocaleDateString('pt-BR') : 'Início'} — ${to ? new Date(`${to}T12:00:00`).toLocaleDateString('pt-BR') : 'Hoje'}`;
+  const period = reportPeriodLabel();
+  reportBillingCustomers = [];
   let detail = '';
   if (reportState.type === 'customers') {
     const rows = new Map();
-    orders.forEach(order => { const row = rows.get(order.customer) || { count: 0, total: 0 }; row.count++; row.total += orderTotal(order); rows.set(order.customer, row); });
-    detail = `<div class="report-table">${[...rows.entries()].sort((a, b) => b[1].total - a[1].total).map(([name, row]) => `<div><strong>${escapeHtml(name)}</strong><span>${row.count} pedidos</span><strong>${currency(row.total)}</strong></div>`).join('')}</div>`;
+    orders.forEach(order => { const key = reportCustomerKey(order); const row = rows.get(key) || { name: order.customer, count: 0, total: 0 }; row.count++; row.total += orderTotal(order); rows.set(key, row); });
+    detail = `<div class="report-table">${[...rows.values()].sort((a, b) => b.total - a.total).map(row => `<div><strong>${escapeHtml(row.name)}</strong><span>${row.count} pedidos</span><strong>${currency(row.total)}</strong></div>`).join('')}</div>`;
   } else if (reportState.type === 'billing') {
     const balances = window.TrameliPayments?.api?.balances || [];
     const balanceByOrder = new Map(balances.map(row => [row.order_id, row]));
     const customers = new Map();
     orders.forEach(order => {
-      const key = order.customerId || `local:${String(order.customer).trim().toLocaleLowerCase('pt-BR')}`;
+      const key = reportCustomerKey(order);
       const entry = customers.get(key) || { key, name: order.customer, orders: [], total: 0, paid: 0, due: 0, reconciled: true };
       const balance = balanceByOrder.get(order.id);
       const orderValue = orderTotal(order);
@@ -315,14 +326,16 @@ function renderReportResults() {
       if (!balance) entry.reconciled = false;
       customers.set(key, entry);
     });
-    const cards = [...customers.values()].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map(customer => {
+    const sortedCustomers = [...customers.values()].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+    reportBillingCustomers = sortedCustomers;
+    const cards = sortedCustomers.map(customer => {
       const orderRows = customer.orders.slice().sort((a, b) => a.order.date.localeCompare(b.order.date)).map(({ order, paid, due, reconciled }) => {
         const paymentStatus = !reconciled ? 'A conferir' : due <= 0 ? 'Pago' : paid > 0 ? 'Parcial' : 'Em aberto';
         const items = order.items.map(item => {
           const lineTotal = item.weightGrams ? Number(item.priceCents || 0) : Number(item.quantity || 0) * Number(item.priceCents || 0);
           return `<li><span>${escapeHtml(window.TrameliOrderMath.itemLabel(item))}</span><strong>${currency(lineTotal)}</strong></li>`;
         }).join('');
-        return `<section class="billing-order"><header><div><strong>${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR')}</strong><small>#${escapeHtml(order.id.slice(0, 8))} · vence ${new Date(`${billingDeadlineForDelivery(order.date)}T12:00:00`).toLocaleDateString('pt-BR')}</small></div><span class="screen-badge ${due <= 0 ? 'screen-badge--green' : 'screen-badge--amber'}">${paymentStatus}</span></header><ul>${items}</ul><footer><span>Total <strong>${currency(orderTotal(order))}</strong></span><span>Pago <strong>${currency(paid)}</strong></span><span>Em aberto <strong>${currency(due)}</strong></span></footer></section>`;
+        return `<section class="billing-order"><header><div><strong>${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR')}</strong><small>#${escapeHtml(orderCode(order))} · vence ${new Date(`${billingDeadlineForDelivery(order.date)}T12:00:00`).toLocaleDateString('pt-BR')}</small></div><span class="screen-badge ${due <= 0 ? 'screen-badge--green' : 'screen-badge--amber'}">${paymentStatus}</span></header><ul>${items}</ul><footer><span>Total <strong>${currency(orderTotal(order))}</strong></span><span>Pago <strong>${currency(paid)}</strong></span><span>Em aberto <strong>${currency(due)}</strong></span></footer></section>`;
       }).join('');
       return `<article class="billing-customer" data-billing-customer="${escapeHtml(customer.key)}"><header class="billing-customer__head"><label><input type="checkbox" data-billing-select value="${escapeHtml(customer.key)}" checked> <span><strong>${escapeHtml(customer.name)}</strong><small>${customer.orders.length} ${customer.orders.length === 1 ? 'pedido' : 'pedidos'} no período</small></span></label><button type="button" data-billing-only="${escapeHtml(customer.key)}">PDF deste cliente</button></header><div class="billing-customer__totals"><span>Compras <strong>${currency(customer.total)}</strong></span><span>Pago <strong>${currency(customer.paid)}</strong></span><span>Em aberto <strong>${currency(customer.due)}</strong></span></div>${customer.reconciled ? '' : '<p class="report-note">Há pedido sem saldo conciliado; confira o Financeiro antes de cobrar.</p>'}${orderRows}</article>`;
     }).join('');
@@ -332,7 +345,7 @@ function renderReportResults() {
     orders.forEach(order => order.items.forEach(item => { const row = rows.get(item.name) || { quantity: 0, total: 0 }; row.quantity += item.weightGrams ? 1 : item.quantity; row.total += item.quantity * item.priceCents; rows.set(item.name, row); }));
     detail = `<div class="report-table">${[...rows.entries()].sort((a, b) => b[1].total - a[1].total).map(([name, row]) => `<div><strong>${escapeHtml(name)}</strong><span>${row.quantity} itens</span><strong>${currency(row.total)}</strong></div>`).join('')}</div>`;
   } else {
-    detail = `<div class="report-table">${orders.slice().sort((a, b) => b.date.localeCompare(a.date)).map(order => `<div><strong>#${escapeHtml(order.id.slice(0, 8))} · ${escapeHtml(order.customer)}</strong><span>${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR')} · ${orderStateLabel(order)}</span><strong>${currency(orderTotal(order))}</strong></div>`).join('')}</div>`;
+    detail = `<div class="report-table">${orders.slice().sort((a, b) => b.date.localeCompare(a.date)).map(order => `<div><strong>#${escapeHtml(orderCode(order))} · ${escapeHtml(order.customer)}</strong><span>${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR')} · ${orderStateLabel(order)}</span><strong>${currency(orderTotal(order))}</strong></div>`).join('')}</div>`;
   }
   const body = `<article class="generated-report"><header><div><span>TRAMELI · RELATÓRIO</span><h2>${title}</h2><p>${period}</p></div><strong>${orders.length} pedidos</strong></header><div class="report-summary"><div><span>Pedidos</span><strong>${orders.length}</strong></div><div><span>Valor total</span><strong>${currency(total)}</strong></div></div>${orders.length ? detail : '<div class="friendly-empty"><strong>Nenhum dado neste período.</strong><span>Escolha outro intervalo para gerar o relatório.</span></div>'}</article>`;
   host.innerHTML = `${body}<div class="report-actions"><button class="screen-primary" type="button" data-report-print ${orders.length ? '' : 'disabled'}>Baixar PDF</button><button type="button" data-report-generate>Atualizar relatório</button></div>`;
@@ -520,7 +533,7 @@ function renderGlobalSearch() {
   const clients = [...new Set([...window.TrameliClients.list().map(client => client.name), ...storedOrders().map(order => order.customer)])].filter(name => name.toLocaleLowerCase('pt-BR').includes(query)).slice(0, 4);
   const products = (window.TrameliCatalog?.list() || []).filter(product => product.name.toLocaleLowerCase('pt-BR').includes(query)).slice(0, 4);
   const group = (title, rows) => rows.length ? `<section><h3>${title}</h3>${rows.join('')}</section>` : '';
-  globalSearchResults.innerHTML = group('Pedidos', orders.map(order => `<button type="button" data-global-order="${escapeHtml(order.id)}"><span>#${escapeHtml(order.id.slice(0, 8))} · ${escapeHtml(order.customer)}</span><small>${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR')}</small></button>`)) + group('Clientes', clients.map(name => `<button type="button" data-global-client="${escapeHtml(name)}"><span>${escapeHtml(name)}</span><small>Abrir clientes</small></button>`)) + group('Produtos', products.map(product => `<button type="button" data-global-product="${escapeHtml(product.id)}"><span>${escapeHtml(product.name)}</span><small>${currency(product.priceCents)}</small></button>`)) || '<p>Nenhum resultado encontrado.</p>';
+  globalSearchResults.innerHTML = group('Pedidos', orders.map(order => `<button type="button" data-global-order="${escapeHtml(order.id)}"><span>#${escapeHtml(orderCode(order))} · ${escapeHtml(order.customer)}</span><small>${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR')}</small></button>`)) + group('Clientes', clients.map(name => `<button type="button" data-global-client="${escapeHtml(name)}"><span>${escapeHtml(name)}</span><small>Abrir clientes</small></button>`)) + group('Produtos', products.map(product => `<button type="button" data-global-product="${escapeHtml(product.id)}"><span>${escapeHtml(product.name)}</span><small>${currency(product.priceCents)}</small></button>`)) || '<p>Nenhum resultado encontrado.</p>';
   globalSearchResults.hidden = false;
   globalSearchInput.setAttribute('aria-expanded', 'true');
 }
@@ -569,6 +582,7 @@ document.addEventListener('click', async event => {
     try {
       reportState.type = document.getElementById('report-type')?.value || reportState.type;
       reportState.period = document.getElementById('report-period')?.value || reportState.period;
+      reportState.customer = document.getElementById('report-customer')?.value || 'all';
       if (reportState.period !== 'custom') setReportPeriod();
       else { reportRange.from = document.getElementById('report-from')?.value || ''; reportRange.to = document.getElementById('report-to')?.value || ''; }
       if (live) await live.load(true);
@@ -599,9 +613,11 @@ document.addEventListener('click', async event => {
     let preview = document.querySelector('#report-results .generated-report');
     if (!preview) return;
     let clone = preview.cloneNode(true);
+    let selectedBillingKeys = null;
     if (reportState.type === 'billing') {
       const selected = new Set([...document.querySelectorAll('[data-billing-select]:checked')].map(input => input.value));
       if (!selected.size) { alert('Selecione ao menos um cliente para gerar o PDF.'); return; }
+      selectedBillingKeys = selected;
       clone.querySelectorAll('[data-billing-customer]').forEach(card => { if (!selected.has(card.dataset.billingCustomer)) card.remove(); });
       clone.querySelectorAll('.billing-toolbar, [data-billing-only], [data-billing-select]').forEach(node => node.remove());
     }
@@ -610,12 +626,21 @@ document.addEventListener('click', async event => {
     reportPrint.textContent = 'Preparando PDF...';
     try {
       const title = ({ financial: 'Resumo financeiro', sales: 'Vendas', customers: 'Clientes', billing: 'Cobrança detalhada', products: 'Produtos', orders: 'Pedidos', deliveries: 'Entregas' })[reportState.type];
-      const period = `${reportRange.from ? new Date(`${reportRange.from}T12:00:00`).toLocaleDateString('pt-BR') : 'Início'} — ${reportRange.to ? new Date(`${reportRange.to}T12:00:00`).toLocaleDateString('pt-BR') : 'Hoje'}`;
+      const period = reportPeriodLabel();
       const { downloadReportPdf } = await import('../src/report-pdf.js');
       await downloadReportPdf({
         title,
         period,
         text: clone.innerText,
+        billingCustomers: reportState.type === 'billing' ? reportBillingCustomers.filter(customer => selectedBillingKeys?.has(customer.key)).map(customer => ({
+          name: customer.name, totalCents: customer.total, paidCents: customer.paid, dueCents: customer.due,
+          orders: customer.orders.map(({ order, paid, due, reconciled }) => ({
+            date: order.date, code: orderCode(order), dueDate: billingDeadlineForDelivery(order.date),
+            status: !reconciled ? 'A conferir' : due <= 0 ? 'Pago' : paid > 0 ? 'Parcial' : 'Em aberto',
+            totalCents: orderTotal(order), paidCents: paid, dueCents: due,
+            items: order.items.map(item => ({ label: window.TrameliOrderMath.itemLabel(item), amountCents: item.weightGrams ? Number(item.priceCents || 0) : Number(item.quantity || 0) * Number(item.priceCents || 0) })),
+          })),
+        })) : null,
         businessName: readSettings().businessName || 'Trameli',
         filename: `trameli-${reportState.type}-${reportRange.from || 'inicio'}-${reportRange.to || saoPauloToday()}`,
       });
@@ -661,6 +686,10 @@ document.addEventListener('change', event => {
     if (custom) custom.hidden = reportState.period !== 'custom';
   }
   if (event.target.id === 'report-type') reportState.type = event.target.value;
+  if (event.target.id === 'report-customer') {
+    reportState.customer = event.target.value;
+    if (reportState.generated) renderReportResults();
+  }
   if (event.target.id === 'report-from' || event.target.id === 'report-to') {
     reportRange[event.target.id === 'report-from' ? 'from' : 'to'] = event.target.value;
     if (reportState.generated) renderReportResults();

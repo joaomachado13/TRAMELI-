@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { PDFDocument } from 'pdf-lib';
-import { createReportPdf } from '../src/report-pdf.js';
+import { createReportPdf, createBillingReportPdf } from '../src/report-pdf.js';
 
 const regular = await readFile(new URL('../assets/manrope-400.ttf', import.meta.url));
 const bold = await readFile(new URL('../assets/manrope-600.ttf', import.meta.url));
@@ -40,4 +40,21 @@ const longBytes = await createReportPdf({
 });
 const longPdf = await PDFDocument.load(longBytes);
 assert(longPdf.getPageCount() > 1);
+const billingBytes = await createBillingReportPdf({
+  title: 'Cobrança detalhada',
+  period: '01/10/2026 — 13/10/2026 · Cliente de teste',
+  customers: [{
+    name: 'Cliente de teste', totalCents: 250000, paidCents: 125000, dueCents: 125000,
+    orders: Array.from({ length: 24 }, (_, index) => ({
+      date: '2026-10-13', code: `TR-131026-${String(index + 1).padStart(3, '0')}`, dueDate: '2026-10-15',
+      status: index % 2 ? 'Pago' : 'Em aberto', totalCents: 10000, paidCents: 5000, dueCents: 5000,
+      items: Array.from({ length: 8 }, (_, item) => ({ label: `Produto ${item + 1} de um pedido grande`, amountCents: 1250 })),
+    })),
+  }],
+  businessName: 'Trameli', regular, bold,
+});
+const billingPdf = await PDFDocument.load(billingBytes);
+assert(billingPdf.getPageCount() > 1, 'Cobrança detalhada deve paginar sem cortar pedidos longos.');
+assert.equal(billingPdf.getTitle(), 'Trameli - Cobrança detalhada');
+
 console.log('Relatórios: PDF real, metadados e paginação OK.');

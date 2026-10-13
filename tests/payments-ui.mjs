@@ -55,6 +55,8 @@ try {
   assert.equal(await evaluate('paymentFixture.state.calls.filter(c=>c.name==="trameli_record_payment").length'),1);
   assert.equal(await evaluate('paymentFixture.state.calls.find(c=>c.name==="trameli_record_payment").args.p_amount_cents'),1200);
   assert.equal(await evaluate('paymentFixture.state.balances[0].payment_status'), 'paid');
+  assert.match(await evaluate('document.querySelector("[data-payment-content]").textContent'),/Histórico de pagamentos/);
+  assert.match(await evaluate('document.querySelector("[data-payment-content]").textContent'),/Recebimento confirmado/);
   assert.equal(await evaluate('!!document.querySelector("[data-pay-unknown]")'), false);
   assert.doesNotMatch(await evaluate('document.querySelector("[data-payment-content]").textContent'),/Sem cliente vinculado/);
   await evaluate('window.confirm=()=>true;document.querySelector("[data-day-close]").click()');

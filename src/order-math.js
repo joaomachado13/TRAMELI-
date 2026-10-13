@@ -1,14 +1,9 @@
 export const statusOf = order => order.status || (order.checked ? 'confirmed' : 'received');
 export const weightPriceCents = (pricePerKgCents, grams) => Math.round(pricePerKgCents * grams / 1000);
 export const itemLabel = item => item.weightGrams ? `${item.weightGrams} g de ${item.name}` : `${item.quantity}× ${item.name}`;
-export const labelsForPrint = orders => orders.flatMap(order => {
-  const parts = [];
-  for (let index = 0; index < order.items.length; index += 3) {
-    parts.push({ order, items: order.items.slice(index, index + 3),
-      part: Math.floor(index / 3) + 1, totalParts: Math.ceil(order.items.length / 3) });
-  }
-  return parts;
-});
+export const labelsForPrint = orders => orders
+  .filter(order => order && Array.isArray(order.items) && order.items.length > 0)
+  .map(order => ({ order, items: order.items, part: 1, totalParts: 1 }));
 export const subtotalCents = order => order.subtotalCents ?? order.items.reduce((sum, item) => sum + item.quantity * item.priceCents, 0);
 export const totalCents = order => order.totalCents ?? subtotalCents(order) + order.feeCents;
 export function summarizeDay(orders, date) {

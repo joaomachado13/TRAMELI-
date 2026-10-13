@@ -7,7 +7,7 @@ const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 export const enabled = Boolean(url && key && !url.includes('YOUR_PROJECT') && !key.includes('YOUR_PUBLISHABLE_KEY'));
 
 const mapOrder = row => ({
-  id: row.id, createdAt: row.created_at, updatedAt: row.updated_at, version: row.version,
+  id: row.id, publicCode: row.public_code || '', createdAt: row.created_at, updatedAt: row.updated_at, version: row.version,
   status: row.status, checked: row.status !== 'received',
   customerId: row.customer_id, source: row.source,
   customer: row.customer_name, phone: row.phone, address: row.address,
