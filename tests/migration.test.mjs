@@ -32,7 +32,7 @@ try {
   await db.exec(publicCodeMigration);
   const tables = await db.query(`select tablename from pg_tables where schemaname = 'public' and tablename like 'trameli_%' order by tablename`);
   assert.deepEqual(tables.rows.map(row => row.tablename), [
-    'trameli_operators', 'trameli_order_code_counters', 'trameli_order_costs', 'trameli_order_events', 'trameli_orders',
+    'trameli_operators', 'trameli_order_costs', 'trameli_order_events', 'trameli_orders',
     'trameli_product_costs', 'trameli_products', 'trameli_profiles',
   ]);
   await db.exec('set role anon');
@@ -40,7 +40,7 @@ try {
   assert.equal(publicProducts.rows[0].count, 79);
   await assert.rejects(db.query('select count(*) from public.trameli_orders'), /permission denied/);
   await assert.rejects(db.query('select count(*) from public.trameli_product_costs'), /permission denied/);
-  await assert.rejects(db.query('select count(*) from public.trameli_order_code_counters'), /permission denied/);
+  await assert.rejects(db.query('select count(*) from private.trameli_order_code_counters'), /permission denied/);
   await assert.rejects(db.query('select public.trameli_is_operator()'), /permission denied/);
   await assert.rejects(db.query('select public.trameli_audit_order()'), /permission denied/);
   await assert.rejects(db.query('select public.trameli_snapshot_order_costs()'), /permission denied/);
