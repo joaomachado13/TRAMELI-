@@ -99,6 +99,10 @@ try {
   await evaluate(`(() => { document.querySelector('.item-quantity').value='4'; document.querySelector('#order-form').requestSubmit(); })()`);
   assert(await evaluate('document.querySelector("#grand-total").textContent.includes("20,00")'), 'Edição não recalculou.');
   assert(await evaluate('window.TrameliOperation.preparePrint() && document.querySelectorAll(".print-label").length === 1 && document.querySelectorAll(".print-sheet").length === 1'), 'Ficha de impressão não foi criada em uma folha A4.');
+  const originalPrintSettings = await evaluate('localStorage.getItem("trameli-print-settings-70x33-v1")');
+  await evaluate('localStorage.setItem("trameli-print-settings-70x33-v1", JSON.stringify({offsetX:1.5,offsetY:-1})); window.TrameliOperation.preparePrint();');
+  assert(await evaluate('document.querySelector("#print-document").style.getPropertyValue("--print-offset-x") === "1.5mm" && document.querySelector("#print-document").style.getPropertyValue("--print-offset-y") === "-1mm"'), 'A calibração salva não foi aplicada na impressão sem recarregar a página.');
+  await evaluate(`(() => { const value=${JSON.stringify(originalPrintSettings)}; if (value === null) localStorage.removeItem('trameli-print-settings-70x33-v1'); else localStorage.setItem('trameli-print-settings-70x33-v1', value); window.TrameliOperation.preparePrint(); })()`);
   await send('Emulation.setEmulatedMedia', { media: 'print' });
   assert(await evaluate('getComputedStyle(document.querySelector(".nav")).display === "none" && getComputedStyle(document.querySelector("#print-document")).display === "block"'), 'Layout de impressão integrado não isolou as fichas.');
   assert(await evaluate('(() => { const sheet=document.querySelector(".print-sheet"); const style=getComputedStyle(sheet); return Math.abs(parseFloat(style.width)-210*96/25.4)<1 && Math.abs(parseFloat(style.height)-297*96/25.4)<1 && style.gridTemplateColumns.split(" ").length===3 && style.gridTemplateRows.split(" ").length===9; })()'), 'Folha de impressão não respeitou A4 com grade 3 × 9 de etiquetas.');
