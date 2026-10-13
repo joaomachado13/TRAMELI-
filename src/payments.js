@@ -172,6 +172,11 @@ export function initPayments(live) {
       <strong>${money(row.due_cents)}</strong>
     </label>`).join('')}</div>`;
   };
+  const identifyOrders = (rows, paymentAmountCents) => `<div class="payment-review-orders">${rows.filter(row=>Number(row.due_cents)>0).map(row=>`<label class="payment-review-order payment-review-order--identify">
+    <input type="checkbox" data-allocation="${esc(row.order_id)}" data-due="${Number(row.due_cents)}">
+    <span><strong>Pedido #${orderCode(row.order_id)}</strong><small>${dateLabel(row.delivery_date)} · saldo ${money(row.due_cents)}</small></span>
+    <span class="payment-identify-amount"><small>Valor vinculado (R$)</small><input type="number" data-identify-amount="${esc(row.order_id)}" min="0.01" max="${(Number(row.due_cents)/100).toFixed(2)}" step="0.01" value="${(Math.min(Number(row.due_cents),Number(paymentAmountCents))/100).toFixed(2)}" disabled></span>
+  </label>`).join('')}</div>`;
   async function openAccount(paymentId=null,intentId=null) {
     await refresh();
     if(warning()) {notify(warning());return;}
@@ -217,7 +222,7 @@ export function initPayments(live) {
     const groups = [...new Map(openRows.map(row => [groupKey(row), row])).entries()];
     if (!groups.length) { notify('Não há pedidos com saldo em aberto para vincular este pagamento.'); return; }
     const firstGroup = groups[0][0];
-    open(`<div class="payment-dialog__heading payment-dialog__heading--clean"><div><span class="screen-eyebrow">IDENTIFICAR RECEBIMENTO</span><h2>${money(payment.amount_cents)}</h2><p>Escolha o cliente e selecione pedidos que somem exatamente o valor recebido.</p></div></div><form class="payment-review-form" data-payment-form="identify" data-payment-id="${payment.id}" data-unidentified="true" data-amount-cents="${payment.amount_cents}"><label class="payment-method-simple">Cliente<select name="identifyGroup" data-identify-customer>${groups.map(([key,row])=>`<option value="${esc(key)}">${esc(groupLabel(row))}</option>`).join('')}</select></label><div data-identify-orders>${reviewOrders(openRows.filter(row=>groupKey(row)===firstGroup))}</div><div class="payment-review-footer"><span>Valor selecionado</span><strong data-allocation-total>R$ 0,00</strong></div><p class="payment-error" role="alert"></p><button class="payment-confirm-primary" type="submit">Vincular pagamento</button></form>`);
+    open(`<div class="payment-dialog__heading payment-dialog__heading--clean"><div><span class="screen-eyebrow">IDENTIFICAR RECEBIMENTO</span><h2>${money(payment.amount_cents)}</h2><p>Escolha o cliente e selecione pedidos que somem exatamente o valor recebido.</p></div></div><form class="payment-review-form" data-payment-form="identify" data-payment-id="${payment.id}" data-unidentified="true" data-amount-cents="${payment.amount_cents}"><label class="payment-method-simple">Cliente<select name="identifyGroup" data-identify-customer>${groups.map(([key,row])=>`<option value="${esc(key)}">${esc(groupLabel(row))}</option>`).join('')}</select></label><div data-identify-orders>${identifyOrders(openRows.filter(row=>groupKey(row)===firstGroup),payment.amount_cents)}</div><div class="payment-review-footer"><span>Valor selecionado</span><strong data-allocation-total>R$ 0,00</strong></div><p class="payment-error" role="alert"></p><button class="payment-confirm-primary" type="submit">Vincular pagamento</button></form>`);
     dialog.dispatchEvent(new Event('change'));
   }
   function snapshotHtml(s) {
@@ -265,7 +270,12 @@ export function initPayments(live) {
       if(form.dataset.paymentForm==='refund') {
         name='trameli_refund_payment';args=requestArgs(form,{p_payment_id:form.dataset.paymentId,p_reason:form.elements.reason.value.trim()});
       } else {
-        const lines=[...form.querySelectorAll('[data-allocation]:checked')].map(input=>({order_id:input.dataset.allocation,amount_cents:Number(input.dataset.due)}));
+        const lines=[...form.querySelectorAll('[data-allocation]:checked')].map(input=>{
+        const amountInput=form.dataset.unidentified==='true'?form.querySelector(`[data-identify-amount="${input.dataset.allocation}"]`):null;
+        const amount_cents=amountInput?Math.round(Number(amountInput.value)*100):Number(input.dataset.due);
+        if(!Number.isInteger(amount_cents)||amount_cents<1||amount_cents>Number(input.dataset.due)) throw new Error(`O valor vinculado ao pedido #${orderCode(input.dataset.allocation)} precisa estar entre R$ 0,01 e ${money(Number(input.dataset.due))}.`);
+        return {order_id:input.dataset.allocation,amount_cents};
+      });
         if(form.dataset.paymentForm==='identify') {
           if(form.dataset.unidentified==='true' && lines.reduce((sum,line)=>sum+line.amount_cents,0)!==Number(form.dataset.amountCents)) throw new Error(`Os pedidos selecionados precisam totalizar ${money(Number(form.dataset.amountCents))}.`);
           name='trameli_identify_payment';args={p_payment_id:form.dataset.paymentId,p_lines:lines};
@@ -290,10 +300,19 @@ export function initPayments(live) {
   dialog.addEventListener('change',event=>{
     if(event.target.matches('[data-identify-customer]')) {
       const host=dialog.querySelector('[data-identify-orders]');
-      if(host) host.innerHTML=reviewOrders(api.balances.filter(row=>groupKey(row)===event.target.value && Number(row.due_cents)>0));
+      const form=dialog.querySelector('[data-payment-form]');
+      if(host) host.innerHTML=identifyOrders(api.balances.filter(row=>groupKey(row)===event.target.value && Number(row.due_cents)>0),Number(form?.dataset.amountCents||0));
+    }
+    if(event.target.matches('[data-allocation]')) {
+      const amountInput=dialog.querySelector(`[data-identify-amount="${event.target.dataset.allocation}"]`);
+      if(amountInput) amountInput.disabled=!event.target.checked;
     }
     const total=dialog.querySelector('[data-allocation-total]');if(!total)return;
-    total.textContent=money([...dialog.querySelectorAll('[data-allocation]:checked')].reduce((sum,input)=>sum+Number(input.dataset.due),0));
+    const form=dialog.querySelector('[data-payment-form]');
+    total.textContent=money([...dialog.querySelectorAll('[data-allocation]:checked')].reduce((sum,input)=>{
+      const amountInput=form?.dataset.unidentified==='true'?form.querySelector(`[data-identify-amount="${input.dataset.allocation}"]`):null;
+      return sum+(amountInput?Math.round(Number(amountInput.value)*100):Number(input.dataset.due));
+    },0));
   });
   document.addEventListener('change',event=>{
     if(event.target.matches('[data-payment-group]'))selectedGroup=event.target.value;
