@@ -102,29 +102,38 @@ try {
   await send('Emulation.setEmulatedMedia', { media: 'print' });
   assert(await evaluate('getComputedStyle(document.querySelector(".nav")).display === "none" && getComputedStyle(document.querySelector("#print-document")).display === "block"'), 'Layout de impressão integrado não isolou as fichas.');
   assert(await evaluate('(() => { const sheet=document.querySelector(".print-sheet"); const style=getComputedStyle(sheet); return Math.abs(parseFloat(style.width)-210*96/25.4)<1 && Math.abs(parseFloat(style.height)-297*96/25.4)<1 && style.gridTemplateColumns.split(" ").length===3 && style.gridTemplateRows.split(" ").length===9; })()'), 'Folha de impressão não respeitou A4 com grade 3 × 9 de etiquetas.');
+  const originalOrders = await evaluate('localStorage.getItem("trameli-operation-draft-v2")');
   const paginationCheck = await evaluate(`(() => {
     const storageKey='trameli-operation-draft-v2';
-    const original=localStorage.getItem(storageKey);
-    const base=JSON.parse(original)[0];
+    const base=JSON.parse(localStorage.getItem(storageKey))[0];
     const many=Array.from({length:28},(_,index)=>({...base,id:'print-sheet-test-'+index,customer:'Cliente teste '+(index+1),status:'received',items:base.items.map(item=>({...item}))}));
     localStorage.setItem(storageKey,JSON.stringify(many));
     window.dispatchEvent(new Event('trameli:orders-changed'));
     window.TrameliOperation.preparePrint();
-    const sheets=document.querySelectorAll('.print-sheet').length;
-    const labels=document.querySelectorAll('.print-label').length;
+    return {sheets:document.querySelectorAll('.print-sheet').length,labels:document.querySelectorAll('.print-label').length};
+  })()`);
+  assert(paginationCheck.sheets === 2 && paginationCheck.labels === 28, `A impressão não distribuiu 28 etiquetas em 2 folhas A4: ${JSON.stringify(paginationCheck)}`);
+  const labelsPdfResult = await send('Page.printToPDF', { printBackground: true, preferCSSPageSize: true, displayHeaderFooter: false });
+  const labelsPdf = await PDFDocument.load(Buffer.from(labelsPdfResult.data, 'base64'));
+  assert(labelsPdf.getPageCount() === 2, `28 etiquetas deveriam ocupar exatamente 2 páginas A4, mas geraram ${labelsPdf.getPageCount()}.`);
+  const longOrderCheck = await evaluate(`(() => {
+    const storageKey='trameli-operation-draft-v2';
+    const base=JSON.parse(localStorage.getItem(storageKey))[0];
     const oversized={...base,id:'print-long-order-test',status:'received',items:Array.from({length:18},(_,index)=>({name:'Produto de teste '+(index+1),quantity:1,priceCents:100}))};
     localStorage.setItem(storageKey,JSON.stringify([oversized]));
     window.dispatchEvent(new Event('trameli:orders-changed'));
     window.TrameliOperation.preparePrint();
-    const splitLabels=document.querySelectorAll('.print-label').length;
-    const numbered=Array.from(document.querySelectorAll('.print-label__top span')).some(node=>node.textContent.includes('1/')) && Array.from(document.querySelectorAll('.print-label__top span')).some(node=>node.textContent.includes('2/'));
-    localStorage.setItem(storageKey,original);
-    window.dispatchEvent(new Event('trameli:orders-changed'));
-    window.TrameliOperation.preparePrint();
-    return {sheets,labels,splitLabels,numbered};
+    return {
+      labels:document.querySelectorAll('.print-label').length,
+      numbered:Array.from(document.querySelectorAll('.print-label__top span')).some(node=>node.textContent.includes('1/')) &&
+        Array.from(document.querySelectorAll('.print-label__top span')).some(node=>node.textContent.includes('2/'))
+    };
   })()`);
-  assert(paginationCheck.sheets === 2 && paginationCheck.labels === 28, `A impressão não distribuiu 28 etiquetas em 2 folhas A4: ${JSON.stringify(paginationCheck)}`);
-  assert(paginationCheck.splitLabels > 1 && paginationCheck.numbered, `Pedido longo não foi dividido em etiquetas numeradas: ${JSON.stringify(paginationCheck)}`);
+  assert(longOrderCheck.labels > 1 && longOrderCheck.numbered, `Pedido longo não foi dividido em etiquetas numeradas: ${JSON.stringify(longOrderCheck)}`);
+  const longPdfResult = await send('Page.printToPDF', { printBackground: true, preferCSSPageSize: true, displayHeaderFooter: false });
+  const longPdf = await PDFDocument.load(Buffer.from(longPdfResult.data, 'base64'));
+  assert(longPdf.getPageCount() === 1, `As partes de um pedido longo deveriam caber na mesma folha A4, mas geraram ${longPdf.getPageCount()} páginas.`);
+  await evaluate(`(() => { localStorage.setItem('trameli-operation-draft-v2', ${JSON.stringify(originalOrders)}); window.dispatchEvent(new Event('trameli:orders-changed')); window.TrameliOperation.preparePrint(); })()`);
   await send('Emulation.setEmulatedMedia', { media: 'screen' });
   const image = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
   await writeFile(shot, Buffer.from(image.data, 'base64'));
