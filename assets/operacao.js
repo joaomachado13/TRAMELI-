@@ -500,27 +500,96 @@ function preparePrint() {
   const printHost = document.getElementById('print-document');
   printHost.style.setProperty('--print-offset-x', `${printSettings.offsetX}mm`);
   printHost.style.setProperty('--print-offset-y', `${printSettings.offsetY}mm`);
+
+  const LABEL_HEIGHT_MM = 33;
   const estimateLines = (value, charsPerLine) => {
     const text = String(value || '');
     if (!text) return 0;
     return text.split(/\r?\n/).reduce((sum, line) => sum + Math.max(1, Math.ceil(line.length / charsPerLine)), 0);
   };
-  const prepared = labels.map(label => {
-    const customerLines = Math.max(1, estimateLines(label.order.customer, 30));
-    const addressLines = estimateLines(label.order.address, 54);
-    const itemLines = label.items.reduce((sum, item) => sum + Math.max(1, estimateLines(itemLabel(item), 54)), 0);
-    const noteLines = estimateLines(label.order.notes, 54);
-    // Altura variável: uma etiqueta por pedido, sem desperdiçar espaço em folha A4.
-    const height = Math.max(12, Math.ceil(
+  const estimateLabelHeight = (order, items, includeAddress, includeNotes, includeTotal) => {
+    const customerLines = Math.max(1, estimateLines(order.customer, 30));
+    const addressLines = includeAddress ? estimateLines(order.address, 54) : 0;
+    const itemLines = items.reduce((sum, item) => sum + Math.max(1, estimateLines(itemLabel(item), 54)), 0);
+    const noteLines = includeNotes ? estimateLines(order.notes, 54) : 0;
+    return Math.max(12, Math.ceil(
       3.2 + customerLines * 2.6 +
       (addressLines ? 0.4 + addressLines * 2.15 : 0) +
       0.4 + itemLines * 2.15 +
       (noteLines ? 0.4 + noteLines * 1.95 : 0) +
-      0.4 + 2.2 + 0.8
+      (includeTotal ? 0.4 + 2.2 + 0.8 : 0)
     ));
-    return { ...label, height };
-  });
-  printHost.innerHTML = `<div class="print-roll">${prepared.map(({ order, items, height }) => `<article class="print-label" style="--label-height:${height}mm"><div class="print-label__content"><div class="print-label__top"><strong>${escapeHtml(order.customer)}</strong><span>${escapeHtml(orderCode(order))}</span></div>${order.address ? `<p>${escapeHtml(order.address)}</p>` : ''}<ul>${items.map(item => `<li>${escapeHtml(itemLabel(item))}</li>`).join('')}</ul>${order.notes ? `<small>Obs.: ${escapeHtml(order.notes)}</small>` : ''}<footer>Total: ${money(orderTotal(order))}</footer></div></article>`).join('')}</div>`;
+  };
+
+  const scaleForHeight = naturalHeight => naturalHeight > LABEL_HEIGHT_MM
+    ? Math.max(0.55, (LABEL_HEIGHT_MM - 3.2) / Math.max(1, naturalHeight - 3.2))
+    : 1;
+  const MIN_READABLE_SCALE = 0.78;
+
+  const prepareOrderLabels = order => {
+    const chunks = [order.items.slice()];
+    let attempts = 0;
+    while (attempts++ < Math.max(8, order.items.length * 2)) {
+      const overflowIndex = chunks.findIndex((items, index) => {
+        const isFirst = index === 0;
+        const isLast = index === chunks.length - 1;
+        return items.length > 1 &&
+          scaleForHeight(estimateLabelHeight(order, items, isFirst, isLast, isLast)) < MIN_READABLE_SCALE;
+      });
+      if (overflowIndex < 0) break;
+
+      const current = chunks[overflowIndex];
+      const weights = current.map(item => Math.max(1, estimateLines(itemLabel(item), 54)));
+      const totalLines = weights.reduce((sum, weight) => sum + weight, 0);
+      let accumulated = 0;
+      let splitAt = 1;
+      let bestDifference = Infinity;
+      for (let index = 1; index < weights.length; index++) {
+        accumulated += weights[index - 1];
+        const difference = Math.abs(totalLines / 2 - accumulated);
+        if (difference < bestDifference) {
+          bestDifference = difference;
+          splitAt = index;
+        }
+      }
+      chunks.splice(overflowIndex, 1, current.slice(0, splitAt), current.slice(splitAt));
+    }
+
+    return chunks.map((items, index) => {
+      const includeAddress = index === 0;
+      const isLast = index === chunks.length - 1;
+      const naturalHeight = estimateLabelHeight(order, items, includeAddress, isLast, isLast);
+      const scale = scaleForHeight(naturalHeight);
+      return {
+        order, items, part: index + 1, totalParts: chunks.length, scale,
+        includeAddress, includeNotes: isLast && Boolean(order.notes), includeTotal: isLast
+      };
+    });
+  };
+
+  const prepared = labels.flatMap(label => prepareOrderLabels(label.order));
+  const renderLabel = ({ order, items, part, totalParts, scale, includeAddress, includeNotes, includeTotal }) => {
+    const partText = totalParts > 1 ? ' · ' + part + '/' + totalParts : '';
+    const style = [
+      'height:' + LABEL_HEIGHT_MM + 'mm',
+      '--label-body-size:' + (5.8 * scale).toFixed(2) + 'pt',
+      '--label-header-size:' + (7 * scale).toFixed(2) + 'pt',
+      '--label-code-size:' + (5.5 * scale).toFixed(2) + 'pt',
+      '--label-small-size:' + (5.3 * scale).toFixed(2) + 'pt',
+      '--label-total-size:' + (6 * scale).toFixed(2) + 'pt',
+      '--label-line-height:' + Math.max(0.82, 1.05 * scale).toFixed(2)
+    ].join(';');
+    return '<article class="print-label" style="' + style + '"><div class="print-label__content">' +
+      '<div class="print-label__top"><strong>' + escapeHtml(order.customer) + '</strong><span>' +
+      escapeHtml(orderCode(order)) + partText + '</span></div>' +
+      (includeAddress && order.address ? '<p>' + escapeHtml(order.address) + '</p>' : '') +
+      '<ul>' + items.map(item => '<li>' + escapeHtml(itemLabel(item)) + '</li>').join('') + '</ul>' +
+      (includeNotes && order.notes ? '<small>Obs.: ' + escapeHtml(order.notes) + '</small>' : '') +
+      (includeTotal ? '<footer>Total: ' + money(orderTotal(order)) + '</footer>' : '') +
+      '</div></article>';
+  };
+
+  printHost.innerHTML = '<div class="print-roll">' + prepared.map(renderLabel).join('') + '</div>';
   return true;
 }
 
