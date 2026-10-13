@@ -500,28 +500,27 @@ function preparePrint() {
   const printHost = document.getElementById('print-document');
   printHost.style.setProperty('--print-offset-x', `${printSettings.offsetX}mm`);
   printHost.style.setProperty('--print-offset-y', `${printSettings.offsetY}mm`);
-  const pageHeight = 277;
+  const estimateLines = (value, charsPerLine) => {
+    const text = String(value || '');
+    if (!text) return 0;
+    return text.split(/\\r?\\n/).reduce((sum, line) => sum + Math.max(1, Math.ceil(line.length / charsPerLine)), 0);
+  };
   const prepared = labels.map(label => {
-    const addressLines = Math.max(1, Math.ceil(String(label.order.address || '').length / 34));
-    const itemLines = label.items.reduce((sum, item) => sum + Math.max(1, Math.ceil(itemLabel(item).length / 31)), 0);
-    const noteLines = label.order.notes ? Math.max(1, Math.ceil(label.order.notes.length / 34)) : 0;
-    const height = Math.max(33, Math.ceil(20 + (addressLines + itemLines + noteLines) * 3.2));
+    const customerLines = Math.max(1, estimateLines(label.order.customer, 30));
+    const addressLines = estimateLines(label.order.address, 54);
+    const itemLines = label.items.reduce((sum, item) => sum + Math.max(1, estimateLines(itemLabel(item), 54)), 0);
+    const noteLines = estimateLines(label.order.notes, 54);
+    // Altura variável: uma etiqueta por pedido, sem desperdiçar espaço em folha A4.
+    const height = Math.max(12, Math.ceil(
+      3.2 + customerLines * 2.6 +
+      (addressLines ? 0.4 + addressLines * 2.15 : 0) +
+      0.4 + itemLines * 2.15 +
+      (noteLines ? 0.4 + noteLines * 1.95 : 0) +
+      0.4 + 2.2 + 0.8
+    ));
     return { ...label, height };
   });
-  const pages = [];
-  let pageLabels = [];
-  let usedHeight = 0;
-  for (const label of prepared) {
-    if (pageLabels.length && usedHeight + label.height + 3 > pageHeight) {
-      pages.push(pageLabels);
-      pageLabels = [];
-      usedHeight = 0;
-    }
-    pageLabels.push(label);
-    usedHeight += label.height + 3;
-  }
-  if (pageLabels.length) pages.push(pageLabels);
-  printHost.innerHTML = pages.map(page => `<section class="print-page"><div class="print-grid">${page.map(({ order, items, height }) => `<article class="print-label" style="--label-height:${height}mm"><div class="print-label__content"><div class="print-label__top"><strong>${escapeHtml(order.customer)}</strong><span>${escapeHtml(orderCode(order))}</span></div><p>${escapeHtml(order.address)}</p><ul>${items.map(item => `<li>${escapeHtml(itemLabel(item))}</li>`).join('')}</ul>${order.notes ? `<small>Obs.: ${escapeHtml(order.notes)}</small>` : ''}<footer>Total: ${money(orderTotal(order))}</footer></div></article>`).join('')}</div></section>`).join('');
+  printHost.innerHTML = `<div class="print-roll">${prepared.map(({ order, items, height }) => `<article class="print-label" style="--label-height:${height}mm"><div class="print-label__content"><div class="print-label__top"><strong>${escapeHtml(order.customer)}</strong><span>${escapeHtml(orderCode(order))}</span></div>${order.address ? `<p>${escapeHtml(order.address)}</p>` : ''}<ul>${items.map(item => `<li>${escapeHtml(itemLabel(item))}</li>`).join('')}</ul>${order.notes ? `<small>Obs.: ${escapeHtml(order.notes)}</small>` : ''}<footer>Total: ${money(orderTotal(order))}</footer></div></article>`).join('')}</div>`;
   return true;
 }
 
