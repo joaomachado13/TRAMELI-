@@ -22,7 +22,7 @@ export class PaymentsApi {
         const c = this.live.client;
         const balances = await this.rows(() => c.rpc('trameli_payment_balances'), ['order_id']);
         const statement = await this.rows(() => c.rpc('trameli_payment_statement'), ['payment_id', 'order_id']);
-        const payments = this.live.operator ? await this.rows(() => c.from('trameli_payments').select('id,kind,amount_cents,method,reference,note,reverses_id,recorded_at'), ['id']) : [];
+        const payments = this.live.operator ? await this.rows(() => c.from('trameli_payments').select('id,kind,amount_cents,method,reference,note,reverses_id,actor_id,recorded_at'), ['id']) : [];
         const allocations = this.live.operator ? await this.rows(() => c.from('trameli_payment_allocations').select('payment_id,order_id,amount_cents'), ['payment_id', 'order_id']) : [];
         const intentResult = await c.from('trameli_payment_intents').select('id,customer_id,order_ids,amount_cents,status,created_at,resolved_at').order('created_at',{ascending:false}).limit(500);
         if (intentResult.error && intentResult.error.code !== 'PGRST205') throw intentResult.error;
