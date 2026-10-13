@@ -8,7 +8,6 @@ const labels = { open:'Em aberto', partial:'Parcialmente pago', paid:'Pago', ref
 const orderLabels = { received:'A conferir', confirmed:'Conferido', packing:'Em separação', ready:'Pronto', delivered:'Entregue', cancelled:'Cancelado' };
 const methods = { pix_manual:'Pix conferido manualmente', cash:'Dinheiro', bank:'Transferência', other:'Acordado com a proprietária' };
 const short = id => String(id).slice(0,8);
-  const orderCode = id => window.TrameliLive?.orders?.find(order => order.id === id)?.publicCode || short(id);
 const today = () => new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 const dateLabel = date => new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR');
 const timestamp = value => new Date(value).toLocaleString('pt-BR');
@@ -29,6 +28,7 @@ const totals = rows => rows.reduce((sum,row) => {
 
 export function initPayments(live) {
   const api = live ? new PaymentsApi(live) : null;
+  const orderCode = id => live?.orders?.find(order => order.id === id)?.publicCode || short(id);
   let selectedDay=today(), selectedGroup='', selectedOrderIds=null, dayRevision=0;
   const dialog=document.createElement('dialog'); dialog.className='payment-dialog';
   dialog.setAttribute('aria-label','Recebimentos e conta do cliente'); document.body.append(dialog);
