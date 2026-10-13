@@ -107,12 +107,12 @@ export async function createBillingReportPdf({ title = 'Cobrança detalhada', pe
   };
   newPage();
   for (const customer of customers) {
-    ensureSpace(72);
-    page.drawRectangle({ x: MARGIN, y: y - 25, width: WIDTH - 2 * MARGIN, height: 29, color: pale });
-    const customerName = wrap(strong, customer.name || 'Cliente', 10, WIDTH - 2 * MARGIN - 20)[0] || 'Cliente';
-    page.drawText(customerName, { x: MARGIN + 10, y: y - 16, size: 10, font: strong, color: ink });
-    page.drawText(`${(customer.orders || []).length} ${(customer.orders || []).length === 1 ? 'pedido' : 'pedidos'}`, { x: WIDTH - MARGIN - 84, y: y - 16, size: 8, font, color: muted });
-    y -= 36;
+    ensureSpace(82);
+    page.drawRectangle({ x: MARGIN, y: y - 34, width: WIDTH - 2 * MARGIN, height: 38, color: pale });
+    const customerNameLines = wrap(strong, customer.name || 'Cliente', 10, WIDTH - 2 * MARGIN - 110).slice(0, 2);
+    customerNameLines.forEach((line, index) => page.drawText(line, { x: MARGIN + 10, y: y - 14 - index * 12, size: 10, font: strong, color: ink }));
+    page.drawText(`${(customer.orders || []).length} ${(customer.orders || []).length === 1 ? 'pedido' : 'pedidos'}`, { x: WIDTH - MARGIN - 84, y: y - 14, size: 8, font, color: muted });
+    y -= 45;
     const colWidth = (WIDTH - 2 * MARGIN) / 3;
     const summary = [
       ['Compras', customer.totalCents],
