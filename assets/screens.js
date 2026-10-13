@@ -237,7 +237,7 @@ const pages = {
     const customers = [...new Set(all.map(order => order.customer))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
     const paymentLabels = { pix_manual: 'Pix', cash: 'Dinheiro', other: 'Acordado com a proprietária', bank: 'Transferência', unspecified: 'Não informado' };
     const normalized = orderFilters.query.trim().toLocaleLowerCase('pt-BR');
-    const orders = all.filter(order => (!normalized || [order.id, order.customer, order.address, ...order.items.map(item => item.name)].some(value => String(value).toLocaleLowerCase('pt-BR').includes(normalized)))
+    const orders = all.filter(order => (!normalized || [order.id, orderCode(order), order.customer, order.address, ...order.items.map(item => item.name)].some(value => String(value).toLocaleLowerCase('pt-BR').includes(normalized)))
       && (orderFilters.customer === 'all' || order.customer === orderFilters.customer)
       && (orderFilters.status === 'all' || orderState(order) === orderFilters.status)
       && (orderFilters.payment === 'all' || (order.paymentMethod || 'unspecified') === orderFilters.payment)
