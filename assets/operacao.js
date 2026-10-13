@@ -503,7 +503,7 @@ function preparePrint() {
   const estimateLines = (value, charsPerLine) => {
     const text = String(value || '');
     if (!text) return 0;
-    return text.split(/\\r?\\n/).reduce((sum, line) => sum + Math.max(1, Math.ceil(line.length / charsPerLine)), 0);
+    return text.split(/\r?\n/).reduce((sum, line) => sum + Math.max(1, Math.ceil(line.length / charsPerLine)), 0);
   };
   const prepared = labels.map(label => {
     const customerLines = Math.max(1, estimateLines(label.order.customer, 30));
