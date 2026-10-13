@@ -521,6 +521,11 @@ function preparePrint() {
     ));
   };
 
+  const scaleForHeight = naturalHeight => naturalHeight > LABEL_HEIGHT_MM
+    ? Math.max(0.55, (LABEL_HEIGHT_MM - 3.2) / Math.max(1, naturalHeight - 3.2))
+    : 1;
+  const MIN_READABLE_SCALE = 0.78;
+
   const prepareOrderLabels = order => {
     const chunks = [order.items.slice()];
     let attempts = 0;
@@ -529,7 +534,7 @@ function preparePrint() {
         const isFirst = index === 0;
         const isLast = index === chunks.length - 1;
         return items.length > 1 &&
-          estimateLabelHeight(order, items, isFirst, isLast, isLast) > LABEL_HEIGHT_MM;
+          scaleForHeight(estimateLabelHeight(order, items, isFirst, isLast, isLast)) < MIN_READABLE_SCALE;
       });
       if (overflowIndex < 0) break;
 
@@ -554,9 +559,7 @@ function preparePrint() {
       const includeAddress = index === 0;
       const isLast = index === chunks.length - 1;
       const naturalHeight = estimateLabelHeight(order, items, includeAddress, isLast, isLast);
-      const scale = naturalHeight > LABEL_HEIGHT_MM
-        ? Math.max(0.55, (LABEL_HEIGHT_MM - 3.2) / Math.max(1, naturalHeight - 3.2))
-        : 1;
+      const scale = scaleForHeight(naturalHeight);
       return {
         order, items, part: index + 1, totalParts: chunks.length, scale,
         includeAddress, includeNotes: isLast && Boolean(order.notes), includeTotal: isLast
