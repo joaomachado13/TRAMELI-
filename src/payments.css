@@ -507,3 +507,10 @@
 #screen-view .payment-ledger-entry .payment-history-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}
 #screen-view .payment-ledger-entry .payment-history-actions button{padding:6px 8px;border:1px solid var(--color-border);border-radius:7px;background:var(--color-surface);color:var(--color-text-primary);font:inherit;font-size:.67rem}
 @media(max-width:900px){#screen-view .payment-ledger-entry{grid-template-columns:1fr auto}#screen-view .payment-ledger-entry__details{grid-column:1/-1;grid-row:2}#screen-view .payment-ledger-entry .payment-history-actions{grid-column:1/-1;justify-content:flex-start}}
+
+
+.payment-review-order--identify{grid-template-columns:20px minmax(0,1fr) minmax(112px,145px)}
+.payment-identify-amount{display:grid;gap:4px;color:var(--color-text-secondary);font-size:.64rem}
+.payment-identify-amount input{width:100%;min-width:0;min-height:34px;padding:6px 8px;border:1px solid var(--color-border);border-radius:7px;background:var(--color-background);color:var(--color-text-primary);font:inherit;font-size:.75rem}
+.payment-identify-amount input:disabled{opacity:.5}
+@media(max-width:520px){.payment-review-order--identify{grid-template-columns:20px minmax(0,1fr)}.payment-review-order--identify .payment-identify-amount{grid-column:2}}
