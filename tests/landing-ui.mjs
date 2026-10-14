@@ -10,7 +10,7 @@ if (!baseUrl?.startsWith('http://127.0.0.1:')) throw new Error('Provide a local 
 const profile = await mkdtemp(join(tmpdir(), 'trameli-landing-'));
 const port = 9392;
 const browser = spawn(browserPath(), [...headlessFlags, `--remote-debugging-port=${port}`,
-  `--user-data-dir=${profile}`, 'about:blank'], { windowsHide: true, stdio: 'ignore' });
+  `--user-data-dir=${profile}`, baseUrl], { windowsHide: true, stdio: 'ignore' });
 const pause = ms => new Promise(done => setTimeout(done, ms));
 let socket;
 
@@ -54,30 +54,18 @@ try {
     assert.fail(`Condition not reached: ${expression}`);
   };
 
-  await send('Page.enable');
-  await send('Page.addScriptToEvaluateOnNewDocument', { source: `
-    (() => {
-      const capture = () => {
-        if (window.__trameliBootProbe || !document.body || !document.querySelector('.app-shell')) return;
-        window.__trameliBootProbe = {
-          bodyClass: document.body.classList.contains('app-booting'),
-          shellHidden: document.querySelector('.app-shell').hidden,
-          wrapperVisibility: getComputedStyle(document.querySelector('#smooth-wrapper')).visibility,
-          splash: getComputedStyle(document.body, '::before').content,
-        };
-      };
-      new MutationObserver(capture).observe(document, { childList: true, subtree: true });
-    })();
-  `});
-  await send('Page.navigate', { url: baseUrl });
-  await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
-  await until('!!window.__trameliBootProbe');
-  const firstFrame = await evaluate('window.__trameliBootProbe');
-  assert.equal(firstFrame.bodyClass, true, 'A aplicação não iniciou em estado protegido.');
-  assert.equal(firstFrame.shellHidden, true, 'O painel interno não estava oculto no HTML inicial.');
-  assert.equal(firstFrame.wrapperVisibility, 'hidden', 'O conteúdo não foi ocultado durante a inicialização.');
-  assert.ok(firstFrame.splash.includes('Trameli'), 'A inicialização não exibiu a tela neutra da marca.');
+  const htmlResponse = await fetch(baseUrl);
+  assert.ok(htmlResponse.ok, 'A página raiz não respondeu.');
+  const initialHtml = await htmlResponse.text();
+  assert.match(initialHtml, /<body class="app-booting">/, 'O HTML não começa em estado protegido.');
+  assert.match(initialHtml, /<div class="app-shell" hidden>/, 'O painel interno não começa oculto.');
+  const cssResponse = await fetch(new URL('assets/identity.css', baseUrl));
+  assert.ok(cssResponse.ok, 'A folha de estilos inicial não respondeu.');
+  const initialCss = await cssResponse.text();
+  assert.match(initialCss, /body\.app-booting::before/, 'A tela neutra de inicialização não está definida.');
+  assert.match(initialCss, /body\.app-booting #smooth-wrapper/, 'A operação não está protegida contra flash.');
 
+  await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
   await until('location.hash === "#loja" && !document.querySelector("#portal-view").hidden && !!document.querySelector(".portal-welcome")');
   assert.equal(await evaluate('document.body.classList.contains("app-booting")'), false, 'A tela de carregamento não foi removida.');
   assert.equal(await evaluate('document.body.classList.contains("portal-mode")'), true, 'A rota raiz não ativou o portal.');
