@@ -173,3 +173,31 @@ body ::selection { color: var(--color-primary-active); background: var(--color-p
   html, body { color: var(--color-text-primary); background: var(--color-surface); }
   body .print-label { font-family: var(--font-interface); }
 }
+
+
+/* Inicialização sem flash: não mostra a operação nem o menu antes da rota e do acesso estarem prontos. */
+body.app-booting::before {
+  content: "Trameli.";
+  position: fixed;
+  z-index: 9999;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--color-background, #F7F2EA);
+  color: var(--color-primary, #9E432C);
+  font-family: Manrope, sans-serif;
+  font-size: clamp(28px, 4vw, 36px);
+  font-weight: 700;
+  letter-spacing: -.045em;
+  pointer-events: none;
+}
+body.app-booting #smooth-wrapper,
+body.app-booting .nav,
+body.app-booting .menu-overlay,
+body.app-booting #portal-view,
+body.app-booting #portal-floating-host,
+body.app-booting .portal-bottom-nav,
+body.app-booting .portal-support-whatsapp {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
