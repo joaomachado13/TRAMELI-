@@ -35,13 +35,16 @@ try {
   ); insert into public.trameli_settings(singleton) values(true);`);
   await db.exec(await readFile(new URL('../supabase/migrations/202610070015_shirley_billing_rules.sql', import.meta.url), 'utf8'));
   await db.exec(await readFile(new URL('../supabase/migrations/202610071858_customer_manual_order_block.sql', import.meta.url), 'utf8'));
+  await db.exec(await readFile(new URL('../supabase/migrations/202610140017_no_sunday_customer_delivery.sql', import.meta.url), 'utf8'));
   assert.equal((await db.query("select cutoff_time::text value from public.trameli_settings where singleton")).rows[0].value, '21:00:00');
   await db.query('insert into auth.users(id) values($1),($2),($3)', [master, operator, customer]);
   await db.query("insert into public.trameli_operators(user_id,role) values($1,'master'),($2,'operator')", [master, operator]);
   const dates = (await db.query(`select
-    (now() at time zone 'America/Sao_Paulo')::date::text today,
-    ((now() at time zone 'America/Sao_Paulo')::date + 2)::text future,
-    ((now() at time zone 'America/Sao_Paulo')::date - 40)::text overdue`)).rows[0];
+    local_today::text today,
+    (local_today + 2 + case when extract(dow from local_today + 2) = 0 then 1 else 0 end)::text future,
+    (local_today - 40)::text overdue,
+    (date_trunc('week', local_today::timestamp)::date + 13)::text sunday
+    from (select (now() at time zone 'America/Sao_Paulo')::date as local_today) as clock`)).rows[0];
   const productId = (await db.query("select id from public.trameli_products where name='Pão de queijo'")).rows[0].id;
   const customerLines = JSON.stringify([{ product_id: productId, quantity: 2 }]);
   const manualItems = JSON.stringify([{ name: 'Item manual', quantity: 1, priceCents: 1000 }]);
@@ -58,6 +61,7 @@ try {
 
   await asUser(customer);
   await assert.rejects(customerOrder(randomUUID(), dates.today), /cutoff exceeded/);
+  await assert.rejects(customerOrder(randomUUID(), dates.sunday), /Sunday delivery is not available for customer orders/);
   const placed = await customerOrder(randomUUID(), dates.future);
   const customerOrderId = placed.rows[0].id;
   const stored = (await db.query(`select fee_cents,payment_method_preference
