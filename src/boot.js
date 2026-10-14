@@ -15,6 +15,12 @@ window.TrameliFinanceMath = financeMath;
 window.TrameliSourceCatalog = clientCatalog.products.map(withOfficialProductPhoto);
 window.TrameliProductPhoto = withOfficialProductPhoto;
 
+// A raiz pública sempre começa no portal do cliente, antes de carregar qualquer tela.
+// Preserve hashes de callback do Supabase e rotas internas explícitas.
+if (!location.hash) {
+  history.replaceState(history.state, '', `${location.pathname}${location.search}#loja`);
+}
+
 if (enabled) {
   const live = new LiveData();
   window.TrameliLive = live;
@@ -65,6 +71,8 @@ await import('../assets/operacao.js');
 await import('../assets/screens.js');
 await import('../assets/portal.js');
 initMotion();
+// Só revela a aplicação depois que a rota correta e seus componentes estão prontos.
+document.body.classList.remove('app-booting');
 
 
 /* Modal UX: clicking the backdrop closes any non-busy dialog. */

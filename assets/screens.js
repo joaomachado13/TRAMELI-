@@ -503,8 +503,8 @@ function animateRouteIn(route) {
 }
 
 function showRoute(force = false) {
-  const requested = decodeURIComponent(location.hash.slice(1)) || 'operacao';
-  const route = live && !live.operator ? 'loja' : routes.has(requested) ? requested : 'operacao';
+  const requested = decodeURIComponent(location.hash.slice(1)) || 'loja';
+  const route = live && !live.operator ? 'loja' : routes.has(requested) ? requested : 'loja';
   if (route === activeRoute && !force) { ++routeRevision; motion.cancelTransition(); setMenu(false); return; }
   const revision = ++routeRevision;
   const previous = activeRoute;

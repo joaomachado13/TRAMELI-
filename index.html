@@ -6,7 +6,7 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; frame-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.pwnedpasswords.com; form-action 'self'">
     <meta name="referrer" content="no-referrer">
     <meta name="color-scheme" content="light">
-    <title>Visão e CRM — Trameli</title>
+    <title>Peça para amanhã — Trameli</title>
     <link rel="icon" href="assets/brand-mark.svg" type="image/svg+xml">
     <link rel="stylesheet" href="assets/styles.css?v=4">
     <link rel="stylesheet" href="assets/operacao.css">
@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="assets/design-system.css?v=8">
     <link rel="stylesheet" href="assets/identity.css">
   </head>
-  <body>
+  <body class="app-booting">
     <div class="ambient-field" aria-hidden="true"></div>
     <button class="menu-overlay" type="button" aria-label="Fechar menu" hidden></button>
     <aside class="nav" aria-label="Navegação principal" id="main-navigation-panel" aria-hidden="true" inert>
@@ -28,7 +28,7 @@
           </a>
 
           <nav class="nav__links" id="main-navigation">
-            <a class="btn nav__item nav__item--operation" href="#operacao" aria-current="page"><span class="ico ico--nav ico--orders" aria-hidden="true"></span><span class="nav__label">Operação diária</span></a>
+            <a class="lnk nav__item nav__item--operation" href="#operacao"><span class="ico ico--nav ico--orders" aria-hidden="true"></span><span class="nav__label">Operação diária</span></a>
             <a class="lnk nav__item" href="#inicio"><span class="ico ico--nav ico--home" aria-hidden="true"></span><span class="nav__label">Visão geral</span></a>
             <a class="lnk nav__item" href="#pendencias"><span class="ico ico--nav ico--notification" aria-hidden="true"></span><span class="nav__label">Pendências</span></a>
             <a class="lnk nav__item" href="#pedidos"><span class="ico ico--nav ico--orders" aria-hidden="true"></span><span class="nav__label">Pedidos</span><span class="nav__count" id="nav-pending-count" aria-label="0 pedidos precisam de atenção">0</span></a>
@@ -49,7 +49,7 @@
     </aside>
 
     <div id="smooth-wrapper"><div id="smooth-content">
-    <div class="app-shell">
+    <div class="app-shell" hidden>
       <main class="section" id="inicio">
         <header class="nav2">
           <button class="mobile-menu-button" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="main-navigation-panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM9 4v16M12.5 9h4M12.5 13h4"/></svg></button>
