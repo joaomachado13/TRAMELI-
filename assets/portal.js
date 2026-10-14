@@ -1,3 +1,5 @@
+import { isDeliveryDate, nextAvailableDeliveryDate, rollingDeliveryWeek } from '../src/delivery-days.js';
+
 (() => {
   const live = window.TrameliLive;
   const host = document.getElementById('portal-content');
@@ -86,10 +88,9 @@
     const clock = saoPauloClock();
     const [cutoffHour, cutoffMinute] = cutoffTime().split(':').map(Number);
     const cutoffPassed = clock.hour * 60 + clock.minute > cutoffHour * 60 + cutoffMinute;
-    return shiftDateKey(todayInSaoPaulo(), cutoffPassed ? 2 : 1);
+    return nextAvailableDeliveryDate(todayInSaoPaulo(), cutoffPassed);
   };
-  const rollingWeek = () => Array.from({ length: 7 }, (_, index) => {
-    const date = shiftDateKey(nextDeliveryDate(), index);
+  const rollingWeek = () => rollingDeliveryWeek(nextDeliveryDate(), 7).map(date => {
     const jsDay = new Date(`${date}T12:00:00Z`).getUTCDay();
     const [key, label] = dayMeta[jsDay];
     return { key, label, date };
@@ -99,11 +100,13 @@
     const [cutoffHour, cutoffMinute] = cutoffTime().split(':').map(Number);
     if (clock.hour * 60 + clock.minute <= cutoffHour * 60 + cutoffMinute) return '';
     const missed = shiftDateKey(todayInSaoPaulo(), 1);
+    if (!isDeliveryDate(missed)) return '';
     const first = nextDeliveryDate();
     return `O horário para pedir para ${formatDate(missed)} terminou às ${cutoffLabel()}. A primeira entrega disponível agora é ${formatDate(first)}.`;
   };
 
   const beforeCustomerCutoff = deliveryDate => {
+    if (!isDeliveryDate(deliveryDate)) return false;
     const [year, month, day] = String(deliveryDate).split('-').map(Number);
     if (!year || !month || !day) return false;
     const clock = saoPauloClock();
@@ -344,8 +347,10 @@
     if (!count()) { view = 'cart'; return cartView(); }
     const previous = readOrders().find(order => order.id === editingOrderId && owns(order) && editable(order));
     const deliveryDate = previous?.date || checkoutDeliveryDate || nextDeliveryDate();
+    const deliveryAllowed = isDeliveryDate(deliveryDate);
+    const withinCutoff = beforeCustomerCutoff(deliveryDate);
     const selectedPayment = paymentLabels[previous?.paymentMethod] ? previous.paymentMethod : 'pix_manual';
-    return `<section class="portal-page"><button class="portal-back" type="button" data-view="cart">← Voltar à sacola</button><span class="portal-eyebrow">ENTREGA EM ${escapeHtml(formatDate(deliveryDate).toLocaleUpperCase('pt-BR'))}</span><h1>Entrega e pagamento</h1>${reviewNotice()}<p>Seus dados ficam salvos para os próximos pedidos.</p><form id="portal-checkout-form"><label>Seu nome<input name="customer" autocomplete="name" maxlength="90" value="${escapeHtml(previous?.customer || profile.name || '')}" required></label><label>Telefone<input name="phone" type="tel" autocomplete="tel" maxlength="25" value="${escapeHtml(previous?.phone || profile.phone || '')}" required></label><label>Endereço e referência<input name="address" autocomplete="street-address" maxlength="180" value="${escapeHtml(previous?.address || profile.address || '')}" placeholder="Bloco, apartamento ou ponto de encontro" required></label><fieldset class="portal-payment-options"><legend>Como pretende pagar?</legend>${Object.entries(paymentLabels).filter(([key]) => key !== 'unspecified').map(([key, label]) => `<label><input type="radio" name="paymentMethod" value="${key}" ${key === selectedPayment ? 'checked' : ''} required><span>${key === 'pix_manual' ? '◇' : key === 'cash' ? 'R$' : '•••'}</span><strong>${label}</strong></label>`).join('')}</fieldset><label>Observação <span>(opcional)</span><textarea name="notes" maxlength="280" rows="3" placeholder="Ex.: deixar na portaria">${escapeHtml(previous?.notes || '')}</textarea></label><div class="portal-order-summary"><h2>Resumo do pedido</h2>${cartLines().map(({ product, quantity }) => `<div><span>${escapeHtml(lineLabel(product, quantity))}</span><strong>${money(linePrice(product, quantity))}</strong></div>`).join('')}<div><span>Subtotal dos produtos</span><strong>${money(subtotal())}</strong></div><div><span>Taxa de entrega</span><strong>${money(200)}</strong></div><div class="portal-order-summary__total"><span>Total para ${formatDate(deliveryDate)}</span><strong>${money(subtotal() + 200)}</strong></div></div><p class="portal-payment-note">A forma escolhida ainda não confirma o recebimento. Alterações são permitidas até ${cutoffLabel()} do dia anterior.</p>${!beforeCustomerCutoff(deliveryDate) ? '<p class="portal-error" role="alert">O prazo das ${cutoffLabel()} para esta entrega já terminou.</p>' : ''}${error ? `<p class="portal-error" role="alert">${escapeHtml(error)}</p>` : ''}<button class="portal-primary" type="submit" ${beforeCustomerCutoff(deliveryDate) ? '' : 'disabled'}>${previous ? 'Salvar alterações' : 'Confirmar pedido'} · ${money(subtotal() + 200)}</button></form></section>`;
+    return `<section class="portal-page"><button class="portal-back" type="button" data-view="cart">← Voltar à sacola</button><span class="portal-eyebrow">ENTREGA EM ${escapeHtml(formatDate(deliveryDate).toLocaleUpperCase('pt-BR'))}</span><h1>Entrega e pagamento</h1>${reviewNotice()}<p>Seus dados ficam salvos para os próximos pedidos.</p><form id="portal-checkout-form"><label>Seu nome<input name="customer" autocomplete="name" maxlength="90" value="${escapeHtml(previous?.customer || profile.name || '')}" required></label><label>Telefone<input name="phone" type="tel" autocomplete="tel" maxlength="25" value="${escapeHtml(previous?.phone || profile.phone || '')}" required></label><label>Endereço e referência<input name="address" autocomplete="street-address" maxlength="180" value="${escapeHtml(previous?.address || profile.address || '')}" placeholder="Bloco, apartamento ou ponto de encontro" required></label><fieldset class="portal-payment-options"><legend>Como pretende pagar?</legend>${Object.entries(paymentLabels).filter(([key]) => key !== 'unspecified').map(([key, label]) => `<label><input type="radio" name="paymentMethod" value="${key}" ${key === selectedPayment ? 'checked' : ''} required><span>${key === 'pix_manual' ? '◇' : key === 'cash' ? 'R$' : '•••'}</span><strong>${label}</strong></label>`).join('')}</fieldset><label>Observação <span>(opcional)</span><textarea name="notes" maxlength="280" rows="3" placeholder="Ex.: deixar na portaria">${escapeHtml(previous?.notes || '')}</textarea></label><div class="portal-order-summary"><h2>Resumo do pedido</h2>${cartLines().map(({ product, quantity }) => `<div><span>${escapeHtml(lineLabel(product, quantity))}</span><strong>${money(linePrice(product, quantity))}</strong></div>`).join('')}<div><span>Subtotal dos produtos</span><strong>${money(subtotal())}</strong></div><div><span>Taxa de entrega</span><strong>${money(200)}</strong></div><div class="portal-order-summary__total"><span>Total para ${formatDate(deliveryDate)}</span><strong>${money(subtotal() + 200)}</strong></div></div><p class="portal-payment-note">A forma escolhida ainda não confirma o recebimento. Alterações são permitidas até ${cutoffLabel()} do dia anterior.</p>${!deliveryAllowed ? '<p class="portal-error" role="alert">Não fazemos entregas aos domingos. Escolha um dia disponível.</p>' : !withinCutoff ? '<p class="portal-error" role="alert">O prazo das ${cutoffLabel()} para esta entrega já terminou.</p>' : ''}${error ? `<p class="portal-error" role="alert">${escapeHtml(error)}</p>` : ''}<button class="portal-primary" type="submit" ${deliveryAllowed && withinCutoff ? '' : 'disabled'}>${previous ? 'Salvar alterações' : 'Confirmar pedido'} · ${money(subtotal() + 200)}</button></form></section>`;
   }
   function success() {
     return `<section class="portal-page portal-success"><span class="portal-success__icon" aria-hidden="true">✓</span><span class="portal-eyebrow">PEDIDO RECEBIDO</span><h1>Pedido registrado com sucesso.</h1><p>Agora ele segue para a conferência da operação.</p><div class="portal-success__receipt"><span>Pedido</span><strong>#${escapeHtml(orderCode(lastOrder) || '—')}</strong><span>Entrega</span><strong>${lastOrder ? formatDate(lastOrder.date) : '—'}</strong><span>Endereço</span><strong>${escapeHtml(lastOrder?.address || '—')}</strong><span>Pagamento</span><strong>${escapeHtml(paymentLabels[lastOrder?.paymentMethod] || paymentLabels.unspecified)}</strong><span>Total</span><strong>${lastOrder ? money(orderValue(lastOrder)) : '—'}</strong></div><p class="portal-payment-note">O pedido ainda não representa pagamento confirmado.</p><button class="portal-primary" type="button" data-view="orders">Ver meu pedido</button><button class="portal-link" type="button" data-view="catalog">Voltar aos produtos</button></section>`;
@@ -375,7 +380,7 @@
     </div>` : '';
     const cutoffNotice = cutoffWindowNotice();
     const availableProducts = allProducts().filter(product => !unavailableFor(product, selectedDay.date));
-    return `<section class="portal-page portal-week ${plannedDays.length ? 'portal-week--has-summary' : ''}"><button class="portal-back" type="button" data-view="catalog">← Voltar aos produtos</button><span class="portal-eyebrow">PLANEJAMENTO, NÃO CONFIRMAÇÃO</span><h1>Minha semana</h1><p>Monte os próximos 7 dias na ordem real de entrega. Você confirma tudo só no final.</p>${cutoffNotice?`<aside class="portal-week__cutoff" role="status"><strong>Prazo encerrado para amanhã</strong><span>${escapeHtml(cutoffNotice)}</span></aside>`:''}<div class="portal-week__days">${days.map(day => `<button type="button" data-week-day="${day.date}" aria-pressed="${selectedDay.date === day.date}"><strong>${day.label}</strong><small>${new Date(`${day.date}T12:00:00`).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} · ${planCount(day)} itens</small></button>`).join('')}</div>${repeat}<div class="portal-week__products">${availableProducts.map(product => { const quantity = Number(plan[product.id] || 0); return `<article><div class="portal-week__photo">${photo(product)}</div><span><strong>${escapeHtml(product.name)}</strong><small>${money(product.priceCents)} / ${escapeHtml(product.unit)}</small>${quantity ? `<small class="portal-week__line-total">Total: ${money(linePrice(product, quantity))}</small>` : ''}</span><div class="portal-stepper"><button type="button" data-week-qty="-1" data-id="${escapeHtml(product.id)}" ${quantity ? '' : 'disabled'}>−</button><span>${weighted(product) ? `${quantity * 50} g` : quantity}</span><button type="button" data-week-qty="1" data-id="${escapeHtml(product.id)}">+</button></div></article>`; }).join('')}</div></section>`;
+    return `<section class="portal-page portal-week ${plannedDays.length ? 'portal-week--has-summary' : ''}"><button class="portal-back" type="button" data-view="catalog">← Voltar aos produtos</button><span class="portal-eyebrow">PLANEJAMENTO, NÃO CONFIRMAÇÃO</span><h1>Minha semana</h1><p>Monte os próximos dias de entrega, sem domingo. Você confirma tudo só no final.</p>${cutoffNotice?`<aside class="portal-week__cutoff" role="status"><strong>Prazo encerrado para amanhã</strong><span>${escapeHtml(cutoffNotice)}</span></aside>`:''}<div class="portal-week__days">${days.map(day => `<button type="button" data-week-day="${day.date}" aria-pressed="${selectedDay.date === day.date}"><strong>${day.label}</strong><small>${new Date(`${day.date}T12:00:00`).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} · ${planCount(day)} itens</small></button>`).join('')}</div>${repeat}<div class="portal-week__products">${availableProducts.map(product => { const quantity = Number(plan[product.id] || 0); return `<article><div class="portal-week__photo">${photo(product)}</div><span><strong>${escapeHtml(product.name)}</strong><small>${money(product.priceCents)} / ${escapeHtml(product.unit)}</small>${quantity ? `<small class="portal-week__line-total">Total: ${money(linePrice(product, quantity))}</small>` : ''}</span><div class="portal-stepper"><button type="button" data-week-qty="-1" data-id="${escapeHtml(product.id)}" ${quantity ? '' : 'disabled'}>−</button><span>${weighted(product) ? `${quantity * 50} g` : quantity}</span><button type="button" data-week-qty="1" data-id="${escapeHtml(product.id)}">+</button></div></article>`; }).join('')}</div></section>`;
   }
 
   function weekCheckoutView() {
@@ -394,6 +399,7 @@
     const days = rollingWeek().filter(day => planCount(day) > 0);
     const customer = form.elements.customer.value.trim(), phone = form.elements.phone.value.trim(), address = form.elements.address.value.trim();
     if (!days.length || !customer || !phone || !address) { error='Preencha seus dados e planeje ao menos um dia.'; render(true); return; }
+    if (days.some(day => !isDeliveryDate(day.date))) { error='Domingo não tem entregas. Volte à semana e escolha os dias disponíveis.'; render(true); return; }
     if (days.some(day => !beforeCustomerCutoff(day.date))) { error='Um dos dias planejados já passou do horário de corte. Volte à semana para atualizar as datas.'; render(true); return; }
     const notes=form.elements.notes.value.trim(), paymentMethod=form.elements.paymentMethod.value;
     submitting=true; form.querySelector('[type="submit"]').disabled=true;
@@ -485,6 +491,7 @@
     const previous = oldOrders.find(order => order.id === editingOrderId && owns(order) && editable(order));
     if (editingOrderId && !previous) { error = 'Este pedido não pode mais ser alterado. Confira em Meus pedidos.'; render(true); return; }
     const deliveryDate = previous?.date || checkoutDeliveryDate || nextDeliveryDate();
+    if (!isDeliveryDate(deliveryDate)) { error = 'Não fazemos entregas aos domingos. Escolha outro dia disponível.'; render(true); return; }
     if (!beforeCustomerCutoff(deliveryDate)) { error = `O prazo das ${cutoffLabel()} para esta entrega já terminou.`; render(true); return; }
     const nextOrder = {
       id: previous?.id || (crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`),
