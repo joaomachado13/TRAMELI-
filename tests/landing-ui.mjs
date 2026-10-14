@@ -82,7 +82,7 @@ try {
   assert.equal(await evaluate('document.body.classList.contains("app-booting")'), false, 'A tela de carregamento não foi removida.');
   assert.equal(await evaluate('document.body.classList.contains("portal-mode")'), true, 'A rota raiz não ativou o portal.');
   assert.equal(await evaluate('document.querySelector(".app-shell").hidden'), true, 'A operação ficou visível na entrada.');
-  assert.equal(await evaluate('document.querySelector(".nav").getClientRects().length'), 0, 'A sidebar apareceu no portal do cliente.');
+  assert.ok(await evaluate('document.querySelector(".nav").getBoundingClientRect().right <= 0'), 'A sidebar ficou visível no portal do cliente.');
   assert.ok((await evaluate('document.title')).startsWith('Peça para amanhã'), 'O título inicial não corresponde ao portal.');
   
   await evaluate('location.hash = "#operacao"');
