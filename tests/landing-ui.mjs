@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { browserPath, headlessFlags } from './browser-path.mjs';
@@ -59,9 +59,7 @@ try {
   const initialHtml = await htmlResponse.text();
   assert.match(initialHtml, /<body class="app-booting">/, 'O HTML não começa em estado protegido.');
   assert.match(initialHtml, /<div class="app-shell" hidden>/, 'O painel interno não começa oculto.');
-  const cssResponse = await fetch(new URL('assets/identity.css', baseUrl));
-  assert.ok(cssResponse.ok, 'A folha de estilos inicial não respondeu.');
-  const initialCss = await cssResponse.text();
+  const initialCss = await readFile(new URL('../assets/identity.css', import.meta.url), 'utf8');
   assert.match(initialCss, /body\.app-booting::before/, 'A tela neutra de inicialização não está definida.');
   assert.match(initialCss, /body\.app-booting #smooth-wrapper/, 'A operação não está protegida contra flash.');
 
