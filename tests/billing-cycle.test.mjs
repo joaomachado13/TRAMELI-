@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { billingDeadlineForDelivery, daysUntil, billingReminder } from '../src/billing-cycle.js';
+import { billingDeadlineForDelivery, daysUntil, billingReminder, nextBillingDeadline } from '../src/billing-cycle.js';
 
 assert.equal(billingDeadlineForDelivery('2026-10-01'), '2026-10-15');
 assert.equal(billingDeadlineForDelivery('2026-10-15'), '2026-10-15');
@@ -7,6 +7,11 @@ assert.equal(billingDeadlineForDelivery('2026-10-16'), '2026-10-31');
 assert.equal(billingDeadlineForDelivery('2026-02-28'), '2026-02-28');
 assert.equal(billingDeadlineForDelivery('2028-02-16'), '2028-02-29');
 assert.equal(daysUntil('2026-10-15', '2026-10-07'), 8);
+assert.equal(nextBillingDeadline('2026-10-07'), '2026-10-15');
+assert.equal(nextBillingDeadline('2026-10-15'), '2026-10-31');
+assert.equal(nextBillingDeadline('2026-10-20'), '2026-10-31');
+assert.equal(nextBillingDeadline('2026-10-31'), '2026-11-15');
+assert.equal(nextBillingDeadline('2026-02-28'), '2026-03-15');
 
 const rows = [
   { delivery_date: '2026-10-03', due_cents: 1200 },
