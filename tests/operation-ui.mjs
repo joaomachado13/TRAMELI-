@@ -123,17 +123,27 @@ try {
   const longOrderCheck = await evaluate(`(() => {
     const storageKey='trameli-operation-draft-v2';
     const base=JSON.parse(localStorage.getItem(storageKey))[0];
-    const oversized={...base,id:'print-long-order-test',status:'received',items:Array.from({length:18},(_,index)=>({name:'Produto de teste '+(index+1),quantity:1,priceCents:100}))};
+    const oversized={...base,id:'print-long-order-test',customer:'Cliente teste etiquetas',address:'Rua de Teste, 123 - Centro',notes:'Entregar na portaria',status:'received',items:Array.from({length:18},(_,index)=>({name:'Produto de teste '+(index+1),quantity:1,priceCents:100}))};
     localStorage.setItem(storageKey,JSON.stringify([oversized]));
     window.dispatchEvent(new Event('trameli:orders-changed'));
     window.TrameliOperation.preparePrint();
+    const labels=Array.from(document.querySelectorAll('.print-label'));
     return {
-      labels:document.querySelectorAll('.print-label').length,
+      labels:labels.length,
       numbered:Array.from(document.querySelectorAll('.print-label__top span')).some(node=>node.textContent.includes('1/')) &&
-        Array.from(document.querySelectorAll('.print-label__top span')).some(node=>node.textContent.includes('2/'))
+        Array.from(document.querySelectorAll('.print-label__top span')).some(node=>node.textContent.includes('2/')),
+      metadataRepeated:labels.length > 1 && labels.every(label =>
+        label.querySelector('.print-label__top strong')?.textContent === 'Cliente teste etiquetas' &&
+        label.querySelector('p')?.textContent === 'Rua de Teste, 123 - Centro' &&
+        label.querySelector('small')?.textContent === 'Obs.: Entregar na portaria' &&
+        label.querySelector('footer')?.textContent.includes('Total:')
+      ),
+      fixedSize:labels.every(label=>label.style.height === '33mm')
     };
   })()`);
   assert(longOrderCheck.labels > 1 && longOrderCheck.numbered, `Pedido longo não foi dividido em etiquetas numeradas: ${JSON.stringify(longOrderCheck)}`);
+  assert(longOrderCheck.metadataRepeated, `As etiquetas divididas não repetiram nome, endereço, observação e total: ${JSON.stringify(longOrderCheck)}`);
+  assert(longOrderCheck.fixedSize, `As etiquetas divididas saíram da altura fixa de 33 mm: ${JSON.stringify(longOrderCheck)}`);
   const longPdfResult = await send('Page.printToPDF', { printBackground: true, preferCSSPageSize: true, displayHeaderFooter: false });
   const longPdf = await PDFDocument.load(Buffer.from(longPdfResult.data, 'base64'));
   assert(longPdf.getPageCount() === 1, `As partes de um pedido longo deveriam caber na mesma folha A4, mas geraram ${longPdf.getPageCount()} páginas.`);
