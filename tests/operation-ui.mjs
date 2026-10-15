@@ -99,12 +99,14 @@ try {
   await evaluate(`(() => { document.querySelector('.item-quantity').value='4'; document.querySelector('#order-form').requestSubmit(); })()`);
   assert(await evaluate('document.querySelector("#grand-total").textContent.includes("20,00")'), 'Edição não recalculou.');
   assert(await evaluate('window.TrameliOperation.preparePrint() && document.querySelectorAll(".print-label").length === 1 && document.querySelectorAll(".print-sheet").length === 1'), 'Ficha de impressão não foi criada em uma folha A4.');
+  assert(await evaluate('document.querySelector(".print-label__top span").textContent === "01"'), 'Etiqueta simples não usou a numeração sequencial de dois dígitos do PDF de referência.');
   const originalPrintSettings = await evaluate('localStorage.getItem("trameli-print-settings-70x33-v1")');
   await evaluate('localStorage.setItem("trameli-print-settings-70x33-v1", JSON.stringify({offsetX:1.5,offsetY:-1})); window.TrameliOperation.preparePrint();');
   assert(await evaluate('document.querySelector("#print-document").style.getPropertyValue("--print-offset-x") === "1.5mm" && document.querySelector("#print-document").style.getPropertyValue("--print-offset-y") === "-1mm"'), 'A calibração salva não foi aplicada na impressão sem recarregar a página.');
   await evaluate(`(() => { const value=${JSON.stringify(originalPrintSettings)}; if (value === null) localStorage.removeItem('trameli-print-settings-70x33-v1'); else localStorage.setItem('trameli-print-settings-70x33-v1', value); window.TrameliOperation.preparePrint(); })()`);
   await send('Emulation.setEmulatedMedia', { media: 'print' });
   assert(await evaluate('getComputedStyle(document.querySelector(".nav")).display === "none" && getComputedStyle(document.querySelector("#print-document")).display === "block"'), 'Layout de impressão integrado não isolou as fichas.');
+  assert(await evaluate('(() => { const content=document.querySelector(".print-label__content"); const footer=content.querySelector("footer"); return getComputedStyle(content).display==="flex" && getComputedStyle(content).flexDirection==="column" && getComputedStyle(footer).marginTop==="auto"; })()'), 'Total não ficou preso ao rodapé da etiqueta como no PDF de referência.');
   assert(await evaluate('(() => { const sheet=document.querySelector(".print-sheet"); const style=getComputedStyle(sheet); const label=document.querySelector(".print-label"); return Math.abs(parseFloat(style.width)-210*96/25.4)<1 && Math.abs(parseFloat(style.height)-297*96/25.4)<1 && style.position==="relative" && getComputedStyle(label).position==="absolute" && Math.abs(label.getBoundingClientRect().width-70*96/25.4)<1 && Math.abs(label.getBoundingClientRect().height-33*96/25.4)<1; })()'), 'Folha A4 ou dimensão fixa de etiqueta 70 × 33 mm incorreta.');
   const originalOrders = await evaluate('localStorage.getItem("trameli-operation-draft-v2")');
   const paginationCheck = await evaluate(`(() => {
@@ -122,11 +124,15 @@ try {
       sheets:document.querySelectorAll('.print-sheet').length,
       labels:labels.length,
       horizontalPitch:!!first && !!second && Math.abs((second.left-first.left)-70*96/25.4)<1,
-      verticalPitch:!!first && !!fourth && Math.abs((fourth.top-first.top)-33*96/25.4)<1
+      verticalPitch:!!first && !!fourth && Math.abs((fourth.top-first.top)-33*96/25.4)<1,
+      sequenceAcrossSheets:labels[0]?.querySelector('.print-label__top span')?.textContent==='01' &&
+        labels[26]?.querySelector('.print-label__top span')?.textContent==='27' &&
+        labels[27]?.querySelector('.print-label__top span')?.textContent==='28'
     };
   })()`);
   assert(paginationCheck.sheets === 2 && paginationCheck.labels === 28, `A impressão não distribuiu 28 etiquetas em 2 folhas A4: ${JSON.stringify(paginationCheck)}`);
   assert(paginationCheck.horizontalPitch && paginationCheck.verticalPitch, `As etiquetas não respeitaram o passo físico de 70 × 33 mm: ${JSON.stringify(paginationCheck)}`);
+  assert(paginationCheck.sequenceAcrossSheets, `A numeração das etiquetas reiniciou ou saiu da sequência entre folhas: ${JSON.stringify(paginationCheck)}`);
   const labelsPdfResult = await send('Page.printToPDF', { printBackground: true, preferCSSPageSize: true, displayHeaderFooter: false });
   const labelsPdf = await PDFDocument.load(Buffer.from(labelsPdfResult.data, 'base64'));
   assert(labelsPdf.getPageCount() === 2, `28 etiquetas deveriam ocupar exatamente 2 páginas A4, mas geraram ${labelsPdf.getPageCount()}.`);
@@ -142,6 +148,8 @@ try {
       labels:labels.length,
       numbered:Array.from(document.querySelectorAll('.print-label__top span')).some(node=>node.textContent.includes('1/')) &&
         Array.from(document.querySelectorAll('.print-label__top span')).some(node=>node.textContent.includes('2/')),
+      exactPartSequence:Array.from(document.querySelectorAll('.print-label__top span')).map(node=>node.textContent).join(',') === '1/6,2/6,3/6,4/6,5/6,6/6',
+      maxThreeItems:labels.every(label=>label.querySelectorAll('li').length <= 3),
       metadataRepeated:labels.length > 1 && labels.every(label =>
         label.querySelector('.print-label__top strong')?.textContent === 'Cliente teste etiquetas' &&
         label.querySelector('p')?.textContent === 'Rua de Teste, 123 - Centro' &&
@@ -151,7 +159,8 @@ try {
       fixedSize:labels.every(label=>label.style.height === '33mm')
     };
   })()`);
-  assert(longOrderCheck.labels > 1 && longOrderCheck.numbered, `Pedido longo não foi dividido em etiquetas numeradas: ${JSON.stringify(longOrderCheck)}`);
+  assert(longOrderCheck.labels === 6 && longOrderCheck.numbered, `Pedido de 18 itens deveria gerar seis etiquetas numeradas de três itens: ${JSON.stringify(longOrderCheck)}`);
+  assert(longOrderCheck.exactPartSequence && longOrderCheck.maxThreeItems, `As etiquetas não respeitaram três itens por parte e numeração 1/6 a 6/6: ${JSON.stringify(longOrderCheck)}`);
   assert(longOrderCheck.metadataRepeated, `As etiquetas divididas não repetiram nome, endereço, observação e total: ${JSON.stringify(longOrderCheck)}`);
   assert(longOrderCheck.fixedSize, `As etiquetas divididas saíram da altura fixa de 33 mm: ${JSON.stringify(longOrderCheck)}`);
   const longPdfResult = await send('Page.printToPDF', { printBackground: true, preferCSSPageSize: true, displayHeaderFooter: false });
