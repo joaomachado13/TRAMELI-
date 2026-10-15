@@ -576,9 +576,12 @@ function preparePrint() {
   };
 
   const prepared = labels.flatMap(label => prepareOrderLabels(label.order));
-  const renderLabel = ({ order, items, part, totalParts, scale, includeAddress, includeNotes, includeTotal }) => {
+  const LABEL_WIDTH_MM = 70;
+  const renderLabel = ({ order, items, part, totalParts, scale, includeAddress, includeNotes, includeTotal }, position) => {
     const partText = totalParts > 1 ? ' · ' + part + '/' + totalParts : '';
     const style = [
+      'left:' + ((position % 3) * LABEL_WIDTH_MM) + 'mm',
+      'top:' + (Math.floor(position / 3) * LABEL_HEIGHT_MM) + 'mm',
       'height:' + LABEL_HEIGHT_MM + 'mm',
       '--label-body-size:' + (5.8 * scale).toFixed(2) + 'pt',
       '--label-header-size:' + (7 * scale).toFixed(2) + 'pt',
@@ -601,7 +604,7 @@ function preparePrint() {
   const sheets = [];
   for (let index = 0; index < prepared.length; index += LABELS_PER_SHEET) {
     const sheetNumber = Math.floor(index / LABELS_PER_SHEET) + 1;
-    const labelsHtml = prepared.slice(index, index + LABELS_PER_SHEET).map(renderLabel).join('');
+    const labelsHtml = prepared.slice(index, index + LABELS_PER_SHEET).map((label, position) => renderLabel(label, position)).join('');
     sheets.push('<section class="print-sheet" aria-label="Folha ' + sheetNumber + '">' + labelsHtml + '</section>');
   }
   printHost.innerHTML = sheets.join('');
