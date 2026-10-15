@@ -26,6 +26,18 @@ export function daysUntil(date, today) {
   return Math.round((parseDate(date).getTime() - parseDate(today).getTime()) / 86400000);
 }
 
+export function nextBillingDeadline(today) {
+  const date = parseDate(today);
+  const year = date.getUTCFullYear();
+  const month = date.getUTCMonth();
+  const day = date.getUTCDate();
+  const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+
+  if (day < 15) return `${year}-${String(month + 1).padStart(2, '0')}-15`;
+  if (day < lastDay) return formatDate(new Date(Date.UTC(year, month + 1, 0)));
+  return `${month === 11 ? year + 1 : year}-${String(month === 11 ? 1 : month + 2).padStart(2, '0')}-15`;
+}
+
 export function billingReminder(rows, today) {
   const open = (rows || []).filter(row => Number(row.due_cents || 0) > 0 && row.delivery_date);
   if (!open.length) return { state: 'clear', days: null, deadline: null, dueCents: 0, message: 'Nenhum pagamento pendente.' };
