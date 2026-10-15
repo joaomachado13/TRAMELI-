@@ -1,7 +1,7 @@
+@import "./identity-tokens.css";
 @font-face{font-family:"TrameliLabelDM";src:url("dm-sans-400.ttf") format("truetype");font-weight:400;font-style:normal;font-display:swap}
 @font-face{font-family:"TrameliLabelDM";src:url("dm-sans-500.ttf") format("truetype");font-weight:500;font-style:normal;font-display:swap}
 @font-face{font-family:"TrameliLabelDM";src:url("dm-sans-600.ttf") format("truetype");font-weight:600;font-style:normal;font-display:swap}
-@import "./identity-tokens.css";
 @scope (#operation-view) {
 :root{font-family:var(--font-interface);color:var(--color-text-secondary);background:var(--color-surface-alternate);color-scheme:light}
 *{box-sizing:border-box}
