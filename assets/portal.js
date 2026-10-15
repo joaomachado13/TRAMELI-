@@ -1,4 +1,5 @@
 import { isDeliveryDate, nextAvailableDeliveryDate, rollingDeliveryWeek } from '../src/delivery-days.js';
+import { billingReminder, daysUntil, nextBillingDeadline } from '../src/billing-cycle.js';
 
 (() => {
   const live = window.TrameliLive;
@@ -325,6 +326,34 @@ import { isDeliveryDate, nextAvailableDeliveryDate, rollingDeliveryWeek } from '
     return hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
   };
   const firstName = () => String(profile.name || '').trim().split(/\s+/)[0] || '';
+  const paymentCountdown = () => {
+    if (!live || live.operator) return '';
+    const api = window.TrameliPayments?.api;
+    const today = todayInSaoPaulo();
+    const rows = api?.ready === true
+      ? (api.balances || []).filter(row => row.customer_id === live.user.id)
+      : [];
+    const reminder = api?.ready === true ? billingReminder(rows, today) : null;
+    const hasPending = reminder && reminder.state !== 'clear';
+    const deadline = hasPending ? reminder.deadline : nextBillingDeadline(today);
+    const days = hasPending ? reminder.days : daysUntil(deadline, today);
+    const dateLabel = new Date(`${deadline}T12:00:00`).toLocaleDateString('pt-BR', {
+      day: 'numeric', month: 'long', timeZone: 'America/Sao_Paulo',
+    });
+    const message = hasPending
+      ? reminder.message
+      : days === 0 ? 'O fechamento quinzenal é hoje.'
+        : days === 1 ? 'Próximo fechamento em 1 dia.'
+          : `Próximo fechamento em ${days} dias.`;
+    const stateClass = hasPending && reminder.state === 'overdue' ? 'is-overdue'
+      : hasPending && reminder.state === 'today' ? 'is-today' : 'is-upcoming';
+    const detail = hasPending
+      ? `${money(reminder.dueCents)} pendentes · vencimento ${dateLabel}`
+      : reminder?.state === 'clear'
+        ? `Sem pagamentos pendentes · próximo fechamento ${dateLabel}`
+        : `Vencimentos dia 15 ou no último dia do mês · ${dateLabel}`;
+    return `<aside class="portal-billing-countdown ${stateClass}" role="status"><span>FECHAMENTO QUINZENAL</span><strong>${escapeHtml(message)}</strong><small>${escapeHtml(detail)}</small></aside>`;
+  };
   const orderValue = order => order.items.reduce((sum, item) => sum + item.quantity * item.priceCents, order.feeCents || 0);
   function lastOrderCard() {
     const order = readOrders().filter(owns).sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
@@ -337,7 +366,7 @@ import { isDeliveryDate, nextAvailableDeliveryDate, rollingDeliveryWeek } from '
     const categories = ['Todos', ...new Set(all.map(product => product.category || 'Outros'))];
     const visible = filteredProducts();
     const notice=unavailable.length?`<aside class="portal-review-notice" role="status"><strong>Indisponíveis para a próxima entrega</strong><ul>${unavailable.map(item=>{const substitute=allProducts().find(candidate=>candidate.id===item.substituteProductId&&!unavailableFor(candidate));return `<li>${escapeHtml(item.name)}${substitute?` — sugestão: ${escapeHtml(substitute.name)}`:''}</li>`;}).join('')}</ul><p>A troca não é automática; escolha a sugestão no catálogo se desejar.</p></aside>`:'';
-    return `<section class="portal-welcome"><span class="portal-eyebrow">${greeting().toLocaleUpperCase('pt-BR')}${firstName() ? `, ${escapeHtml(firstName()).toLocaleUpperCase('pt-BR')}` : ''}</span><h1>${greeting()}${firstName() ? `, ${escapeHtml(firstName())}` : ''}.</h1><p>Seu pedido em três passos simples.</p><ol><li><strong>1</strong> Escolha os produtos</li><li><strong>2</strong> Revise a sacola</li><li><strong>3</strong> Confirme entrega e pagamento</li></ol><a class="portal-welcome__action" href="#portal-products">Escolher produtos ↓</a></section><section class="portal-quick-actions">${lastOrderCard()}<article><span>PLANEJE COM CALMA</span><strong>Pedidos da semana</strong><p>Organize cada dia sem confirmar nada automaticamente.</p><button type="button" data-view="week">Montar minha semana</button></article></section><section id="portal-products" class="portal-section">${notice}<div class="portal-section__head"><div><span class="portal-eyebrow">FEITO PARA O SEU DIA</span><h2>Produtos da padaria</h2></div><span>${all.length} opções</span></div><label class="portal-search">Buscar produto<input id="portal-search" type="search" value="${escapeHtml(query)}" placeholder="Pão, bolo, suco..."></label><div class="portal-categories" aria-label="Categorias">${categories.map(item => `<button type="button" data-category="${escapeHtml(item)}" aria-pressed="${String(item === category)}">${escapeHtml(item)}</button>`).join('')}</div>${personalFilters()}<div class="portal-grid" id="portal-grid">${visible.length ? visible.map(card).join('') : '<p class="portal-empty">Não encontramos produtos nessa busca.</p>'}</div></section>`;
+    return `<section class="portal-welcome"><div class="portal-welcome__heading"><div><span class="portal-eyebrow">${greeting().toLocaleUpperCase('pt-BR')}${firstName() ? `, ${escapeHtml(firstName()).toLocaleUpperCase('pt-BR')}` : ''}</span><h1>${greeting()}${firstName() ? `, ${escapeHtml(firstName())}` : ''}.</h1></div>${paymentCountdown()}</div><p>Seu pedido em três passos simples.</p><ol><li><strong>1</strong> Escolha os produtos</li><li><strong>2</strong> Revise a sacola</li><li><strong>3</strong> Confirme entrega e pagamento</li></ol><a class="portal-welcome__action" href="#portal-products">Escolher produtos ↓</a></section><section class="portal-quick-actions">${lastOrderCard()}<article><span>PLANEJE COM CALMA</span><strong>Pedidos da semana</strong><p>Organize cada dia sem confirmar nada automaticamente.</p><button type="button" data-view="week">Montar minha semana</button></article></section><section id="portal-products" class="portal-section">${notice}<div class="portal-section__head"><div><span class="portal-eyebrow">FEITO PARA O SEU DIA</span><h2>Produtos da padaria</h2></div><span>${all.length} opções</span></div><label class="portal-search">Buscar produto<input id="portal-search" type="search" value="${escapeHtml(query)}" placeholder="Pão, bolo, suco..."></label><div class="portal-categories" aria-label="Categorias">${categories.map(item => `<button type="button" data-category="${escapeHtml(item)}" aria-pressed="${String(item === category)}">${escapeHtml(item)}</button>`).join('')}</div>${personalFilters()}<div class="portal-grid" id="portal-grid">${visible.length ? visible.map(card).join('') : '<p class="portal-empty">Não encontramos produtos nessa busca.</p>'}</div></section>`;
   }
   function cartView() {
     const lines = cartLines();
@@ -698,6 +727,7 @@ import { isDeliveryDate, nextAvailableDeliveryDate, rollingDeliveryWeek } from '
   }
   window.addEventListener('trameli:portal-open', syncPortalFrame);
   window.addEventListener('trameli:shopping-changed', () => { if (view === 'catalog') render(true); });
+  window.addEventListener('trameli:payments-changed', () => { if (view === 'catalog' && location.hash === '#loja') render(true); });
   window.addEventListener('trameli:catalog-changed', () => render(true));
   if (live) window.addEventListener('trameli:orders-changed', () => { if (view === 'orders' || (view === 'catalog' && personalFilter === 'frequent')) render(true); });
   window.addEventListener('storage', event => { if ([orderKey, cartKey].includes(event.key)) { if (event.key === cartKey) cart = readJson(cartKey, {}); render(true); } });
