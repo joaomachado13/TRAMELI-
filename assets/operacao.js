@@ -538,12 +538,10 @@ function preparePrint() {
     const chunks = [order.items.slice()];
     let attempts = 0;
     while (attempts++ < Math.max(8, order.items.length * 2)) {
-      const overflowIndex = chunks.findIndex((items, index) => {
-        const isFirst = index === 0;
-        const isLast = index === chunks.length - 1;
-        return items.length > 1 &&
-          scaleForHeight(estimateLabelHeight(order, items, isFirst, isLast, isLast)) < MIN_READABLE_SCALE;
-      });
+      const overflowIndex = chunks.findIndex(items =>
+        items.length > 1 &&
+        scaleForHeight(estimateLabelHeight(order, items, Boolean(order.address), Boolean(order.notes), true)) < MIN_READABLE_SCALE
+      );
       if (overflowIndex < 0) break;
 
       const current = chunks[overflowIndex];
@@ -564,13 +562,15 @@ function preparePrint() {
     }
 
     return chunks.map((items, index) => {
-      const includeAddress = index === 0;
-      const isLast = index === chunks.length - 1;
-      const naturalHeight = estimateLabelHeight(order, items, includeAddress, isLast, isLast);
+      // Cada etiqueta mantém os dados do pedido; somente a lista de itens é repartida.
+      const includeAddress = Boolean(order.address);
+      const includeNotes = Boolean(order.notes);
+      const includeTotal = true;
+      const naturalHeight = estimateLabelHeight(order, items, includeAddress, includeNotes, includeTotal);
       const scale = scaleForHeight(naturalHeight);
       return {
         order, items, part: index + 1, totalParts: chunks.length, scale,
-        includeAddress, includeNotes: isLast && Boolean(order.notes), includeTotal: isLast
+        includeAddress, includeNotes, includeTotal
       };
     });
   };
