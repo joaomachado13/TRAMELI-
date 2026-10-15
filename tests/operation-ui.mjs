@@ -105,7 +105,7 @@ try {
   await evaluate(`(() => { const value=${JSON.stringify(originalPrintSettings)}; if (value === null) localStorage.removeItem('trameli-print-settings-70x33-v1'); else localStorage.setItem('trameli-print-settings-70x33-v1', value); window.TrameliOperation.preparePrint(); })()`);
   await send('Emulation.setEmulatedMedia', { media: 'print' });
   assert(await evaluate('getComputedStyle(document.querySelector(".nav")).display === "none" && getComputedStyle(document.querySelector("#print-document")).display === "block"'), 'Layout de impressão integrado não isolou as fichas.');
-  assert(await evaluate('(() => { const sheet=document.querySelector(".print-sheet"); const style=getComputedStyle(sheet); return Math.abs(parseFloat(style.width)-210*96/25.4)<1 && Math.abs(parseFloat(style.height)-297*96/25.4)<1 && style.gridTemplateColumns.split(" ").length===3 && style.gridTemplateRows.split(" ").length===9; })()'), 'Folha de impressão não respeitou A4 com grade 3 × 9 de etiquetas.');
+  assert(await evaluate('(() => { const sheet=document.querySelector(".print-sheet"); const style=getComputedStyle(sheet); const label=document.querySelector(".print-label"); return Math.abs(parseFloat(style.width)-210*96/25.4)<1 && Math.abs(parseFloat(style.height)-297*96/25.4)<1 && style.position==="relative" && getComputedStyle(label).position==="absolute" && Math.abs(label.getBoundingClientRect().width-70*96/25.4)<1 && Math.abs(label.getBoundingClientRect().height-33*96/25.4)<1; })()'), 'Folha A4 ou dimensão fixa de etiqueta 70 × 33 mm incorreta.');
   const originalOrders = await evaluate('localStorage.getItem("trameli-operation-draft-v2")');
   const paginationCheck = await evaluate(`(() => {
     const storageKey='trameli-operation-draft-v2';
@@ -114,9 +114,19 @@ try {
     localStorage.setItem(storageKey,JSON.stringify(many));
     window.dispatchEvent(new Event('trameli:orders-changed'));
     window.TrameliOperation.preparePrint();
-    return {sheets:document.querySelectorAll('.print-sheet').length,labels:document.querySelectorAll('.print-label').length};
+    const labels=Array.from(document.querySelectorAll('.print-label'));
+    const first=labels[0]?.getBoundingClientRect();
+    const second=labels[1]?.getBoundingClientRect();
+    const fourth=labels[3]?.getBoundingClientRect();
+    return {
+      sheets:document.querySelectorAll('.print-sheet').length,
+      labels:labels.length,
+      horizontalPitch:!!first && !!second && Math.abs((second.left-first.left)-70*96/25.4)<1,
+      verticalPitch:!!first && !!fourth && Math.abs((fourth.top-first.top)-33*96/25.4)<1
+    };
   })()`);
   assert(paginationCheck.sheets === 2 && paginationCheck.labels === 28, `A impressão não distribuiu 28 etiquetas em 2 folhas A4: ${JSON.stringify(paginationCheck)}`);
+  assert(paginationCheck.horizontalPitch && paginationCheck.verticalPitch, `As etiquetas não respeitaram o passo físico de 70 × 33 mm: ${JSON.stringify(paginationCheck)}`);
   const labelsPdfResult = await send('Page.printToPDF', { printBackground: true, preferCSSPageSize: true, displayHeaderFooter: false });
   const labelsPdf = await PDFDocument.load(Buffer.from(labelsPdfResult.data, 'base64'));
   assert(labelsPdf.getPageCount() === 2, `28 etiquetas deveriam ocupar exatamente 2 páginas A4, mas geraram ${labelsPdf.getPageCount()}.`);
