@@ -516,16 +516,16 @@ function preparePrint() {
     return text.split(/\r?\n/).reduce((sum, line) => sum + Math.max(1, Math.ceil(line.length / charsPerLine)), 0);
   };
   const estimateLabelHeight = (order, items, includeAddress, includeNotes, includeTotal) => {
-    const customerLines = Math.max(1, estimateLines(order.customer, 30));
-    const addressLines = includeAddress ? estimateLines(order.address, 54) : 0;
-    const itemLines = items.reduce((sum, item) => sum + Math.max(1, estimateLines(itemLabel(item), 54)), 0);
-    const noteLines = includeNotes ? estimateLines(order.notes, 54) : 0;
+    const customerLines = Math.max(1, estimateLines(order.customer, 36));
+    const addressLines = includeAddress ? estimateLines(order.address, 62) : 0;
+    const itemLines = items.reduce((sum, item) => sum + Math.max(1, estimateLines(itemLabel(item), 62)), 0);
+    const noteLines = includeNotes ? estimateLines(order.notes, 62) : 0;
     return Math.max(12, Math.ceil(
-      3.2 + customerLines * 2.6 +
-      (addressLines ? 0.4 + addressLines * 2.15 : 0) +
-      0.4 + itemLines * 2.15 +
-      (noteLines ? 0.4 + noteLines * 1.95 : 0) +
-      (includeTotal ? 0.4 + 2.2 + 0.8 : 0)
+      6.8 + customerLines * 4.1 +
+      (addressLines ? 0.5 + addressLines * 3.2 : 0) +
+      0.5 + itemLines * 3.2 +
+      (noteLines ? 0.4 + noteLines * 2.75 : 0) +
+      (includeTotal ? 0.4 + 3.2 : 0)
     ));
   };
 
@@ -564,12 +564,12 @@ function preparePrint() {
       'left:' + ((sheetPosition % 3) * LABEL_WIDTH_MM) + 'mm',
       'top:' + (Math.floor(sheetPosition / 3) * LABEL_HEIGHT_MM) + 'mm',
       'height:' + LABEL_HEIGHT_MM + 'mm',
-      '--label-body-size:' + (5.8 * scale).toFixed(2) + 'pt',
-      '--label-header-size:' + (7 * scale).toFixed(2) + 'pt',
-      '--label-code-size:' + (5.5 * scale).toFixed(2) + 'pt',
-      '--label-small-size:' + (5.3 * scale).toFixed(2) + 'pt',
-      '--label-total-size:' + (6 * scale).toFixed(2) + 'pt',
-      '--label-line-height:' + Math.max(0.82, 1.05 * scale).toFixed(2)
+      '--label-body-size:' + (7 * scale).toFixed(2) + 'pt',
+      '--label-header-size:' + (9 * scale).toFixed(2) + 'pt',
+      '--label-code-size:' + (9 * scale).toFixed(2) + 'pt',
+      '--label-small-size:' + (6 * scale).toFixed(2) + 'pt',
+      '--label-total-size:' + (7 * scale).toFixed(2) + 'pt',
+      '--label-line-height:' + Math.max(1.05, 1.3 * scale).toFixed(2)
     ].join(';');
     return '<article class="print-label" style="' + style + '"><div class="print-label__content">' +
       '<div class="print-label__top"><strong>' + escapeHtml(order.customer) + '</strong><span>' +
