@@ -532,37 +532,18 @@ function preparePrint() {
   const scaleForHeight = naturalHeight => naturalHeight > LABEL_HEIGHT_MM
     ? Math.max(0.55, (LABEL_HEIGHT_MM - 3.2) / Math.max(1, naturalHeight - 3.2))
     : 1;
-  const MIN_READABLE_SCALE = 0.78;
+  const MAX_ITEMS_PER_LABEL = 3;
 
   const prepareOrderLabels = order => {
-    const chunks = [order.items.slice()];
-    let attempts = 0;
-    while (attempts++ < Math.max(8, order.items.length * 2)) {
-      const overflowIndex = chunks.findIndex(items =>
-        items.length > 1 &&
-        scaleForHeight(estimateLabelHeight(order, items, Boolean(order.address), Boolean(order.notes), true)) < MIN_READABLE_SCALE
-      );
-      if (overflowIndex < 0) break;
-
-      const current = chunks[overflowIndex];
-      const weights = current.map(item => Math.max(1, estimateLines(itemLabel(item), 54)));
-      const totalLines = weights.reduce((sum, weight) => sum + weight, 0);
-      let accumulated = 0;
-      let splitAt = 1;
-      let bestDifference = Infinity;
-      for (let index = 1; index < weights.length; index++) {
-        accumulated += weights[index - 1];
-        const difference = Math.abs(totalLines / 2 - accumulated);
-        if (difference < bestDifference) {
-          bestDifference = difference;
-          splitAt = index;
-        }
-      }
-      chunks.splice(overflowIndex, 1, current.slice(0, splitAt), current.slice(splitAt));
+    const sourceItems = Array.isArray(order.items) ? order.items : [];
+    const chunks = [];
+    for (let start = 0; start < sourceItems.length; start += MAX_ITEMS_PER_LABEL) {
+      chunks.push(sourceItems.slice(start, start + MAX_ITEMS_PER_LABEL));
     }
+    if (!chunks.length) chunks.push([]);
 
     return chunks.map((items, index) => {
-      // Cada etiqueta mantém os dados do pedido; somente a lista de itens é repartida.
+      // O padrão da folha é de até três itens por etiqueta; os dados do pedido se repetem.
       const includeAddress = Boolean(order.address);
       const includeNotes = Boolean(order.notes);
       const includeTotal = true;
@@ -577,11 +558,11 @@ function preparePrint() {
 
   const prepared = labels.flatMap(label => prepareOrderLabels(label.order));
   const LABEL_WIDTH_MM = 70;
-  const renderLabel = ({ order, items, part, totalParts, scale, includeAddress, includeNotes, includeTotal }, position) => {
-    const partText = totalParts > 1 ? ' · ' + part + '/' + totalParts : '';
+  const renderLabel = ({ order, items, part, totalParts, scale, includeAddress, includeNotes, includeTotal }, globalPosition, sheetPosition) => {
+    const labelCode = totalParts > 1 ? part + '/' + totalParts : String(globalPosition + 1).padStart(2, '0');
     const style = [
-      'left:' + ((position % 3) * LABEL_WIDTH_MM) + 'mm',
-      'top:' + (Math.floor(position / 3) * LABEL_HEIGHT_MM) + 'mm',
+      'left:' + ((sheetPosition % 3) * LABEL_WIDTH_MM) + 'mm',
+      'top:' + (Math.floor(sheetPosition / 3) * LABEL_HEIGHT_MM) + 'mm',
       'height:' + LABEL_HEIGHT_MM + 'mm',
       '--label-body-size:' + (5.8 * scale).toFixed(2) + 'pt',
       '--label-header-size:' + (7 * scale).toFixed(2) + 'pt',
@@ -592,7 +573,7 @@ function preparePrint() {
     ].join(';');
     return '<article class="print-label" style="' + style + '"><div class="print-label__content">' +
       '<div class="print-label__top"><strong>' + escapeHtml(order.customer) + '</strong><span>' +
-      escapeHtml(orderCode(order)) + partText + '</span></div>' +
+      escapeHtml(labelCode) + '</span></div>' +
       (includeAddress && order.address ? '<p>' + escapeHtml(order.address) + '</p>' : '') +
       '<ul>' + items.map(item => '<li>' + escapeHtml(itemLabel(item)) + '</li>').join('') + '</ul>' +
       (includeNotes && order.notes ? '<small>Obs.: ' + escapeHtml(order.notes) + '</small>' : '') +
@@ -604,7 +585,7 @@ function preparePrint() {
   const sheets = [];
   for (let index = 0; index < prepared.length; index += LABELS_PER_SHEET) {
     const sheetNumber = Math.floor(index / LABELS_PER_SHEET) + 1;
-    const labelsHtml = prepared.slice(index, index + LABELS_PER_SHEET).map((label, position) => renderLabel(label, position)).join('');
+    const labelsHtml = prepared.slice(index, index + LABELS_PER_SHEET).map((label, position) => renderLabel(label, index + position, position)).join('');
     sheets.push('<section class="print-sheet" aria-label="Folha ' + sheetNumber + '">' + labelsHtml + '</section>');
   }
   printHost.innerHTML = sheets.join('');
