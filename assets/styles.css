@@ -798,12 +798,15 @@ body.menu-open { overflow: hidden; }
 
 .orders-table th:first-child,
 .orders-table td:first-child {
-  width: 7%;
+  width: 22%;
   padding-left: 2px;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 .orders-table th:nth-child(2) {
-  width: 30%;
+  width: 23%;
 }
 
 .orders-table td:nth-child(2) {
@@ -823,16 +826,16 @@ body.menu-open { overflow: hidden; }
 }
 
 .orders-table th:nth-child(3) {
-  width: 17%;
+  width: 15%;
 }
 
 .orders-table th:nth-child(4) {
-  width: 17%;
+  width: 15%;
 }
 
 .orders-table th:last-child,
 .orders-table td:last-child {
-  width: 29%;
+  width: 25%;
   padding-right: 2px;
 }
 
