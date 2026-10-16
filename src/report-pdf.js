@@ -130,10 +130,16 @@ export async function createBillingReportPdf({ title = 'Cobrança detalhada', pe
       page.drawLine({ start: { x: MARGIN, y }, end: { x: WIDTH - MARGIN, y }, thickness: 0.55, color: rule });
       y -= 14;
       const heading = `${billingDate(order.date)} · ${order.code || 'Pedido'} · vence ${billingDate(order.dueDate)}`;
-      const headingLines = wrap(strong, heading, 8.5, WIDTH - 2 * MARGIN - 92);
-      page.drawText(headingLines[0] || 'Pedido', { x: MARGIN, y, size: 8.5, font: strong, color: ink });
-      drawRight(order.status || '', WIDTH - MARGIN, y, 8, strong, order.status === 'Pago' ? primary : muted);
-      y -= 14;
+      const statusText = String(order.status || '');
+      const statusWidth = strong.widthOfTextAtSize(statusText, 8);
+      const headingWidth = Math.max(120, WIDTH - 2 * MARGIN - (statusText ? statusWidth + 18 : 0));
+      const headingLines = wrap(strong, heading, 8.5, headingWidth);
+      headingLines.forEach((line, index) => {
+        if (index > 0) ensureSpace(13);
+        page.drawText(line || 'Pedido', { x: MARGIN, y, size: 8.5, font: strong, color: ink });
+        if (index === 0 && statusText) drawRight(statusText, WIDTH - MARGIN, y, 8, strong, statusText === 'Pago' ? primary : muted);
+        y -= 12;
+      });
       for (const item of order.items || []) {
         const itemLines = wrap(font, item.label || 'Item', 8, WIDTH - 2 * MARGIN - 95);
         for (let index = 0; index < itemLines.length; index += 1) {
@@ -143,11 +149,20 @@ export async function createBillingReportPdf({ title = 'Cobrança detalhada', pe
           y -= 11;
         }
       }
-      ensureSpace(25);
+      ensureSpace(38);
       page.drawLine({ start: { x: MARGIN + 8, y: y + 4 }, end: { x: WIDTH - MARGIN, y: y + 4 }, thickness: 0.35, color: rule });
-      const totals = `Total ${billingMoney(order.totalCents)}   Pago ${billingMoney(order.paidCents)}   Em aberto ${billingMoney(order.dueCents)}`;
-      page.drawText(totals, { x: MARGIN + 8, y: y - 8, size: 8, font: strong, color: ink });
-      y -= 24;
+      const totalColumns = [
+        ['Total do pedido', order.totalCents],
+        ['Pago', order.paidCents],
+        ['Em aberto', order.dueCents],
+      ];
+      const totalColumnWidth = (WIDTH - 2 * MARGIN - 16) / totalColumns.length;
+      totalColumns.forEach(([label, amount], index) => {
+        const x = MARGIN + 8 + index * totalColumnWidth;
+        page.drawText(label, { x, y: y - 8, size: 7, font, color: muted });
+        page.drawText(billingMoney(amount), { x, y: y - 20, size: 8, font: strong, color: ink });
+      });
+      y -= 34;
     }
     y -= 8;
   }
