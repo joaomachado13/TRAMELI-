@@ -395,8 +395,8 @@ body :is(
   .portal-page .payment-customer .payment-pay-all,
   .portal-page .payment-customer .payment-order-pix,
   .portal-page .payment-customer .payment-selection-bar button,
-  .portal-back, .portal-link, .text-button, .portal-stepper button,
-  button:not([class]):not([type="submit"])
+  .portal-back, .portal-link, .text-button,
+  button:not([class]):not([type="submit"]):not(.portal-stepper button)
 ):not([data-portal-nav]):not([data-settings-tab]):not([data-agenda-mode]):not([data-agenda-day]):not([data-finance-days]):not([data-client-filter]):not([data-category]):not([data-personal-filter]):not([data-week-repeat-prev]):not([data-week-copy]):hover:not(:disabled) {
   background: var(--ui-button-secondary-hover) !important;
   border-color: var(--ui-button-secondary-hover-border) !important;
@@ -491,4 +491,25 @@ body :is(
 ):hover:not(:disabled) {
   border-color: var(--ui-button-secondary-hover-border) !important;
   background: var(--ui-button-secondary-hover) !important;
+}
+
+
+/* Steppers de quantidade são controles compactos, não botões de ação primária/secundária. */
+body .portal-stepper button {
+  width: 34px !important;
+  min-width: 34px !important;
+  min-height: 34px !important;
+  height: 34px !important;
+  padding: 0 !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 8px !important;
+  color: var(--color-text-primary) !important;
+  background: var(--color-surface-alternate) !important;
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+}
+body .portal-stepper button:hover:not(:disabled) {
+  background: var(--color-primary-subtle) !important;
+  border-color: var(--color-primary) !important;
 }
