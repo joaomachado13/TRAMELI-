@@ -144,7 +144,7 @@ export async function createSupplierPeriodPdf(report, kindLabel, { businessName 
 
   newPage();
   section('1. Itens e preço de custo');
-  const products = [...report.products].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  const products = [...report.products].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
   for (const product of products) productRow(product);
 
   y -= 8;
