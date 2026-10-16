@@ -1651,10 +1651,11 @@ body .live-logout:hover { border-color: var(--color-primary); background: var(--
   clip-path: circle(0 at 50% 50%);
   transition: clip-path 1.2s cubic-bezier(.23,1,.32,1);
 }
+/* Setas ficam explícitas apenas no rótulo de ações que avançam de etapa. */
 .screen-primary::after,
 .portal-primary::after,
 #operation-view .button--primary::after,
-.catalog-toolbar [data-catalog-action="new"]::after { content: "→"; font-size: 1rem; line-height: 1; transition: transform .55s cubic-bezier(.23,1,.32,1); }
+.catalog-toolbar [data-catalog-action="new"]::after { content: none; display: none; }
 .screen-primary:hover,
 .portal-primary:hover,
 #operation-view .button--primary:hover,
@@ -1663,10 +1664,7 @@ body .live-logout:hover { border-color: var(--color-primary); background: var(--
 .portal-primary:hover::before,
 #operation-view .button--primary:hover::before,
 .catalog-toolbar [data-catalog-action="new"]:hover::before { clip-path: circle(150% at 50% 50%); }
-.screen-primary:hover::after,
-.portal-primary:hover::after,
-#operation-view .button--primary:hover::after,
-.catalog-toolbar [data-catalog-action="new"]:hover::after { transform: translateX(4px); }
+/* Sem animação de seta automática: evita setas duplicadas e setas em ações não navegacionais. */
 .screen-primary:active,
 .portal-primary:active,
 #operation-view .button--primary:active,
