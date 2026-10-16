@@ -27,8 +27,9 @@ export function lineCost(costMap, orderId, index) {
 }
 
 // Consolidado de um período: por produto, por dia e total, só com pedidos não cancelados.
-// referenceUnitCents e estimatedCount são metadados de exibição do PDF; não alteram totais.
-export function supplierPeriodReport(orders, costMap, from, to) {
+// O preço por kg é metadado de exibição; não altera custos por linha nem totais.
+export function supplierPeriodReport(orders, costMap, from, to, catalogProducts = []) {
+  const catalogCostById = new Map((catalogProducts || []).map(product => [product.id, product.costCents]));
   const inRange = orders.filter(order => order.date >= from && order.date <= to && statusOf(order) !== 'cancelled');
   const products = new Map();
   const days = new Map();
@@ -42,7 +43,7 @@ export function supplierPeriodReport(orders, costMap, from, to) {
       const weighted = Number(item.weightGrams) > 0;
       const key = JSON.stringify([item.productId || normalize(item.name), weighted]);
       const current = products.get(key) || {
-        name: item.name, weighted, quantity: 0, grams: 0, costCents: 0,
+        productId: item.productId || null, name: item.name, weighted, quantity: 0, grams: 0, costCents: 0,
         missing: 0, estimatedCount: 0, referenceUnitCents: null,
       };
       current.quantity += Number(item.quantity) || 0;
@@ -51,7 +52,12 @@ export function supplierPeriodReport(orders, costMap, from, to) {
         current.costCents += cost.totalCents;
         day.costCents += cost.totalCents;
         totalCents += cost.totalCents;
-        if (current.referenceUnitCents == null && cost.unitCents != null) current.referenceUnitCents = cost.unitCents;
+        if (current.referenceUnitCents == null && cost.totalCents != null) {
+          // O snapshot guarda o custo da porção vendida; converte para kg só para exibição.
+          current.referenceUnitCents = weighted && Number(item.weightGrams) > 0
+            ? Math.round(cost.totalCents * 1000 / Number(item.weightGrams))
+            : cost.unitCents;
+        }
       } else {
         current.missing += 1;
         missingLines += 1;
@@ -67,7 +73,7 @@ export function supplierPeriodReport(orders, costMap, from, to) {
     ...product,
     label: (product.weighted ? String(product.grams) + ' g' : String(product.quantity) + '×') + ' ' + product.name,
     unitCents: product.missing ? null : product.weighted
-      ? product.referenceUnitCents
+      ? (catalogCostById.get(product.productId) ?? product.referenceUnitCents)
       : product.quantity ? Math.round(product.costCents / product.quantity) : null,
   }));
   return {
