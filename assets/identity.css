@@ -375,7 +375,7 @@ body :is(
   .portal-page .payment-customer .payment-order-pix,
   .portal-page .payment-customer .payment-selection-bar button,
   .portal-back, .portal-link, .text-button, .pix-copy-button,
-  .portal-stepper button, button:not([class])
+  button:not([class]):not([type="submit"]):not(.portal-stepper button)
 ):not([data-portal-nav]):not([data-settings-tab]):not([data-agenda-mode]):not([data-agenda-day]):not([data-finance-days]):not([data-client-filter]):not([data-category]):not([data-personal-filter]):not([data-week-repeat-prev]):not([data-week-copy]):not([type="submit"]) {
   box-sizing: border-box;
   min-height: var(--ui-button-height) !important;
