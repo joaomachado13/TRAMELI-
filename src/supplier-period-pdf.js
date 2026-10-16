@@ -73,9 +73,14 @@ export async function createSupplierPeriodPdf(report, kindLabel, { businessName 
     const valueWidth = selected.widthOfTextAtSize(String(value ?? ''), valueSize);
     const lines = wrapLine(left, selected, leftSize, leftWidth);
     const noteLines = note ? wrapLine(note, font, 8, WIDTH - 2 * MARGIN - 12) : [];
-    const rowHeight = Math.max(lines.length * 12, 13) + (noteLines.length ? noteLines.length * 10 + 3 : 0) + 8;
+    const lastProductY = y - (lines.length - 1) * 12;
+    const noteStartY = lastProductY - 14;
+    const dividerY = noteLines.length ? noteStartY - (noteLines.length - 1) * 10 - 10 : lastProductY - 14;
+    const nextRowY = dividerY - 14;
+    const rowHeight = y - nextRowY;
     if (y - rowHeight < BOTTOM) newPage();
 
+    // Product lines use a fixed 12 pt baseline interval.
     lines.forEach((line, index) => {
       page.drawText(line, { x: leftX, y: y - index * 12, size: leftSize, font: selected, color: ink });
     });
@@ -90,14 +95,12 @@ export async function createSupplierPeriodPdf(report, kindLabel, { businessName 
       font: selected,
       color: note ? primary : ink,
     });
-    let cursorY = y - Math.max(lines.length * 12, 13);
-    for (const line of noteLines) {
-      // Pull the unit-cost note closer to the product row, while preserving clear space above the divider.
-      page.drawText(line, { x: leftX, y: cursorY + 3, size: 8, font, color: muted });
-      cursorY -= 10;
-    }
-    y = cursorY - 11;
-    page.drawLine({ start: { x: MARGIN, y: y + 4 }, end: { x: WIDTH - MARGIN, y: y + 4 }, thickness: 0.4, color: pale });
+    noteLines.forEach((line, index) => {
+      page.drawText(line, { x: leftX, y: noteStartY - index * 10, size: 8, font, color: muted });
+    });
+    // Keep the divider below the last text baseline, and give every following row the same gap.
+    page.drawLine({ start: { x: MARGIN, y: dividerY }, end: { x: WIDTH - MARGIN, y: dividerY }, thickness: 0.4, color: pale });
+    y = nextRowY;
   }
 
   newPage();
