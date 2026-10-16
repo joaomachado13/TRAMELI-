@@ -36,15 +36,67 @@ export async function createSupplierPeriodPdf(report, kindLabel, { businessName 
     page.drawText(title, { x: MARGIN + 10, y: y - 18, size: 12, font: strong, color: ink });
     y -= 42;
   }
+  function wrapLine(value, selectedFont, size, maxWidth) {
+    const words = String(value ?? '').trim().split(/\\s+/).filter(Boolean);
+    if (!words.length) return ['—'];
+    const lines = [];
+    let current = '';
+    for (const word of words) {
+      const candidate = current ? `${current} ${word}` : word;
+      if (selectedFont.widthOfTextAtSize(candidate, size) <= maxWidth) {
+        current = candidate;
+      } else {
+        if (current) lines.push(current);
+        // Keep even unusually long product names inside the page width.
+        let part = '';
+        for (const character of word) {
+          const next = part + character;
+          if (selectedFont.widthOfTextAtSize(next, size) > maxWidth && part) {
+            lines.push(part);
+            part = character;
+          } else part = next;
+        }
+        current = part;
+      }
+    }
+    if (current) lines.push(current);
+    return lines;
+  }
+
   function row(left, value, { bolder = false, note = '' } = {}) {
-    if (y - 20 < BOTTOM) newPage();
     const selected = bolder ? strong : font;
-    page.drawText(left, { x: MARGIN + 6, y, size: 10.5, font: selected, color: ink });
-    const width = selected.widthOfTextAtSize(value, 10.5);
-    page.drawText(value, { x: WIDTH - MARGIN - 6 - width, y, size: 10.5, font: selected, color: note ? primary : ink });
-    y -= 17;
-    if (note) { page.drawText(note, { x: MARGIN + 6, y: y + 2, size: 8, font, color: muted }); y -= 8; }
-    page.drawLine({ start: { x: MARGIN, y: y + 9 }, end: { x: WIDTH - MARGIN, y: y + 9 }, thickness: 0.4, color: pale });
+    const leftX = MARGIN + 6;
+    const valueRight = WIDTH - MARGIN - 6;
+    const valueSize = 10;
+    const leftSize = 9.5;
+    const leftWidth = 350;
+    const valueWidth = selected.widthOfTextAtSize(String(value ?? ''), valueSize);
+    const lines = wrapLine(left, selected, leftSize, leftWidth);
+    const noteLines = note ? wrapLine(note, font, 8, WIDTH - 2 * MARGIN - 12) : [];
+    const rowHeight = Math.max(lines.length * 12, 13) + (noteLines.length ? noteLines.length * 10 + 3 : 0) + 8;
+    if (y - rowHeight < BOTTOM) newPage();
+
+    lines.forEach((line, index) => {
+      page.drawText(line, { x: leftX, y: y - index * 12, size: leftSize, font: selected, color: ink });
+    });
+    const shownValue = String(value ?? '');
+    const safeValue = shownValue;
+    const safeValueSize = valueWidth > 150 ? 8.5 : valueSize;
+    // Monetary values remain right-aligned and never collide with a long product name.
+    page.drawText(safeValue, {
+      x: valueRight - selected.widthOfTextAtSize(safeValue, safeValueSize),
+      y,
+      size: safeValueSize,
+      font: selected,
+      color: note ? primary : ink,
+    });
+    let cursorY = y - Math.max(lines.length * 12, 13);
+    for (const line of noteLines) {
+      page.drawText(line, { x: leftX, y: cursorY, size: 8, font, color: muted });
+      cursorY -= 10;
+    }
+    y = cursorY - 5;
+    page.drawLine({ start: { x: MARGIN, y: y + 2 }, end: { x: WIDTH - MARGIN, y: y + 2 }, thickness: 0.4, color: pale });
   }
 
   newPage();
