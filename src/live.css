@@ -8,3 +8,66 @@
 @media(max-height:720px) and (min-width:761px){.auth-story{position:sticky;top:0;height:100dvh;box-sizing:border-box}.live-gate{align-items:start}.live-gate__panel{padding-top:24px;padding-bottom:24px}}
 .portal-header__actions #portal-cart-link{background:var(--color-surface);color:var(--color-text-secondary);border-color:var(--color-border)}.portal-header__actions .live-account{background:transparent;color:var(--color-text-primary);border-color:var(--color-border)}body .account-dialog.account-panel .account-signout{display:inline-flex;align-items:center;justify-content:center;min-height:44px;margin-top:24px;padding:10px 16px;border:1px solid var(--color-border)!important;border-radius:8px;background:var(--color-background)!important;color:var(--color-text-secondary)!important;font-weight:700!important;line-height:1.1;box-shadow:0 6px 16px var(--color-shadow);cursor:pointer;appearance:none;-webkit-appearance:none}body .account-dialog.account-panel .account-signout:hover{border-color:var(--color-primary)!important;background:var(--color-background)!important;color:var(--color-text-secondary)!important;box-shadow:0 8px 18px var(--color-shadow);transform:translateY(-1px)}body .account-dialog.account-panel .account-signout:active{background:var(--color-background)!important;transform:translateY(0);box-shadow:none}body .account-dialog.account-panel .account-signout:disabled{background:var(--color-background)!important;color:var(--color-text-secondary)!important;opacity:.5;cursor:wait;transform:none;box-shadow:none}
 @media(max-width:640px){.portal-header{flex-wrap:wrap;gap:14px}.portal-header__actions{margin-left:auto}}
+
+
+/* Trameli auth switch: one capsule, a single moving terracotta-tinted indicator. */
+.live-gate .auth-tabs {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0 !important;
+  padding: 4px !important;
+  overflow: hidden !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 9999px !important;
+  background: var(--color-surface) !important;
+  box-shadow: 0 1px 2px var(--color-shadow), 0 5px 12px var(--color-shadow) !important;
+  isolation: isolate;
+}
+.live-gate .auth-tabs::before {
+  content: "" !important;
+  position: absolute !important;
+  z-index: 0 !important;
+  top: 4px !important;
+  bottom: 4px !important;
+  left: 4px !important;
+  width: calc(50% - 4px) !important;
+  border: 1px solid var(--color-border-secondary) !important;
+  border-radius: 9999px !important;
+  background: var(--color-primary-subtle) !important;
+  box-sizing: border-box !important;
+  transform: translateX(0) !important;
+  transition: transform 250ms ease-out !important;
+  pointer-events: none !important;
+}
+.live-gate .auth-tabs:has(button[data-mode="signup"][aria-pressed="true"])::before {
+  transform: translateX(calc(100% + 8px)) !important;
+}
+.live-gate .auth-tabs > button {
+  position: relative !important;
+  z-index: 1 !important;
+  flex: 1 1 50% !important;
+  min-width: 0 !important;
+  min-height: 36px !important;
+  height: 36px !important;
+  padding: 8px 14px !important;
+  border: 0 !important;
+  border-radius: 9999px !important;
+  color: var(--color-text-secondary) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font: 600 13px var(--font-interface) !important;
+  transition: color 150ms ease-in !important;
+}
+.live-gate .auth-tabs > button:hover:not(:disabled),
+.live-gate .auth-tabs > button:active:not(:disabled),
+.live-gate .auth-tabs > button[aria-pressed="true"] {
+  border: 0 !important;
+  color: var(--color-primary) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-gate .auth-tabs::before,
+  .live-gate .auth-tabs > button { transition: none !important; }
+}
