@@ -236,3 +236,14 @@ body:not(.portal-mode) #portal-floating-host,body:not(.portal-mode) .portal-bott
 .portal-billing-countdown.is-overdue{border-color:#f2b4a5;background:color-mix(in srgb,#8e3022 28%,transparent)}
 .portal-billing-countdown.is-today{border-color:color-mix(in srgb,var(--color-on-primary) 55%,transparent)}
 @media(max-width:640px){.portal-welcome__heading{flex-direction:column;gap:17px}.portal-billing-countdown{flex-basis:auto;width:100%;max-width:none}.portal-welcome h1{font-size:2.7rem}}
+
+
+/* Contraste explícito para o cartão de fechamento no portal do cliente. */
+.portal-billing-countdown,
+.portal-billing-countdown > span,
+.portal-billing-countdown > strong,
+.portal-billing-countdown > small {
+  color: var(--color-on-primary, #fffaf5) !important;
+}
+.portal-billing-countdown > strong { opacity: 1; }
+.portal-billing-countdown > small { opacity: .9; }
