@@ -81,24 +81,15 @@ const dateBr = date => date.split('-').reverse().join('/');
 export const periodLabel = (from, to) => from === to ? dateBr(from) : dateBr(from) + ' a ' + dateBr(to);
 
 export function supplierPeriodText(report, kindLabel, businessName = 'Pão Doce') {
-  const lines = [
-    businessName + ' - Repasse da padaria (' + kindLabel + ')',
-    'Período: ' + periodLabel(report.from, report.to) + ' · ' + report.orderCount + ' ' + (report.orderCount === 1 ? 'pedido' : 'pedidos'),
-    '', 'ITENS (preço de custo)',
-  ];
+  const lines = [businessName + ' - Repasse da padaria (' + kindLabel + ')', 'Período: ' + periodLabel(report.from, report.to) + ' · ' + report.orderCount + ' pedidos', '', 'ITENS (preço de custo)'];
   for (const product of report.products) {
-    lines.push(product.label + ' — ' + (product.missing ? 'custo não informado' : formatMoney(product.costCents))
-      + (product.unitCents != null ? ' (' + formatMoney(product.unitCents) + (product.weighted ? ' por kg' : ' por unidade') + ')' : ''));
+    lines.push(product.label + ' — ' + (product.missing ? 'custo não informado' : formatMoney(product.costCents)) + (product.unitCents != null && !product.weighted ? ' (' + formatMoney(product.unitCents) + ' un.)' : ''));
   }
   lines.push('', 'POR DIA');
-  for (const day of report.days) {
-    lines.push(dateBr(day.date) + ' · ' + day.orders + ' ' + (day.orders === 1 ? 'pedido' : 'pedidos') + ' · ' + formatMoney(day.costCents));
-  }
+  for (const day of report.days) lines.push(dateBr(day.date) + ' · ' + day.orders + ' pedidos · ' + formatMoney(day.costCents));
   lines.push('', 'TOTAL A PAGAR À PADARIA: ' + formatMoney(report.totalCents));
   if (report.missingLines) lines.push('Atenção: ' + report.missingLines + ' item(ns) sem custo cadastrado; o total está incompleto.');
-  if (report.estimatedLines) lines.push(report.estimatedLines === 1
-    ? '* Custo estimado, ainda não confirmado (1 item).'
-    : '* Custos estimados, ainda não confirmados (' + report.estimatedLines + ' itens).');
+  if (report.estimatedLines) lines.push('Obs.: ' + report.estimatedLines + ' item(ns) com custo estimado, ainda não confirmado.');
   return lines.join('\n');
 }
 
