@@ -486,3 +486,22 @@ body .live-gate .auth-tabs > button:focus-visible {
   body .live-gate .auth-tabs::before,
   body .live-gate .auth-tabs > button { transition: none !important; }
 }
+
+
+/* Transição discreta entre entrar/cadastro, sem deslocar o formulário inteiro. */
+body .live-gate .auth-copy-enter {
+  animation: auth-copy-in 260ms cubic-bezier(.2,.7,.25,1) both;
+}
+@keyframes auth-copy-in {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+body .live-gate .auth-tabs > button {
+  transition: color 180ms ease !important;
+}
+body .live-gate .auth-tabs::before {
+  transition: transform 280ms cubic-bezier(.22,.8,.25,1), background-color 180ms ease !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  body .live-gate .auth-copy-enter { animation: none !important; }
+}
