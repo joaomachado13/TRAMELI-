@@ -212,10 +212,12 @@ body .ico--brand { color: inherit; }
 
 /* O portal público não deve exibir nem permitir interação com a navegação interna. */
 body.portal-mode .nav {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
   transform: translateX(-105%) !important;
-  visibility: hidden;
-  pointer-events: none;
 }
+
 body.portal-mode .menu-overlay {
   display: none !important;
 }
