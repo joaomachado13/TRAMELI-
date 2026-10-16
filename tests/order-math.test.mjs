@@ -40,3 +40,14 @@ const manyItems = { items: Array.from({ length: 7 }, (_, index) => ({ name: `Ite
 assert.deepEqual(labelsForPrint([manyItems]).map(label => [label.items.length, label.part, label.totalParts]), [[7, 1, 1]]);
 assert.equal(labelsForPrint([manyItems])[0].items.length, manyItems.items.length, 'Pedido grande deve caber em uma única etiqueta.');
 console.log('Cálculos de 60 pedidos: OK');
+
+// Etiquetas ordenadas por rua numerada e, dentro da rua, pela casa.
+{
+  const base = { items: [{ name: 'Pão francês', quantity: 1, priceCents: 100 }], feeCents: 200, date: '2026-10-16' };
+  const ordered = labelsForPrint([
+    { ...base, id: 'a', address: 'Rua 10, casa 1' }, { ...base, id: 'b', address: 'Rua 2, casa 9' },
+    { ...base, id: 'c', address: 'Sem rua informada' }, { ...base, id: 'd', address: 'Rua 2, casa 3' },
+    { ...base, id: 'e', address: 'R. 01 casa 5' },
+  ]).map(label => label.order.id);
+  assert.deepEqual(ordered, ['e', 'd', 'b', 'a', 'c']);
+}
