@@ -674,7 +674,7 @@ async function buildPeriodReport() {
   const inPeriod = periodOrders(period);
   if (!inPeriod.length) throw new Error('Não há pedidos neste período.');
   await loadCostsFor(inPeriod);
-  return { period, report: supplierPeriodReport(orders, supplierCostMap || new Map(), period.from, period.to) };
+  return { period, report: supplierPeriodReport(orders, supplierCostMap || new Map(), period.from, period.to, live?.products || []) };
 }
 supplierPeriodSelect?.addEventListener('change', () => { supplierFeedback.textContent = ''; renderSupplierList(); });
 supplierCopy.addEventListener('click', async () => {
