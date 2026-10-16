@@ -1,4 +1,7 @@
 @import "./identity-tokens.css";
+
+/* Fundo global consistente com a identidade creme, inclusive fora das telas principais. */
+body { background-color: var(--color-background); }
 /* Revisão de experiência: painel claro, dados progressivos e drawers reutilizáveis. */
 .global-search{position:relative;width:min(540px,52vw)}
 .global-search .search{width:100%}
