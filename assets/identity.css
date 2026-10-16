@@ -434,3 +434,61 @@ body :is(.portal-page .payment-customer .payment-pay-all, .portal-page .payment-
   border-color: var(--ui-button-primary-hover) !important;
 }
 body .pix-order-reference { margin: 4px 0 8px; font-size: .78rem; color: var(--color-text-secondary); }
+
+
+/* Valores finais autoritativos: vencem estilos legados com seletores mais específicos. */
+body :is(
+  .button--primary, .screen-primary, .portal-primary, .auth-submit,
+  .pix-signal-primary, .payment-confirm-primary, .portal-page .payment-customer .payment-pay-all,
+  .portal-page .payment-customer .payment-order-pix,
+  .catalog-toolbar [data-catalog-action="new"], .catalog-actions button:last-child,
+  .account-panel button:not(.account-signout):not(.account-dialog__close),
+  .portal-floating > button, #portal-cart-link
+) {
+  min-height: var(--ui-button-height) !important;
+  padding: var(--ui-button-padding-y) var(--ui-button-padding-x) !important;
+  border: 1px solid var(--ui-button-primary-bg) !important;
+  border-radius: 999px !important;
+  font-size: var(--ui-button-font-size) !important;
+  font-weight: var(--ui-button-font-weight) !important;
+  line-height: 1.25 !important;
+}
+body :is(
+  .button--primary, .screen-primary, .portal-primary, .auth-submit,
+  .pix-signal-primary, .payment-confirm-primary, .portal-page .payment-customer .payment-pay-all,
+  .portal-page .payment-customer .payment-order-pix,
+  .catalog-toolbar [data-catalog-action="new"], .catalog-actions button:last-child,
+  .account-panel button:not(.account-signout):not(.account-dialog__close),
+  .portal-floating > button, #portal-cart-link
+):hover:not(:disabled) {
+  border-radius: 12px !important;
+  box-shadow: 0 0 0 4px var(--color-shadow) !important;
+}
+body :is(
+  .button--quiet, .auth-google, .pix-whatsapp, .pix-afterpay__actions > button,
+  .entity-detail__actions button:not(.screen-primary),
+  .report-actions > button:not(.screen-primary),
+  .catalog-actions button:not(:last-child), [data-pix-config], [data-pix-refresh],
+  .pix-copy-button, .portal-back, .portal-link, .text-button
+) {
+  min-height: var(--ui-button-height) !important;
+  padding: var(--ui-button-padding-y) var(--ui-button-padding-x) !important;
+  border: 1px solid var(--ui-button-secondary-border) !important;
+  border-radius: var(--ui-button-radius) !important;
+  color: var(--ui-button-secondary-text) !important;
+  background: var(--ui-button-secondary-bg) !important;
+  font-size: var(--ui-button-font-size) !important;
+  font-weight: var(--ui-button-font-weight) !important;
+  line-height: 1.25 !important;
+  box-shadow: none !important;
+}
+body :is(
+  .button--quiet, .auth-google, .pix-whatsapp, .pix-afterpay__actions > button,
+  .entity-detail__actions button:not(.screen-primary),
+  .report-actions > button:not(.screen-primary),
+  .catalog-actions button:not(:last-child), [data-pix-config], [data-pix-refresh],
+  .pix-copy-button, .portal-back, .portal-link, .text-button
+):hover:not(:disabled) {
+  border-color: var(--ui-button-secondary-hover-border) !important;
+  background: var(--ui-button-secondary-hover) !important;
+}
