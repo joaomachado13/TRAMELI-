@@ -42,7 +42,7 @@ try {
   const dates = (await db.query(`select
     local_today::text today,
     (local_today + 2 + case when extract(dow from local_today + 2) = 0 then 1 else 0 end)::text future,
-    (local_today - 40)::text overdue,
+    (local_today - 40 - case when extract(dow from local_today - 40) = 0 then 1 else 0 end)::text overdue,
     (date_trunc('week', local_today::timestamp)::date + 13)::text sunday
     from (select (now() at time zone 'America/Sao_Paulo')::date as local_today) as clock`)).rows[0];
   const productId = (await db.query("select id from public.trameli_products where name='Pão de queijo'")).rows[0].id;
@@ -95,7 +95,7 @@ try {
 
   const expired = (await customerOrder(randomUUID(), dates.future)).rows[0].id;
   await db.exec('reset role');
-  await db.query('update public.trameli_orders set delivery_date=$2 where id=$1', [expired, dates.today]);
+  await db.query('update public.trameli_orders set delivery_date=$2 where id=$1', [expired, dates.overdue]);
   await asUser(customer);
   await assert.rejects(db.query('select public.trameli_cancel_customer_order($1,1)', [expired]), /cutoff exceeded/);
 
