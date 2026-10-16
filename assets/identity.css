@@ -209,3 +209,13 @@ body .ico--brand { color: inherit; }
 .portal-brand { display: inline-flex; align-items: center; flex-wrap: wrap; }
 .auth-brand { display: inline-flex; align-items: center; }
 .portal-brand small { flex-basis: 100%; }
+
+/* O portal público não deve exibir nem permitir interação com a navegação interna. */
+body.portal-mode .nav {
+  transform: translateX(-105%) !important;
+  visibility: hidden;
+  pointer-events: none;
+}
+body.portal-mode .menu-overlay {
+  display: none !important;
+}
