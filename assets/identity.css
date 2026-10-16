@@ -405,69 +405,84 @@ body :is(.button--primary, .screen-primary, .portal-primary, .auth-submit, .pix-
 }
 body .pix-order-reference { margin: 4px 0 8px; font-size: .78rem; color: var(--color-text-secondary); }
 
-/* Entrar / Criar conta: cápsula única com indicador deslizante, sem fundo nos botões. */
+/* Login: seletor segmentado com um único indicador deslizante. */
 body .live-gate .auth-tabs {
   position: relative !important;
   display: flex !important;
-  align-items: center;
+  align-items: stretch !important;
   gap: 0 !important;
   padding: 4px !important;
   overflow: hidden !important;
+  box-sizing: border-box !important;
   border: 1px solid var(--color-border) !important;
   border-radius: 9999px !important;
-  background: var(--color-surface) !important;
-  box-shadow: 0 1px 2px var(--color-shadow), 0 5px 12px var(--color-shadow) !important;
+  background: var(--color-surface-alternate) !important;
+  box-shadow: none !important;
   isolation: isolate;
 }
 body .live-gate .auth-tabs::before {
-  content: "";
-  position: absolute;
-  z-index: 0;
-  top: 4px;
-  bottom: 4px;
-  left: 4px;
-  width: calc(50% - 4px);
-  border: 1px solid var(--color-border-secondary);
-  border-radius: 9999px;
-  background: var(--color-primary-subtle);
-  box-sizing: border-box;
-  transform: translateX(0);
-  transition: transform 250ms ease-out;
-  pointer-events: none;
+  content: "" !important;
+  position: absolute !important;
+  z-index: 0 !important;
+  top: 4px !important;
+  bottom: 4px !important;
+  left: 4px !important;
+  width: calc(50% - 4px) !important;
+  box-sizing: border-box !important;
+  border: 1px solid var(--color-primary) !important;
+  border-radius: 9999px !important;
+  background: var(--color-primary-subtle) !important;
+  transform: translateX(0) !important;
+  transition: transform 240ms cubic-bezier(.2,.75,.25,1) !important;
+  pointer-events: none !important;
 }
-body .live-gate .auth-tabs:has(button[data-mode="signup"][aria-pressed="true"])::before {
-  transform: translateX(calc(100% + 8px));
+body .live-gate .auth-tabs:has(> button[data-mode="signup"][aria-pressed="true"])::before {
+  transform: translateX(calc(100% + 4px)) !important;
 }
-body .live-gate .auth-tabs button {
-  position: relative;
-  z-index: 1;
-  flex: 1 1 50%;
-  min-width: 0;
-  min-height: 30px !important;
-  height: 36px;
-  padding: 8px 14px !important;
-  border: 0 !important;
+body .live-gate .auth-tabs > button,
+body .live-gate .auth-tabs > button:hover:not(:disabled),
+body .live-gate .auth-tabs > button:active:not(:disabled),
+body .live-gate .auth-tabs > button[aria-pressed="true"] {
+  position: relative !important;
+  z-index: 1 !important;
+  display: inline-flex !important;
+  flex: 1 1 50% !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 0 !important;
+  min-height: 38px !important;
+  height: 38px !important;
+  margin: 0 !important;
+  padding: 8px 12px !important;
+  box-sizing: border-box !important;
+  border: 1px solid transparent !important;
   border-radius: 9999px !important;
   color: var(--color-text-secondary) !important;
   background: transparent !important;
   box-shadow: none !important;
-  font-weight: 600 !important;
-  transition: color 150ms ease-in;
+  font-family: var(--font-interface) !important;
+  font-size: 13px !important;
+  font-weight: 650 !important;
+  line-height: 1.2 !important;
+  text-decoration: none !important;
+  transform: none !important;
+  transition: color 150ms ease !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
 }
-body .live-gate .auth-tabs button:hover:not(:disabled),
-body .live-gate .auth-tabs button:active:not(:disabled) {
-  border: 0 !important;
-  color: var(--color-primary) !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-body .live-gate .auth-tabs button[aria-pressed="true"] {
+body .live-gate .auth-tabs > button[aria-pressed="true"],
+body .live-gate .auth-tabs > button:hover:not(:disabled),
+body .live-gate .auth-tabs > button:active:not(:disabled) {
   color: var(--color-primary) !important;
   background: transparent !important;
   border-color: transparent !important;
   box-shadow: none !important;
 }
+body .live-gate .auth-tabs > button:focus-visible {
+  outline: 2px solid var(--color-primary) !important;
+  outline-offset: -3px !important;
+}
 @media (prefers-reduced-motion: reduce) {
   body .live-gate .auth-tabs::before,
-  body .live-gate .auth-tabs button { transition: none !important; }
+  body .live-gate .auth-tabs > button { transition: none !important; }
 }
