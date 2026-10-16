@@ -82,6 +82,32 @@ summary {
   outline-offset: 2px !important;
 }
 
+/* Variante circular para controles de incremento/decremento; não herda padding de botões de texto. */
+.button--icon-round {
+  display: inline-flex;
+  flex: 0 0 32px;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 9999px;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font: 700 1.2rem/1 var(--font-interface);
+  text-align: center;
+  box-shadow: none;
+  cursor: pointer;
+}
+.button--icon-round:hover:not(:disabled) { background: var(--color-primary-hover); }
+.button--icon-round:disabled { opacity: .45; cursor: not-allowed; }
+.button--icon-round:focus-visible { outline: 3px solid var(--color-focus-ring) !important; outline-offset: 2px !important; }
+.portal-stepper button.button--icon-round:disabled { background: var(--color-primary); color: var(--color-on-primary); }
+
 ::selection {
   color: var(--color-text-primary);
   background: var(--color-surface);
