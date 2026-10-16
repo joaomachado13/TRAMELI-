@@ -73,12 +73,16 @@ export async function createSupplierPeriodPdf(report, kindLabel, { businessName 
     const valueWidth = selected.widthOfTextAtSize(String(value ?? ''), valueSize);
     const lines = wrapLine(left, selected, leftSize, leftWidth);
     const noteLines = note ? wrapLine(note, font, 8, WIDTH - 2 * MARGIN - 12) : [];
-    const lastProductY = y - (lines.length - 1) * 12;
-    const noteStartY = lastProductY - 14;
-    const dividerY = noteLines.length ? noteStartY - (noteLines.length - 1) * 10 - 10 : lastProductY - 14;
-    const nextRowY = dividerY - 14;
-    const rowHeight = y - nextRowY;
-    if (y - rowHeight < BOTTOM) newPage();
+    const lastProductOffset = (lines.length - 1) * 12;
+    const noteStartOffset = lastProductOffset + 14;
+    const dividerOffset = noteLines.length
+      ? noteStartOffset + (noteLines.length - 1) * 10 + 10
+      : lastProductOffset + 14;
+    const nextRowOffset = dividerOffset + 14;
+    if (y - nextRowOffset < BOTTOM) newPage();
+    const noteStartY = y - noteStartOffset;
+    const dividerY = y - dividerOffset;
+    const nextRowY = y - nextRowOffset;
 
     // Product lines use a fixed 12 pt baseline interval.
     lines.forEach((line, index) => {
