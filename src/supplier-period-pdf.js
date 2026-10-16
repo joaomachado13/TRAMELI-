@@ -39,9 +39,9 @@ export async function createSupplierPeriodPdf(report, kindLabel, { businessName 
     page = pdf.addPage([WIDTH, HEIGHT]);
     y = HEIGHT - MARGIN;
     page.drawText(businessName, { x: MARGIN, y, size: 10, font: strong, color: primary });
-    y -= 23;
+    y -= 26;
     page.drawText('Repasse da padaria - ' + kindLabel, { x: MARGIN, y, size: 20, font: strong, color: ink });
-    y -= 19;
+    y -= 22;
     page.drawText('Período: ' + label + '   |   ' + report.orderCount + ' ' + (report.orderCount === 1 ? 'pedido' : 'pedidos'),
       { x: MARGIN, y, size: 10, font, color: muted });
     y -= 24;
@@ -136,7 +136,7 @@ export async function createSupplierPeriodPdf(report, kindLabel, { businessName 
     const titleHeight = Math.max(titleLines.length * 11, 11);
     const noteHeight = noteLines.length * 9;
     const contentHeight = titleHeight + PDF_NOTE_GAP + noteHeight;
-    const rowHeight = PDF_HALF_GAP + 8 + contentHeight + PDF_HALF_GAP;
+    const rowHeight = PDF_HALF_GAP + 8 + contentHeight + PDF_NOTE_GAP + PDF_HALF_GAP;
 
     // Mantém o item inteiro e reserva espaço para a seção diária + total + nota.
     if (y - rowHeight - finalBlockHeight < BOTTOM) newPage();
@@ -152,7 +152,7 @@ export async function createSupplierPeriodPdf(report, kindLabel, { businessName 
       page.drawText(line, { x: leftX, y: noteY, size: 7.8, font, color: muted });
       noteY -= 9;
     }
-    const separatorY = noteY + 9 - PDF_GAP;
+    const separatorY = noteY + 9 - PDF_GAP - PDF_NOTE_GAP;
     page.drawLine({ start: { x: MARGIN, y: separatorY }, end: { x: WIDTH - MARGIN, y: separatorY }, thickness: 0.4, color: pale });
     y = separatorY - PDF_HALF_GAP;
   }
