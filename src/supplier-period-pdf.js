@@ -1,6 +1,8 @@
 import { PDFDocument, rgb } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import { formatMoney, periodLabel } from './supplier-costs.js';
+import regularFontUrl from '../assets/manrope-400.ttf?url';
+import boldFontUrl from '../assets/manrope-600.ttf?url';
 
 const WIDTH = 595.28;
 const HEIGHT = 841.89;
@@ -189,11 +191,11 @@ export async function createSupplierPeriodPdf(report, kindLabel, { businessName 
 }
 
 export async function downloadSupplierPeriodPdf(report, kindLabel, businessName) {
-  const load = name => fetch(new URL('../assets/' + name, import.meta.url)).then(response => {
+  const load = url => fetch(url).then(response => {
     if (!response.ok) throw new Error('Não foi possível carregar a fonte do PDF.');
     return response.arrayBuffer();
   });
-  const [regular, bold] = await Promise.all([load('manrope-400.ttf'), load('manrope-600.ttf')]);
+  const [regular, bold] = await Promise.all([load(regularFontUrl), load(boldFontUrl)]);
   const bytes = await createSupplierPeriodPdf(report, kindLabel, { businessName, regular, bold });
   const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
   const link = document.createElement('a');
