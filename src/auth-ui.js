@@ -35,7 +35,7 @@ export async function requireAccess(live) {
     const [title, description] = descriptions[mode];
     const newPassword = mode === 'signup' || mode === 'reset';
     const credentials = ['signin', 'signup', 'recover'].includes(mode);
-    gate.innerHTML = `<aside class="auth-story"><a class="auth-brand" href="${location.pathname}"><img class="auth-brand__logo" src="assets/logo-pao-doce.png" alt="" width="40" height="40">Pão Doce<span>.</span></a><p class="auth-eyebrow">CADA PEDIDO NO SEU CAMINHO</p><h2>Menos passos.<br>Mais tempo para<br><em>o seu dia.</em></h2><p>Seu pedido, seus dados e sua rotina.<br>Tudo pronto para quando você voltar.</p><span class="auth-story__line" aria-hidden="true"></span></aside>
+    gate.innerHTML = `<aside class="auth-story"><a class="auth-brand" href="${location.pathname}"><img class="auth-brand__logo" src="/assets/logo-pao-doce.png" alt="" width="40" height="40">Pão Doce<span>.</span></a><p class="auth-eyebrow">CADA PEDIDO NO SEU CAMINHO</p><h2>Menos passos.<br>Mais tempo para<br><em>o seu dia.</em></h2><p>Seu pedido, seus dados e sua rotina.<br>Tudo pronto para quando você voltar.</p><span class="auth-story__line" aria-hidden="true"></span></aside>
       <section class="live-gate__panel"><span class="live-gate__brand">Pão Doce.</span>
       ${['signin', 'signup'].includes(mode) ? `<div class="auth-tabs" aria-label="Tipo de acesso"><button type="button" data-mode="signin" aria-pressed="${mode === 'signin'}">Entrar</button><button type="button" data-mode="signup" aria-pressed="${mode === 'signup'}">Criar conta</button></div>` : ''}
       <div class="auth-copy"><h1>${title}</h1><p class="auth-description">${description}</p></div>
