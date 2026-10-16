@@ -225,3 +225,143 @@ body.portal-mode .menu-overlay {
 
 /* Garante o canvas creme no elemento raiz, inclusive durante a inicialização da aplicação. */
 html, body { background-color: #F7F2EA; }
+
+
+/* Botão padrão único: tokens compartilhados pelas variantes primária e secundária. */
+:root {
+  --ui-button-height: 44px;
+  --ui-button-padding-y: 10px;
+  --ui-button-padding-x: 16px;
+  --ui-button-radius: 8px;
+  --ui-button-font-size: .875rem;
+  --ui-button-font-weight: 600;
+  --ui-button-primary-bg: var(--color-primary);
+  --ui-button-primary-hover: var(--color-primary-hover);
+  --ui-button-primary-active: var(--color-primary-active);
+  --ui-button-primary-text: var(--color-on-primary);
+  --ui-button-secondary-bg: var(--color-surface);
+  --ui-button-secondary-hover: var(--color-primary-subtle);
+  --ui-button-secondary-text: var(--color-text-primary);
+  --ui-button-secondary-border: var(--color-border);
+  --ui-button-secondary-hover-border: var(--color-border-strong);
+}
+
+/* Marca superior e inferior compartilham o eixo dos ícones da navegação. */
+body .brand {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 13px;
+  margin: 4px 12px 32px;
+}
+body .brand .ico--brand,
+body .nav__footer .ico--brand {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  justify-self: center;
+}
+body .brand .ico--brand { grid-column: 1; grid-row: 1; }
+body .brand__name { grid-column: 2; grid-row: 1; min-width: 0; }
+body .brand__tagline { grid-column: 1 / -1; }
+body .nav__footer {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 0 12px;
+}
+body .nav__footer .ico--brand { flex: 0 0 20px; }
+body .nav__footer .t2 { margin: 0; }
+
+/* Componente de botão: os nomes legados abaixo só selecionam a variante; o visual vem destes tokens. */
+body :is(
+  .button--primary, .screen-primary, .portal-primary, .auth-submit,
+  .pix-signal-primary, .pix-copy-button, .payment-confirm-primary,
+  .payment-pay-all, .payment-order-pix, .catalog-toolbar [data-catalog-action="new"],
+  .catalog-actions button:last-child, .account-panel button:not(.account-signout):not(.account-dialog__close),
+  .portal-floating > button, #portal-cart-link
+) {
+  box-sizing: border-box;
+  min-height: var(--ui-button-height);
+  padding: var(--ui-button-padding-y) var(--ui-button-padding-x);
+  border: 1px solid var(--ui-button-primary-bg);
+  border-radius: 999px;
+  color: var(--ui-button-primary-text) !important;
+  background: var(--ui-button-primary-bg) !important;
+  font-family: var(--font-interface);
+  font-size: var(--ui-button-font-size);
+  font-weight: var(--ui-button-font-weight);
+  line-height: 1.25;
+  box-shadow: none;
+  text-decoration: none;
+}
+body :is(
+  .button--primary, .screen-primary, .portal-primary, .auth-submit,
+  .pix-signal-primary, .pix-copy-button, .payment-confirm-primary,
+  .payment-pay-all, .payment-order-pix, .catalog-toolbar [data-catalog-action="new"],
+  .catalog-actions button:last-child, .account-panel button:not(.account-signout):not(.account-dialog__close),
+  .portal-floating > button, #portal-cart-link
+):hover:not(:disabled) {
+  color: var(--ui-button-primary-text) !important;
+  background: var(--ui-button-primary-hover) !important;
+  border-color: var(--ui-button-primary-hover) !important;
+}
+body :is(
+  .button--primary, .screen-primary, .portal-primary, .auth-submit,
+  .pix-signal-primary, .pix-copy-button, .payment-confirm-primary,
+  .payment-pay-all, .payment-order-pix, .catalog-toolbar [data-catalog-action="new"],
+  .catalog-actions button:last-child, .account-panel button:not(.account-signout):not(.account-dialog__close),
+  .portal-floating > button, #portal-cart-link
+):active:not(:disabled) {
+  background: var(--ui-button-primary-active) !important;
+  border-color: var(--ui-button-primary-active) !important;
+}
+body :is(
+  .button--quiet, .auth-google, .pix-whatsapp, .pix-afterpay__actions > button,
+  .entity-detail__actions button:not(.screen-primary),
+  .report-actions > button:not(.screen-primary),
+  .catalog-actions button:not(:last-child),
+  .payment-order-pix, [data-pix-config], [data-pix-refresh]
+) {
+  box-sizing: border-box;
+  min-height: var(--ui-button-height);
+  padding: var(--ui-button-padding-y) var(--ui-button-padding-x);
+  border: 1px solid var(--ui-button-secondary-border);
+  border-radius: var(--ui-button-radius);
+  color: var(--ui-button-secondary-text) !important;
+  background: var(--ui-button-secondary-bg) !important;
+  font-family: var(--font-interface);
+  font-size: var(--ui-button-font-size);
+  font-weight: var(--ui-button-font-weight);
+  line-height: 1.25;
+  box-shadow: none;
+  text-decoration: none;
+}
+body :is(
+  .button--quiet, .auth-google, .pix-whatsapp, .pix-afterpay__actions > button,
+  .entity-detail__actions button:not(.screen-primary),
+  .report-actions > button:not(.screen-primary),
+  .catalog-actions button:not(:last-child),
+  [data-pix-config], [data-pix-refresh]
+):hover:not(:disabled) {
+  color: var(--ui-button-secondary-text) !important;
+  background: var(--ui-button-secondary-hover) !important;
+  border-color: var(--ui-button-secondary-hover-border) !important;
+}
+body :is(button, .button, .screen-primary, .portal-primary):focus-visible {
+  outline: 3px solid var(--color-focus-ring) !important;
+  outline-offset: 2px !important;
+}
+body :is(.button--primary, .screen-primary, .portal-primary, .auth-submit, .pix-signal-primary, .pix-copy-button, .payment-confirm-primary, .payment-pay-all, .payment-order-pix, .button--quiet, .auth-google, .pix-whatsapp, [data-pix-config], [data-pix-refresh]):disabled {
+  cursor: not-allowed;
+  color: var(--color-on-disabled) !important;
+  background: var(--color-disabled) !important;
+  border-color: var(--color-disabled) !important;
+  opacity: 1 !important;
+}
+
+/* Botões de navegação por etapa exibem a seta escrita no rótulo; nenhuma seta é injetada por CSS. */
+body :is(.screen-primary, .portal-primary, .button--primary, .catalog-toolbar [data-catalog-action="new"])::after {
+  content: none !important;
+  display: none !important;
+}
