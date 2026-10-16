@@ -22,7 +22,7 @@ function wrap(font, value, size, width) {
   return lines;
 }
 
-export async function createReportPdf({ title, period, text, businessName = 'Trameli', regular, bold }) {
+export async function createReportPdf({ title, period, text, businessName = 'Pão Doce', regular, bold }) {
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
   const font = await pdf.embedFont(regular, { subset: true });
@@ -46,7 +46,7 @@ export async function createReportPdf({ title, period, text, businessName = 'Tra
 
   newPage();
   for (const rawLine of String(text || '').split(/\r?\n/)) {
-    const isHeading = /^(TRAMELI|RESUMO|CLIENTE|PEDIDOS?|VALOR TOTAL|COMPRAS|PAGO|EM ABERTO)/i.test(rawLine.trim());
+    const isHeading = /^(TRAMELI|PÃO DOCE|RESUMO|CLIENTE|PEDIDOS?|VALOR TOTAL|COMPRAS|PAGO|EM ABERTO)/i.test(rawLine.trim());
     const selectedFont = isHeading ? strong : font;
     const size = isHeading ? 10 : 9;
     const lines = wrap(selectedFont, rawLine, size, WIDTH - 2 * MARGIN);
@@ -71,7 +71,7 @@ function billingDate(value) {
   return new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR');
 }
 
-export async function createBillingReportPdf({ title = 'Cobrança detalhada', period, customers = [], businessName = 'Trameli', regular, bold }) {
+export async function createBillingReportPdf({ title = 'Cobrança detalhada', period, customers = [], businessName = 'Pão Doce', regular, bold }) {
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
   const font = await pdf.embedFont(regular, { subset: true });
@@ -159,7 +159,7 @@ export async function createBillingReportPdf({ title = 'Cobrança detalhada', pe
   return pdf.save();
 }
 
-export async function downloadReportPdf({ title, period, text, billingCustomers = null, businessName = 'Trameli', filename = 'relatorio' }) {
+export async function downloadReportPdf({ title, period, text, billingCustomers = null, businessName = 'Pão Doce', filename = 'relatorio' }) {
   const [regular, bold] = await Promise.all([
     fetch(new URL('../assets/manrope-400.ttf', import.meta.url)).then(response => {
       if (!response.ok) throw new Error('Não foi possível carregar a fonte do PDF.');

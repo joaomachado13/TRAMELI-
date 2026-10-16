@@ -1,13 +1,14 @@
 import { PDFDocument, PDFName, PDFHexString, rgb } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
-import { supplierTotals } from './supplier-checklist.js';
+import { supplierTotals, supplierDayCost } from './supplier-checklist.js';
+import { formatMoney } from './supplier-costs.js';
 
 const WIDTH = 595.28;
 const HEIGHT = 841.89;
 const MARGIN = 42;
 const BOTTOM = 55;
 
-export async function createSupplierPdf(groups, date, { businessName = 'Trameli', regular, bold }) {
+export async function createSupplierPdf(groups, date, { businessName = 'Pão Doce', regular, bold }) {
   if (!groups.length) throw new Error('Não há pedidos para exportar nesta data.');
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
@@ -17,7 +18,7 @@ export async function createSupplierPdf(groups, date, { businessName = 'Trameli'
   const ink = rgb(43 / 255, 39 / 255, 36 / 255);
   const muted = rgb(98 / 255, 90 / 255, 85 / 255);
   const pale = rgb(244 / 255, 222 / 255, 213 / 255);
-  const primary = rgb(158 / 255, 67 / 255, 44 / 255);
+  const primary = rgb(122 / 255, 59 / 255, 40 / 255);
   const dateLabel = new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR');
   pdf.setTitle(`Repasse da padaria - ${dateLabel}`);
   pdf.setAuthor(businessName);
@@ -25,6 +26,9 @@ export async function createSupplierPdf(groups, date, { businessName = 'Trameli'
   let page;
   let y;
   let fieldIndex = 0;
+  const day = supplierDayCost(groups);
+  const costed = day.withCosts;
+  const drawCost = (text, baseline, size = 10.5, selected = font) => page.drawText(text, { x: WIDTH - MARGIN - 6 - selected.widthOfTextAtSize(text, size), y: baseline, size, font: selected, color: ink });
 
   function wrap(value, size = 10, width = WIDTH - 2 * MARGIN, selectedFont = font) {
     const result = [];
@@ -57,7 +61,7 @@ export async function createSupplierPdf(groups, date, { businessName = 'Trameli'
     y -= 34;
     page.drawText(`Entrega: ${dateLabel}   |   ${groups.length} clientes`, { x: MARGIN, y, size: 10, font, color: muted });
     y -= 20;
-    page.drawText('Marque os itens separados e o pedido completo. Sem valores.', { x: MARGIN, y, size: 9, font, color: muted });
+    page.drawText(costed ? 'Marque os itens separados e o pedido completo. Valores pelo preço de custo.' : 'Marque os itens separados e o pedido completo. Sem valores.', { x: MARGIN, y, size: 9, font, color: muted });
     y -= 25;
   }
 
@@ -101,15 +105,25 @@ export async function createSupplierPdf(groups, date, { businessName = 'Trameli'
   }
   totalsHeading();
   for (const product of supplierTotals(groups)) {
-    const lines = wrap(product.label, 11, WIDTH - 2 * MARGIN - 32);
+    const lines = wrap(product.label, 11, WIDTH - 2 * MARGIN - (costed ? 150 : 32));
     if (y - Math.min(lines.length * 16 + 9, 120) < BOTTOM) { newPage(); totalsHeading(true); }
     checkbox(product.checked, MARGIN + 4, y, `Total: ${product.label}`);
+    if (costed) drawCost(product.costMissing ? 'custo não informado' : formatMoney(product.costCents), y, 10.5);
     for (const text of lines) {
       if (y - 16 < BOTTOM) { newPage(); totalsHeading(true); }
       page.drawText(text, { x: MARGIN + 26, y, size: 11, font, color: ink });
       y -= 16;
     }
     y -= 9;
+  }
+  if (costed) {
+    if (y - 50 < BOTTOM) newPage();
+    const total = formatMoney(day.totalCents);
+    page.drawRectangle({ x: MARGIN, y: y - 30, width: WIDTH - 2 * MARGIN, height: 30, color: primary });
+    page.drawText('TOTAL A PAGAR À PADARIA (custo)', { x: MARGIN + 10, y: y - 20, size: 11, font: strong, color: rgb(1, 1, 1) });
+    page.drawText(total, { x: WIDTH - MARGIN - 10 - strong.widthOfTextAtSize(total, 13), y: y - 21, size: 13, font: strong, color: rgb(1, 1, 1) });
+    y -= 40;
+    if (day.missing) { page.drawText(`Atenção: ${day.missing} item(ns) sem custo cadastrado; total incompleto.`, { x: MARGIN, y, size: 9, font, color: muted }); y -= 14; }
   }
   newPage();
   page.drawText('2. Pedidos por cliente', { x: MARGIN, y, size: 13, font: strong, color: ink });
@@ -121,9 +135,10 @@ export async function createSupplierPdf(groups, date, { businessName = 'Trameli'
       orderHeader(order);
       const continueOrder = () => { newPage(); clientHeader(group, true); orderHeader(order, true); };
       for (const line of order.lines) {
-        const lines = wrap(line.label, 11, WIDTH - 2 * MARGIN - 32);
+        const lines = wrap(line.label, 11, WIDTH - 2 * MARGIN - (costed ? 150 : 32));
         if (y - Math.min(lines.length * 16 + 10, 120) < BOTTOM) continueOrder();
         checkbox(line.checked, MARGIN + 4, y, line.label);
+        if (costed) drawCost('costKnown' in line && line.costKnown ? formatMoney(line.costCents) : 'custo não informado', y, 10);
         for (const text of lines) {
           if (y - 16 < BOTTOM) continueOrder();
           page.drawText(text, { x: MARGIN + 26, y, size: 11, font, color: ink });
@@ -137,6 +152,7 @@ export async function createSupplierPdf(groups, date, { businessName = 'Trameli'
           page.drawText(text, { x: MARGIN + 26, y, size: 9, font, color: muted }); y -= 14;
         }
       }
+      if (order.costCents != null) { drawCost(`Subtotal do pedido: ${formatMoney(order.costCents)}`, y, 9.5, strong); y -= 14; }
       y -= 12;
       page.drawLine({ start: { x: MARGIN, y }, end: { x: WIDTH - MARGIN, y }, thickness: 0.5, color: pale });
       y -= 20;

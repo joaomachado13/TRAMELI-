@@ -1,7 +1,9 @@
+import { sortByStreet } from './address-sort.js';
 export const statusOf = order => order.status || (order.checked ? 'confirmed' : 'received');
 export const weightPriceCents = (pricePerKgCents, grams) => Math.round(pricePerKgCents * grams / 1000);
 export const itemLabel = item => item.weightGrams ? `${item.weightGrams} g de ${item.name}` : `${item.quantity}× ${item.name}`;
-export const labelsForPrint = orders => orders
+// Etiquetas saem na ordem das ruas (rua 1, rua 2...) e, dentro da rua, pela casa.
+export const labelsForPrint = orders => sortByStreet(orders)
   .filter(order => order && Array.isArray(order.items) && order.items.length > 0)
   .map(order => ({ order, items: order.items, part: 1, totalParts: 1 }));
 export const subtotalCents = order => order.subtotalCents ?? order.items.reduce((sum, item) => sum + item.quantity * item.priceCents, 0);

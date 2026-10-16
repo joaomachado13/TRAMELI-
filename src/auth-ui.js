@@ -3,7 +3,7 @@ import { authError, escapeHtml } from './auth-utils.js';
 export async function requireAccess(live) {
   const gate = document.createElement('main');
   gate.className = 'live-gate';
-  gate.setAttribute('aria-label', 'Acesso à Trameli');
+  gate.setAttribute('aria-label', 'Acesso ao Pão Doce');
   document.body.classList.add('auth-pending');
   document.body.append(gate);
   let mode = 'signin';
@@ -35,8 +35,8 @@ export async function requireAccess(live) {
     const [title, description] = descriptions[mode];
     const newPassword = mode === 'signup' || mode === 'reset';
     const credentials = ['signin', 'signup', 'recover'].includes(mode);
-    gate.innerHTML = `<aside class="auth-story"><a class="auth-brand" href="${location.pathname}">Trameli<span>.</span></a><p class="auth-eyebrow">CADA PEDIDO NO SEU CAMINHO</p><h2>Menos passos.<br>Mais tempo para<br><em>o seu dia.</em></h2><p>Seu pedido, seus dados e sua rotina.<br>Tudo pronto para quando você voltar.</p><span class="auth-story__line" aria-hidden="true"></span></aside>
-      <section class="live-gate__panel"><span class="live-gate__brand">Trameli.</span>
+    gate.innerHTML = `<aside class="auth-story"><a class="auth-brand" href="${location.pathname}"><img class="auth-brand__logo" src="assets/logo-pao-doce.png" alt="" width="40" height="40">Pão Doce<span>.</span></a><p class="auth-eyebrow">CADA PEDIDO NO SEU CAMINHO</p><h2>Menos passos.<br>Mais tempo para<br><em>o seu dia.</em></h2><p>Seu pedido, seus dados e sua rotina.<br>Tudo pronto para quando você voltar.</p><span class="auth-story__line" aria-hidden="true"></span></aside>
+      <section class="live-gate__panel"><span class="live-gate__brand">Pão Doce.</span>
       ${['signin', 'signup'].includes(mode) ? `<div class="auth-tabs" aria-label="Tipo de acesso"><button type="button" data-mode="signin" aria-pressed="${mode === 'signin'}">Entrar</button><button type="button" data-mode="signup" aria-pressed="${mode === 'signup'}">Criar conta</button></div>` : ''}
       <h1>${title}</h1><p class="auth-description">${description}</p>
       ${['signin', 'signup'].includes(mode) ? `<button class="auth-google" type="button" data-action="google" ${providers?.external?.google ? '' : 'disabled'}><span aria-hidden="true">G</span> Continuar com Google</button><p class="auth-provider-note">${providers === null ? 'Verificando disponibilidade do Google…' : providers.external?.google ? 'Use sua conta Google para entrar.' : 'O acesso com Google ainda não está disponível.'}</p><div class="auth-divider"><span>ou use sua conta</span></div>` : ''}

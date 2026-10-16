@@ -52,7 +52,7 @@ assert.deepEqual(calls.at(-1).args[0], { password: 'test-password' });
 await service.enrollTotp();
 assert.deepEqual(calls.at(-1), {
   name: 'mfa.enroll',
-  args: [{ factorType: 'totp', friendlyName: 'Trameli - Administrador', issuer: 'Trameli' }],
+  args: [{ factorType: 'totp', friendlyName: 'Pão Doce - Administrador', issuer: 'Pão Doce' }],
 });
 auth.signInWithPassword = async () => ({ error: { code: 'invalid_credentials' } });
 await assert.rejects(service.signIn('email', 'a@example.com', 'wrong'), { code: 'invalid_credentials' });

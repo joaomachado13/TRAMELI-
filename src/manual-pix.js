@@ -36,7 +36,7 @@ export function initManualPix(live) {
   const fail=message=>open(`<h2>Pix manual</h2><p role="alert">${esc(message)}</p>`);
   function configure() {
     if(live?.role!=='master'||problem||!config)return;
-    open(`<h2>Configurar recebimento Pix</h2><p>Copie do banco dela um Pix estático reutilizável <strong>sem valor</strong>. A Trameli preencherá o saldo sem mudar a chave. Não cole senha, token ou credencial bancária.</p><form data-pix-form data-version="${config.version}"><label>Pix Copia e Cola do banco<textarea name="payload" maxlength="512" rows="5">${esc(config.payload||'')}</textarea></label><label>Nome completo do titular, conferido no banco<input name="receiver" maxlength="90" value="${esc(config.receiver_label||'')}"></label><label class="payment-check"><input type="checkbox" name="enabled" ${config.enabled?'checked':''}> Habilitar Pix para os clientes</label><label class="payment-check"><input type="checkbox" name="verified"> Conferi a chave e o titular no banco e autorizei usar essa conta para receber as vendas.</label><p data-pix-error role="alert"></p><button type="submit">Salvar configuração</button></form>`);
+    open(`<h2>Configurar recebimento Pix</h2><p>Copie do banco dela um Pix estático reutilizável <strong>sem valor</strong>. O Pão Doce preencherá o saldo sem mudar a chave. Não cole senha, token ou credencial bancária.</p><form data-pix-form data-version="${config.version}"><label>Pix Copia e Cola do banco<textarea name="payload" maxlength="512" rows="5">${esc(config.payload||'')}</textarea></label><label>Nome completo do titular, conferido no banco<input name="receiver" maxlength="90" value="${esc(config.receiver_label||'')}"></label><label class="payment-check"><input type="checkbox" name="enabled" ${config.enabled?'checked':''}> Habilitar Pix para os clientes</label><label class="payment-check"><input type="checkbox" name="verified"> Conferi a chave e o titular no banco e autorizei usar essa conta para receber as vendas.</label><p data-pix-error role="alert"></p><button type="submit">Salvar configuração</button></form>`);
   }
   async function pay(orderId) {
     if(!live||opening)return;opening=true;
@@ -81,7 +81,7 @@ export function initManualPix(live) {
         <label class="pix-copy-field"><span>Pix Copia e Cola</span><textarea data-pix-payload readonly rows="3">${esc(payload)}</textarea></label>
         <button type="button" class="pix-copy-button" data-pix-copy>Copiar código Pix</button>
         <p class="pix-copy-status" data-pix-copy-status role="status"></p>
-        <p class="pix-confirm-note">A Trameli não consulta o banco automaticamente. Depois de pagar, toque em <strong>“Já paguei”</strong> para entrar na fila de conferência. Se já pagou, não pague de novo.</p>
+        <p class="pix-confirm-note">O Pão Doce não consulta o banco automaticamente. Depois de pagar, toque em <strong>“Já paguei”</strong> para entrar na fila de conferência. Se já pagou, não pague de novo.</p>
       </div>`);
       expires=setTimeout(()=>{if(dialog.open)fail('Consulte novamente o saldo antes de pagar. Esta tela foi ocultada, mas isso não invalida uma cópia antiga do Pix.');},300000);
     }catch(error){if(dialog.open)fail(error.message||'Não foi possível preparar o Pix.');}

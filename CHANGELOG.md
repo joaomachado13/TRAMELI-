@@ -1,5 +1,15 @@
 # Histórico de versões
 
+## 0.4.0 — Pão Doce
+
+- Marca Pão Doce (nome, logo, cores ajustadas) no lugar de Trameli.
+- Repasse da padaria com preço de custo: diário, quinzenal (fechamentos dia 15 e último dia) e mensal, em PDF e texto.
+- Exclusão de pedido com pagamento vinculado: manter o pagamento ou excluir os dois (migração 202610160018).
+- Etiquetas ordenadas por rua e número da casa.
+- Contagem do próximo fechamento também para a operação.
+- Migração 202610160019: nome e paleta padrão no banco.
+
+
 ## 0.3.0 — 2026-10-02
 
 ### Experiência e operação

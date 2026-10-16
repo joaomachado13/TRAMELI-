@@ -53,3 +53,21 @@ export function billingReminder(rows, today) {
   if (days === 1) return { state: 'upcoming', days, deadline, dueCents, message: 'Falta 1 dia para o seu pagamento.' };
   return { state: 'upcoming', days, deadline, dueCents, message: `Faltam ${days} dias para o seu pagamento.` };
 }
+
+const pad = value => String(value).padStart(2, '0');
+
+// Períodos alinhados aos fechamentos: quinzena 1 (dia 1 ao 15), quinzena 2 (16 ao último dia) e mês inteiro.
+export function closingPeriod(date, kind = 'quinzenal') {
+  const parsed = parseDate(date);
+  const year = parsed.getUTCFullYear();
+  const month = parsed.getUTCMonth();
+  const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  const prefix = `${year}-${pad(month + 1)}`;
+  if (kind === 'mensal') return { kind, from: `${prefix}-01`, to: `${prefix}-${pad(lastDay)}` };
+  if (kind === 'quinzenal') {
+    return parsed.getUTCDate() <= 15
+      ? { kind, from: `${prefix}-01`, to: `${prefix}-15` }
+      : { kind, from: `${prefix}-16`, to: `${prefix}-${pad(lastDay)}` };
+  }
+  return { kind: 'diario', from: String(date), to: String(date) };
+}

@@ -263,9 +263,14 @@ export class LiveData {
     window.dispatchEvent(new Event('trameli:profile-changed'));
   }
 
-  async deleteOrder(orderId) {
+  // paymentMode: 'none' recusa se houver pagamento vinculado; 'keep' mantém o pagamento; 'delete' exclui pedido e pagamento.
+  async deleteOrder(orderId, paymentMode = 'none') {
     if (this.role !== 'master') throw new Error('Apenas Master pode excluir pedidos definitivamente.');
-    const { error } = await this.client.rpc('trameli_master_delete_order', { p_order_id: orderId });
+    let { error } = await this.client.rpc('trameli_master_delete_order_with_payments', { p_order_id: orderId, p_payment_mode: paymentMode });
+    if (error?.code === 'PGRST202') {
+      if (paymentMode !== 'none') throw new Error('Aplique a migração 202610160018 para excluir pedidos com pagamento vinculado.');
+      ({ error } = await this.client.rpc('trameli_master_delete_order', { p_order_id: orderId }));
+    }
     if (error) throw error;
     this.orders = this.orders.filter(order => order.id !== orderId);
     this.costSummaryCache.clear();
@@ -315,6 +320,22 @@ export class LiveData {
         window.dispatchEvent(new CustomEvent('trameli:remote-change', { detail: payload }));
         window.dispatchEvent(new Event('trameli:payments-refresh'));
       }).subscribe();
+  }
+
+  // Linhas de custo gravadas por pedido (somente operação). Usadas no repasse da padaria.
+  async orderCostRows(orderIds) {
+    if (!this.operator) throw new Error('Acesso restrito à operação.');
+    if (!this.catalogUpgradeReady) throw new Error('Aplique a migração de custos para consultar o repasse.');
+    const ids = [...new Set(orderIds)];
+    const rows = [];
+    for (let start = 0; start < ids.length; start += 100) {
+      const { data, error } = await this.client.from('trameli_order_costs')
+        .select('order_id,line_index,quantity,unit_cost_cents,total_cost_cents,estimated')
+        .in('order_id', ids.slice(start, start + 100));
+      if (error) throw error;
+      rows.push(...data);
+    }
+    return rows;
   }
 
   async costSummary(from = null, to = null) {
