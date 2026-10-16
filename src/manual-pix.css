@@ -62,3 +62,5 @@
   .pix-signal-reminder{position:sticky;top:8px;z-index:4;grid-template-columns:1fr;box-shadow:0 8px 26px var(--color-shadow)}
   .pix-signal-reminder .pix-signal-primary{grid-column:1;grid-row:auto;width:100%}
 }
+
+.pix-order-reference{margin:4px 0 8px;color:var(--color-text-secondary);font-size:.78rem;line-height:1.4}
