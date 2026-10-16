@@ -64,7 +64,7 @@ const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character =>
 const dateKey = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 const tomorrow = () => { const date = new Date(); date.setDate(date.getDate() + 1); return dateKey(date); };
 const orderTotal = order => window.TrameliOrderMath.totalCents(order);
-const orderCode = order => order?.publicCode || String(order?.id || '').slice(0, 8);
+const orderCode = order => order?.publicCode || '—';
 const paymentOrderCode = id => orderCode((live?.orders || []).find(order => order.id === id) || { id });
 const reportCustomerKey = order => order.customerId || `manual:${String(order.customer || '').trim().toLocaleLowerCase('pt-BR')}`;
 const orderState = order => order.status || (order.checked ? 'confirmed' : 'received');
