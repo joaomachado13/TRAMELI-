@@ -338,7 +338,7 @@ body :is(
   .catalog-actions button:not(:last-child),
   [data-pix-config], [data-pix-refresh], .pix-copy-button,
   .portal-back, .portal-link, .text-button,
-  button:not([class]):not([type="submit"]):not(.portal-stepper button)
+  button:not([class]):not([type="submit"]):not(.portal-stepper button):not(.auth-tabs button)
 ):not([data-portal-nav]):not([data-settings-tab]):not([data-agenda-mode]):not([data-agenda-day]):not([data-finance-days]):not([data-client-filter]):not([data-category]):not([data-personal-filter]) {
   box-sizing: border-box;
   min-height: var(--ui-button-height) !important;
@@ -361,7 +361,7 @@ body :is(
   .catalog-actions button:not(:last-child),
   [data-pix-config], [data-pix-refresh], .pix-copy-button,
   .portal-back, .portal-link, .text-button,
-  button:not([class]):not([type="submit"]):not(.portal-stepper button)
+  button:not([class]):not([type="submit"]):not(.portal-stepper button):not(.auth-tabs button)
 ):not([data-portal-nav]):not([data-settings-tab]):not([data-agenda-mode]):not([data-agenda-day]):not([data-finance-days]):not([data-client-filter]):not([data-category]):not([data-personal-filter]):not([data-week-repeat-prev]):not([data-week-copy]):hover:not(:disabled) {
   border-color: var(--ui-button-secondary-hover-border) !important;
   background: var(--ui-button-secondary-hover) !important;
