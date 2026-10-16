@@ -111,7 +111,7 @@ const itemTotal = item => item.quantity * item.priceCents;
 const itemLabel = item => window.TrameliOrderMath.itemLabel(item);
 const orderSubtotal = order => window.TrameliOrderMath.subtotalCents(order);
 const orderTotal = order => window.TrameliOrderMath.totalCents(order);
-const orderCode = order => order?.publicCode || String(order?.id || '').slice(0, 8);
+const orderCode = order => order?.publicCode || '—';
 function localOrderCode(createdAt) {
   const date = new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: '2-digit' }).format(new Date(createdAt)).replace(/\//g, '');
   const prefix = `TR-${date}-`;
