@@ -243,7 +243,7 @@ body:not(.portal-mode) #portal-floating-host,body:not(.portal-mode) .portal-bott
 .portal-billing-countdown > span,
 .portal-billing-countdown > strong,
 .portal-billing-countdown > small {
-  color: var(--color-on-primary, #fffaf5) !important;
+  color: #fffaf5 !important;
 }
 .portal-billing-countdown > strong { opacity: 1; }
 .portal-billing-countdown > small { opacity: .9; }
