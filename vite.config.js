@@ -7,6 +7,10 @@ export default defineConfig(({ command, mode }) => {
   if (command === 'build' && mode !== 'test') {
     const url = env.VITE_SUPABASE_URL || '';
     const key = env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
+    const processHasUrl = Boolean(process.env.VITE_SUPABASE_URL);
+    const processHasKey = Boolean(process.env.VITE_SUPABASE_PUBLISHABLE_KEY);
+    const loadedHasUrl = Boolean(env.VITE_SUPABASE_URL);
+    const loadedHasKey = Boolean(env.VITE_SUPABASE_PUBLISHABLE_KEY);
     const configurationIssues = [];
     if (!url.startsWith('https://') || url.includes('YOUR_PROJECT') || !url.endsWith('.supabase.co')) {
       configurationIssues.push('VITE_SUPABASE_URL ausente ou inválida (esperado https://<projeto>.supabase.co)');
@@ -17,6 +21,8 @@ export default defineConfig(({ command, mode }) => {
     if (configurationIssues.length) {
       throw new Error(
         `Build de publicação bloqueado. Problemas de configuração: ${configurationIssues.join('; ')}. ` +
+        `Diagnóstico sem exibir valores: process.env(URL=${processHasUrl ? 'presente' : 'ausente'}, KEY=${processHasKey ? 'presente' : 'ausente'}); ` +
+        `loadEnv(URL=${loadedHasUrl ? 'presente' : 'ausente'}, KEY=${loadedHasKey ? 'presente' : 'ausente'}). ` +
         'Confira as variáveis disponíveis no ambiente de build. Os valores não são exibidos por segurança.'
       );
     }
