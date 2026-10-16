@@ -83,7 +83,6 @@ export async function createSupplierPeriodPdf(report, kindLabel, { businessName 
     const nextRowOffset = dividerOffset + 14;
     if (y - nextRowOffset < BOTTOM) newPage();
 
-    const productLastY = y - productLastLineOffset;
     const noteStartY = y - noteStartOffset;
     const dividerY = y - dividerOffset;
     const nextRowY = y - nextRowOffset;
