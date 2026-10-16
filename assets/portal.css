@@ -247,3 +247,20 @@ body:not(.portal-mode) #portal-floating-host,body:not(.portal-mode) .portal-bott
 }
 .portal-billing-countdown > strong { opacity: 1; }
 .portal-billing-countdown > small { opacity: .9; }
+
+/* Correção pontual: manter circulares os botões +/- de todos os seletores de quantidade do portal. */
+#portal-view .portal-stepper > button,
+#portal-floating-host .portal-stepper > button {
+  display: inline-flex !important;
+  flex: 0 0 32px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 32px !important;
+  min-width: 32px !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-radius: 9999px !important;
+  text-align: center !important;
+}
