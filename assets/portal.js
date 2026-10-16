@@ -168,7 +168,7 @@ import { billingReminder, daysUntil, nextBillingDeadline } from '../src/billing-
     const visible = location.hash === '#loja' && Boolean(phone);
     supportLink.hidden = !visible;
     if (!visible) return;
-    supportLink.href = `https://wa.me/${phone}?text=${encodeURIComponent('Olá! Estou com uma dúvida sobre meu pedido na Trameli.')}`;
+    supportLink.href = `https://wa.me/${phone}?text=${encodeURIComponent('Olá! Estou com uma dúvida sobre meu pedido no Pão Doce.')}`;
     supportLink.innerHTML = `${whatsappIcon}<span><small>Dúvidas?</small><strong>Falar no WhatsApp</strong></span>`;
   }
   function renderFloating() {
@@ -327,13 +327,14 @@ import { billingReminder, daysUntil, nextBillingDeadline } from '../src/billing-
   };
   const firstName = () => String(profile.name || '').trim().split(/\s+/)[0] || '';
   const paymentCountdown = () => {
-    if (!live || live.operator) return '';
+    if (!live) return '';
     const api = window.TrameliPayments?.api;
     const today = todayInSaoPaulo();
-    const rows = api?.ready === true
+    // Operador não tem saldo de cliente: vê só a contagem do próximo fechamento.
+    const rows = api?.ready === true && !live.operator
       ? (api.balances || []).filter(row => row.customer_id === live.user.id)
       : [];
-    const reminder = api?.ready === true ? billingReminder(rows, today) : null;
+    const reminder = api?.ready === true && !live.operator ? billingReminder(rows, today) : null;
     const hasPending = reminder && reminder.state !== 'clear';
     const deadline = hasPending ? reminder.deadline : nextBillingDeadline(today);
     const days = hasPending ? reminder.days : daysUntil(deadline, today);

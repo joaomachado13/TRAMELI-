@@ -1,5 +1,8 @@
 import { stages, statusPath, progressOrder } from '../src/operation-flow.js';
-import { supplierGroups, supplierTotals, supplierText, downloadSupplierPdf, itemCheckKey } from '../src/supplier-checklist.js';
+import { supplierGroups, supplierTotals, supplierText, supplierDayCost, downloadSupplierPdf, itemCheckKey } from '../src/supplier-checklist.js';
+import { closingPeriod } from '../src/billing-cycle.js';
+import { costMapFromRows, supplierPeriodReport, supplierPeriodText, periodLabel, formatMoney as formatCost } from '../src/supplier-costs.js';
+import { downloadSupplierPeriodPdf } from '../src/supplier-period-pdf.js';
 
 (() => {
 const live = window.TrameliLive;
@@ -38,6 +41,31 @@ const supplierTotalsHost = document.getElementById('supplier-list-totals');
 const supplierCopy = document.getElementById('copy-supplier-list');
 const supplierPdf = document.getElementById('download-supplier-pdf');
 const supplierFeedback = document.getElementById('supplier-list-feedback');
+const supplierPeriodSelect = document.getElementById('supplier-period');
+const supplierPeriodLabel = document.getElementById('supplier-period-label');
+const periodKinds = { diario: 'Diário', quinzenal: 'Quinzenal', mensal: 'Mensal' };
+// Custos por linha de pedido (somente operação com banco). Pedido sem linha de custo continua "não informado".
+const costRows = [];
+const costRequested = new Set();
+let supplierCostMap = null;
+const costsAvailable = () => Boolean(live?.operator && live.catalogUpgradeReady);
+const selectedPeriod = () => closingPeriod(dateInput.value, supplierPeriodSelect?.value || 'diario');
+async function loadCostsFor(periodOrders) {
+  if (!costsAvailable()) return false;
+  const missing = periodOrders.map(order => order.id).filter(id => !costRequested.has(id));
+  if (!missing.length) return false;
+  missing.forEach(id => costRequested.add(id));
+  try {
+    costRows.push(...await live.orderCostRows(missing));
+    supplierCostMap = costMapFromRows(costRows);
+    return true;
+  } catch (cause) {
+    missing.forEach(id => costRequested.delete(id));
+    supplierFeedback.textContent = `Não foi possível carregar os custos: ${cause.message}`;
+    return false;
+  }
+}
+function resetCosts() { costRows.length = 0; costRequested.clear(); supplierCostMap = null; }
 const kanbanFeedback = document.getElementById('kanban-feedback');
 const checklistKey = `trameli-supplier-checks-v1:${live?.user?.id || 'demo'}`;
 let supplierChecks = new Set();
@@ -213,7 +241,13 @@ function selectedOrders() {
   return orders.filter(order => order.date === dateInput.value && orderStatus(order) !== 'cancelled').sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
-function checklistGroups() { return supplierGroups(orders, dateInput.value, supplierChecks); }
+function checklistGroups() { return supplierGroups(orders, dateInput.value, supplierChecks, costsAvailable() ? (supplierCostMap || new Map()) : null); }
+function periodOrders(period) { return orders.filter(order => order.date >= period.from && order.date <= period.to && orderStatus(order) !== 'cancelled'); }
+function refreshPeriodLabel() {
+  if (!supplierPeriodLabel) return;
+  const period = selectedPeriod();
+  supplierPeriodLabel.textContent = `${periodKinds[period.kind] || 'Diário'}: ${periodLabel(period.from, period.to)}`;
+}
 
 function renderSupplierList() {
   const validKeys = new Set(orders.filter(order => orderStatus(order) !== 'cancelled').flatMap(order => order.items.map((_, index) => itemCheckKey(order, index))));
@@ -225,15 +259,21 @@ function renderSupplierList() {
   const groups = checklistGroups();
   const totals = supplierTotals(groups);
   if (supplierTotalsHost) supplierTotalsHost.innerHTML = totals.length
-    ? `<ul>${totals.map(product => `<li><strong>${product.grams ? `${product.grams} g` : `${product.quantity}×`}</strong><span>${escapeHtml(product.name)}</span></li>`).join('')}</ul>`
+    ? `<ul>${totals.map(product => `<li><strong>${product.grams ? `${product.grams} g` : `${product.quantity}×`}</strong><span>${escapeHtml(product.name)}</span>${product.hasCost ? `<em class="supplier-cost">${product.costMissing ? 'custo não informado' : escapeHtml(formatCost(product.costCents))}</em>` : ''}</li>`).join('')}</ul>${(() => { const day = supplierDayCost(groups); return day.withCosts ? `<p class="supplier-cost-total"><strong>Total a pagar à padaria (custo): ${escapeHtml(formatCost(day.totalCents))}</strong>${day.missing ? ` · ${day.missing} item(ns) sem custo, total incompleto` : ''}</p>` : ''; })()}`
     : '<p class="supplier-list__empty">Nenhum item nesta data.</p>';
   supplierList.innerHTML = groups.length ? groups.map(group => `<section class="supplier-client"><header><h3>${escapeHtml(group.customer)}</h3><p>${escapeHtml(group.address)}</p></header>${group.orders.map(order => `<article class="supplier-order${order.checked ? ' is-complete' : ''}" data-supplier-order="${escapeHtml(order.id)}"><label class="supplier-order__heading"><input type="checkbox" data-supplier-check-order="${escapeHtml(order.id)}" ${order.checked ? 'checked' : ''}><strong>Pedido #${escapeHtml(orderCode(order))}</strong><span>${order.lines.filter(line => line.checked).length}/${order.lines.length} itens conferidos</span></label><ul>${order.lines.map((line, index) => `<li><label class="supplier-item${line.checked ? ' is-complete' : ''}"><input type="checkbox" data-supplier-check-item="${index}" data-id="${escapeHtml(order.id)}" ${line.checked ? 'checked' : ''}><span>${escapeHtml(line.label)}</span></label></li>`).join('')}</ul>${order.notes ? `<p class="supplier-order__notes">Observação: ${escapeHtml(order.notes)}</p>` : ''}</article>`).join('')}</section>`).join('') : '<p class="supplier-list__empty">Nenhum pedido nesta data.</p>';
   supplierList.querySelectorAll('[data-supplier-check-order]').forEach(input => {
     const order = groups.flatMap(group => group.orders).find(order => order.id === input.dataset.supplierCheckOrder);
     input.indeterminate = !order.checked && order.lines.some(line => line.checked);
   });
-  supplierCopy.disabled = !groups.length;
-  if (supplierPdf && !supplierPdf.dataset.busy) supplierPdf.disabled = !groups.length;
+  const hasExport = selectedPeriod().kind === 'diario' ? groups.length > 0 : periodOrders(selectedPeriod()).length > 0;
+  supplierCopy.disabled = !hasExport;
+  if (supplierPdf && !supplierPdf.dataset.busy) supplierPdf.disabled = !hasExport;
+  refreshPeriodLabel();
+  if (costsAvailable() && groups.length) {
+    const dayOrders = orders.filter(order => order.date === dateInput.value && orderStatus(order) !== 'cancelled');
+    loadCostsFor(dayOrders).then(changed => { if (changed) renderSupplierList(); });
+  }
 }
 
 function render() {
@@ -464,6 +504,18 @@ async function openHistory(order) {
   } catch (cause) { alert(`Não foi possível carregar o histórico: ${cause.message}`); }
 }
 
+// Pedido com pagamento vinculado: o Master decide se o pagamento fica registrado ou sai junto com o pedido.
+function askPaymentMode(order) {
+  return new Promise(resolve => {
+    const dialogEl = document.createElement('dialog');
+    dialogEl.className = 'payment-mode-dialog';
+    dialogEl.innerHTML = `<form method="dialog"><h3>Este pedido tem pagamento vinculado</h3><p>Pedido de <strong>${escapeHtml(order.customer)}</strong>. O que fazer com o pagamento?</p><div class="payment-mode-dialog__actions"><button class="button button--primary" value="keep">Excluir o pedido e manter o pagamento</button><button class="button button--quiet order-detail__danger" value="delete">Excluir o pedido e o pagamento</button><button class="button button--quiet" value="">Voltar</button></div><small>Manter: o dinheiro continua registrado como recebimento sem pedido e pode ser vinculado a outro. Excluir os dois: o recebimento deixa de existir no sistema. Fechamentos diários já salvos não mudam.</small></form>`;
+    document.body.append(dialogEl);
+    dialogEl.addEventListener('close', () => { const value = dialogEl.returnValue; dialogEl.remove(); resolve(value === 'keep' || value === 'delete' ? value : null); });
+    dialogEl.showModal();
+  });
+}
+
 async function handleOrderAction(button) {
   if (button.dataset.action === 'new') { openForm(); return; }
   const order = orders.find(item => item.id === button.dataset.id);
@@ -474,8 +526,17 @@ async function handleOrderAction(button) {
   if (button.dataset.action === 'edit') { detailDrawer.close(); openForm(order); return; }
   if (button.dataset.action === 'destroy') {
     if (live?.role !== 'master' || !confirm(`Excluir definitivamente o pedido de ${order.customer}? Esta ação não pode ser desfeita.`)) return;
-    try { await window.TrameliAccount?.ensureMasterAal2?.(); await live.deleteOrder(order.id); orders = readOrders(); detailDrawer.close(); render(); }
-    catch (cause) { alert(`O pedido não foi excluído: ${cause.message}`); }
+    try {
+      await window.TrameliAccount?.ensureMasterAal2?.();
+      try { await live.deleteOrder(order.id, 'none'); }
+      catch (cause) {
+        if (!/pagamentos vinculados/i.test(cause.message || '')) throw cause;
+        const mode = await askPaymentMode(order);
+        if (!mode) return;
+        await live.deleteOrder(order.id, mode);
+      }
+      orders = readOrders(); detailDrawer.close(); render();
+    } catch (cause) { alert(`O pedido não foi excluído: ${cause.message}`); }
     return;
   }
   if (button.dataset.action === 'delete' && !confirm(`Cancelar o pedido de ${order.customer}? O registro ficará no histórico.`)) return;
@@ -605,13 +666,31 @@ form.elements.customer.addEventListener('change', event => {
 form.elements.fee.addEventListener('input', updateFormTotal);
 dateInput.addEventListener('change', render);
 searchInput.addEventListener('input', render);
+const businessLabel = () => live?.settings?.business_name || window.TrameliSettings?.businessName || 'Pão Doce';
+async function buildPeriodReport() {
+  const period = selectedPeriod();
+  if (!costsAvailable()) throw new Error('Os custos só ficam disponíveis com o banco conectado e a migração de custos aplicada.');
+  const inPeriod = periodOrders(period);
+  if (!inPeriod.length) throw new Error('Não há pedidos neste período.');
+  await loadCostsFor(inPeriod);
+  return { period, report: supplierPeriodReport(orders, supplierCostMap || new Map(), period.from, period.to) };
+}
+supplierPeriodSelect?.addEventListener('change', () => { supplierFeedback.textContent = ''; renderSupplierList(); });
 supplierCopy.addEventListener('click', async () => {
-  const groups = checklistGroups();
-  if (!groups.length) return;
-  const content = supplierText(groups, dateInput.value);
+  let content;
+  try {
+    if (selectedPeriod().kind === 'diario') {
+      const groups = checklistGroups();
+      if (!groups.length) return;
+      content = supplierText(groups, dateInput.value);
+    } else {
+      const { period, report } = await buildPeriodReport();
+      content = supplierPeriodText(report, periodKinds[period.kind], businessLabel());
+    }
+  } catch (cause) { supplierFeedback.textContent = cause.message; return; }
   try {
     await navigator.clipboard.writeText(content);
-    supplierFeedback.textContent = 'Lista copiada. Confira as quantidades antes de enviar.';
+    supplierFeedback.textContent = 'Lista copiada. Confira as quantidades e os custos antes de enviar.';
   } catch {
     supplierFeedback.textContent = 'Não foi possível copiar automaticamente neste navegador.';
   }
@@ -641,14 +720,23 @@ supplierList.addEventListener('change', event => {
 });
 supplierPdf?.addEventListener('click', async () => {
   if (supplierPdf.dataset.busy) return;
-  const groups = checklistGroups();
-  if (!groups.length) return;
-  const exportDate = dateInput.value;
   supplierPdf.dataset.busy = 'true'; supplierPdf.disabled = true;
   supplierFeedback.textContent = 'Gerando PDF…';
   try {
-    await downloadSupplierPdf(groups, exportDate, live?.settings?.business_name || window.TrameliSettings?.businessName || 'Trameli');
-    supplierFeedback.textContent = 'PDF baixado com a lista completa e os pedidos por cliente, sem valores. As marcações no PDF são independentes do site.';
+    if (selectedPeriod().kind === 'diario') {
+      const groups = checklistGroups();
+      if (!groups.length) throw new Error('Não há pedidos nesta data.');
+      const exportDate = dateInput.value;
+      if (costsAvailable()) await loadCostsFor(orders.filter(order => order.date === exportDate && orderStatus(order) !== 'cancelled'));
+      await downloadSupplierPdf(checklistGroups(), exportDate, businessLabel());
+      supplierFeedback.textContent = costsAvailable()
+        ? 'PDF baixado com a lista completa e os pedidos por cliente, com preço de custo e total. As marcações no PDF são independentes do site.'
+        : 'PDF baixado sem valores: os custos só aparecem com o banco conectado. As marcações no PDF são independentes do site.';
+    } else {
+      const { period, report } = await buildPeriodReport();
+      await downloadSupplierPeriodPdf(report, periodKinds[period.kind], businessLabel());
+      supplierFeedback.textContent = `PDF ${periodKinds[period.kind].toLowerCase()} baixado (${periodLabel(period.from, period.to)}) com itens, custo por dia e total.${report.missingLines ? ` Atenção: ${report.missingLines} item(ns) sem custo cadastrado.` : ''}`;
+    }
   } catch (error) { supplierFeedback.textContent = `Não foi possível gerar o PDF: ${error.message}`; }
   finally { delete supplierPdf.dataset.busy; renderSupplierList(); }
 });
@@ -731,7 +819,7 @@ printSettingsHost?.addEventListener('change', event => {
 });
 
 render();
-window.addEventListener('trameli:orders-changed', () => { orders = readOrders(); render(); });
+window.addEventListener('trameli:orders-changed', () => { resetCosts(); orders = readOrders(); render(); });
 window.addEventListener('storage', event => {
   if (event.key === storageKey) { orders = readOrders(); render(); }
   if (event.key === checklistKey) {

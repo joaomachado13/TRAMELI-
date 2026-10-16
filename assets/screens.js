@@ -12,13 +12,17 @@ let userReducedMotion = false;
 try { userReducedMotion = localStorage.getItem('trameli-reduced-motion') === 'true'; } catch { /* Storage may be unavailable on file URLs. */ }
 const motionDisabled = () => systemReducedMotion.matches || userReducedMotion;
 const motion = window.TrameliMotion;
-const settingsDefaults = { businessName: 'Trameli', contact: '', primaryColor: '#9E432C', accentColor: '#E8B8A6', surfaceColor: '#F7F2EA', rolloverTime: '13:30', cutoffTime: '21:00', deliveryFeeCents: 200 };
+const settingsDefaults = { businessName: 'Pão Doce', contact: '', primaryColor: '#8F3D22', accentColor: '#EBBFA1', surfaceColor: '#FBF0E4', rolloverTime: '13:30', cutoffTime: '21:00', deliveryFeeCents: 200 };
 // Atualiza apenas a apresentação dos valores oficiais antigos, sem gravar dados.
 function identitySettings(settings) {
-  const colors = { primaryColor: ['#244d32', '#9E432C'], accentColor: ['#b6c780', '#E8B8A6'], surfaceColor: ['#f5f1e8', '#F7F2EA'] };
+  const colors = {
+    primaryColor: [['#244d32', '#9e432c'], '#8F3D22'],
+    accentColor: [['#b6c780', '#e8b8a6'], '#EBBFA1'],
+    surfaceColor: [['#f5f1e8', '#f7f2ea'], '#FBF0E4'],
+  };
   const result = { ...settings };
   for (const [key, [previous, current]] of Object.entries(colors)) {
-    if (String(result[key]).toLowerCase() === previous) result[key] = current;
+    if (previous.includes(String(result[key]).toLowerCase())) result[key] = current;
   }
   return result;
 }
@@ -277,7 +281,7 @@ const pages = {
     try { print = JSON.parse(localStorage.getItem('trameli-print-settings-70x33-v1') || '{}'); } catch { /* Defaults below. */ }
     const tabs = [['geral','Geral'],['aparencia','Aparência'],['pedidos','Pedidos'],['entregas','Entregas'],['pagamentos','Pagamentos'],['catalogo','Catálogo'],['impressao','Impressão'],['acessos','Equipe e acessos'],['conta','Conta']];
     const content = {
-      geral: `<form class="settings-form" data-settings-form="general"><label>Nome da operação<input name="businessName" value="${escapeHtml(operation.businessName || 'Trameli')}" maxlength="80"></label><label>WhatsApp da loja<input name="contact" type="tel" value="${escapeHtml(operation.contact || '')}" maxlength="24" placeholder="(34) 99999-9999"></label><small>Usado em dúvidas e comprovantes dos clientes.</small><div class="settings-row settings-row--motion"><span>Movimento da interface</span><button type="button" class="motion-toggle" aria-pressed="${!motionDisabled()}" ${systemReducedMotion.matches ? 'disabled' : ''}>${systemReducedMotion.matches ? 'Reduzido pelo sistema' : motionDisabled() ? 'Desativado' : 'Ativado'}</button></div><button class="screen-primary" type="submit">Salvar</button></form>`,
+      geral: `<form class="settings-form" data-settings-form="general"><label>Nome da operação<input name="businessName" value="${escapeHtml(operation.businessName || 'Pão Doce')}" maxlength="80"></label><label>WhatsApp da loja<input name="contact" type="tel" value="${escapeHtml(operation.contact || '')}" maxlength="24" placeholder="(34) 99999-9999"></label><small>Usado em dúvidas e comprovantes dos clientes.</small><div class="settings-row settings-row--motion"><span>Movimento da interface</span><button type="button" class="motion-toggle" aria-pressed="${!motionDisabled()}" ${systemReducedMotion.matches ? 'disabled' : ''}>${systemReducedMotion.matches ? 'Reduzido pelo sistema' : motionDisabled() ? 'Desativado' : 'Ativado'}</button></div><button class="screen-primary" type="submit">Salvar</button></form>`,
       aparencia: `<form class="settings-form settings-colors" data-settings-form="appearance"><label>Cor principal<input name="primaryColor" type="color" value="${escapeHtml(operation.primaryColor)}"></label><label>Cor de destaque<input name="accentColor" type="color" value="${escapeHtml(operation.accentColor)}"></label><label>Fundo claro<input name="surfaceColor" type="color" value="${escapeHtml(operation.surfaceColor)}"></label><button class="screen-primary" type="submit">Salvar aparência</button></form>`,
       pedidos: `<form class="settings-form" data-settings-form="orders"><label>Horário de virada operacional<input name="rolloverTime" type="time" value="${escapeHtml(operation.rolloverTime)}" required></label><p>A tela passa a priorizar o próximo dia somente quando os pedidos de hoje estiverem resolvidos.</p><label>Horário de corte do cliente<input name="cutoffTime" type="time" value="${escapeHtml(operation.cutoffTime || '21:00')}" required></label><small>O cliente pode criar, alterar ou cancelar pedidos até este horário no dia anterior à entrega.</small><button class="screen-primary" type="submit">Salvar</button></form>`,
       entregas: `<div class="settings-form"><label>Taxa padrão<input value="R$ 2,00" disabled></label><p>A taxa está protegida pelo cálculo dos pedidos para impedir divergências.</p></div>`,
@@ -347,7 +351,7 @@ function renderReportResults() {
   } else {
     detail = `<div class="report-table">${orders.slice().sort((a, b) => b.date.localeCompare(a.date)).map(order => `<div><strong>#${escapeHtml(orderCode(order))} · ${escapeHtml(order.customer)}</strong><span>${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR')} · ${orderStateLabel(order)}</span><strong>${currency(orderTotal(order))}</strong></div>`).join('')}</div>`;
   }
-  const body = `<article class="generated-report"><header><div><span>TRAMELI · RELATÓRIO</span><h2>${title}</h2><p>${period}</p></div><strong>${orders.length} pedidos</strong></header><div class="report-summary"><div><span>Pedidos</span><strong>${orders.length}</strong></div><div><span>Valor total</span><strong>${currency(total)}</strong></div></div>${orders.length ? detail : '<div class="friendly-empty"><strong>Nenhum dado neste período.</strong><span>Escolha outro intervalo para gerar o relatório.</span></div>'}</article>`;
+  const body = `<article class="generated-report"><header><div><span>PÃO DOCE · RELATÓRIO</span><h2>${title}</h2><p>${period}</p></div><strong>${orders.length} pedidos</strong></header><div class="report-summary"><div><span>Pedidos</span><strong>${orders.length}</strong></div><div><span>Valor total</span><strong>${currency(total)}</strong></div></div>${orders.length ? detail : '<div class="friendly-empty"><strong>Nenhum dado neste período.</strong><span>Escolha outro intervalo para gerar o relatório.</span></div>'}</article>`;
   host.innerHTML = `${body}<div class="report-actions"><button class="screen-primary" type="button" data-report-print ${orders.length ? '' : 'disabled'}>Baixar PDF</button><button type="button" data-report-generate>Atualizar relatório</button></div>`;
   let sheet = document.getElementById('report-print-sheet');
   if (!sheet) { sheet = document.createElement('div'); sheet.id = 'report-print-sheet'; document.body.append(sheet); }
@@ -641,7 +645,7 @@ document.addEventListener('click', async event => {
             items: order.items.map(item => ({ label: window.TrameliOrderMath.itemLabel(item), amountCents: item.weightGrams ? Number(item.priceCents || 0) : Number(item.quantity || 0) * Number(item.priceCents || 0) })),
           })),
         })) : null,
-        businessName: readSettings().businessName || 'Trameli',
+        businessName: readSettings().businessName || 'Pão Doce',
         filename: `trameli-${reportState.type}-${reportRange.from || 'inicio'}-${reportRange.to || saoPauloToday()}`,
       });
     } catch (cause) {

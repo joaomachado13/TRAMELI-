@@ -177,14 +177,14 @@ body ::selection { color: var(--color-primary-active); background: var(--color-p
 
 /* Inicialização sem flash: não mostra a operação nem o menu antes da rota e do acesso estarem prontos. */
 body.app-booting::before {
-  content: "Trameli.";
+  content: "Pão Doce.";
   position: fixed;
   z-index: 9999;
   inset: 0;
   display: grid;
   place-items: center;
-  background: var(--color-background, #F7F2EA);
-  color: var(--color-primary, #9E432C);
+  background: var(--color-background, #FBF0E4);
+  color: var(--color-primary, #8F3D22);
   font-family: Manrope, sans-serif;
   font-size: clamp(28px, 4vw, 36px);
   font-weight: 700;
@@ -201,3 +201,11 @@ body.app-booting .portal-support-whatsapp {
   visibility: hidden !important;
   pointer-events: none !important;
 }
+
+/* Marca Pão Doce: a logo substitui o símbolo monocromático. */
+body .ico--brand::before { background: url("logo-pao-doce.png") center / contain no-repeat; mask: none; -webkit-mask: none; }
+body .ico--brand { color: inherit; }
+.portal-brand__logo, .auth-brand__logo { display: inline-block; width: 44px; height: 44px; margin-right: 10px; border-radius: 50%; vertical-align: middle; object-fit: contain; }
+.portal-brand { display: inline-flex; align-items: center; flex-wrap: wrap; }
+.auth-brand { display: inline-flex; align-items: center; }
+.portal-brand small { flex-basis: 100%; }
