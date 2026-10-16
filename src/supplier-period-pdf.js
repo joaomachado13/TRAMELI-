@@ -73,8 +73,20 @@ export async function createSupplierPeriodPdf(report, kindLabel, { businessName 
     const valueWidth = selected.widthOfTextAtSize(String(value ?? ''), valueSize);
     const lines = wrapLine(left, selected, leftSize, leftWidth);
     const noteLines = note ? wrapLine(note, font, 8, WIDTH - 2 * MARGIN - 12) : [];
-    const rowHeight = Math.max(lines.length * 12, 13) + (noteLines.length ? noteLines.length * 10 + 3 : 0) + 8;
-    if (y - rowHeight < BOTTOM) newPage();
+    // Calculate each baseline and divider from the last product line so the
+    // divider can never cross the product or unit-cost text.
+    const productLastLineOffset = (lines.length - 1) * 12;
+    const noteStartOffset = productLastLineOffset + 13;
+    const dividerOffset = noteLines.length
+      ? noteStartOffset + (noteLines.length - 1) * 10 + 8
+      : productLastLineOffset + 8;
+    const nextRowOffset = dividerOffset + 14;
+    if (y - nextRowOffset < BOTTOM) newPage();
+
+    const productLastY = y - productLastLineOffset;
+    const noteStartY = y - noteStartOffset;
+    const dividerY = y - dividerOffset;
+    const nextRowY = y - nextRowOffset;
 
     lines.forEach((line, index) => {
       page.drawText(line, { x: leftX, y: y - index * 12, size: leftSize, font: selected, color: ink });
@@ -90,14 +102,12 @@ export async function createSupplierPeriodPdf(report, kindLabel, { businessName 
       font: selected,
       color: note ? primary : ink,
     });
-    let cursorY = y - Math.max(lines.length * 12, 13);
-    for (const line of noteLines) {
-      // Pull the unit-cost note closer to the product row, while preserving clear space above the divider.
-      page.drawText(line, { x: leftX, y: cursorY + 3, size: 8, font, color: muted });
-      cursorY -= 10;
-    }
-    y = cursorY - 11;
-    page.drawLine({ start: { x: MARGIN, y: y + 4 }, end: { x: WIDTH - MARGIN, y: y + 4 }, thickness: 0.4, color: pale });
+    noteLines.forEach((line, index) => {
+      page.drawText(line, { x: leftX, y: noteStartY - index * 10, size: 8, font, color: muted });
+    });
+    // Use a single divider position and a consistent 14 pt gap before the next row.
+    page.drawLine({ start: { x: MARGIN, y: dividerY }, end: { x: WIDTH - MARGIN, y: dividerY }, thickness: 0.4, color: pale });
+    y = nextRowY;
   }
 
   newPage();
