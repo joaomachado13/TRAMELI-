@@ -404,3 +404,55 @@ body :is(.button--primary, .screen-primary, .portal-primary, .auth-submit, .pix-
   opacity: 1 !important;
 }
 body .pix-order-reference { margin: 4px 0 8px; font-size: .78rem; color: var(--color-text-secondary); }
+
+/* Entrar / Criar conta: seletor unido em formato de cápsula, com indicador deslizante. */
+body .live-gate .auth-tabs {
+  position: relative !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 0 !important;
+  padding: 4px !important;
+  overflow: hidden !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 9999px !important;
+  background: var(--color-surface-alternate) !important;
+  isolation: isolate;
+}
+body .live-gate .auth-tabs::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  border-radius: 9999px;
+  background: var(--color-primary);
+  box-shadow: 0 2px 8px var(--color-shadow);
+  transform: translateX(0);
+  transition: transform 300ms cubic-bezier(.22, 1, .36, 1);
+}
+body .live-gate .auth-tabs:has(button[data-mode="signup"][aria-pressed="true"])::before {
+  transform: translateX(calc(100% + 8px));
+}
+body .live-gate .auth-tabs button {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  padding: 11px 14px !important;
+  border: 0 !important;
+  border-radius: 9999px !important;
+  background: transparent !important;
+  color: var(--color-text-secondary) !important;
+  box-shadow: none !important;
+  transition: color 220ms ease, background-color 220ms ease;
+}
+body .live-gate .auth-tabs button[aria-pressed="true"] {
+  color: var(--color-on-primary) !important;
+  background: transparent !important;
+  border-color: transparent !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  body .live-gate .auth-tabs::before,
+  body .live-gate .auth-tabs button { transition: none !important; }
+}
