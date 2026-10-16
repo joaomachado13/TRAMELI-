@@ -268,7 +268,8 @@ function renderSupplierList() {
   });
   const hasExport = selectedPeriod().kind === 'diario' ? groups.length > 0 : periodOrders(selectedPeriod()).length > 0;
   supplierCopy.disabled = !hasExport;
-  if (supplierPdf && !supplierPdf.dataset.busy) supplierPdf.disabled = !hasExport;
+  // Mantenha o botão de PDF clicável nos períodos agregados para que a própria ação informe se faltam pedidos ou custos, em vez de parecer que não responde.
+  if (supplierPdf && !supplierPdf.dataset.busy) supplierPdf.disabled = selectedPeriod().kind === 'diario' && !hasExport;
   refreshPeriodLabel();
   if (costsAvailable() && groups.length) {
     const dayOrders = orders.filter(order => order.date === dateInput.value && orderStatus(order) !== 'cancelled');
