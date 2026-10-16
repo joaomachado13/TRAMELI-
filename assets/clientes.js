@@ -4,7 +4,7 @@
   const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
   const money = cents => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(cents || 0) / 100);
   const total = order => window.TrameliOrderMath.totalCents(order);
-  const orderCode = order => order?.publicCode || String(order?.id || '').slice(0, 8);
+  const orderCode = order => order?.publicCode || '—';
   const normalize = value => String(value || '').trim().toLocaleLowerCase('pt-BR');
   const dateLabel = value => new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR');
   const timestamp = value => new Date(value).toLocaleString('pt-BR');
