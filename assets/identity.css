@@ -372,11 +372,9 @@ body :is(
   .portal-page .payment-customer .payment-pay-all,
   .portal-page .payment-customer .payment-order-pix,
   .portal-page .payment-customer .payment-selection-bar button,
-  .payment-dialog form button[type="submit"],
-  .settings-form button[type="submit"],
   .portal-back, .portal-link, .text-button, .pix-copy-button,
   .portal-stepper button, button:not([class])
-):not([data-portal-nav]):not([data-settings-tab]):not([data-agenda-mode]):not([data-agenda-day]):not([data-finance-days]):not([data-client-filter]):not([data-category]):not([data-personal-filter]):not([data-week-repeat-prev]):not([data-week-copy]) {
+):not([data-portal-nav]):not([data-settings-tab]):not([data-agenda-mode]):not([data-agenda-day]):not([data-finance-days]):not([data-client-filter]):not([data-category]):not([data-personal-filter]):not([data-week-repeat-prev]):not([data-week-copy]):not([type="submit"]) {
   box-sizing: border-box;
   min-height: var(--ui-button-height) !important;
   padding: var(--ui-button-padding-y) var(--ui-button-padding-x) !important;
@@ -395,10 +393,8 @@ body :is(
   .portal-page .payment-customer .payment-pay-all,
   .portal-page .payment-customer .payment-order-pix,
   .portal-page .payment-customer .payment-selection-bar button,
-  .payment-dialog form button[type="submit"],
-  .settings-form button[type="submit"],
   .portal-back, .portal-link, .text-button, .portal-stepper button,
-  button:not([class])
+  button:not([class]):not([type="submit"])
 ):not([data-portal-nav]):not([data-settings-tab]):not([data-agenda-mode]):not([data-agenda-day]):not([data-finance-days]):not([data-client-filter]):not([data-category]):not([data-personal-filter]):not([data-week-repeat-prev]):not([data-week-copy]):hover:not(:disabled) {
   background: var(--ui-button-secondary-hover) !important;
   border-color: var(--ui-button-secondary-hover-border) !important;
