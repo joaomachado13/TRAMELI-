@@ -405,32 +405,35 @@ body :is(.button--primary, .screen-primary, .portal-primary, .auth-submit, .pix-
 }
 body .pix-order-reference { margin: 4px 0 8px; font-size: .78rem; color: var(--color-text-secondary); }
 
-/* Entrar / Criar conta: seletor unido em formato de cápsula, com indicador deslizante. */
+/* Entrar / Criar conta: cápsula única com indicador deslizante, sem fundo nos botões. */
 body .live-gate .auth-tabs {
   position: relative !important;
-  display: grid !important;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  display: flex !important;
+  align-items: center;
   gap: 0 !important;
   padding: 4px !important;
   overflow: hidden !important;
   border: 1px solid var(--color-border) !important;
   border-radius: 9999px !important;
-  background: var(--color-surface-alternate) !important;
+  background: var(--color-surface) !important;
+  box-shadow: 0 1px 2px var(--color-shadow), 0 5px 12px var(--color-shadow) !important;
   isolation: isolate;
 }
 body .live-gate .auth-tabs::before {
   content: "";
   position: absolute;
-  z-index: -1;
+  z-index: 0;
   top: 4px;
   bottom: 4px;
   left: 4px;
   width: calc(50% - 4px);
+  border: 1px solid var(--color-border-secondary);
   border-radius: 9999px;
-  background: var(--color-primary);
-  box-shadow: 0 2px 8px var(--color-shadow);
+  background: var(--color-primary-subtle);
+  box-sizing: border-box;
   transform: translateX(0);
-  transition: transform 300ms cubic-bezier(.22, 1, .36, 1);
+  transition: transform 250ms ease-out;
+  pointer-events: none;
 }
 body .live-gate .auth-tabs:has(button[data-mode="signup"][aria-pressed="true"])::before {
   transform: translateX(calc(100% + 8px));
@@ -438,19 +441,31 @@ body .live-gate .auth-tabs:has(button[data-mode="signup"][aria-pressed="true"]):
 body .live-gate .auth-tabs button {
   position: relative;
   z-index: 1;
+  flex: 1 1 50%;
   min-width: 0;
-  padding: 11px 14px !important;
+  min-height: 30px !important;
+  height: 36px;
+  padding: 8px 14px !important;
   border: 0 !important;
   border-radius: 9999px !important;
-  background: transparent !important;
   color: var(--color-text-secondary) !important;
+  background: transparent !important;
   box-shadow: none !important;
-  transition: color 220ms ease, background-color 220ms ease;
+  font-weight: 600 !important;
+  transition: color 150ms ease-in;
+}
+body .live-gate .auth-tabs button:hover:not(:disabled),
+body .live-gate .auth-tabs button:active:not(:disabled) {
+  border: 0 !important;
+  color: var(--color-primary) !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 body .live-gate .auth-tabs button[aria-pressed="true"] {
-  color: var(--color-on-primary) !important;
+  color: var(--color-primary) !important;
   background: transparent !important;
   border-color: transparent !important;
+  box-shadow: none !important;
 }
 @media (prefers-reduced-motion: reduce) {
   body .live-gate .auth-tabs::before,
