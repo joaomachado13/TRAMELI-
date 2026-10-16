@@ -227,6 +227,7 @@ body.portal-mode .menu-overlay {
 html, body { background-color: #F7F2EA; }
 
 
+
 /* Botão padrão único: tokens compartilhados pelas variantes primária e secundária. */
 :root {
   --ui-button-height: 44px;
@@ -246,7 +247,7 @@ html, body { background-color: #F7F2EA; }
   --ui-button-secondary-hover-border: var(--color-primary);
 }
 
-/* Marca superior e inferior compartilham o eixo dos ícones da navegação. */
+/* Marca superior e inferior compartilham o eixo e o tamanho dos ícones da navegação. */
 body .brand {
   display: grid;
   grid-template-columns: 20px minmax(0, 1fr);
@@ -273,110 +274,72 @@ body .nav__footer {
 body .nav__footer .ico--brand { flex: 0 0 20px; }
 body .nav__footer .t2 { margin: 0; }
 
-/* Componente de botão: os nomes legados abaixo só selecionam a variante; o visual vem destes tokens. */
+/* Variante primária: referência "+ Novo pedido". */
 body :is(
   .button--primary, .screen-primary, .portal-primary, .auth-submit,
-  .pix-signal-primary, .pix-copy-button, .payment-confirm-primary,
-  .payment-pay-all, .payment-order-pix, .catalog-toolbar [data-catalog-action="new"],
-  .catalog-actions button:last-child, .account-panel button:not(.account-signout):not(.account-dialog__close),
-  .portal-floating > button, #portal-cart-link
+  .pix-signal-primary, .payment-confirm-primary,
+  .portal-page .payment-customer .payment-pay-all,
+  .portal-page .payment-customer .payment-order-pix,
+  .catalog-toolbar [data-catalog-action="new"], .catalog-actions button:last-child,
+  .account-panel button:not(.account-signout):not(.account-dialog__close),
+  .portal-floating > button, #portal-cart-link,
+  .payment-dialog form button[type="submit"], .settings-form button[type="submit"],
+  .pix-receipt-form > button
 ) {
   box-sizing: border-box;
-  min-height: var(--ui-button-height);
-  padding: var(--ui-button-padding-y) var(--ui-button-padding-x);
-  border: 1px solid var(--ui-button-primary-bg);
-  border-radius: 999px;
+  min-height: var(--ui-button-height) !important;
+  padding: var(--ui-button-padding-y) var(--ui-button-padding-x) !important;
+  border: 1px solid var(--ui-button-primary-bg) !important;
+  border-radius: 999px !important;
   color: var(--ui-button-primary-text) !important;
   background: var(--ui-button-primary-bg) !important;
-  font-family: var(--font-interface);
-  font-size: var(--ui-button-font-size);
-  font-weight: var(--ui-button-font-weight);
-  line-height: 1.25;
-  box-shadow: none;
+  font-family: var(--font-interface) !important;
+  font-size: var(--ui-button-font-size) !important;
+  font-weight: var(--ui-button-font-weight) !important;
+  line-height: 1.25 !important;
+  box-shadow: none !important;
   text-decoration: none;
 }
 body :is(
   .button--primary, .screen-primary, .portal-primary, .auth-submit,
-  .pix-signal-primary, .pix-copy-button, .payment-confirm-primary,
-  .payment-pay-all, .payment-order-pix, .catalog-toolbar [data-catalog-action="new"],
-  .catalog-actions button:last-child, .account-panel button:not(.account-signout):not(.account-dialog__close),
-  .portal-floating > button, #portal-cart-link
+  .pix-signal-primary, .payment-confirm-primary,
+  .portal-page .payment-customer .payment-pay-all,
+  .portal-page .payment-customer .payment-order-pix,
+  .catalog-toolbar [data-catalog-action="new"], .catalog-actions button:last-child,
+  .account-panel button:not(.account-signout):not(.account-dialog__close),
+  .portal-floating > button, #portal-cart-link,
+  .payment-dialog form button[type="submit"], .settings-form button[type="submit"],
+  .pix-receipt-form > button
 ):hover:not(:disabled) {
-  color: var(--ui-button-primary-text) !important;
-  background: var(--ui-button-primary-hover) !important;
   border-color: var(--ui-button-primary-hover) !important;
   border-radius: 12px !important;
+  color: var(--ui-button-primary-text) !important;
+  background: var(--ui-button-primary-hover) !important;
   box-shadow: 0 0 0 4px var(--color-shadow) !important;
 }
 body :is(
   .button--primary, .screen-primary, .portal-primary, .auth-submit,
-  .pix-signal-primary, .pix-copy-button, .payment-confirm-primary,
-  .payment-pay-all, .payment-order-pix, .catalog-toolbar [data-catalog-action="new"],
-  .catalog-actions button:last-child, .account-panel button:not(.account-signout):not(.account-dialog__close),
-  .portal-floating > button, #portal-cart-link
-):active:not(:disabled) {
-  background: var(--ui-button-primary-active) !important;
-  border-color: var(--ui-button-primary-active) !important;
-}
-body :is(
-  .button--quiet, .auth-google, .pix-whatsapp, .pix-afterpay__actions > button,
-  .entity-detail__actions button:not(.screen-primary),
-  .report-actions > button:not(.screen-primary),
-  .catalog-actions button:not(:last-child),
-  [data-pix-config], [data-pix-refresh]
-) {
-  box-sizing: border-box;
-  min-height: var(--ui-button-height);
-  padding: var(--ui-button-padding-y) var(--ui-button-padding-x);
-  border: 1px solid var(--ui-button-secondary-border);
-  border-radius: var(--ui-button-radius);
-  color: var(--ui-button-secondary-text) !important;
-  background: var(--ui-button-secondary-bg) !important;
-  font-family: var(--font-interface);
-  font-size: var(--ui-button-font-size);
-  font-weight: var(--ui-button-font-weight);
-  line-height: 1.25;
-  box-shadow: none;
-  text-decoration: none;
-}
-body :is(
-  .button--quiet, .auth-google, .pix-whatsapp, .pix-afterpay__actions > button,
-  .entity-detail__actions button:not(.screen-primary),
-  .report-actions > button:not(.screen-primary),
-  .catalog-actions button:not(:last-child),
-  [data-pix-config], [data-pix-refresh]
-):hover:not(:disabled) {
-  color: var(--ui-button-secondary-text) !important;
-  background: var(--ui-button-secondary-hover) !important;
-  border-color: var(--ui-button-secondary-hover-border) !important;
-}
-body :is(button, .button, .screen-primary, .portal-primary):focus-visible {
-  outline: 3px solid var(--color-focus-ring) !important;
-  outline-offset: 2px !important;
-}
-body :is(.button--primary, .screen-primary, .portal-primary, .auth-submit, .pix-signal-primary, .pix-copy-button, .payment-confirm-primary, .payment-pay-all, .payment-order-pix, .button--quiet, .auth-google, .pix-whatsapp, [data-pix-config], [data-pix-refresh]):disabled {
-  cursor: not-allowed;
-  color: var(--color-on-disabled) !important;
-  background: var(--color-disabled) !important;
-  border-color: var(--color-disabled) !important;
-  opacity: 1 !important;
-}
-
-/* Botões de navegação por etapa exibem a seta escrita no rótulo; nenhuma seta é injetada por CSS. */
-body :is(.screen-primary, .portal-primary, .button--primary, .catalog-toolbar [data-catalog-action="new"])::after {
-  content: none !important;
-  display: none !important;
-}
-
-
-/* Compatibilidade com componentes antigos: todos passam pelo mesmo botão-base. */
-body :is(
+  .pix-signal-primary, .payment-confirm-primary,
   .portal-page .payment-customer .payment-pay-all,
   .portal-page .payment-customer .payment-order-pix,
-  .portal-page .payment-customer .payment-selection-bar button,
-  .portal-back, .portal-link, .text-button, .pix-copy-button,
+  .catalog-toolbar [data-catalog-action="new"], .catalog-actions button:last-child,
+  .account-panel button:not(.account-signout):not(.account-dialog__close),
+  .portal-floating > button, #portal-cart-link
+):active:not(:disabled) {
+  border-color: var(--ui-button-primary-active) !important;
+  background: var(--ui-button-primary-active) !important;
+}
+
+/* Variante secundária: referência "Imprimir etiquetas". */
+body :is(
+  .button--quiet, .auth-google, .pix-whatsapp, .pix-afterpay__actions > button,
+  .entity-detail__actions button:not(.screen-primary),
+  .report-actions > button:not(.screen-primary),
+  .catalog-actions button:not(:last-child),
+  [data-pix-config], [data-pix-refresh], .pix-copy-button,
+  .portal-back, .portal-link, .text-button,
   button:not([class]):not([type="submit"]):not(.portal-stepper button)
-):not([data-portal-nav]):not([data-settings-tab]):not([data-agenda-mode]):not([data-agenda-day]):not([data-finance-days]):not([data-client-filter]):not([data-category]):not([data-personal-filter]):not([data-week-repeat-prev]):not([data-week-copy]):not([type="submit"]) {
+):not([data-portal-nav]):not([data-settings-tab]):not([data-agenda-mode]):not([data-agenda-day]):not([data-finance-days]):not([data-client-filter]):not([data-category]):not([data-personal-filter]):not([data-week-repeat-prev]):not([data-week-copy]) {
   box-sizing: border-box;
   min-height: var(--ui-button-height) !important;
   padding: var(--ui-button-padding-y) var(--ui-button-padding-x) !important;
@@ -392,109 +355,25 @@ body :is(
   text-decoration: none;
 }
 body :is(
-  .portal-page .payment-customer .payment-pay-all,
-  .portal-page .payment-customer .payment-order-pix,
-  .portal-page .payment-customer .payment-selection-bar button,
+  .button--quiet, .auth-google, .pix-whatsapp, .pix-afterpay__actions > button,
+  .entity-detail__actions button:not(.screen-primary),
+  .report-actions > button:not(.screen-primary),
+  .catalog-actions button:not(:last-child),
+  [data-pix-config], [data-pix-refresh], .pix-copy-button,
   .portal-back, .portal-link, .text-button,
   button:not([class]):not([type="submit"]):not(.portal-stepper button)
 ):not([data-portal-nav]):not([data-settings-tab]):not([data-agenda-mode]):not([data-agenda-day]):not([data-finance-days]):not([data-client-filter]):not([data-category]):not([data-personal-filter]):not([data-week-repeat-prev]):not([data-week-copy]):hover:not(:disabled) {
-  background: var(--ui-button-secondary-hover) !important;
-  border-color: var(--ui-button-secondary-hover-border) !important;
-}
-
-/* Envio e confirmação são primários; copiar Pix e voltar são secundários. */
-body :is(.payment-dialog form button[type="submit"], .settings-form button[type="submit"]) {
-  min-height: var(--ui-button-height) !important;
-  padding: var(--ui-button-padding-y) var(--ui-button-padding-x) !important;
-  border: 1px solid var(--ui-button-primary-bg) !important;
-  border-radius: 999px !important;
-  color: var(--ui-button-primary-text) !important;
-  background: var(--ui-button-primary-bg) !important;
-  font-size: var(--ui-button-font-size) !important;
-  font-weight: var(--ui-button-font-weight) !important;
-}
-body :is(.payment-dialog form button[type="submit"], .settings-form button[type="submit"]):hover:not(:disabled) {
-  color: var(--ui-button-primary-text) !important;
-  background: var(--ui-button-primary-hover) !important;
-  border-color: var(--ui-button-primary-hover) !important;
-}
-body :is(.portal-page .payment-customer .payment-pay-all, .portal-page .payment-customer .payment-order-pix) {
-  min-height: var(--ui-button-height) !important;
-  padding: var(--ui-button-padding-y) var(--ui-button-padding-x) !important;
-  border: 1px solid var(--ui-button-primary-bg) !important;
-  border-radius: 999px !important;
-  color: var(--ui-button-primary-text) !important;
-  background: var(--ui-button-primary-bg) !important;
-  font-size: var(--ui-button-font-size) !important;
-  font-weight: var(--ui-button-font-weight) !important;
-}
-body :is(.portal-page .payment-customer .payment-pay-all, .portal-page .payment-customer .payment-order-pix):hover:not(:disabled) {
-  color: var(--ui-button-primary-text) !important;
-  background: var(--ui-button-primary-hover) !important;
-  border-color: var(--ui-button-primary-hover) !important;
-}
-body .pix-order-reference { margin: 4px 0 8px; font-size: .78rem; color: var(--color-text-secondary); }
-
-
-/* Valores finais autoritativos: vencem estilos legados com seletores mais específicos. */
-body :is(
-  .button--primary, .screen-primary, .portal-primary, .auth-submit,
-  .pix-signal-primary, .payment-confirm-primary, .portal-page .payment-customer .payment-pay-all,
-  .portal-page .payment-customer .payment-order-pix,
-  .catalog-toolbar [data-catalog-action="new"], .catalog-actions button:last-child,
-  .account-panel button:not(.account-signout):not(.account-dialog__close),
-  .portal-floating > button, #portal-cart-link
-) {
-  min-height: var(--ui-button-height) !important;
-  padding: var(--ui-button-padding-y) var(--ui-button-padding-x) !important;
-  border: 1px solid var(--ui-button-primary-bg) !important;
-  border-radius: 999px !important;
-  font-size: var(--ui-button-font-size) !important;
-  font-weight: var(--ui-button-font-weight) !important;
-  line-height: 1.25 !important;
-}
-body :is(
-  .button--primary, .screen-primary, .portal-primary, .auth-submit,
-  .pix-signal-primary, .payment-confirm-primary, .portal-page .payment-customer .payment-pay-all,
-  .portal-page .payment-customer .payment-order-pix,
-  .catalog-toolbar [data-catalog-action="new"], .catalog-actions button:last-child,
-  .account-panel button:not(.account-signout):not(.account-dialog__close),
-  .portal-floating > button, #portal-cart-link
-):hover:not(:disabled) {
-  border-radius: 12px !important;
-  box-shadow: 0 0 0 4px var(--color-shadow) !important;
-}
-body :is(
-  .button--quiet, .auth-google, .pix-whatsapp, .pix-afterpay__actions > button,
-  .entity-detail__actions button:not(.screen-primary),
-  .report-actions > button:not(.screen-primary),
-  .catalog-actions button:not(:last-child), [data-pix-config], [data-pix-refresh],
-  .pix-copy-button, .portal-back, .portal-link, .text-button
-) {
-  min-height: var(--ui-button-height) !important;
-  padding: var(--ui-button-padding-y) var(--ui-button-padding-x) !important;
-  border: 1px solid var(--ui-button-secondary-border) !important;
-  border-radius: var(--ui-button-radius) !important;
-  color: var(--ui-button-secondary-text) !important;
-  background: var(--ui-button-secondary-bg) !important;
-  font-size: var(--ui-button-font-size) !important;
-  font-weight: var(--ui-button-font-weight) !important;
-  line-height: 1.25 !important;
-  box-shadow: none !important;
-}
-body :is(
-  .button--quiet, .auth-google, .pix-whatsapp, .pix-afterpay__actions > button,
-  .entity-detail__actions button:not(.screen-primary),
-  .report-actions > button:not(.screen-primary),
-  .catalog-actions button:not(:last-child), [data-pix-config], [data-pix-refresh],
-  .pix-copy-button, .portal-back, .portal-link, .text-button
-):hover:not(:disabled) {
   border-color: var(--ui-button-secondary-hover-border) !important;
   background: var(--ui-button-secondary-hover) !important;
 }
 
+/* Setas são explícitas no texto: não se injeta uma segunda seta por CSS. */
+body :is(.screen-primary, .portal-primary, .button--primary, .catalog-toolbar [data-catalog-action="new"])::after {
+  content: none !important;
+  display: none !important;
+}
 
-/* Steppers de quantidade são controles compactos, não botões de ação primária/secundária. */
+/* Steppers de quantidade são controles compactos, não botões de ação. */
 body .portal-stepper button {
   width: 34px !important;
   min-width: 34px !important;
@@ -513,3 +392,15 @@ body .portal-stepper button:hover:not(:disabled) {
   background: var(--color-primary-subtle) !important;
   border-color: var(--color-primary) !important;
 }
+body :is(button, .button, .screen-primary, .portal-primary):focus-visible {
+  outline: 3px solid var(--color-focus-ring) !important;
+  outline-offset: 2px !important;
+}
+body :is(.button--primary, .screen-primary, .portal-primary, .auth-submit, .pix-signal-primary, .payment-confirm-primary, .button--quiet, .auth-google, .pix-whatsapp, [data-pix-config], [data-pix-refresh]):disabled {
+  cursor: not-allowed;
+  color: var(--color-on-disabled) !important;
+  background: var(--color-disabled) !important;
+  border-color: var(--color-disabled) !important;
+  opacity: 1 !important;
+}
+body .pix-order-reference { margin: 4px 0 8px; font-size: .78rem; color: var(--color-text-secondary); }
