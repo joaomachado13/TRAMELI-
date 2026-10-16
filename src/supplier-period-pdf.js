@@ -37,7 +37,7 @@ export async function createSupplierPeriodPdf(report, kindLabel, { businessName 
     y -= 42;
   }
   function wrapLine(value, selectedFont, size, maxWidth) {
-    const words = String(value ?? '').trim().split(/\\s+/).filter(Boolean);
+    const words = String(value ?? '').trim().split(/\s+/).filter(Boolean);
     if (!words.length) return ['—'];
     const lines = [];
     let current = '';
@@ -95,8 +95,9 @@ export async function createSupplierPeriodPdf(report, kindLabel, { businessName 
       page.drawText(line, { x: leftX, y: cursorY, size: 8, font, color: muted });
       cursorY -= 10;
     }
-    y = cursorY - 5;
-    page.drawLine({ start: { x: MARGIN, y: y + 2 }, end: { x: WIDTH - MARGIN, y: y + 2 }, thickness: 0.4, color: pale });
+    // Extra breathing room after the unit-price note so it never touches the divider.
+    y = cursorY - 11;
+    page.drawLine({ start: { x: MARGIN, y: y + 4 }, end: { x: WIDTH - MARGIN, y: y + 4 }, thickness: 0.4, color: pale });
   }
 
   newPage();
