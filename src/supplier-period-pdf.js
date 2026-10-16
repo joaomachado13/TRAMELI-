@@ -69,7 +69,7 @@ export async function createSupplierPeriodPdf(report, kindLabel, { businessName 
     const valueRight = WIDTH - MARGIN - 6;
     const valueSize = 10;
     const leftSize = 9.5;
-    const leftWidth = 350;
+    const leftWidth = 320;
     const valueWidth = selected.widthOfTextAtSize(String(value ?? ''), valueSize);
     const lines = wrapLine(left, selected, leftSize, leftWidth);
     const noteLines = note ? wrapLine(note, font, 8, WIDTH - 2 * MARGIN - 12) : [];
