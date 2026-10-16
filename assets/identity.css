@@ -339,7 +339,7 @@ body :is(
   [data-pix-config], [data-pix-refresh], .pix-copy-button,
   .portal-back, .portal-link, .text-button,
   button:not([class]):not([type="submit"]):not(.portal-stepper button)
-):not([data-portal-nav]):not([data-settings-tab]):not([data-agenda-mode]):not([data-agenda-day]):not([data-finance-days]):not([data-client-filter]):not([data-category]):not([data-personal-filter]):not([data-week-repeat-prev]):not([data-week-copy]) {
+):not([data-portal-nav]):not([data-settings-tab]):not([data-agenda-mode]):not([data-agenda-day]):not([data-finance-days]):not([data-client-filter]):not([data-category]):not([data-personal-filter]) {
   box-sizing: border-box;
   min-height: var(--ui-button-height) !important;
   padding: var(--ui-button-padding-y) var(--ui-button-padding-x) !important;
