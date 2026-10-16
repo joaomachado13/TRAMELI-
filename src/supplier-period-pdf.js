@@ -88,7 +88,7 @@ export async function createSupplierPeriodPdf(report, kindLabel, { businessName 
     const leftWidth = WIDTH - 2 * MARGIN - 150;
     const lines = wrapLine(left, selected, leftSize, leftWidth);
     const rowHeight = Math.max(lines.length * 12, 13) + 9;
-    if (y - rowHeight < BOTTOM) newPage();
+    if (y - (rowHeight + 11) < BOTTOM) newPage();
 
     lines.forEach((line, index) => {
       page.drawText(line, { x: leftX, y: y - index * 12, size: leftSize, font: selected, color: ink });
