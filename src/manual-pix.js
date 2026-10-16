@@ -44,6 +44,7 @@ export function initManualPix(live) {
     try {
       const api=window.TrameliPayments?.api;
       if(!api)throw new Error('Consulte o saldo em Meus pedidos antes de pagar.');
+      await live.load(true);
       await Promise.all([refresh(),api.load(true)]);
       if(problem)throw new Error(problem);
       if(!config?.enabled)throw new Error('O Pix ainda não foi habilitado pela loja. Combine o pagamento com a operadora.');
@@ -63,7 +64,9 @@ export function initManualPix(live) {
       const payload=pixForAmount(config.payload,amount);
       const dataUrl=await QRCode.toDataURL(payload,{errorCorrectionLevel:'M',width:320,margin:4});
       const phone=whatsappNumber(live.settings?.contact);
-      const orderText=rows.map(row=>`#${row.order_id.slice(0,8)}`).join(', ');
+      const orderCodes=rows.map(row=>live.orders.find(order=>order.id===row.order_id)?.publicCode || '');
+      if(orderCodes.some(code=>!code))throw new Error('Não foi possível localizar o número oficial de um dos pedidos. Atualize a página e tente novamente.');
+      const orderText=orderCodes.map(code=>`#${code}`).join(', ');
       const waMessage=`Olá! Fiz o pagamento via Pix do pedido ${orderText}, no valor de ${money(amount)}. Vou enviar o comprovante por aqui.`;
       const waHref=phone?`https://wa.me/${phone}?text=${encodeURIComponent(waMessage)}`:'';
       shownWhatsappHref=waHref;
@@ -100,7 +103,7 @@ export function initManualPix(live) {
         const {error}=await live.client.rpc('trameli_signal_pix_payment',{p_request_id:intentRequestId,p_order_ids:shownOrderIds});
         if(error)throw error;
         await window.TrameliPayments?.api?.load(true);
-        open(`<div class="pix-signal-success"><span class="pix-afterpay__eyebrow">AVISO ENVIADO</span><h2>Agora é com a Shirley.</h2><p>Seu pagamento entrou na fila de conferência. Ele só será marcado como pago depois que ela conferir.</p>${shownWhatsappHref?`<a class="pix-whatsapp pix-whatsapp--wide" href="${shownWhatsappHref}" target="_blank" rel="noopener noreferrer">${whatsappIcon}<span>Enviar comprovante no WhatsApp</span></a>`:''}</div>`);
+        open(`<div class="pix-signal-success"><span class="pix-afterpay__eyebrow">AVISO ENVIADO</span><h2>Agora é com a Shirley.</h2><p>Referência: <strong>${esc(orderText)}</strong></p><p>Seu pagamento entrou na fila de conferência. Ele só será marcado como pago depois que ela conferir.</p>${shownWhatsappHref?`<a class="pix-whatsapp pix-whatsapp--wide" href="${shownWhatsappHref}" target="_blank" rel="noopener noreferrer">${whatsappIcon}<span>Enviar comprovante no WhatsApp</span></a>`:''}</div>`);
       }catch(error){button.disabled=false;const host=dialog.querySelector('[data-pix-copy-status]');if(host)host.textContent=error.message||'Não foi possível enviar o aviso.';}
       return;
     }
