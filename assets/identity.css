@@ -321,7 +321,7 @@ body :is(
   .entity-detail__actions button:not(.screen-primary),
   .report-actions > button:not(.screen-primary),
   .catalog-actions button:not(:last-child),
-  .payment-order-pix, [data-pix-config], [data-pix-refresh]
+  [data-pix-config], [data-pix-refresh]
 ) {
   box-sizing: border-box;
   min-height: var(--ui-button-height);
