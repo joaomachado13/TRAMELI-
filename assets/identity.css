@@ -221,3 +221,7 @@ body.portal-mode .nav {
 body.portal-mode .menu-overlay {
   display: none !important;
 }
+
+
+/* Garante o canvas creme no elemento raiz, inclusive durante a inicialização da aplicação. */
+html, body { background-color: #F7F2EA; }
