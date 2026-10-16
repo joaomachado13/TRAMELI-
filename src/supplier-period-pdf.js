@@ -1,13 +1,11 @@
 import { PDFDocument, rgb } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import { formatMoney, periodLabel } from './supplier-costs.js';
-import regularFontUrl from '../assets/manrope-400.ttf?url';
-import boldFontUrl from '../assets/manrope-600.ttf?url';
 
 const WIDTH = 595.28;
 const HEIGHT = 841.89;
-const MARGIN = 42;
-const BOTTOM = 55;
+const MARGIN = 34;
+const BOTTOM = 48;
 
 export async function createSupplierPeriodPdf(report, kindLabel, { businessName = 'Pão Doce', regular, bold }) {
   if (!report.orderCount) throw new Error('Não há pedidos neste período.');
@@ -31,19 +29,19 @@ export async function createSupplierPeriodPdf(report, kindLabel, { businessName 
     page = pdf.addPage([WIDTH, HEIGHT]);
     y = HEIGHT - MARGIN;
     page.drawText(businessName, { x: MARGIN, y, size: 10, font: strong, color: primary });
-    y -= 26;
+    y -= 23;
     page.drawText('Repasse da padaria - ' + kindLabel, { x: MARGIN, y, size: 20, font: strong, color: ink });
-    y -= 20;
+    y -= 19;
     page.drawText('Período: ' + label + '   |   ' + report.orderCount + ' ' + (report.orderCount === 1 ? 'pedido' : 'pedidos'),
       { x: MARGIN, y, size: 10, font, color: muted });
-    y -= 28;
+    y -= 24;
   }
 
   function section(title) {
-    if (y - 60 < BOTTOM) newPage();
-    page.drawRectangle({ x: MARGIN, y: y - 26, width: WIDTH - 2 * MARGIN, height: 26, color: pale });
-    page.drawText(title, { x: MARGIN + 10, y: y - 18, size: 12, font: strong, color: ink });
-    y -= 42;
+    if (y - 42 < BOTTOM) newPage();
+    page.drawRectangle({ x: MARGIN, y: y - 24, width: WIDTH - 2 * MARGIN, height: 24, color: pale });
+    page.drawText(title, { x: MARGIN + 10, y: y - 16, size: 11.5, font: strong, color: ink });
+    y -= 35;
   }
 
   function wrapLine(value, selectedFont, size, maxWidth) {
@@ -89,16 +87,16 @@ export async function createSupplierPeriodPdf(report, kindLabel, { businessName 
     const valueSize = options.valueSize || 10;
     const leftWidth = WIDTH - 2 * MARGIN - 150;
     const lines = wrapLine(left, selected, leftSize, leftWidth);
-    const rowHeight = Math.max(lines.length * 12, 13) + 9;
+    const rowHeight = Math.max(lines.length * 10, 11) + 3;
     if (y - (rowHeight + 11) < BOTTOM) newPage();
 
     lines.forEach((line, index) => {
-      page.drawText(line, { x: leftX, y: y - index * 12, size: leftSize, font: selected, color: ink });
+      page.drawText(line, { x: leftX, y: y - index * 10, size: leftSize, font: selected, color: ink });
     });
     drawRight(value, y, valueSize, selected, options.valueColor || ink);
-    y -= Math.max(lines.length * 12, 13) + 8;
+    y -= Math.max(lines.length * 10, 11) + 3;
     page.drawLine({ start: { x: MARGIN, y: y + 3 }, end: { x: WIDTH - MARGIN, y: y + 3 }, thickness: 0.4, color: pale });
-    y -= 6;
+    y -= 3;
   }
 
   function displayProductName(value) {
@@ -120,28 +118,28 @@ export async function createSupplierPeriodPdf(report, kindLabel, { businessName 
       : formatMoney(product.unitCents) + (product.weighted ? ' por kg' : ' por unidade');
     const leftX = MARGIN + 6;
     const leftWidth = WIDTH - 2 * MARGIN - 155;
-    const titleLines = wrapLine(title, font, 9.5, leftWidth);
+    const titleLines = wrapLine(title, font, 9, leftWidth);
     const noteLines = wrapLine(note, font, 8, WIDTH - 2 * MARGIN - 12);
     const titleHeight = Math.max(titleLines.length * 12, 13);
-    const rowHeight = titleHeight + noteLines.length * 10 + 8;
+    const rowHeight = titleHeight + noteLines.length * 9 + 3;
 
     // Reserve space for the complete item before drawing anything, so its two-line block
     // (including a wrapped product name) can never be split across pages.
     if (y - (rowHeight + 11) < BOTTOM) newPage();
 
     titleLines.forEach((line, index) => {
-      page.drawText(line, { x: leftX, y: y - index * 12, size: 9.5, font, color: ink });
+      page.drawText(line, { x: leftX, y: y - index * 11, size: 9, font, color: ink });
     });
     drawRight(value, y, 10, font, product.estimatedCount > 0 ? primary : ink);
 
     let noteY = y - titleHeight + 1;
     for (const line of noteLines) {
-      page.drawText(line, { x: leftX, y: noteY, size: 8, font, color: muted });
-      noteY -= 10;
+      page.drawText(line, { x: leftX, y: noteY, size: 7.8, font, color: muted });
+      noteY -= 9;
     }
-    y = y - rowHeight - 5;
+    y = y - rowHeight - 1;
     page.drawLine({ start: { x: MARGIN, y: y + 3 }, end: { x: WIDTH - MARGIN, y: y + 3 }, thickness: 0.4, color: pale });
-    y -= 6;
+    y -= 4;
   }
 
   newPage();
@@ -149,34 +147,35 @@ export async function createSupplierPeriodPdf(report, kindLabel, { businessName 
   const products = [...report.products].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
   for (const product of products) productRow(product);
 
-  y -= 8;
-  section('2. Custo por dia');
-  for (const day of report.days) {
-    const date = day.date.split('-').reverse().join('/');
-    row(date + ' · ' + day.orders + ' ' + (day.orders === 1 ? 'pedido' : 'pedidos'), formatMoney(day.costCents));
-  }
+  y -= 4;
 
   const notes = [];
   if (report.missingLines) notes.push('Atenção: ' + report.missingLines + ' item(ns) sem custo cadastrado. O total está incompleto.');
   if (report.estimatedLines === 1) notes.push('* Custo estimado, ainda não confirmado (1 item).');
   else if (report.estimatedLines > 1) notes.push('* Custos estimados, ainda não confirmados (' + report.estimatedLines + ' itens).');
 
-  const notesHeight = notes.length * 14;
-  if (y - (48 + notesHeight) < BOTTOM) newPage();
-  y -= 3;
-  page.drawLine({ start: { x: MARGIN, y }, end: { x: WIDTH - MARGIN, y }, thickness: 1, color: primary });
-  y -= 22;
-  page.drawText('TOTAL A PAGAR À PADARIA', { x: MARGIN + 6, y, size: 13, font: strong, color: ink });
-  drawRight(formatMoney(report.totalCents), y - 1, 14, strong, ink);
-  y -= 24;
+  const noteLines = notes.flatMap(note => wrapLine(note, font, 8.8, WIDTH - 2 * MARGIN));
+  const dayBlockHeight = 35 + report.days.length * 17 + 8 + 46 + noteLines.length * 11 + 8;
+  // Mantém a seção diária, o total e as observações juntos; nunca cria página só para o total.
+  if (y - dayBlockHeight < BOTTOM) newPage();
+  section('2. Custo por dia');
+  for (const day of report.days) {
+    const date = day.date.split('-').reverse().join('/');
+    row(date + ' · ' + day.orders + ' ' + (day.orders === 1 ? 'pedido' : 'pedidos'), formatMoney(day.costCents), { leftSize: 9, valueSize: 9.5 });
+  }
 
-  for (const note of notes) {
-    const lines = wrapLine(note, font, 9, WIDTH - 2 * MARGIN);
-    for (const line of lines) {
-      if (y - 14 < BOTTOM) newPage();
-      page.drawText(line, { x: MARGIN, y, size: 9, font, color: muted });
-      y -= 14;
-    }
+  y -= 4;
+  page.drawLine({ start: { x: MARGIN, y }, end: { x: WIDTH - MARGIN, y }, thickness: 1, color: primary });
+  y -= 13;
+  page.drawText('TOTAL A PAGAR À PADARIA', { x: MARGIN + 6, y, size: 12.5, font: strong, color: ink });
+  drawRight(formatMoney(report.totalCents), y, 13.5, strong, ink);
+  y -= 13;
+  page.drawLine({ start: { x: MARGIN, y }, end: { x: WIDTH - MARGIN, y }, thickness: 0.6, color: rule });
+  y -= 12;
+
+  for (const line of noteLines) {
+    page.drawText(line, { x: MARGIN + 2, y, size: 8.8, font, color: muted });
+    y -= 11;
   }
 
   const pages = pdf.getPages();
@@ -191,6 +190,10 @@ export async function createSupplierPeriodPdf(report, kindLabel, { businessName 
 }
 
 export async function downloadSupplierPeriodPdf(report, kindLabel, businessName) {
+  const [{ default: regularFontUrl }, { default: boldFontUrl }] = await Promise.all([
+    import('../assets/manrope-400.ttf?url'),
+    import('../assets/manrope-600.ttf?url'),
+  ]);
   const load = url => fetch(url).then(response => {
     if (!response.ok) throw new Error('Não foi possível carregar a fonte do PDF.');
     return response.arrayBuffer();
