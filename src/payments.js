@@ -28,7 +28,7 @@ const totals = rows => rows.reduce((sum,row) => {
 
 export function initPayments(live) {
   const api = live ? new PaymentsApi(live) : null;
-  const orderCode = id => live?.orders?.find(order => order.id === id)?.publicCode || short(id);
+  const orderCode = id => live?.orders?.find(order => order.id === id)?.publicCode || '—';
   let selectedDay=today(), selectedGroup='', selectedOrderIds=null, dayRevision=0;
   const dialog=document.createElement('dialog'); dialog.className='payment-dialog';
   dialog.setAttribute('aria-label','Recebimentos e conta do cliente'); document.body.append(dialog);
