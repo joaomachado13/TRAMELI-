@@ -241,9 +241,9 @@ html, body { background-color: #F7F2EA; }
   --ui-button-primary-text: var(--color-on-primary);
   --ui-button-secondary-bg: var(--color-surface);
   --ui-button-secondary-hover: var(--color-primary-subtle);
-  --ui-button-secondary-text: var(--color-text-primary);
-  --ui-button-secondary-border: var(--color-border);
-  --ui-button-secondary-hover-border: var(--color-border-strong);
+  --ui-button-secondary-text: var(--color-primary-hover);
+  --ui-button-secondary-border: var(--color-border-secondary);
+  --ui-button-secondary-hover-border: var(--color-primary);
 }
 
 /* Marca superior e inferior compartilham o eixo dos ícones da navegação. */
@@ -305,6 +305,8 @@ body :is(
   color: var(--ui-button-primary-text) !important;
   background: var(--ui-button-primary-hover) !important;
   border-color: var(--ui-button-primary-hover) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 0 0 4px var(--color-shadow) !important;
 }
 body :is(
   .button--primary, .screen-primary, .portal-primary, .auth-submit,
