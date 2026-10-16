@@ -92,10 +92,10 @@ export async function createSupplierPeriodPdf(report, kindLabel, { businessName 
     });
     let cursorY = y - Math.max(lines.length * 12, 13);
     for (const line of noteLines) {
-      page.drawText(line, { x: leftX, y: cursorY, size: 8, font, color: muted });
+      // Pull the unit-cost note closer to the product row, while preserving clear space above the divider.
+      page.drawText(line, { x: leftX, y: cursorY + 3, size: 8, font, color: muted });
       cursorY -= 10;
     }
-    // Extra breathing room after the unit-price note so it never touches the divider.
     y = cursorY - 11;
     page.drawLine({ start: { x: MARGIN, y: y + 4 }, end: { x: WIDTH - MARGIN, y: y + 4 }, thickness: 0.4, color: pale });
   }
