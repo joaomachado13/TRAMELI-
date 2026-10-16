@@ -125,7 +125,7 @@ export async function createSupplierPeriodPdf(report, kindLabel, { businessName 
 
     // Reserve space for the complete item before drawing anything, so its two-line block
     // (including a wrapped product name) can never be split across pages.
-    if (y - rowHeight < BOTTOM) newPage();
+    if (y - (rowHeight + 11) < BOTTOM) newPage();
 
     titleLines.forEach((line, index) => {
       page.drawText(line, { x: leftX, y: y - index * 12, size: 9.5, font, color: ink });
