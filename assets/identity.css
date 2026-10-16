@@ -365,3 +365,74 @@ body :is(.screen-primary, .portal-primary, .button--primary, .catalog-toolbar [d
   content: none !important;
   display: none !important;
 }
+
+
+/* Compatibilidade com componentes antigos: todos passam pelo mesmo botão-base. */
+body :is(
+  .portal-page .payment-customer .payment-pay-all,
+  .portal-page .payment-customer .payment-order-pix,
+  .portal-page .payment-customer .payment-selection-bar button,
+  .payment-dialog form button[type="submit"],
+  .settings-form button[type="submit"],
+  .portal-back, .portal-link, .text-button, .pix-copy-button,
+  .portal-stepper button, button:not([class])
+):not([data-portal-nav]):not([data-settings-tab]):not([data-agenda-mode]):not([data-agenda-day]):not([data-finance-days]):not([data-client-filter]):not([data-category]):not([data-personal-filter]):not([data-week-repeat-prev]):not([data-week-copy]) {
+  box-sizing: border-box;
+  min-height: var(--ui-button-height) !important;
+  padding: var(--ui-button-padding-y) var(--ui-button-padding-x) !important;
+  border: 1px solid var(--ui-button-secondary-border) !important;
+  border-radius: var(--ui-button-radius) !important;
+  color: var(--ui-button-secondary-text) !important;
+  background: var(--ui-button-secondary-bg) !important;
+  font-family: var(--font-interface) !important;
+  font-size: var(--ui-button-font-size) !important;
+  font-weight: var(--ui-button-font-weight) !important;
+  line-height: 1.25 !important;
+  box-shadow: none !important;
+  text-decoration: none;
+}
+body :is(
+  .portal-page .payment-customer .payment-pay-all,
+  .portal-page .payment-customer .payment-order-pix,
+  .portal-page .payment-customer .payment-selection-bar button,
+  .payment-dialog form button[type="submit"],
+  .settings-form button[type="submit"],
+  .portal-back, .portal-link, .text-button, .portal-stepper button,
+  button:not([class])
+):not([data-portal-nav]):not([data-settings-tab]):not([data-agenda-mode]):not([data-agenda-day]):not([data-finance-days]):not([data-client-filter]):not([data-category]):not([data-personal-filter]):not([data-week-repeat-prev]):not([data-week-copy]):hover:not(:disabled) {
+  background: var(--ui-button-secondary-hover) !important;
+  border-color: var(--ui-button-secondary-hover-border) !important;
+}
+
+/* Envio e confirmação são primários; copiar Pix e voltar são secundários. */
+body :is(.payment-dialog form button[type="submit"], .settings-form button[type="submit"]) {
+  min-height: var(--ui-button-height) !important;
+  padding: var(--ui-button-padding-y) var(--ui-button-padding-x) !important;
+  border: 1px solid var(--ui-button-primary-bg) !important;
+  border-radius: 999px !important;
+  color: var(--ui-button-primary-text) !important;
+  background: var(--ui-button-primary-bg) !important;
+  font-size: var(--ui-button-font-size) !important;
+  font-weight: var(--ui-button-font-weight) !important;
+}
+body :is(.payment-dialog form button[type="submit"], .settings-form button[type="submit"]):hover:not(:disabled) {
+  color: var(--ui-button-primary-text) !important;
+  background: var(--ui-button-primary-hover) !important;
+  border-color: var(--ui-button-primary-hover) !important;
+}
+body :is(.portal-page .payment-customer .payment-pay-all, .portal-page .payment-customer .payment-order-pix) {
+  min-height: var(--ui-button-height) !important;
+  padding: var(--ui-button-padding-y) var(--ui-button-padding-x) !important;
+  border: 1px solid var(--ui-button-primary-bg) !important;
+  border-radius: 999px !important;
+  color: var(--ui-button-primary-text) !important;
+  background: var(--ui-button-primary-bg) !important;
+  font-size: var(--ui-button-font-size) !important;
+  font-weight: var(--ui-button-font-weight) !important;
+}
+body :is(.portal-page .payment-customer .payment-pay-all, .portal-page .payment-customer .payment-order-pix):hover:not(:disabled) {
+  color: var(--ui-button-primary-text) !important;
+  background: var(--ui-button-primary-hover) !important;
+  border-color: var(--ui-button-primary-hover) !important;
+}
+body .pix-order-reference { margin: 4px 0 8px; font-size: .78rem; color: var(--color-text-secondary); }
