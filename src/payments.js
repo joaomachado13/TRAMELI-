@@ -115,7 +115,7 @@ export function initPayments(live) {
     <div class="payment-customer-list-head"><div><span>SEUS PEDIDOS</span><h3>${openRows.length?'Escolha o que deseja pagar':'Pedidos desta conta'}</h3><p>${openRows.length>1?'Marque mais de um pedido para gerar um único Pix com a soma dos saldos.':openRows.length===1?'Você pode pagar este pedido diretamente pelo botão abaixo.':'Consulte os valores já confirmados.'}</p></div></div>
     ${customerOrders(rows,openRows.length>1,openRows.length>1)}
     ${pixReady && openRows.length>1?`<div class="payment-selection-bar" data-payment-selection><div><span>Seleção</span><strong data-payment-selection-summary>Nenhum pedido selecionado</strong></div><button type="button" data-pix-order="selected" disabled>Pagar selecionados</button></div>`:''}
-    ${customerStatement(rows)}`;
+    ${customerStatement(rows)}${upcomingMarkup}`;
   }
   function operatorContent() {
     if (warning()) return `<p role="status">${esc(warning())}</p><button type="button" data-pay-refresh>Verificar novamente</button>`;
