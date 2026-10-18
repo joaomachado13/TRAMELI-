@@ -541,6 +541,7 @@ import { billingReminder, daysUntil, nextBillingDeadline } from '../src/billing-
       weeklySuccessCount=created.length;
       error='';
       view='weekSuccess';
+      // Keep the weekly confirmation isolated from the portal host, just like single-order success.
       render();
     } catch (cause) {
       error=`Não foi possível concluir a semana: ${cause.message}`;
