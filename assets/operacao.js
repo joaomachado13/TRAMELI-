@@ -256,7 +256,7 @@ function formItems() {
       if (!product || quantity < 1) return null;
       if (product.unit === 'kg') {
         const weightGrams = quantity * 50;
-        return { productId: product.id, name: product.name + ' (' + weightGrams + ' g)', quantity: 1,
+        return { productId: product.id, name: product.name, quantity: 1,
           weightGrams, kgPriceCents: product.priceCents,
           priceCents: window.TrameliOrderMath.weightPriceCents(product.priceCents, weightGrams) };
       }
@@ -312,11 +312,12 @@ function openForm(order = null, schedule = null) {
       const products = live?.products || window.TrameliCatalog?.list() || [];
       for (const line of schedule.items || []) {
         const baseName = String(line.name || '').replace(/\s+\(\d{2,4}\s*g\)$/i, '').trim();
-        const product = products.find(candidate => candidate.active && candidate.name === baseName)
+        const product = products.find(candidate => candidate.active && candidate.id === line.productId)
+          || products.find(candidate => candidate.active && candidate.name === baseName)
           || products.filter(candidate => candidate.active && baseName.startsWith(candidate.name)).sort((a, b) => b.name.length - a.name.length)[0];
         if (!product) continue;
-        const grams = String(line.name || '').match(/\((\d{2,4})\s*g\)/i);
-        const quantity = product.unit === 'kg' ? Math.max(1, Math.min(99, Math.round(Number(grams?.[1] || 50) / 50)))
+        const grams = Number(line.weightGrams || String(line.name || '').match(/\((\d{2,4})\s*g\)/i)?.[1] || 50);
+        const quantity = product.unit === 'kg' ? Math.max(1, Math.min(99, Math.round(grams / 50)))
           : Math.max(1, Math.min(999, Number(line.quantity) || 1));
         selectedProductQuantities.set(product.id, quantity);
       }
@@ -344,7 +345,7 @@ async function showRecurringManager() {
     const names = { fixed: 'Fixo diário', fortnightly: 'Quinzenal', monthly: 'Mensal' };
     host.innerHTML = recurringSchedulesCache.length ? recurringSchedulesCache.map(schedule => {
       const customer = profiles.get(schedule.customer_id);
-      const itemNames = (schedule.items || []).map(item => item.name).join(' · ');
+      const itemNames = (schedule.items || []).map(item => item.weightGrams ? item.name + ' (' + item.weightGrams + ' g)' : item.name).join(' · ');
       const period = schedule.recurrence === 'fixed' ? 'Sem fechamento' : 'Ciclo até ' + new Date(schedule.cycle_ends_on + 'T12:00:00').toLocaleDateString('pt-BR');
       return '<article class="recurring-manager__item"><div><strong>' + escapeHtml(customer?.name || 'Cliente cadastrado') + '</strong><span>' + escapeHtml(names[schedule.recurrence] || schedule.recurrence) + ' · ' + escapeHtml(period) + '</span><small>' + escapeHtml(itemNames) + '</small><small>' + (schedule.active ? 'Ativo' : 'Pausado') + '</small></div><div class="recurring-manager__actions"><button type="button" data-recurring-edit="' + escapeHtml(schedule.id) + '" ' + (schedule.active ? '' : 'disabled') + '>Editar</button><button type="button" data-recurring-active="' + escapeHtml(schedule.id) + '" data-active="' + String(!schedule.active) + '">' + (schedule.active ? 'Pausar' : 'Reativar') + '</button></div></article>';
     }).join('') : '<p class="recurring-manager__empty">Ainda não há pedidos recorrentes cadastrados.</p>';
@@ -943,7 +944,9 @@ form.addEventListener('submit', async event => {
       } else {
         await live.saveRecurringOrder({
           customerId, recurrence, startDate: order.date, notes: order.notes, feeCents,
-          items: items.map(({ name, quantity, priceCents }) => ({ name, quantity, priceCents })),
+          items: items.map(item => item.weightGrams !== undefined
+            ? ({ productId: item.productId, name: item.name, quantity: item.quantity, weightGrams: item.weightGrams, kgPriceCents: item.kgPriceCents, priceCents: item.priceCents })
+            : ({ name: item.name, quantity: item.quantity, priceCents: item.priceCents })),
         }, requestId, editingScheduleId);
         await live.materializeRecurringOrders(order.date);
       }
