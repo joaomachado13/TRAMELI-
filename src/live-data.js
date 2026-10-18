@@ -298,6 +298,19 @@ export class LiveData {
     window.dispatchEvent(new Event('trameli:profile-changed'));
   }
 
+  async updateCustomerProfile(profile) {
+    if (!this.operator) throw new Error('Acesso restrito à operação.');
+    if (!profile?.id) throw new Error('Selecione um cliente existente.');
+    const { error } = await this.client.rpc('trameli_operator_update_customer_profile', {
+      p_customer_id: profile.id,
+      p_name: profile.name,
+      p_phone: profile.phone || '',
+      p_address: profile.address,
+    });
+    if (error) throw error;
+    window.dispatchEvent(new Event('trameli:payments-refresh'));
+  }
+
   // paymentMode: 'none' recusa se houver pagamento vinculado; 'keep' mantém o pagamento; 'delete' exclui pedido e pagamento.
   async deleteOrder(orderId, paymentMode = 'none') {
     if (this.role !== 'master') throw new Error('Apenas Master pode excluir pedidos definitivamente.');
