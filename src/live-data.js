@@ -180,16 +180,36 @@ export class LiveData {
     await this.load(true);
   }
 
-  async saveOperatorOrder(order, requestId) {
-    const { error } = await this.client.rpc('trameli_operator_order', {
+  async saveOperatorOrder(order, requestId, customerId) {
+    const { error } = await this.client.rpc('trameli_operator_order_for_customer', {
       p_order_id: order.id || null, p_expected_version: order.version || null,
       p_request_id: requestId,
       p_delivery_date: order.date, p_name: order.customer, p_phone: order.phone,
       p_address: order.address, p_notes: order.notes,
-      p_fee_cents: order.feeCents, p_items: order.items,
+      p_fee_cents: order.feeCents, p_items: order.items, p_customer_id: customerId,
     });
     if (error) throw error;
     await this.load(true);
+  }
+
+  async saveRecurringOrder(schedule, requestId) {
+    const { data, error } = await this.client.rpc('trameli_save_recurring_order', {
+      p_schedule_id: null, p_request_id: requestId,
+      p_customer_id: schedule.customerId, p_recurrence: schedule.recurrence,
+      p_start_date: schedule.startDate, p_active: true, p_notes: schedule.notes,
+      p_fee_cents: schedule.feeCents, p_items: schedule.items,
+    });
+    if (error) throw error;
+    return data;
+  }
+
+  async materializeRecurringOrders(date) {
+    const { data, error } = await this.client.rpc('trameli_materialize_recurring_orders', {
+      p_delivery_date: date,
+    });
+    if (error) throw error;
+    await this.load(true);
+    return Number(data || 0);
   }
 
   async setStatus(order, status) {
