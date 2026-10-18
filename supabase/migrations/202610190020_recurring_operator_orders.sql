@@ -138,6 +138,8 @@ begin
     raise exception 'operator access required' using errcode = '42501';
   end if;
   if p_delivery_date is null then raise exception 'delivery date required' using errcode = '22023'; end if;
+  -- Historical views must never create retroactive charges.
+  if p_delivery_date < (now() at time zone 'America/Sao_Paulo')::date then return 0; end if;
   -- Sunday deliveries are never generated.
   if extract(dow from p_delivery_date) = 0 then return 0; end if;
 
