@@ -31,7 +31,6 @@ function readOrders() {
 let orders = readOrders();
 let editingId = null;
 let editingScheduleId = null;
-let creatingRecurringFromOrder = false;
 let detailId = null;
 let submitting = false;
 let requestId = null;
@@ -291,7 +290,6 @@ function updateFormTotal() {
 function openForm(order = null, schedule = null, makeRecurring = false) {
   editingId = makeRecurring ? null : order?.id || null;
   editingScheduleId = schedule?.id || null;
-  creatingRecurringFromOrder = Boolean(makeRecurring);
   requestId = schedule?.request_id || (order && !makeRecurring ? null : crypto.randomUUID());
   form.reset();
   formError.hidden = true;
@@ -1019,7 +1017,6 @@ form.addEventListener('submit', async event => {
       orders = readOrders();
       dateInput.value = order.date;
       searchInput.value = '';
-      creatingRecurringFromOrder = false;
       dialog.close();
       render();
     } catch (cause) { formError.textContent = `Não foi possível salvar: ${cause.message}`; formError.hidden = false; }
