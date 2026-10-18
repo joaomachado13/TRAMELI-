@@ -208,18 +208,21 @@ create or replace function public.trameli_operator_order_for_customer(
 language plpgsql security definer set search_path = '' as $$
 declare
   v_id uuid;
+  v_profile public.trameli_profiles%rowtype;
 begin
   if not public.trameli_is_operator() then
     raise exception 'operator access required' using errcode = '42501';
   end if;
-  if p_customer_id is null or not exists (
-    select 1 from public.trameli_profiles where user_id = p_customer_id
-  ) then
+  if p_customer_id is null then
+    raise exception 'select an existing customer profile' using errcode = '22023';
+  end if;
+  select * into v_profile from public.trameli_profiles where user_id = p_customer_id;
+  if not found then
     raise exception 'select an existing customer profile' using errcode = '22023';
   end if;
   v_id := public.trameli_operator_order(
     p_order_id, p_request_id, p_expected_version, p_delivery_date,
-    p_name, p_phone, p_address, p_notes, p_fee_cents, p_items
+    v_profile.name, coalesce(v_profile.phone,''), v_profile.address, p_notes, p_fee_cents, p_items
   );
   update public.trameli_orders set customer_id = p_customer_id
     where id = v_id;
