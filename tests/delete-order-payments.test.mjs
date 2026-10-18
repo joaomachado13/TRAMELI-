@@ -76,7 +76,7 @@ try {
     values ($1,$2,'fixed',$3,true,'',200,'[{"name":"Teste","quantity":1,"priceCents":1000}]'::jsonb,$4)`,
     [scheduleId, customer, today, master]);
   await db.query(`insert into public.trameli_recurring_occurrences(schedule_id,delivery_date,order_id)
-    values ($1,$2,$3),($1,$2,$4)`, [scheduleId, today, generatedA, generatedB]);
+    values ($1,$2,$3),($1,$2::date + 1,$4)`, [scheduleId, today, generatedA, generatedB]);
   await as(master);
   const recurringPayment = await pay(1200, [{ order_id: generatedA, amount_cents: 1200 }]);
   const beforeRecurringDelete = await count('trameli_payments');
