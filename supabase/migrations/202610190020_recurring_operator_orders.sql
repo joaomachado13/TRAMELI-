@@ -197,6 +197,36 @@ begin
 end;
 $$;
 
+
+create or replace function public.trameli_operator_order_for_customer(
+  p_order_id uuid, p_request_id uuid, p_expected_version integer, p_delivery_date date,
+  p_name text, p_phone text, p_address text, p_notes text,
+  p_fee_cents integer, p_items jsonb, p_customer_id uuid
+) returns uuid
+language plpgsql security definer set search_path = '' as $
+declare
+  v_id uuid;
+begin
+  if not public.trameli_is_operator() then
+    raise exception 'operator access required' using errcode = '42501';
+  end if;
+  if p_customer_id is null or not exists (
+    select 1 from public.trameli_profiles where user_id = p_customer_id
+  ) then
+    raise exception 'select an existing customer profile' using errcode = '22023';
+  end if;
+  v_id := public.trameli_operator_order(
+    p_order_id, p_request_id, p_expected_version, p_delivery_date,
+    p_name, p_phone, p_address, p_notes, p_fee_cents, p_items
+  );
+  update public.trameli_orders set customer_id = p_customer_id
+    where id = v_id;
+  return v_id;
+end;
+$;
+revoke all on function public.trameli_operator_order_for_customer(uuid,uuid,integer,date,text,text,text,text,integer,jsonb,uuid) from public, anon;
+grant execute on function public.trameli_operator_order_for_customer(uuid,uuid,integer,date,text,text,text,text,integer,jsonb,uuid) to authenticated;
+
 revoke all on function public.trameli_save_recurring_order(uuid,uuid,text,date,boolean,text,integer,jsonb) from public, anon;
 revoke all on function public.trameli_materialize_recurring_orders(date) from public, anon;
 grant execute on function public.trameli_save_recurring_order(uuid,uuid,text,date,boolean,text,integer,jsonb) to authenticated;
