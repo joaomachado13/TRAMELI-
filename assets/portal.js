@@ -829,9 +829,20 @@ import { billingReminder, daysUntil, nextBillingDeadline } from '../src/billing-
     if (event.target.id === 'portal-checkout-form') { event.preventDefault(); placeOrder(event.target); }
     if (event.target.id === 'portal-week-checkout-form') { event.preventDefault(); placeWeeklyOrders(event.target); }
   });
-  // A loja do cliente nunca oferece navegação para a Operação nesta mesma aba.
-  const adminLink=document.getElementById('portal-admin-link');
-  if(adminLink) adminLink.hidden = true;
+  // Somente contas Master recebem o atalho de volta ao painel operacional.
+  // A autorização real continua sendo validada pelo papel retornado pelo Supabase.
+  const adminLink = document.getElementById('portal-admin-link');
+  if (adminLink) {
+    const isMaster = live?.role === 'master';
+    adminLink.hidden = !isMaster;
+    adminLink.setAttribute('aria-hidden', String(!isMaster));
+    if (isMaster) adminLink.addEventListener('click', () => {
+      portalVisible = false;
+      document.getElementById('portal-success-screen')?.remove();
+      location.hash = '#operacao';
+      syncPortalFrame();
+    });
+  }
   document.getElementById('portal-orders-link').addEventListener('click', () => { view = 'orders'; render(); });
   document.getElementById('portal-cart-link').addEventListener('click', () => { view = 'cart'; render(); });
   document.querySelectorAll('[data-portal-nav]').forEach(button => button.addEventListener('click', () => { view = button.dataset.portalNav; render(); }));
