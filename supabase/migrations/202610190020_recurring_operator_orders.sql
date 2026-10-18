@@ -208,7 +208,7 @@ create or replace function public.trameli_operator_order_for_customer(
   p_name text, p_phone text, p_address text, p_notes text,
   p_fee_cents integer, p_items jsonb, p_customer_id uuid
 ) returns uuid
-language plpgsql security definer set search_path = '' as $
+language plpgsql security definer set search_path = '' as $$
 declare
   v_id uuid;
 begin
@@ -228,13 +228,13 @@ begin
     where id = v_id;
   return v_id;
 end;
-$;
+$$;
 
 create or replace function public.trameli_set_recurring_order_active(
   p_schedule_id uuid,
   p_active boolean
 ) returns void
-language plpgsql security definer set search_path = '' as $
+language plpgsql security definer set search_path = '' as $$
 begin
   if not public.trameli_is_operator() then
     raise exception 'operator access required' using errcode = '42501';
@@ -247,7 +247,7 @@ begin
    where id = p_schedule_id;
   if not found then raise exception 'recurring order not found' using errcode = 'P0002'; end if;
 end;
-$;
+$$;
 revoke all on function public.trameli_set_recurring_order_active(uuid,boolean) from public, anon;
 grant execute on function public.trameli_set_recurring_order_active(uuid,boolean) to authenticated;
 
