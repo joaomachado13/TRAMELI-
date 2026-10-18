@@ -715,14 +715,27 @@ document.getElementById('new-order').addEventListener('click', () => openForm())
 document.getElementById('add-item').addEventListener('click', () => addItem());
 document.getElementById('close-dialog').addEventListener('click', () => dialog.close());
 document.getElementById('cancel-dialog').addEventListener('click', () => dialog.close());
-form.elements.customer.addEventListener('change', event => {
-  const client = window.TrameliClients?.findByName(event.target.value);
-  if (!client) return;
-  form.elements.address.value = client.address;
-  form.elements.phone.value = client.phone;
+form.elements.customerId.addEventListener('change', syncSelectedCustomer);
+catalogHost.addEventListener('click', event => {
+  const button = event.target.closest('[data-product-step][data-product-id]');
+  if (!button) return;
+  const id = button.dataset.productId;
+  const product = (live?.products || window.TrameliCatalog?.list() || []).find(item => item.id === id);
+  if (!product) return;
+  const current = selectedProductQuantities.get(id) || 0;
+  const next = Math.max(0, Math.min(product.unit === 'kg' ? 99 : 999, current + Number(button.dataset.productStep)));
+  if (next) selectedProductQuantities.set(id, next); else selectedProductQuantities.delete(id);
+  renderProductCatalog();
+  updateFormTotal();
 });
 form.elements.fee.addEventListener('input', updateFormTotal);
-dateInput.addEventListener('change', render);
+dateInput.addEventListener('change', async () => {
+  if (live?.operator && dateInput.value) {
+    try { await live.materializeRecurringOrders(dateInput.value); orders = readOrders(); }
+    catch (cause) { kanbanFeedback.textContent = 'Não foi possível gerar os pedidos recorrentes: ' + cause.message; }
+  }
+  render();
+});
 searchInput.addEventListener('input', render);
 const businessLabel = () => live?.settings?.business_name || window.TrameliSettings?.businessName || 'Pão Doce';
 async function buildPeriodReport() {
@@ -804,10 +817,22 @@ form.addEventListener('submit', async event => {
   if (submitting) return;
   const items = formItems();
   const feeCents = 200;
-  const customer = form.elements.customer.value.trim();
-  const address = form.elements.address.value.trim();
-  if (!customer || !address || !form.elements.date.value || feeCents === null || !items.length || items.some(item => !item.name || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 999 || item.priceCents === null || (item.weightGrams !== undefined && (!Number.isInteger(item.weightGrams) || item.weightGrams < 50 || item.weightGrams > 4950 || item.weightGrams % 50 !== 0)))) {
-    formError.textContent = 'Confira nome, endereço, data, taxa e os itens com quantidade e preço válidos.';
+  const customerId = form.elements.customerId.value;
+  const customerProfile = customerProfiles().find(profile => profile.user_id === customerId);
+  const customer = customerProfile?.name || '';
+  const address = customerProfile?.address || '';
+  const phone = customerProfile?.phone || '';
+  const recurrence = editingId ? 'once' : form.elements.recurrence.value;
+  if (!customerId || !customer || !address || !form.elements.date.value || !items.length
+    || items.some(item => !item.name || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 999
+      || !Number.isInteger(item.priceCents) || item.priceCents < 0
+      || (item.weightGrams !== undefined && (!Number.isInteger(item.weightGrams) || item.weightGrams < 50 || item.weightGrams > 4950 || item.weightGrams % 50 !== 0)))) {
+    formError.textContent = 'Selecione um cliente cadastrado e pelo menos um produto com quantidade válida.';
+    formError.hidden = false;
+    return;
+  }
+  if (recurrence !== 'once' && !live) {
+    formError.textContent = 'A repetição automática exige conexão com o banco de dados.';
     formError.hidden = false;
     return;
   }
@@ -820,7 +845,7 @@ form.addEventListener('submit', async event => {
     createdAt,
     checked: previous?.checked || false,
     status: previous ? orderStatus(previous) : 'received',
-    customer, address, phone: form.elements.phone.value.trim(),
+    customerId, customer, address, phone,
     date: form.elements.date.value, feeCents, items, notes: form.elements.notes.value.trim(),
   };
   if (live) {
@@ -828,7 +853,15 @@ form.addEventListener('submit', async event => {
     const submitButton = form.querySelector('[type="submit"]');
     submitButton.disabled = true;
     try {
-      await live.saveOperatorOrder(order, requestId);
+      if (recurrence === 'once') {
+        await live.saveOperatorOrder(order, requestId, customerId);
+      } else {
+        await live.saveRecurringOrder({
+          customerId, recurrence, startDate: order.date, notes: order.notes, feeCents,
+          items: items.map(({ name, quantity, priceCents }) => ({ name, quantity, priceCents })),
+        }, requestId);
+        await live.materializeRecurringOrders(order.date);
+      }
       orders = readOrders();
       dateInput.value = order.date;
       searchInput.value = '';
