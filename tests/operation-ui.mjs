@@ -19,7 +19,7 @@ let socket;
 
 try {
   let page;
-  for (let attempt = 0; attempt < 60; attempt++) {
+  for (let attempt = 0; attempt < 120; attempt++) {
     try {
       const tabs = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
       page = tabs.find(tab => tab.type === 'page' && tab.url.startsWith(url));
@@ -84,8 +84,8 @@ try {
   await waitTransition();
   await evaluate('document.querySelector("#new-order").click()');
   assert(await evaluate('document.querySelector("#operation-dialog").open'), 'Formulário não abriu.');
-  assert(await evaluate('!!document.querySelector("#catalog-products option[value=Pão]")'), 'Produto não ficou disponível no pedido.');
-  await evaluate(`(() => { const f = document.querySelector('#order-form'); const d = new Date(); d.setDate(d.getDate() + 1); f.elements.date.value = [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('-'); f.elements.customer.value='Cliente Teste'; f.elements.customer.dispatchEvent(new Event('change', { bubbles: true })); const name = document.querySelector('.item-name'); name.value='Pão'; name.dispatchEvent(new Event('change', { bubbles: true })); document.querySelector('.item-quantity').value='3'; f.requestSubmit(); })()`);
+  assert(await evaluate('[...document.querySelectorAll("#form-catalog .admin-product-card")].some(card => card.textContent.includes("Pão"))'), 'Produto não ficou disponível no catálogo do pedido.');
+  await evaluate(`(() => { const f = document.querySelector('#order-form'); const d = new Date(); d.setDate(d.getDate() + 1); f.elements.date.value = [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('-'); const option = [...f.elements.customerId.options].find(item => item.textContent === 'Cliente Teste'); f.elements.customerId.value = option?.value || ''; f.elements.customerId.dispatchEvent(new Event('change', { bubbles: true })); for (let i = 0; i < 3; i++) { const card = [...document.querySelectorAll('#form-catalog .admin-product-card')].find(item => item.querySelector('.admin-product-card__body > strong')?.textContent.trim() === 'Pão'); card.querySelector('[data-product-step="1"]').click(); } f.requestSubmit(); })()`);
   const createdOrderDate = await evaluate('document.querySelector("#delivery-date").value');
   assert(await evaluate('document.querySelectorAll(".kanban-column").length === 5'), 'Kanban não mostrou as cinco etapas operacionais.');
   await evaluate('document.querySelector(".order-card").click()');

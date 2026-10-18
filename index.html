@@ -78,7 +78,7 @@
           <div class="workspace">
             <section class="intro">
               <div><p class="eyebrow">OPERAÇÃO DIÁRIA</p><h1>Pedidos do dia,<br><em>sem confusão.</em></h1><p>Acompanhe o que chegou, o que já foi conferido e o que terminou.</p></div>
-              <div class="intro__actions"><button class="button button--primary" id="new-order" type="button">+ Novo pedido</button><button class="button button--quiet" id="print-orders" type="button">Imprimir etiquetas</button></div>
+              <div class="intro__actions"><button class="button button--primary" id="new-order" type="button">+ Novo pedido</button><button class="button button--quiet" id="manage-recurring-orders" type="button">Pedidos recorrentes</button><button class="button button--quiet" id="print-orders" type="button">Imprimir etiquetas</button></div>
             </section>
             <p class="prototype-note" role="note"><strong>Modo de demonstração.</strong> Os dados ficam neste navegador. Confira os preços antes de usar com clientes reais.</p>
             <section class="day-tools" aria-label="Seleção do dia"><div><label for="delivery-date">Dia da operação</label><input id="delivery-date" type="date"></div><div class="day-tools__hint" id="operation-day-hint">Escolha uma data para acompanhar a fila.</div></section>
@@ -88,9 +88,9 @@
           </div>
           <dialog id="operation-dialog" aria-labelledby="dialog-title"><form id="order-form" novalidate>
             <div class="dialog-heading"><div><p class="eyebrow">LANÇAMENTO MANUAL</p><h2 id="dialog-title">Novo pedido</h2></div><button class="icon-button" id="close-dialog" type="button" aria-label="Fechar">×</button></div>
-            <p class="dialog-help">Anote aqui o pedido que chegou pelo grupo. Depois, o portal do cliente alimentará esta mesma fila.</p>
-            <div class="form-grid"><label>Nome do cliente <input name="customer" list="known-clients" maxlength="90" autocomplete="name" required></label><label>Telefone <span>(opcional)</span><input name="phone" type="tel" maxlength="25" autocomplete="tel"></label><label class="form-grid__wide">Endereço / referência <input name="address" maxlength="180" autocomplete="street-address" required></label><label>Data da entrega <input name="date" type="date" required></label></div>
-            <div class="items-heading"><strong>Itens do pedido</strong><button class="text-button" id="add-item" type="button">+ Adicionar item</button></div><div id="form-items"></div>
+            <p class="dialog-help">Selecione um cliente já cadastrado e monte o pedido usando os mesmos produtos da loja. Pedidos recorrentes geram somente a ocorrência da data selecionada; não criam pedidos futuros em massa.</p>
+            <div class="form-grid"><label>Cliente cadastrado <select name="customerId" required><option value="">Selecione um cliente…</option></select></label><label>Telefone <input name="phone" type="tel" maxlength="25" readonly></label><label class="form-grid__wide">Endereço / referência <input name="address" maxlength="180" readonly required></label><label>Data da entrega <input name="date" type="date" required></label><label>Repetição <select name="recurrence"><option value="once">Pedido único</option><option value="fixed">Fixo diário</option><option value="fortnightly">Quinzenal (fechamento)</option><option value="monthly">Mensal (fechamento)</option></select></label></div>
+            <div class="items-heading"><strong>Escolha os produtos</strong><button class="text-button" id="add-item" type="button" hidden>+ Adicionar linha manual</button></div><div id="form-catalog" class="admin-product-grid"></div><div id="form-items" hidden></div>
             <label class="notes-label">Observação <span>(opcional)</span><textarea name="notes" rows="2" maxlength="280"></textarea></label>
             <div class="form-total"><span>Subtotal dos produtos</span><strong id="form-subtotal">R$ 0,00</strong></div>
             <div id="form-delivery-summary" hidden><div class="form-grid"><label>Taxa de entrega (fixa) <input name="fee" inputmode="decimal" value="2,00" readonly required></label></div><div class="form-total"><span>Total final com entrega</span><strong id="form-total">R$ 0,00</strong></div></div><p class="form-error" id="form-error" role="alert" hidden></p>

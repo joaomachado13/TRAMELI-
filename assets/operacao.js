@@ -30,6 +30,7 @@ function readOrders() {
 
 let orders = readOrders();
 let editingId = null;
+let editingScheduleId = null;
 let detailId = null;
 let submitting = false;
 let requestId = null;
@@ -81,10 +82,15 @@ const detailDrawer = document.getElementById('order-detail-drawer');
 const detailContent = document.getElementById('order-detail-content');
 const form = document.getElementById('order-form');
 const itemsHost = document.getElementById('form-items');
+const catalogHost = document.getElementById('form-catalog');
+const selectedProductQuantities = new Map();
 const formError = document.getElementById('form-error');
 const printSettingsHost = document.getElementById('print-settings');
 const historyDialog = live ? document.createElement('dialog') : null;
 if (historyDialog) { historyDialog.className = 'history-dialog'; document.body.append(historyDialog); }
+const recurringManager = live ? document.createElement('dialog') : null;
+if (recurringManager) { recurringManager.className = 'recurring-manager-dialog'; document.body.append(recurringManager); }
+let recurringSchedulesCache = [];
 const printDefaults = { offsetX: 0, offsetY: 0 };
 let printSettings = { ...printDefaults };
 try {
@@ -150,9 +156,15 @@ function suggestedOperationDate() {
   const [hour, minute] = operationRolloverTime().split(':').map(Number);
   const afterRollover = clock.hour * 60 + clock.minute >= hour * 60 + minute;
   const todayPending = orders.some(order => order.date === today && !['delivered', 'cancelled'].includes(orderStatus(order)));
-  if (!afterRollover || todayPending) return today;
-  const next = new Date(Date.UTC(clock.year, clock.month - 1, clock.day + 1));
-  return `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, '0')}-${String(next.getUTCDate()).padStart(2, '0')}`;
+  let candidate;
+  if (!afterRollover || todayPending) candidate = today;
+  else {
+    const nextDate = new Date(Date.UTC(clock.year, clock.month - 1, clock.day + 1));
+    candidate = `${nextDate.getUTCFullYear()}-${String(nextDate.getUTCMonth() + 1).padStart(2, '0')}-${String(nextDate.getUTCDate()).padStart(2, '0')}`;
+  }
+  const deliveryDate = new Date(candidate + 'T12:00:00');
+  if (deliveryDate.getDay() === 0) deliveryDate.setDate(deliveryDate.getDate() + 1);
+  return `${deliveryDate.getFullYear()}-${String(deliveryDate.getMonth() + 1).padStart(2, '0')}-${String(deliveryDate.getDate()).padStart(2, '0')}`;
 }
 
 dateInput.value = suggestedOperationDate();
@@ -191,7 +203,66 @@ function addItem(item = {}) {
   syncItemMode();
 }
 
+function customerProfiles() {
+  if (live) {
+    return (window.TrameliPayments?.api?.profiles || [])
+      .filter(profile => profile?.user_id && profile?.name)
+      .slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  }
+  return (window.TrameliClients?.list() || []).map(client => ({
+    user_id: client.customerId || client.key || client.name,
+    name: client.name, phone: client.phone || '', address: client.address || '',
+  })).filter(profile => profile.user_id && profile.name)
+    .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+}
+function syncSelectedCustomer() {
+  const profile = customerProfiles().find(item => item.user_id === form.elements.customerId.value);
+  form.elements.phone.value = profile?.phone || '';
+  form.elements.address.value = profile?.address || '';
+}
+function fillCustomerOptions(selectedId = '', selectedName = '') {
+  const profiles = customerProfiles();
+  const select = form.elements.customerId;
+  select.innerHTML = '<option value="">Selecione um cliente…</option>' + profiles.map(profile =>
+    '<option value="' + escapeHtml(profile.user_id) + '">' + escapeHtml(profile.name) + '</option>'
+  ).join('');
+  let target = profiles.find(profile => profile.user_id === selectedId);
+  if (!target && selectedName) target = profiles.find(profile => profile.name.trim().toLocaleLowerCase('pt-BR') === selectedName.trim().toLocaleLowerCase('pt-BR'));
+  select.value = target?.user_id || '';
+  syncSelectedCustomer();
+  select.disabled = profiles.length === 0;
+}
+function renderProductCatalog() {
+  const products = (live?.products || window.TrameliCatalog?.list() || [])
+    .filter(product => product.active && Number.isSafeInteger(product.priceCents) && product.priceCents >= 0)
+    .slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  catalogHost.innerHTML = products.length ? products.map(product => {
+    const quantity = selectedProductQuantities.get(product.id) || 0;
+    const weighted = product.unit === 'kg';
+    const image = product.image ? '<img src="' + escapeHtml(product.image) + '" alt="" loading="lazy">' : '<span class="admin-product-card__placeholder">PD</span>';
+    const price = weighted ? money(product.priceCents) + ' / kg' : money(product.priceCents);
+    const amount = weighted ? (quantity ? (quantity * 50) + ' g' : '0 g') : quantity;
+    return '<article class="admin-product-card' + (quantity ? ' is-selected' : '') + '" data-product-card="' + escapeHtml(product.id) + '">' +
+      '<div class="admin-product-card__photo">' + image + '</div><div class="admin-product-card__body"><strong>' + escapeHtml(product.name) +
+      '</strong><small>' + price + '</small><div class="admin-product-card__controls"><button type="button" data-product-step="-1" data-product-id="' + escapeHtml(product.id) + '" aria-label="Diminuir ' + escapeHtml(product.name) + '"' + (quantity ? '' : ' disabled') + '>−</button><span>' + amount +
+      '</span><button type="button" data-product-step="1" data-product-id="' + escapeHtml(product.id) + '" aria-label="Adicionar ' + escapeHtml(product.name) + '">+</button></div></div></article>';
+  }).join('') : '<p class="admin-product-empty">Não há produtos ativos no catálogo.</p>';
+}
 function formItems() {
+  if (!catalogHost.hidden) {
+    const products = live?.products || window.TrameliCatalog?.list() || [];
+    return [...selectedProductQuantities.entries()].map(([id, quantity]) => {
+      const product = products.find(item => item.id === id && item.active);
+      if (!product || quantity < 1) return null;
+      if (product.unit === 'kg') {
+        const weightGrams = quantity * 50;
+        return { productId: product.id, name: product.name, quantity: 1,
+          weightGrams, kgPriceCents: product.priceCents,
+          priceCents: window.TrameliOrderMath.weightPriceCents(product.priceCents, weightGrams) };
+      }
+      return { productId: product.id, name: product.name, quantity, priceCents: product.priceCents };
+    }).filter(Boolean);
+  }
   return [...itemsHost.children].map(row => {
     const name = row.querySelector('.item-name').value.trim();
     const enteredPrice = parseMoney(row.querySelector('.item-price').value);
@@ -204,37 +275,84 @@ function formItems() {
     return { name, quantity: Number(row.querySelector('.item-quantity').value), priceCents: enteredPrice };
   });
 }
-
 function updateFormTotal() {
-  const fee = parseMoney(form.elements.fee.value);
+  const fee = parseMoney(form.elements.fee.value || '2,00');
   const items = formItems();
   const valid = fee !== null && items.every(item => Number.isInteger(item.quantity) && item.quantity > 0
     && item.priceCents !== null && (item.weightGrams === undefined || (Number.isInteger(item.weightGrams)
       && item.weightGrams >= 50 && item.weightGrams <= 4950 && item.weightGrams % 50 === 0)));
   const productsTotal = items.reduce((sum, item) => sum + itemTotal(item), 0);
-  const hasItems = items.some(item => item.name && item.priceCents !== null && item.quantity > 0);
+  const hasItems = items.length > 0 && items.some(item => item.name && item.priceCents !== null && item.quantity > 0);
   document.getElementById('form-subtotal').textContent = !hasItems ? money(0) : valid ? money(productsTotal) : '—';
   document.getElementById('form-delivery-summary').hidden = !hasItems;
   document.getElementById('form-total').textContent = !hasItems ? money(0) : valid ? money(productsTotal + fee) : '—';
 }
-
-function openForm(order = null) {
+function openForm(order = null, schedule = null) {
   editingId = order?.id || null;
-  requestId = order ? null : crypto.randomUUID();
+  editingScheduleId = schedule?.id || null;
+  requestId = schedule?.request_id || (order ? null : crypto.randomUUID());
   form.reset();
   formError.hidden = true;
   itemsHost.replaceChildren();
-  form.elements.date.value = order?.date || dateInput.value;
-  form.elements.fee.value = '2,00';
-  form.elements.customer.value = order?.customer || '';
-  form.elements.phone.value = order?.phone || '';
-  form.elements.address.value = order?.address || '';
-  form.elements.notes.value = order?.notes || '';
-  (order?.items || [{}]).forEach(addItem);
-  document.getElementById('dialog-title').textContent = order ? 'Editar pedido' : 'Novo pedido';
+  selectedProductQuantities.clear();
+  form.elements.date.value = schedule ? dateInput.value : order?.date || dateInput.value;
+  form.elements.fee.value = ((schedule?.fee_cents ?? 200) / 100).toFixed(2).replace('.', ',');
+  fillCustomerOptions(schedule?.customer_id || order?.customerId || '', order?.customer || '');
+  form.elements.notes.value = schedule?.notes || order?.notes || '';
+  form.elements.recurrence.value = schedule?.recurrence || 'once';
+  form.elements.recurrence.disabled = Boolean(order);
+  form.elements.recurrence.querySelector('option[value="once"]').disabled = Boolean(schedule);
+  catalogHost.hidden = Boolean(order);
+  itemsHost.hidden = !order;
+  document.getElementById('add-item').hidden = !order;
+  if (order) {
+    (order.items || [{}]).forEach(addItem);
+  } else {
+    if (schedule) {
+      const products = live?.products || window.TrameliCatalog?.list() || [];
+      for (const line of schedule.items || []) {
+        const baseName = String(line.name || '').replace(/\s+\(\d{2,4}\s*g\)$/i, '').trim();
+        const product = products.find(candidate => candidate.active && candidate.id === line.productId)
+          || products.find(candidate => candidate.active && candidate.name === baseName)
+          || products.filter(candidate => candidate.active && baseName.startsWith(candidate.name)).sort((a, b) => b.name.length - a.name.length)[0];
+        if (!product) continue;
+        const grams = Number(line.weightGrams || String(line.name || '').match(/\((\d{2,4})\s*g\)/i)?.[1] || 50);
+        const quantity = product.unit === 'kg' ? Math.max(1, Math.min(99, Math.round(grams / 50)))
+          : Math.max(1, Math.min(999, Number(line.quantity) || 1));
+        selectedProductQuantities.set(product.id, quantity);
+      }
+    }
+    renderProductCatalog();
+  }
+  document.getElementById('dialog-title').textContent = schedule ? 'Editar pedido recorrente' : order ? 'Editar pedido' : 'Novo pedido';
   updateFormTotal();
   dialog.showModal();
-  form.elements.customer.focus();
+  form.elements.customerId.focus();
+}
+
+async function showRecurringManager() {
+  if (!recurringManager) {
+    alert('A gestão de recorrências exige conexão com o banco de dados.');
+    return;
+  }
+  recurringManager.innerHTML = '<div class="recurring-manager__head"><div><p class="eyebrow">OPERAÇÃO</p><h2>Pedidos recorrentes</h2></div><button type="button" data-recurring-close aria-label="Fechar">×</button></div><p class="recurring-manager__help">Cada data gera no máximo uma ocorrência. Quinzenal renova no fechamento dos dias 15 e fim do mês; mensal renova no fim de cada mês. Fixo diário não depende do fechamento.</p><p class="recurring-manager__feedback" role="status">Carregando…</p><div class="recurring-manager__list"></div>';
+  if (!recurringManager.open) recurringManager.showModal();
+  const feedback = recurringManager.querySelector('.recurring-manager__feedback');
+  const host = recurringManager.querySelector('.recurring-manager__list');
+  try {
+    recurringSchedulesCache = await live.recurringSchedules();
+    const profiles = new Map(customerProfiles().map(profile => [profile.user_id, profile]));
+    const names = { fixed: 'Fixo diário', fortnightly: 'Quinzenal', monthly: 'Mensal' };
+    host.innerHTML = recurringSchedulesCache.length ? recurringSchedulesCache.map(schedule => {
+      const customer = profiles.get(schedule.customer_id);
+      const itemNames = (schedule.items || []).map(item => item.weightGrams ? item.name + ' (' + item.weightGrams + ' g)' : item.name).join(' · ');
+      const period = schedule.recurrence === 'fixed' ? 'Sem fechamento' : 'Ciclo até ' + new Date(schedule.cycle_ends_on + 'T12:00:00').toLocaleDateString('pt-BR');
+      return '<article class="recurring-manager__item"><div><strong>' + escapeHtml(customer?.name || 'Cliente cadastrado') + '</strong><span>' + escapeHtml(names[schedule.recurrence] || schedule.recurrence) + ' · ' + escapeHtml(period) + '</span><small>' + escapeHtml(itemNames) + '</small><small>' + (schedule.active ? 'Ativo' : 'Pausado') + '</small></div><div class="recurring-manager__actions"><button type="button" data-recurring-edit="' + escapeHtml(schedule.id) + '" ' + (schedule.active ? '' : 'disabled') + '>Editar</button><button type="button" data-recurring-active="' + escapeHtml(schedule.id) + '" data-active="' + String(!schedule.active) + '">' + (schedule.active ? 'Pausar' : 'Reativar') + '</button></div></article>';
+    }).join('') : '<p class="recurring-manager__empty">Ainda não há pedidos recorrentes cadastrados.</p>';
+    feedback.textContent = '';
+  } catch (cause) {
+    feedback.textContent = 'Não foi possível carregar as recorrências: ' + cause.message;
+  }
 }
 
 function selectedOrders() {
@@ -655,17 +773,53 @@ function preparePrint() {
 }
 
 document.getElementById('new-order').addEventListener('click', () => openForm());
+document.getElementById('manage-recurring-orders').addEventListener('click', showRecurringManager);
+if (recurringManager) recurringManager.addEventListener('click', async event => {
+  if (event.target.closest('[data-recurring-close]')) { recurringManager.close(); return; }
+  const editButton = event.target.closest('[data-recurring-edit]');
+  if (editButton) {
+    const schedule = recurringSchedulesCache.find(item => item.id === editButton.dataset.recurringEdit);
+    if (!schedule) return;
+    recurringManager.close();
+    openForm(null, schedule);
+    return;
+  }
+  const activeButton = event.target.closest('[data-recurring-active]');
+  if (activeButton) {
+    activeButton.disabled = true;
+    try {
+      await live.setRecurringScheduleActive(activeButton.dataset.recurringActive, activeButton.dataset.active === 'true');
+      await showRecurringManager();
+    } catch (cause) {
+      const feedback = recurringManager.querySelector('.recurring-manager__feedback');
+      if (feedback) feedback.textContent = 'Não foi possível alterar a recorrência: ' + cause.message;
+    } finally { activeButton.disabled = false; }
+  }
+});
 document.getElementById('add-item').addEventListener('click', () => addItem());
 document.getElementById('close-dialog').addEventListener('click', () => dialog.close());
 document.getElementById('cancel-dialog').addEventListener('click', () => dialog.close());
-form.elements.customer.addEventListener('change', event => {
-  const client = window.TrameliClients?.findByName(event.target.value);
-  if (!client) return;
-  form.elements.address.value = client.address;
-  form.elements.phone.value = client.phone;
+form.elements.customerId.addEventListener('change', syncSelectedCustomer);
+catalogHost.addEventListener('click', event => {
+  const button = event.target.closest('[data-product-step][data-product-id]');
+  if (!button) return;
+  const id = button.dataset.productId;
+  const product = (live?.products || window.TrameliCatalog?.list() || []).find(item => item.id === id);
+  if (!product) return;
+  const current = selectedProductQuantities.get(id) || 0;
+  const next = Math.max(0, Math.min(product.unit === 'kg' ? 99 : 999, current + Number(button.dataset.productStep)));
+  if (next) selectedProductQuantities.set(id, next); else selectedProductQuantities.delete(id);
+  renderProductCatalog();
+  updateFormTotal();
 });
 form.elements.fee.addEventListener('input', updateFormTotal);
-dateInput.addEventListener('change', render);
+dateInput.addEventListener('change', async () => {
+  if (live?.operator && dateInput.value) {
+    try { await live.materializeRecurringOrders(dateInput.value); orders = readOrders(); }
+    catch (cause) { kanbanFeedback.textContent = 'Não foi possível gerar os pedidos recorrentes: ' + cause.message; }
+  }
+  render();
+});
 searchInput.addEventListener('input', render);
 const businessLabel = () => live?.settings?.business_name || window.TrameliSettings?.businessName || 'Pão Doce';
 async function buildPeriodReport() {
@@ -747,10 +901,24 @@ form.addEventListener('submit', async event => {
   if (submitting) return;
   const items = formItems();
   const feeCents = 200;
-  const customer = form.elements.customer.value.trim();
-  const address = form.elements.address.value.trim();
-  if (!customer || !address || !form.elements.date.value || feeCents === null || !items.length || items.some(item => !item.name || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 999 || item.priceCents === null || (item.weightGrams !== undefined && (!Number.isInteger(item.weightGrams) || item.weightGrams < 50 || item.weightGrams > 4950 || item.weightGrams % 50 !== 0)))) {
-    formError.textContent = 'Confira nome, endereço, data, taxa e os itens com quantidade e preço válidos.';
+  const customerId = form.elements.customerId.value;
+  const customerProfile = customerProfiles().find(profile => profile.user_id === customerId);
+  const customer = customerProfile?.name || '';
+  const address = customerProfile?.address || '';
+  const phone = customerProfile?.phone || '';
+  const recurrence = editingScheduleId ? form.elements.recurrence.value : editingId ? 'once' : form.elements.recurrence.value;
+  const sundayDelivery = Boolean(form.elements.date.value)
+    && new Date(form.elements.date.value + 'T12:00:00').getDay() === 0;
+  if (!customerId || !customer || !address || !form.elements.date.value || sundayDelivery || !items.length
+    || items.some(item => !item.name || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 999
+      || !Number.isInteger(item.priceCents) || item.priceCents < 0
+      || (item.weightGrams !== undefined && (!Number.isInteger(item.weightGrams) || item.weightGrams < 50 || item.weightGrams > 4950 || item.weightGrams % 50 !== 0)))) {
+    formError.textContent = sundayDelivery ? 'Não fazemos entregas aos domingos. Escolha outra data.' : 'Selecione um cliente cadastrado e pelo menos um produto com quantidade válida.';
+    formError.hidden = false;
+    return;
+  }
+  if (recurrence !== 'once' && !live) {
+    formError.textContent = 'A repetição automática exige conexão com o banco de dados.';
     formError.hidden = false;
     return;
   }
@@ -763,7 +931,7 @@ form.addEventListener('submit', async event => {
     createdAt,
     checked: previous?.checked || false,
     status: previous ? orderStatus(previous) : 'received',
-    customer, address, phone: form.elements.phone.value.trim(),
+    customerId, customer, address, phone,
     date: form.elements.date.value, feeCents, items, notes: form.elements.notes.value.trim(),
   };
   if (live) {
@@ -771,7 +939,17 @@ form.addEventListener('submit', async event => {
     const submitButton = form.querySelector('[type="submit"]');
     submitButton.disabled = true;
     try {
-      await live.saveOperatorOrder(order, requestId);
+      if (recurrence === 'once') {
+        await live.saveOperatorOrder(order, requestId, customerId);
+      } else {
+        await live.saveRecurringOrder({
+          customerId, recurrence, startDate: order.date, notes: order.notes, feeCents,
+          items: items.map(item => item.weightGrams !== undefined
+            ? ({ productId: item.productId, name: item.name, quantity: item.quantity, weightGrams: item.weightGrams, kgPriceCents: item.kgPriceCents, priceCents: item.priceCents })
+            : ({ name: item.name, quantity: item.quantity, priceCents: item.priceCents })),
+        }, requestId, editingScheduleId);
+        await live.materializeRecurringOrders(order.date);
+      }
       orders = readOrders();
       dateInput.value = order.date;
       searchInput.value = '';
@@ -820,6 +998,10 @@ printSettingsHost?.addEventListener('change', event => {
 });
 
 render();
+if (live?.operator && dateInput.value) {
+  live.materializeRecurringOrders(dateInput.value).then(() => { orders = readOrders(); render(); })
+    .catch(cause => { kanbanFeedback.textContent = 'Não foi possível carregar pedidos recorrentes: ' + cause.message; });
+}
 window.addEventListener('trameli:orders-changed', () => { resetCosts(); orders = readOrders(); render(); });
 window.addEventListener('storage', event => {
   if (event.key === storageKey) { orders = readOrders(); render(); }
@@ -831,14 +1013,16 @@ function openNewOrder(prefill = {}) {
   location.hash = '#operacao';
   setTimeout(() => {
     openForm();
-    form.elements.customer.value = prefill.customer || '';
-    form.elements.phone.value = prefill.phone || '';
-    form.elements.address.value = prefill.address || '';
+    fillCustomerOptions('', prefill.customer || '');
     form.elements.date.value = prefill.date || dateInput.value;
     form.elements.notes.value = prefill.notes || '';
     if (Array.isArray(prefill.items) && prefill.items.length) {
-      itemsHost.replaceChildren();
-      prefill.items.forEach(item => addItem(item));
+      const products = live?.products || window.TrameliCatalog?.list() || [];
+      for (const item of prefill.items) {
+        const product = products.find(candidate => candidate.active && candidate.name.toLocaleLowerCase('pt-BR') === String(item.name || '').toLocaleLowerCase('pt-BR'));
+        if (product) selectedProductQuantities.set(product.id, Math.min(product.unit === 'kg' ? 99 : 999, Math.max(1, Number(item.quantity) || 1)));
+      }
+      renderProductCatalog();
       updateFormTotal();
     }
   }, 260);
