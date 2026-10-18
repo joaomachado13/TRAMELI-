@@ -248,6 +248,17 @@ try {
     [customerA, 'confirmed', '2026-11-14', 460],
     [customerA, 'confirmed', '2026-11-16', 460],
   ]);
+  const linkedManual = await db.query(`select public.trameli_operator_order_for_customer(
+    null, $1::uuid, null, '2026-11-17'::date, 'Nome digitado errado', '000', 'Endereço errado', '', 200, $2::jsonb, $3::uuid
+  ) as id`, [
+    '13131313-1313-4131-8131-131313131313',
+    JSON.stringify([{ name: 'Pão de queijo', quantity: 1, priceCents: 130 }]), customerA,
+  ]);
+  const linkedManualRow = await db.query('select customer_id, customer_name, address from public.trameli_orders where id=$1', [linkedManual.rows[0].id]);
+  assert.deepEqual(linkedManualRow.rows.map(row => [row.customer_id, row.customer_name, row.address]), [
+    [customerA, 'Cliente A', 'Bloco 1, apto 10'],
+  ], 'Manual order uses the selected existing profile');
+
   const cycles = await db.query('select active, starts_on, cycle_ends_on from public.trameli_recurring_orders order by starts_on');
   assert.equal(cycles.rows.length, 1, 'Cycle rollover must not duplicate the recurring template');
   assert.equal(cycles.rows[0].active, true);
