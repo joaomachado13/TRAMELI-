@@ -102,7 +102,11 @@ begin
     reviewed_at = null,
     recurring_schedule_id = null,
     updated_at = now()
+  where public.trameli_recurring_requests.status <> 'approved'
   returning id into v_id;
+  if v_id is null then
+    raise exception 'order already has an approved recurring schedule' using errcode = '22023';
+  end if;
   return v_id;
 end;
 $$;
