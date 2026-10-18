@@ -5,6 +5,7 @@ begin;
 create table public.trameli_recurring_orders (
   id uuid primary key default gen_random_uuid(),
   customer_id uuid not null references auth.users(id) on delete cascade,
+  request_id uuid unique,
   recurrence text not null check (recurrence in ('fixed','fortnightly','monthly')),
   starts_on date not null,
   cycle_ends_on date,
@@ -36,6 +37,7 @@ create policy recurring_occurrences_operator_read on public.trameli_recurring_oc
 
 create or replace function public.trameli_save_recurring_order(
   p_schedule_id uuid,
+  p_request_id uuid,
   p_customer_id uuid,
   p_recurrence text,
   p_start_date date,
@@ -97,10 +99,13 @@ begin
   end if;
 
   if p_schedule_id is null then
+    if p_request_id is null then raise exception 'request id required' using errcode = '22023'; end if;
+    select id into v_id from public.trameli_recurring_orders where request_id = p_request_id;
+    if v_id is not null then return v_id; end if;
     insert into public.trameli_recurring_orders(
-      customer_id, recurrence, starts_on, cycle_ends_on, active, notes, fee_cents, items, created_by
+      customer_id, request_id, recurrence, starts_on, cycle_ends_on, active, notes, fee_cents, items, created_by
     ) values (
-      p_customer_id, p_recurrence, p_start_date, v_cycle_end, coalesce(p_active,true),
+      p_customer_id, p_request_id, p_recurrence, p_start_date, v_cycle_end, coalesce(p_active,true),
       coalesce(p_notes,''), p_fee_cents, v_items, auth.uid()
     ) returning id into v_id;
   else
@@ -227,9 +232,9 @@ $;
 revoke all on function public.trameli_operator_order_for_customer(uuid,uuid,integer,date,text,text,text,text,integer,jsonb,uuid) from public, anon;
 grant execute on function public.trameli_operator_order_for_customer(uuid,uuid,integer,date,text,text,text,text,integer,jsonb,uuid) to authenticated;
 
-revoke all on function public.trameli_save_recurring_order(uuid,uuid,text,date,boolean,text,integer,jsonb) from public, anon;
+revoke all on function public.trameli_save_recurring_order(uuid,uuid,uuid,text,date,boolean,text,integer,jsonb) from public, anon;
 revoke all on function public.trameli_materialize_recurring_orders(date) from public, anon;
-grant execute on function public.trameli_save_recurring_order(uuid,uuid,text,date,boolean,text,integer,jsonb) to authenticated;
+grant execute on function public.trameli_save_recurring_order(uuid,uuid,uuid,text,date,boolean,text,integer,jsonb) to authenticated;
 grant execute on function public.trameli_materialize_recurring_orders(date) to authenticated;
 notify pgrst, 'reload schema';
 commit;
