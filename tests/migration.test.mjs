@@ -291,12 +291,12 @@ try {
   const weekdayScheduleId = weekdaySchedule.rows[0].id;
   const mondayCreated = await db.query("select public.trameli_materialize_recurring_orders('2026-11-23'::date) as count");
   assert.ok(Number(mondayCreated.rows[0].count) >= 1);
-  const tuesdayCreated = await db.query("select public.trameli_materialize_recurring_orders('2026-11-24'::date) as count");
+  await db.query("select public.trameli_materialize_recurring_orders('2026-11-24'::date) as count");
   const tuesdayExists = await db.query(`select count(*)::integer as count from public.trameli_recurring_occurrences
     where schedule_id=$1 and delivery_date='2026-11-24'::date`, [weekdayScheduleId]);
   assert.equal(tuesdayExists.rows[0].count, 0, 'Unselected weekdays must not generate orders');
-  const wednesdayCreated = await db.query("select public.trameli_materialize_recurring_orders('2026-11-25'::date) as count");
-  const fridayCreated = await db.query("select public.trameli_materialize_recurring_orders('2026-11-27'::date) as count");
+  await db.query("select public.trameli_materialize_recurring_orders('2026-11-25'::date) as count");
+  await db.query("select public.trameli_materialize_recurring_orders('2026-11-27'::date) as count");
   const selectedDates = await db.query(`select delivery_date from public.trameli_recurring_occurrences
     where schedule_id=$1 order by delivery_date`, [weekdayScheduleId]);
   assert.deepEqual(selectedDates.rows.map(row => new Date(row.delivery_date).toISOString().slice(0, 10)), [
