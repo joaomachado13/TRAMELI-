@@ -244,7 +244,7 @@ try {
   const recurringRows = await db.query(`select o.customer_id, o.status::text, o.delivery_date, o.total_cents
     from public.trameli_orders o join public.trameli_recurring_occurrences x on x.order_id=o.id
     where x.delivery_date in ('2026-10-15'::date,'2026-10-16'::date) order by o.delivery_date`);
-  assert.deepEqual(recurringRows.rows.map(row => [row.customer_id, row.status, String(row.delivery_date), Number(row.total_cents)]), [
+  assert.deepEqual(recurringRows.rows.map(row => [row.customer_id, row.status, new Date(row.delivery_date).toISOString().slice(0, 10), Number(row.total_cents)]), [
     [customerA, 'confirmed', '2026-10-15', 460],
     [customerA, 'confirmed', '2026-10-16', 460],
   ]);
