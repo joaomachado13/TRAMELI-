@@ -4,7 +4,8 @@ import { resolveProductPhoto } from './product-photos.js';
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-export const enabled = Boolean(url && key && !url.includes('YOUR_PROJECT') && !key.includes('YOUR_PUBLISHABLE_KEY'));
+// A suíte de UI deve ser isolada: nunca autentique nem consulte o Supabase durante os testes.
+export const enabled = import.meta.env.MODE !== 'test' && Boolean(url && key && !url.includes('YOUR_PROJECT') && !key.includes('YOUR_PUBLISHABLE_KEY'));
 
 const mapOrder = row => ({
   id: row.id, publicCode: row.public_code || '', createdAt: row.created_at, updatedAt: row.updated_at, version: row.version,
