@@ -450,6 +450,61 @@ import { billingReminder, daysUntil, nextBillingDeadline } from '../src/billing-
     return `<section class="portal-page portal-success"><span class="portal-success__icon" aria-hidden="true">✓</span><span class="portal-eyebrow">SEMANA REGISTRADA</span><h1>${weeklySuccessCount} ${weeklySuccessCount===1?'pedido confirmado':'pedidos confirmados'}.</h1><p>Cada pedido foi criado na data planejada e seguirá para conferência da operação.</p><button class="portal-primary" type="button" data-view="orders">Ver meus pedidos</button><button class="portal-link" type="button" data-view="catalog">Voltar aos produtos</button></section>`;
   }
 
+  function showDedicatedSuccessScreen() {
+    document.getElementById('portal-success-screen')?.remove();
+    const screen = document.createElement('main');
+    screen.id = 'portal-success-screen';
+    screen.setAttribute('role', 'region');
+    screen.setAttribute('aria-labelledby', 'portal-success-title');
+
+    const weekly = view === 'weekSuccess';
+    screen.innerHTML = weekly
+      ? `<section class="portal-success-card">
+          <span class="portal-success-mark" aria-hidden="true">✓</span>
+          <span class="portal-eyebrow">SEMANA REGISTRADA</span>
+          <h1 id="portal-success-title">${weeklySuccessCount} ${weeklySuccessCount === 1 ? 'pedido confirmado' : 'pedidos confirmados'}.</h1>
+          <p>Os pedidos foram registrados e seguirão para conferência da operação.</p>
+          <div class="portal-success-actions">
+            <button class="portal-primary" type="button" data-success-action="orders">Ver meus pedidos</button>
+            <button class="portal-link" type="button" data-success-action="catalog">Voltar aos produtos</button>
+          </div>
+        </section>`
+      : `<section class="portal-success-card">
+          <span class="portal-success-mark" aria-hidden="true">✓</span>
+          <span class="portal-eyebrow">PEDIDO RECEBIDO</span>
+          <h1 id="portal-success-title">Pedido registrado com sucesso.</h1>
+          <p>Agora ele segue para a conferência da operação.</p>
+          <dl class="portal-success-receipt">
+            <div><dt>Pedido</dt><dd>#${escapeHtml(orderCode(lastOrder))}</dd></div>
+            <div><dt>Entrega</dt><dd>${lastOrder ? escapeHtml(formatDate(lastOrder.date)) : '—'}</dd></div>
+            <div><dt>Endereço</dt><dd>${escapeHtml(lastOrder?.address || '—')}</dd></div>
+            <div><dt>Pagamento</dt><dd>${escapeHtml(paymentLabels[lastOrder?.paymentMethod] || paymentLabels.unspecified)}</dd></div>
+            <div><dt>Total</dt><dd>${lastOrder ? money(orderValue(lastOrder)) : '—'}</dd></div>
+          </dl>
+          <p class="portal-payment-note">Esta confirmação não significa que o pagamento já foi realizado.</p>
+          <div class="portal-success-actions">
+            <button class="portal-primary" type="button" data-success-action="orders">Ver meu pedido</button>
+            <button class="portal-link" type="button" data-success-action="catalog">Voltar aos produtos</button>
+          </div>
+        </section>`;
+
+    // Listeners próprios e diretos: não dependem do host dinâmico do portal.
+    screen.querySelectorAll('[data-success-action]').forEach(button => {
+      button.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        const nextView = button.dataset.successAction;
+        screen.remove();
+        host.hidden = false;
+        host.style.display = '';
+        view = nextView;
+        error = '';
+        render();
+      });
+    });
+    document.body.append(screen);
+  }
+
   async function placeWeeklyOrders(form) {
     if (submitting) return;
     const days = rollingWeek().filter(day => planCount(day) > 0);
@@ -494,20 +549,33 @@ import { billingReminder, daysUntil, nextBillingDeadline } from '../src/billing-
 
   function render(preserveScroll = false) {
     if (location.hash !== '#loja') return;
-    // A confirmação precisa ser sempre interativa: encerra qualquer camada global
-    // de navegação/transição que possa ter ficado aberta antes do checkout.
-    if (view === 'success' || view === 'weekSuccess') {
+
+    const isSuccessView = view === 'success' || view === 'weekSuccess';
+    if (isSuccessView) {
+      // A confirmação é uma tela independente, fora do smooth-content e do host
+      // que é recriado a cada render. Assim, não herda transformações nem camadas
+      // da Operação e seus botões recebem eventos próprios.
       window.TrameliMenu?.close();
       document.body.classList.remove('menu-open');
       const menuOverlay = document.querySelector('.menu-overlay');
       if (menuOverlay) menuOverlay.hidden = true;
-      // Um dialog da Operação fica no top layer mesmo quando o shell é ocultado.
-      // Feche-o para que o backdrop não bloqueie toda a loja após a confirmação.
-      document.querySelectorAll('dialog[open]').forEach(dialog => {
-        if (!dialog.closest('#portal-view')) dialog.close();
-      });
+      document.querySelectorAll('dialog[open]').forEach(dialog => dialog.close());
       motion()?.cancelTransition?.();
+      host.hidden = true;
+      host.style.display = 'none';
+      renderedView = view;
+      portalVisible = true;
+      updateCounters();
+      renderFloating();
+      document.querySelectorAll('[data-portal-nav]').forEach(button => button.setAttribute('aria-current', String(button.dataset.portalNav === view)));
+      window.scrollTo(0, 0);
+      showDedicatedSuccessScreen();
+      return;
     }
+
+    document.getElementById('portal-success-screen')?.remove();
+    host.hidden = false;
+    host.style.display = '';
     const scroll = motion()?.scrollTop() ?? scrollY;
     const changedView = view !== renderedView || !portalVisible;
     const focus = preserveScroll ? rememberFocus() : null;
