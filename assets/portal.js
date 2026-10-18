@@ -731,12 +731,20 @@ import { billingReminder, daysUntil, nextBillingDeadline } from '../src/billing-
     if (event.target.id === 'portal-checkout-form') { event.preventDefault(); placeOrder(event.target); }
     if (event.target.id === 'portal-week-checkout-form') { event.preventDefault(); placeWeeklyOrders(event.target); }
   });
+  // A loja do cliente nunca oferece navegação para a Operação nesta mesma aba.
   const adminLink=document.getElementById('portal-admin-link');
-  if(adminLink){adminLink.hidden=!live?.operator;adminLink.addEventListener('click',()=>{location.hash='#operacao';});}
+  if(adminLink) adminLink.hidden = true;
   document.getElementById('portal-orders-link').addEventListener('click', () => { view = 'orders'; render(); });
   document.getElementById('portal-cart-link').addEventListener('click', () => { view = 'cart'; render(); });
   document.querySelectorAll('[data-portal-nav]').forEach(button => button.addEventListener('click', () => { view = button.dataset.portalNav; render(); }));
   function syncPortalFrame() {
+    // Depois que esta aba entra na loja, ela fica isolada do shell operacional.
+    // Isso impede que links, eventos ou mudanças de hash exponham a Operação
+    // durante o checkout ou substituam a confirmação do pedido.
+    if (portalVisible && location.hash !== '#loja') {
+      location.hash = '#loja';
+      return;
+    }
     const isPortal = location.hash === '#loja';
     document.body.classList.toggle('portal-mode', isPortal);
     document.querySelector('.app-shell').hidden = isPortal;
