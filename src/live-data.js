@@ -256,6 +256,7 @@ export class LiveData {
       p_lines: lines,
     });
     if (error) throw error;
+    if (!data) throw new Error('O servidor não confirmou o registro do pedido. Nenhuma confirmação foi exibida.');
 
     // A confirmação da RPC significa que o pedido já foi gravado. Uma falha
     // na atualização do cache não deve transformar a gravação em erro no checkout.
