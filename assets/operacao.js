@@ -347,7 +347,7 @@ async function showRecurringManager() {
       const customer = profiles.get(schedule.customer_id);
       const itemNames = (schedule.items || []).map(item => item.weightGrams ? item.name + ' (' + item.weightGrams + ' g)' : item.name).join(' · ');
       const period = schedule.recurrence === 'fixed' ? 'Sem fechamento' : 'Ciclo até ' + new Date(schedule.cycle_ends_on + 'T12:00:00').toLocaleDateString('pt-BR');
-      return '<article class="recurring-manager__item"><div><strong>' + escapeHtml(customer?.name || 'Cliente cadastrado') + '</strong><span>' + escapeHtml(names[schedule.recurrence] || schedule.recurrence) + ' · ' + escapeHtml(period) + '</span><small>' + escapeHtml(itemNames) + '</small><small>' + (schedule.active ? 'Ativo' : 'Pausado') + '</small></div><div class="recurring-manager__actions"><button type="button" data-recurring-edit="' + escapeHtml(schedule.id) + '" ' + (schedule.active ? '' : 'disabled') + '>Editar</button><button type="button" data-recurring-active="' + escapeHtml(schedule.id) + '" data-active="' + String(!schedule.active) + '">' + (schedule.active ? 'Pausar' : 'Reativar') + '</button></div></article>';
+      return '<article class="recurring-manager__item"><div><strong>' + escapeHtml(customer?.name || 'Cliente cadastrado') + '</strong><span>' + escapeHtml(names[schedule.recurrence] || schedule.recurrence) + ' · ' + escapeHtml(period) + '</span><small>' + escapeHtml(itemNames) + '</small><small>' + (schedule.active ? 'Ativo' : 'Pausado') + '</small></div><div class="recurring-manager__actions"><button type="button" data-recurring-edit="' + escapeHtml(schedule.id) + '" ' + (schedule.active ? '' : 'disabled') + '>Editar</button><button type="button" data-recurring-active="' + escapeHtml(schedule.id) + '" data-active="' + String(!schedule.active) + '">' + (schedule.active ? 'Pausar' : 'Reativar') + '</button><button type="button" data-recurring-delete="' + escapeHtml(schedule.id) + '">Excluir</button></div></article>';
     }).join('') : '<p class="recurring-manager__empty">Ainda não há pedidos recorrentes cadastrados.</p>';
     feedback.textContent = '';
   } catch (cause) {
@@ -782,6 +782,26 @@ if (recurringManager) recurringManager.addEventListener('click', async event => 
     if (!schedule) return;
     recurringManager.close();
     openForm(null, schedule);
+    return;
+  }
+  const deleteButton = event.target.closest('[data-recurring-delete]');
+  if (deleteButton) {
+    const scheduleId = deleteButton.dataset.recurringDelete;
+    if (!window.confirm('Excluir esta programação e todos os pedidos já gerados por ela? Os pedidos manuais e de outras programações não serão afetados. Os registros de pagamentos serão preservados, mas deixarão de ficar vinculados aos pedidos excluídos.')) return;
+    deleteButton.disabled = true;
+    try {
+      const removedCount = await live.deleteRecurringSchedule(scheduleId);
+      orders = readOrders();
+      render();
+      await showRecurringManager();
+      const feedback = recurringManager.querySelector('.recurring-manager__feedback');
+      if (feedback) feedback.textContent = 'Programação excluída. ' + removedCount + ' pedido(s) gerado(s) removido(s); registros de pagamentos preservados.';
+    } catch (cause) {
+      const feedback = recurringManager.querySelector('.recurring-manager__feedback');
+      if (feedback) feedback.textContent = 'Não foi possível excluir a programação: ' + cause.message;
+    } finally {
+      if (deleteButton.isConnected) deleteButton.disabled = false;
+    }
     return;
   }
   const activeButton = event.target.closest('[data-recurring-active]');
