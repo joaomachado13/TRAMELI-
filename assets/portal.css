@@ -381,3 +381,14 @@ body:not(.portal-mode) #portal-floating-host,body:not(.portal-mode) .portal-bott
   #portal-success-screen .portal-success-receipt{padding:6px 12px}
   #portal-success-screen .portal-success-receipt>div{grid-template-columns:85px minmax(0,1fr);gap:10px}
 }
+
+
+.portal-recurring-request{margin-top:14px;padding:12px;border:1px solid var(--color-border);border-radius:12px;background:var(--color-background)}
+.portal-recurring-request summary{cursor:pointer;font-size:.82rem;font-weight:700;color:var(--color-primary)}
+.portal-recurring-request fieldset{margin:10px 0 0;padding:0;border:0;min-width:0}
+.portal-recurring-request legend{margin-bottom:8px;font-size:.78rem;font-weight:650}
+.portal-recurring-request fieldset>div{display:flex;flex-wrap:wrap;gap:8px 12px}
+.portal-recurring-request label{display:flex;align-items:center;gap:5px;font-size:.78rem}
+.portal-recurring-request input{accent-color:var(--color-primary)}
+.portal-recurring-request button{margin-top:12px;min-height:40px;padding:8px 14px;border:0;border-radius:9px;background:var(--color-primary);color:var(--color-on-primary);font-weight:700;cursor:pointer}
+.portal-recurring-request fieldset p,.portal-recurring-request__status{margin:9px 0 0;color:var(--color-text-secondary);font-size:.76rem;line-height:1.5}

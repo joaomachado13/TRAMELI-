@@ -287,10 +287,10 @@ function updateFormTotal() {
   document.getElementById('form-delivery-summary').hidden = !hasItems;
   document.getElementById('form-total').textContent = !hasItems ? money(0) : valid ? money(productsTotal + fee) : '—';
 }
-function openForm(order = null, schedule = null) {
-  editingId = order?.id || null;
+function openForm(order = null, schedule = null, makeRecurring = false) {
+  editingId = makeRecurring ? null : order?.id || null;
   editingScheduleId = schedule?.id || null;
-  requestId = schedule?.request_id || (order ? null : crypto.randomUUID());
+  requestId = schedule?.request_id || (order && !makeRecurring ? null : crypto.randomUUID());
   form.reset();
   formError.hidden = true;
   itemsHost.replaceChildren();
@@ -299,9 +299,13 @@ function openForm(order = null, schedule = null) {
   form.elements.fee.value = ((schedule?.fee_cents ?? 200) / 100).toFixed(2).replace('.', ',');
   fillCustomerOptions(schedule?.customer_id || order?.customerId || '', order?.customer || '');
   form.elements.notes.value = schedule?.notes || order?.notes || '';
-  form.elements.recurrence.value = schedule?.recurrence || 'once';
-  form.elements.recurrence.disabled = Boolean(order);
-  form.elements.recurrence.querySelector('option[value="once"]').disabled = Boolean(schedule);
+  form.elements.recurrence.value = schedule?.recurrence || (makeRecurring ? 'fixed' : 'once');
+  form.elements.recurrence.disabled = Boolean(order && !makeRecurring);
+  form.elements.recurrence.querySelector('option[value="once"]').disabled = Boolean(schedule || makeRecurring);
+  const weekdaysFieldset = document.getElementById('recurrence-weekdays');
+  const selectedWeekdays = new Set((schedule?.weekdays || [1, 2, 3, 4, 5, 6]).map(Number));
+  form.querySelectorAll('input[name="weekdays"]').forEach(input => { input.checked = selectedWeekdays.has(Number(input.value)); });
+  if (weekdaysFieldset) weekdaysFieldset.hidden = form.elements.recurrence.value === 'once';
   catalogHost.hidden = Boolean(order);
   itemsHost.hidden = !order;
   document.getElementById('add-item').hidden = !order;
@@ -324,7 +328,7 @@ function openForm(order = null, schedule = null) {
     }
     renderProductCatalog();
   }
-  document.getElementById('dialog-title').textContent = schedule ? 'Editar pedido recorrente' : order ? 'Editar pedido' : 'Novo pedido';
+  document.getElementById('dialog-title').textContent = schedule ? 'Editar pedido recorrente' : makeRecurring ? 'Transformar pedido em recorrente' : order ? 'Editar pedido' : 'Novo pedido';
   updateFormTotal();
   dialog.showModal();
   form.elements.customerId.focus();
@@ -341,14 +345,26 @@ async function showRecurringManager() {
   const host = recurringManager.querySelector('.recurring-manager__list');
   try {
     recurringSchedulesCache = await live.recurringSchedules();
+    const requests = await live.recurringRequests();
     const profiles = new Map(customerProfiles().map(profile => [profile.user_id, profile]));
-    const names = { fixed: 'Fixo diário', fortnightly: 'Quinzenal', monthly: 'Mensal' };
-    host.innerHTML = recurringSchedulesCache.length ? recurringSchedulesCache.map(schedule => {
+    const names = { fixed: 'Fixo por dias da semana', fortnightly: 'Quinzenal (fechamento)', monthly: 'Mensal (fechamento)' };
+    const weekdayNames = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+    const pendingRequests = requests.filter(request => request.status === 'pending');
+    const requestMarkup = pendingRequests.length ? '<h3 class="recurring-manager__section-title">Solicitações dos clientes</h3>' + pendingRequests.map(request => {
+      const customer = profiles.get(request.customer_id);
+      const order = orders.find(item => item.id === request.order_id);
+      const dayNames = (request.weekdays || []).map(day => weekdayNames[Number(day)]).filter(Boolean).join(', ');
+      const itemNames = (order?.items || []).map(item => item.weightGrams ? item.name + ' (' + item.weightGrams + ' g)' : item.name).join(' · ');
+      return '<article class="recurring-manager__item"><div><strong>' + escapeHtml(customer?.name || order?.customer || 'Cliente cadastrado') + '</strong><span>Solicitou: ' + escapeHtml(dayNames) + '</span><small>Pedido de origem: ' + escapeHtml(itemNames || 'itens não disponíveis') + '</small></div><div class="recurring-manager__actions"><button type="button" data-recurring-review="' + escapeHtml(request.id) + '" data-approve="true">Aprovar</button><button type="button" data-recurring-review="' + escapeHtml(request.id) + '" data-approve="false">Recusar</button></div></article>';
+    }).join('') : '<p class="recurring-manager__empty">Nenhuma solicitação pendente dos clientes.</p>';
+    const scheduleMarkup = recurringSchedulesCache.length ? recurringSchedulesCache.map(schedule => {
       const customer = profiles.get(schedule.customer_id);
       const itemNames = (schedule.items || []).map(item => item.weightGrams ? item.name + ' (' + item.weightGrams + ' g)' : item.name).join(' · ');
       const period = schedule.recurrence === 'fixed' ? 'Sem fechamento' : 'Ciclo até ' + new Date(schedule.cycle_ends_on + 'T12:00:00').toLocaleDateString('pt-BR');
-      return '<article class="recurring-manager__item"><div><strong>' + escapeHtml(customer?.name || 'Cliente cadastrado') + '</strong><span>' + escapeHtml(names[schedule.recurrence] || schedule.recurrence) + ' · ' + escapeHtml(period) + '</span><small>' + escapeHtml(itemNames) + '</small><small>' + (schedule.active ? 'Ativo' : 'Pausado') + '</small></div><div class="recurring-manager__actions"><button type="button" data-recurring-edit="' + escapeHtml(schedule.id) + '" ' + (schedule.active ? '' : 'disabled') + '>Editar</button><button type="button" data-recurring-active="' + escapeHtml(schedule.id) + '" data-active="' + String(!schedule.active) + '">' + (schedule.active ? 'Pausar' : 'Reativar') + '</button><button type="button" data-recurring-delete="' + escapeHtml(schedule.id) + '">Excluir</button></div></article>';
+      const dayNames = (schedule.weekdays || [1,2,3,4,5,6]).map(day => weekdayNames[Number(day)]).filter(Boolean).join(', ');
+      return '<article class="recurring-manager__item"><div><strong>' + escapeHtml(customer?.name || 'Cliente cadastrado') + '</strong><span>' + escapeHtml(names[schedule.recurrence] || schedule.recurrence) + ' · ' + escapeHtml(period) + '</span><small>Dias: ' + escapeHtml(dayNames) + '</small><small>' + escapeHtml(itemNames) + '</small><small>' + (schedule.active ? 'Ativo' : 'Pausado') + '</small></div><div class="recurring-manager__actions"><button type="button" data-recurring-edit="' + escapeHtml(schedule.id) + '" ' + (schedule.active ? '' : 'disabled') + '>Editar</button><button type="button" data-recurring-active="' + escapeHtml(schedule.id) + '" data-active="' + String(!schedule.active) + '">' + (schedule.active ? 'Pausar' : 'Reativar') + '</button><button type="button" data-recurring-delete="' + escapeHtml(schedule.id) + '">Excluir</button></div></article>';
     }).join('') : '<p class="recurring-manager__empty">Ainda não há pedidos recorrentes cadastrados.</p>';
+    host.innerHTML = requestMarkup + '<h3 class="recurring-manager__section-title">Programações recorrentes</h3>' + scheduleMarkup;
     feedback.textContent = '';
   } catch (cause) {
     feedback.textContent = 'Não foi possível carregar as recorrências: ' + cause.message;
@@ -444,7 +460,7 @@ function detailActions(order) {
   const state = orderStatus(order);
   const master = !live || live.role === 'master';
   const canCorrect = state === 'received' || master;
-  return `<div class="order-detail__actions">${nextStatus[state] ? `<button class="button button--primary" type="button" data-action="toggle" data-id="${escapeHtml(order.id)}">Avançar para ${escapeHtml(statusLabels[nextStatus[state]].toLowerCase())} →</button>` : ''}${previousStatus[state] && master ? `<button class="button button--quiet" type="button" data-action="back" data-id="${escapeHtml(order.id)}">Voltar para ${escapeHtml(statusLabels[previousStatus[state]].toLowerCase())}</button>` : ''}${!['delivered', 'cancelled'].includes(state) && canCorrect ? `<button class="button button--quiet" type="button" data-action="edit" data-id="${escapeHtml(order.id)}">Editar pedido</button>` : ''}${live ? `<button class="button button--quiet" type="button" data-action="history" data-id="${escapeHtml(order.id)}">Ver histórico</button>` : ''}${!['delivered', 'cancelled'].includes(state) && canCorrect ? `<button class="order-detail__danger" type="button" data-action="delete" data-id="${escapeHtml(order.id)}">Cancelar pedido</button>` : ''}${live?.role === 'master' ? `<button class="order-detail__danger" type="button" data-action="destroy" data-id="${escapeHtml(order.id)}">Excluir definitivamente</button>` : ''}</div>`;
+  return `<div class="order-detail__actions">${nextStatus[state] ? `<button class="button button--primary" type="button" data-action="toggle" data-id="${escapeHtml(order.id)}">Avançar para ${escapeHtml(statusLabels[nextStatus[state]].toLowerCase())} →</button>` : ''}${previousStatus[state] && master ? `<button class="button button--quiet" type="button" data-action="back" data-id="${escapeHtml(order.id)}">Voltar para ${escapeHtml(statusLabels[previousStatus[state]].toLowerCase())}</button>` : ''}${!['delivered', 'cancelled'].includes(state) && canCorrect ? `<button class="button button--quiet" type="button" data-action="edit" data-id="${escapeHtml(order.id)}">Editar pedido</button>` : ''}${live?.operator && order.customerId && state !== 'cancelled' ? `<button class="button button--quiet" type="button" data-action="make-recurring" data-id="${escapeHtml(order.id)}">Tornar recorrente</button>` : ''}${live ? `<button class="button button--quiet" type="button" data-action="history" data-id="${escapeHtml(order.id)}">Ver histórico</button>` : ''}${!['delivered', 'cancelled'].includes(state) && canCorrect ? `<button class="order-detail__danger" type="button" data-action="delete" data-id="${escapeHtml(order.id)}">Cancelar pedido</button>` : ''}${live?.role === 'master' ? `<button class="order-detail__danger" type="button" data-action="destroy" data-id="${escapeHtml(order.id)}">Excluir definitivamente</button>` : ''}</div>`;
 }
 
 function renderOrderDetail(order) {
@@ -643,6 +659,12 @@ async function handleOrderAction(button) {
   if (button.dataset.action === 'open') { openOrderDetail(order); return; }
   if (button.dataset.action === 'history') { await openHistory(order); return; }
   if (button.dataset.action === 'edit') { detailDrawer.close(); openForm(order); return; }
+  if (button.dataset.action === 'make-recurring') {
+    if (!live?.operator || !order.customerId || orderStatus(order) === 'cancelled') return;
+    detailDrawer.close();
+    openForm(order, null, true);
+    return;
+  }
   if (button.dataset.action === 'destroy') {
     if (live?.role !== 'master' || !confirm(`Excluir definitivamente o pedido de ${order.customer}? Esta ação não pode ser desfeita.`)) return;
     try {
@@ -773,9 +795,30 @@ function preparePrint() {
 }
 
 document.getElementById('new-order').addEventListener('click', () => openForm());
+form.elements.recurrence.addEventListener('change', () => {
+  const weekdaysFieldset = document.getElementById('recurrence-weekdays');
+  if (weekdaysFieldset) weekdaysFieldset.hidden = form.elements.recurrence.value === 'once';
+});
 document.getElementById('manage-recurring-orders').addEventListener('click', showRecurringManager);
 if (recurringManager) recurringManager.addEventListener('click', async event => {
   if (event.target.closest('[data-recurring-close]')) { recurringManager.close(); return; }
+  const reviewButton = event.target.closest('[data-recurring-review]');
+  if (reviewButton) {
+    reviewButton.disabled = true;
+    try {
+      await live.reviewRecurringRequest(reviewButton.dataset.recurringReview, reviewButton.dataset.approve === 'true');
+      orders = readOrders();
+      await showRecurringManager();
+      const currentFeedback = recurringManager.querySelector('.recurring-manager__feedback');
+      if (currentFeedback) currentFeedback.textContent = reviewButton.dataset.approve === 'true'
+        ? 'Solicitação aprovada; programação recorrente criada.' : 'Solicitação recusada.';
+    } catch (cause) {
+      const currentFeedback = recurringManager.querySelector('.recurring-manager__feedback');
+      if (currentFeedback) currentFeedback.textContent = 'Não foi possível analisar a solicitação: ' + cause.message;
+      reviewButton.disabled = false;
+    }
+    return;
+  }
   const editButton = event.target.closest('[data-recurring-edit]');
   if (editButton) {
     const schedule = recurringSchedulesCache.find(item => item.id === editButton.dataset.recurringEdit);
@@ -927,13 +970,14 @@ form.addEventListener('submit', async event => {
   const address = customerProfile?.address || '';
   const phone = customerProfile?.phone || '';
   const recurrence = editingScheduleId ? form.elements.recurrence.value : editingId ? 'once' : form.elements.recurrence.value;
+  const weekdays = [...new Set([...form.querySelectorAll('input[name="weekdays"]:checked')].map(input => Number(input.value)))].sort((a, b) => a - b);
   const sundayDelivery = Boolean(form.elements.date.value)
     && new Date(form.elements.date.value + 'T12:00:00').getDay() === 0;
-  if (!customerId || !customer || !address || !form.elements.date.value || sundayDelivery || !items.length
+  if (!customerId || !customer || !address || !form.elements.date.value || sundayDelivery || (recurrence !== 'once' && !weekdays.length) || !items.length
     || items.some(item => !item.name || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 999
       || !Number.isInteger(item.priceCents) || item.priceCents < 0
       || (item.weightGrams !== undefined && (!Number.isInteger(item.weightGrams) || item.weightGrams < 50 || item.weightGrams > 4950 || item.weightGrams % 50 !== 0)))) {
-    formError.textContent = sundayDelivery ? 'Não fazemos entregas aos domingos. Escolha outra data.' : 'Selecione um cliente cadastrado e pelo menos um produto com quantidade válida.';
+    formError.textContent = sundayDelivery ? 'Não fazemos entregas aos domingos. Escolha outra data.' : (recurrence !== 'once' && !weekdays.length) ? 'Selecione pelo menos um dia para a recorrência.' : 'Selecione um cliente cadastrado e pelo menos um produto com quantidade válida.';
     formError.hidden = false;
     return;
   }
@@ -963,7 +1007,7 @@ form.addEventListener('submit', async event => {
         await live.saveOperatorOrder(order, requestId, customerId);
       } else {
         await live.saveRecurringOrder({
-          customerId, recurrence, startDate: order.date, notes: order.notes, feeCents,
+          customerId, recurrence, startDate: order.date, notes: order.notes, feeCents, weekdays,
           items: items.map(item => item.weightGrams !== undefined
             ? ({ productId: item.productId, name: item.name, quantity: item.quantity, weightGrams: item.weightGrams, kgPriceCents: item.kgPriceCents, priceCents: item.priceCents })
             : ({ name: item.name, quantity: item.quantity, priceCents: item.priceCents })),

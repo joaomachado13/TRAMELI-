@@ -222,11 +222,11 @@ try {
         form.elements.address.value='Rua da Semana, 10';
         form.requestSubmit();
       })()`);
-      await waitFor('.portal-success');
+      await waitFor('#portal-success-screen .portal-success-card');
       const plannedDates = await evaluate(`JSON.parse(localStorage.getItem('trameli-operation-draft-v2')||'[]').filter(order=>order.source==='portal'&&order.customer==='Cliente Semana').map(order=>order.date).sort()`);
       assert(plannedDates.length === 2, 'Confirmação da semana não criou um pedido por dia planejado.');
       assert(plannedDates[0] === weekDates[0] && plannedDates[1] === weekDates[1], 'Pedidos da semana caíram em datas diferentes das planejadas.');
-      await evaluate('document.querySelector("[data-view=\\\"catalog\\\"]").click()');
+      await evaluate('document.querySelector("#portal-success-screen [data-success-action=\\"catalog\\"]").click()');
       await waitFor('.portal-welcome');
 
       await evaluate('document.querySelector("[data-qty=\\\"1\\\"]").click()');

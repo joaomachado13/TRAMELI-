@@ -37,11 +37,13 @@ try {
   const futureBalanceGuard = await readFile(new URL('../supabase/migrations/202610190021_recurring_future_balance_guard.sql', import.meta.url), 'utf8');
   assert.match(futureBalanceGuard, /recurring\.delivery_date > \(now\(\) at time zone 'America\/Sao_Paulo'\)::date/);
   assert.match(futureBalanceGuard, /where recurring\.order_id=o\.id/);
+  const recurringWeekdaysMigration = await readFile(new URL('../supabase/migrations/202610190022_recurring_weekdays_and_requests.sql', import.meta.url), 'utf8');
+  await db.exec(recurringWeekdaysMigration);
 
   const tables = await db.query(`select tablename from pg_tables where schemaname = 'public' and tablename like 'trameli_%' order by tablename`);
   assert.deepEqual(tables.rows.map(row => row.tablename), [
     'trameli_operators', 'trameli_order_costs', 'trameli_order_events', 'trameli_orders',
-    'trameli_product_costs', 'trameli_products', 'trameli_profiles', 'trameli_recurring_occurrences', 'trameli_recurring_orders',
+    'trameli_product_costs', 'trameli_products', 'trameli_profiles', 'trameli_recurring_occurrences', 'trameli_recurring_orders', 'trameli_recurring_requests',
   ]);
   await db.exec('set role anon');
   const publicProducts = await db.query('select count(*)::integer as count from public.trameli_products');
@@ -50,6 +52,7 @@ try {
   await assert.rejects(db.query('select count(*) from public.trameli_product_costs'), /permission denied/);
   await assert.rejects(db.query('select count(*) from public.trameli_recurring_orders'), /permission denied/);
   await assert.rejects(db.query('select count(*) from public.trameli_recurring_occurrences'), /permission denied/);
+  await assert.rejects(db.query('select count(*) from public.trameli_recurring_requests'), /permission denied/);
   await assert.rejects(db.query('select count(*) from private.trameli_order_code_counters'), /permission denied/);
   await assert.rejects(db.query('select public.trameli_is_operator()'), /permission denied/);
   await assert.rejects(db.query('select public.trameli_audit_order()'), /permission denied/);
@@ -277,6 +280,41 @@ try {
   assert.equal(cycles.rows[0].active, true);
   assert.equal(new Date(cycles.rows[0].starts_on).toISOString().slice(0, 10), '2026-11-16');
   assert.equal(new Date(cycles.rows[0].cycle_ends_on).toISOString().slice(0, 10), '2026-11-30');
+
+  const weekdaySchedule = await db.query(`select public.trameli_save_recurring_order_with_days(
+    null, $1::uuid, $2::uuid, 'fixed', '2026-11-23'::date, true, 'Seg qua sex', 200, $3::jsonb, $4::smallint[]
+  ) as id`, [
+    '14141414-1414-4141-8141-141414141414', customerA,
+    JSON.stringify([{ name: 'Pão de queijo', quantity: 1, priceCents: 130 }]),
+    [1, 3, 5],
+  ]);
+  const weekdayScheduleId = weekdaySchedule.rows[0].id;
+  const mondayCreated = await db.query("select public.trameli_materialize_recurring_orders('2026-11-23'::date) as count");
+  assert.ok(Number(mondayCreated.rows[0].count) >= 1);
+  await db.query("select public.trameli_materialize_recurring_orders('2026-11-24'::date) as count");
+  const tuesdayExists = await db.query(`select count(*)::integer as count from public.trameli_recurring_occurrences
+    where schedule_id=$1 and delivery_date='2026-11-24'::date`, [weekdayScheduleId]);
+  assert.equal(tuesdayExists.rows[0].count, 0, 'Unselected weekdays must not generate orders');
+  await db.query("select public.trameli_materialize_recurring_orders('2026-11-25'::date) as count");
+  await db.query("select public.trameli_materialize_recurring_orders('2026-11-27'::date) as count");
+  const selectedDates = await db.query(`select delivery_date from public.trameli_recurring_occurrences
+    where schedule_id=$1 order by delivery_date`, [weekdayScheduleId]);
+  assert.deepEqual(selectedDates.rows.map(row => new Date(row.delivery_date).toISOString().slice(0, 10)), [
+    '2026-11-23', '2026-11-25', '2026-11-27',
+  ], 'Weekday schedules create orders only on selected days');
+
+  await db.query("select set_config('request.jwt.claim.sub',$1,false)", [customerA]);
+  const request = await db.query('select public.trameli_request_recurring_order($1, $2::smallint[]) as id', [orderId, [1, 3, 5]]);
+  const requestStatus = await db.query('select status, weekdays from public.trameli_recurring_requests where id=$1', [request.rows[0].id]);
+  assert.equal(requestStatus.rows[0].status, 'pending');
+  assert.deepEqual(requestStatus.rows[0].weekdays, [1, 3, 5]);
+  await db.query("select set_config('request.jwt.claim.sub',$1,false)", [operator]);
+  const approvedSchedule = await db.query('select public.trameli_review_recurring_request($1, true) as id', [request.rows[0].id]);
+  assert.ok(approvedSchedule.rows[0].id);
+  const approved = await db.query('select recurrence, weekdays, items from public.trameli_recurring_orders where id=$1', [approvedSchedule.rows[0].id]);
+  assert.equal(approved.rows[0].recurrence, 'fixed');
+  assert.deepEqual(approved.rows[0].weekdays, [1, 3, 5]);
+  assert.ok(approved.rows[0].items.length > 0, 'Approval copies the original order items');
   console.log('Migração PostgreSQL: OK');
 } finally {
   await db.close();
