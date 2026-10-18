@@ -192,9 +192,9 @@ export class LiveData {
     await this.load(true);
   }
 
-  async saveRecurringOrder(schedule, requestId) {
+  async saveRecurringOrder(schedule, requestId, scheduleId = null) {
     const { data, error } = await this.client.rpc('trameli_save_recurring_order', {
-      p_schedule_id: null, p_request_id: requestId,
+      p_schedule_id: scheduleId, p_request_id: requestId,
       p_customer_id: schedule.customerId, p_recurrence: schedule.recurrence,
       p_start_date: schedule.startDate, p_active: true, p_notes: schedule.notes,
       p_fee_cents: schedule.feeCents, p_items: schedule.items,
@@ -210,6 +210,21 @@ export class LiveData {
     if (error) throw error;
     await this.load(true);
     return Number(data || 0);
+  }
+
+  async recurringSchedules() {
+    if (!this.operator) throw new Error('Acesso restrito à operação.');
+    const { data, error } = await this.client.from('trameli_recurring_orders').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  }
+
+  async setRecurringScheduleActive(scheduleId, active) {
+    if (!this.operator) throw new Error('Acesso restrito à operação.');
+    const { error } = await this.client.rpc('trameli_set_recurring_order_active', {
+      p_schedule_id: scheduleId, p_active: active,
+    });
+    if (error) throw error;
   }
 
   async setStatus(order, status) {
