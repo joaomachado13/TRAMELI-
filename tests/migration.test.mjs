@@ -34,6 +34,10 @@ try {
   await db.exec(billingFrequencyMigration);
   const recurringOrdersMigration = await readFile(new URL('../supabase/migrations/202610190020_recurring_operator_orders.sql', import.meta.url), 'utf8');
   await db.exec(recurringOrdersMigration);
+  const futureBalanceGuard = await readFile(new URL('../supabase/migrations/202610190021_recurring_future_balance_guard.sql', import.meta.url), 'utf8');
+  assert.match(futureBalanceGuard, /recurring\.delivery_date > \(now\(\) at time zone 'America\/Sao_Paulo'\)::date/);
+  assert.match(futureBalanceGuard, /where recurring\.order_id=o\.id/);
+
   const tables = await db.query(`select tablename from pg_tables where schemaname = 'public' and tablename like 'trameli_%' order by tablename`);
   assert.deepEqual(tables.rows.map(row => row.tablename), [
     'trameli_operators', 'trameli_order_costs', 'trameli_order_events', 'trameli_orders',
