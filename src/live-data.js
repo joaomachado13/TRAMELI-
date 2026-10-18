@@ -227,6 +227,17 @@ export class LiveData {
     if (error) throw error;
   }
 
+  async deleteRecurringSchedule(scheduleId) {
+    if (!this.operator) throw new Error('Acesso restrito à operação.');
+    if (!scheduleId) throw new Error('Selecione uma programação.');
+    const { data, error } = await this.client.rpc('trameli_delete_recurring_order', {
+      p_schedule_id: scheduleId,
+    });
+    if (error) throw error;
+    await this.load(true);
+    return Number(data || 0);
+  }
+
   async setStatus(order, status) {
     const { error } = await this.client.rpc('trameli_operator_status', {
       p_order_id: order.id, p_expected_version: order.version, p_status: status,
