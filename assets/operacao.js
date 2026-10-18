@@ -898,11 +898,13 @@ form.addEventListener('submit', async event => {
   const address = customerProfile?.address || '';
   const phone = customerProfile?.phone || '';
   const recurrence = editingScheduleId ? form.elements.recurrence.value : editingId ? 'once' : form.elements.recurrence.value;
-  if (!customerId || !customer || !address || !form.elements.date.value || !items.length
+  const sundayDelivery = Boolean(form.elements.date.value)
+    && new Date(form.elements.date.value + 'T12:00:00').getDay() === 0;
+  if (!customerId || !customer || !address || !form.elements.date.value || sundayDelivery || !items.length
     || items.some(item => !item.name || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 999
       || !Number.isInteger(item.priceCents) || item.priceCents < 0
       || (item.weightGrams !== undefined && (!Number.isInteger(item.weightGrams) || item.weightGrams < 50 || item.weightGrams > 4950 || item.weightGrams % 50 !== 0)))) {
-    formError.textContent = 'Selecione um cliente cadastrado e pelo menos um produto com quantidade válida.';
+    formError.textContent = sundayDelivery ? 'Não fazemos entregas aos domingos. Escolha outra data.' : 'Selecione um cliente cadastrado e pelo menos um produto com quantidade válida.';
     formError.hidden = false;
     return;
   }
