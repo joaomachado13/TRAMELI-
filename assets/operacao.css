@@ -322,3 +322,8 @@ dialog{width:min(670px,calc(100vw - 24px));max-height:min(90vh,900px);padding:0;
   .recurring-manager-dialog { padding:16px; }
   .recurring-manager__item { align-items:flex-start;flex-direction:column; }
 }
+
+@media(max-width:760px) {
+  #operation-view .intro__actions { flex-wrap:wrap;white-space:normal;justify-content:flex-start; }
+  #operation-view .intro__actions .button { flex:1 1 auto; }
+}
