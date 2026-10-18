@@ -496,6 +496,7 @@ import { billingReminder, daysUntil, nextBillingDeadline } from '../src/billing-
         const nextView = button.dataset.successAction;
         screen.remove();
         host.hidden = false;
+        host.style.display = '';
         view = nextView;
         error = '';
         render();
@@ -561,6 +562,7 @@ import { billingReminder, daysUntil, nextBillingDeadline } from '../src/billing-
       document.querySelectorAll('dialog[open]').forEach(dialog => dialog.close());
       motion()?.cancelTransition?.();
       host.hidden = true;
+      host.style.display = 'none';
       renderedView = view;
       portalVisible = true;
       updateCounters();
@@ -573,6 +575,7 @@ import { billingReminder, daysUntil, nextBillingDeadline } from '../src/billing-
 
     document.getElementById('portal-success-screen')?.remove();
     host.hidden = false;
+    host.style.display = '';
     const scroll = motion()?.scrollTop() ?? scrollY;
     const changedView = view !== renderedView || !portalVisible;
     const focus = preserveScroll ? rememberFocus() : null;
