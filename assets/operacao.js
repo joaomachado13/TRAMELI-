@@ -88,6 +88,9 @@ const formError = document.getElementById('form-error');
 const printSettingsHost = document.getElementById('print-settings');
 const historyDialog = live ? document.createElement('dialog') : null;
 if (historyDialog) { historyDialog.className = 'history-dialog'; document.body.append(historyDialog); }
+const recurringManager = live ? document.createElement('dialog') : null;
+if (recurringManager) { recurringManager.className = 'recurring-manager-dialog'; document.body.append(recurringManager); }
+let recurringSchedulesCache = [];
 const printDefaults = { offsetX: 0, offsetY: 0 };
 let printSettings = { ...printDefaults };
 try {
@@ -316,6 +319,31 @@ function openForm(order = null, schedule = null) {
   updateFormTotal();
   dialog.showModal();
   form.elements.customerId.focus();
+}
+
+async function showRecurringManager() {
+  if (!recurringManager) {
+    alert('A gestão de recorrências exige conexão com o banco de dados.');
+    return;
+  }
+  recurringManager.innerHTML = '<div class="recurring-manager__head"><div><p class="eyebrow">OPERAÇÃO</p><h2>Pedidos recorrentes</h2></div><button type="button" data-recurring-close aria-label="Fechar">×</button></div><p class="recurring-manager__help">Cada data gera no máximo uma ocorrência. Quinzenal renova no fechamento dos dias 15 e fim do mês; mensal renova no fim de cada mês. Fixo diário não depende do fechamento.</p><p class="recurring-manager__feedback" role="status">Carregando…</p><div class="recurring-manager__list"></div>';
+  if (!recurringManager.open) recurringManager.showModal();
+  const feedback = recurringManager.querySelector('.recurring-manager__feedback');
+  const host = recurringManager.querySelector('.recurring-manager__list');
+  try {
+    recurringSchedulesCache = await live.recurringSchedules();
+    const profiles = new Map(customerProfiles().map(profile => [profile.user_id, profile]));
+    const names = { fixed: 'Fixo diário', fortnightly: 'Quinzenal', monthly: 'Mensal' };
+    host.innerHTML = recurringSchedulesCache.length ? recurringSchedulesCache.map(schedule => {
+      const customer = profiles.get(schedule.customer_id);
+      const itemNames = (schedule.items || []).map(item => item.name).join(' · ');
+      const period = schedule.recurrence === 'fixed' ? 'Sem fechamento' : 'Ciclo até ' + new Date(schedule.cycle_ends_on + 'T12:00:00').toLocaleDateString('pt-BR');
+      return '<article class="recurring-manager__item"><div><strong>' + escapeHtml(customer?.name || 'Cliente cadastrado') + '</strong><span>' + escapeHtml(names[schedule.recurrence] || schedule.recurrence) + ' · ' + escapeHtml(period) + '</span><small>' + escapeHtml(itemNames) + '</small><small>' + (schedule.active ? 'Ativo' : 'Pausado') + '</small></div><div class="recurring-manager__actions"><button type="button" data-recurring-edit="' + escapeHtml(schedule.id) + '" ' + (schedule.active ? '' : 'disabled') + '>Editar</button><button type="button" data-recurring-active="' + escapeHtml(schedule.id) + '" data-active="' + String(!schedule.active) + '">' + (schedule.active ? 'Pausar' : 'Reativar') + '</button></div></article>';
+    }).join('') : '<p class="recurring-manager__empty">Ainda não há pedidos recorrentes cadastrados.</p>';
+    feedback.textContent = '';
+  } catch (cause) {
+    feedback.textContent = 'Não foi possível carregar as recorrências: ' + cause.message;
+  }
 }
 
 function selectedOrders() {
@@ -736,6 +764,29 @@ function preparePrint() {
 }
 
 document.getElementById('new-order').addEventListener('click', () => openForm());
+document.getElementById('manage-recurring-orders').addEventListener('click', showRecurringManager);
+if (recurringManager) recurringManager.addEventListener('click', async event => {
+  if (event.target.closest('[data-recurring-close]')) { recurringManager.close(); return; }
+  const editButton = event.target.closest('[data-recurring-edit]');
+  if (editButton) {
+    const schedule = recurringSchedulesCache.find(item => item.id === editButton.dataset.recurringEdit);
+    if (!schedule) return;
+    recurringManager.close();
+    openForm(null, schedule);
+    return;
+  }
+  const activeButton = event.target.closest('[data-recurring-active]');
+  if (activeButton) {
+    activeButton.disabled = true;
+    try {
+      await live.setRecurringScheduleActive(activeButton.dataset.recurringActive, activeButton.dataset.active === 'true');
+      await showRecurringManager();
+    } catch (cause) {
+      const feedback = recurringManager.querySelector('.recurring-manager__feedback');
+      if (feedback) feedback.textContent = 'Não foi possível alterar a recorrência: ' + cause.message;
+    } finally { activeButton.disabled = false; }
+  }
+});
 document.getElementById('add-item').addEventListener('click', () => addItem());
 document.getElementById('close-dialog').addEventListener('click', () => dialog.close());
 document.getElementById('cancel-dialog').addEventListener('click', () => dialog.close());
