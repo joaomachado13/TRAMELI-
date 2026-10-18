@@ -193,11 +193,42 @@ export class LiveData {
   }
 
   async saveRecurringOrder(schedule, requestId, scheduleId = null) {
-    const { data, error } = await this.client.rpc('trameli_save_recurring_order', {
+    if (!this.operator) throw new Error('Acesso restrito à operação.');
+    const weekdays = [...new Set((schedule.weekdays || [1, 2, 3, 4, 5, 6]).map(Number))].sort((a, b) => a - b);
+    const { data, error } = await this.client.rpc('trameli_save_recurring_order_with_days', {
       p_schedule_id: scheduleId, p_request_id: requestId,
       p_customer_id: schedule.customerId, p_recurrence: schedule.recurrence,
       p_start_date: schedule.startDate, p_active: true, p_notes: schedule.notes,
-      p_fee_cents: schedule.feeCents, p_items: schedule.items,
+      p_fee_cents: schedule.feeCents, p_items: schedule.items, p_weekdays: weekdays,
+    });
+    if (error) throw error;
+    return data;
+  }
+
+  async recurringRequests() {
+    if (!this.operator) throw new Error('Acesso restrito à operação.');
+    const { data, error } = await this.client.from('trameli_recurring_requests')
+      .select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  }
+
+  async reviewRecurringRequest(requestId, approve) {
+    if (!this.operator) throw new Error('Acesso restrito à operação.');
+    const { data, error } = await this.client.rpc('trameli_review_recurring_request', {
+      p_request_id: requestId, p_approve: Boolean(approve),
+    });
+    if (error) throw error;
+    await this.load(true);
+    return data;
+  }
+
+  async requestRecurringOrder(orderId, weekdays) {
+    if (!this.user?.id || !orderId) throw new Error('Entre na sua conta para solicitar a recorrência.');
+    const days = [...new Set((weekdays || []).map(Number))].sort((a, b) => a - b);
+    if (!days.length) throw new Error('Selecione pelo menos um dia da semana.');
+    const { data, error } = await this.client.rpc('trameli_request_recurring_order', {
+      p_order_id: orderId, p_weekdays: days,
     });
     if (error) throw error;
     return data;
