@@ -289,7 +289,7 @@ function openForm(order = null, schedule = null) {
   formError.hidden = true;
   itemsHost.replaceChildren();
   selectedProductQuantities.clear();
-  form.elements.date.value = schedule?.starts_on || order?.date || dateInput.value;
+  form.elements.date.value = schedule ? dateInput.value : order?.date || dateInput.value;
   form.elements.fee.value = ((schedule?.fee_cents ?? 200) / 100).toFixed(2).replace('.', ',');
   fillCustomerOptions(schedule?.customer_id || order?.customerId || '', order?.customer || '');
   form.elements.notes.value = schedule?.notes || order?.notes || '';
