@@ -871,7 +871,7 @@ import { billingReminder, daysUntil, nextBillingDeadline } from '../src/billing-
     // Depois que esta aba entra na loja, ela fica isolada do shell operacional.
     // Isso impede que links, eventos ou mudanças de hash exponham a Operação
     // durante o checkout ou substituam a confirmação do pedido.
-    if (portalVisible && location.hash !== '#loja') {
+    if (portalVisible && (view === 'success' || view === 'weekSuccess') && location.hash !== '#loja') {
       location.hash = '#loja';
       return;
     }
