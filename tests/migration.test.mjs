@@ -30,6 +30,8 @@ try {
   await db.exec(hardeningMigration);
   const publicCodeMigration = await readFile(new URL('../supabase/migrations/202610130016_order_public_codes.sql', import.meta.url), 'utf8');
   await db.exec(publicCodeMigration);
+  const billingFrequencyMigration = await readFile(new URL('../supabase/migrations/202610180017_customer_billing_frequency.sql', import.meta.url), 'utf8');
+  await db.exec(billingFrequencyMigration);
   const tables = await db.query(`select tablename from pg_tables where schemaname = 'public' and tablename like 'trameli_%' order by tablename`);
   assert.deepEqual(tables.rows.map(row => row.tablename), [
     'trameli_operators', 'trameli_order_costs', 'trameli_order_events', 'trameli_orders',
@@ -207,6 +209,19 @@ try {
     JSON.stringify([{ productId: mozzarella.rows[0].id, name: 'Mussarela',
       quantity: 1, weightGrams: 75, kgPriceCents: 6999, priceCents: 525 }]),
   ]), /invalid weight/);
+  await db.query("select set_config('request.jwt.claim.sub',$1,false)", [customerA]);
+  await assert.rejects(
+    db.query('select public.trameli_set_customer_billing_frequency($1, $2)', [customerA, 'mensal']),
+    /operator access required/,
+  );
+  await db.query("select set_config('request.jwt.claim.sub',$1,false)", [operator]);
+  await db.query('select public.trameli_set_customer_billing_frequency($1, $2)', [customerA, 'quinzenal']);
+  const cadence = await db.query('select billing_frequency from public.trameli_profiles where user_id = $1', [customerA]);
+  assert.equal(cadence.rows[0].billing_frequency, 'quinzenal');
+  await assert.rejects(
+    db.query('select public.trameli_set_customer_billing_frequency($1, $2)', [customerA, 'every day']),
+    /invalid billing frequency/,
+  );
   console.log('Migração PostgreSQL: OK');
 } finally {
   await db.close();
