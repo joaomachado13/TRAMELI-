@@ -347,14 +347,26 @@ async function showRecurringManager() {
   const host = recurringManager.querySelector('.recurring-manager__list');
   try {
     recurringSchedulesCache = await live.recurringSchedules();
+    const requests = await live.recurringRequests();
     const profiles = new Map(customerProfiles().map(profile => [profile.user_id, profile]));
-    const names = { fixed: 'Fixo diário', fortnightly: 'Quinzenal', monthly: 'Mensal' };
-    host.innerHTML = recurringSchedulesCache.length ? recurringSchedulesCache.map(schedule => {
+    const names = { fixed: 'Fixo por dias da semana', fortnightly: 'Quinzenal (fechamento)', monthly: 'Mensal (fechamento)' };
+    const weekdayNames = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+    const pendingRequests = requests.filter(request => request.status === 'pending');
+    const requestMarkup = pendingRequests.length ? '<h3 class="recurring-manager__section-title">Solicitações dos clientes</h3>' + pendingRequests.map(request => {
+      const customer = profiles.get(request.customer_id);
+      const order = orders.find(item => item.id === request.order_id);
+      const dayNames = (request.weekdays || []).map(day => weekdayNames[Number(day)]).filter(Boolean).join(', ');
+      const itemNames = (order?.items || []).map(item => item.weightGrams ? item.name + ' (' + item.weightGrams + ' g)' : item.name).join(' · ');
+      return '<article class="recurring-manager__item"><div><strong>' + escapeHtml(customer?.name || order?.customer || 'Cliente cadastrado') + '</strong><span>Solicitou: ' + escapeHtml(dayNames) + '</span><small>Pedido de origem: ' + escapeHtml(itemNames || 'itens não disponíveis') + '</small></div><div class="recurring-manager__actions"><button type="button" data-recurring-review="' + escapeHtml(request.id) + '" data-approve="true">Aprovar</button><button type="button" data-recurring-review="' + escapeHtml(request.id) + '" data-approve="false">Recusar</button></div></article>';
+    }).join('') : '<p class="recurring-manager__empty">Nenhuma solicitação pendente dos clientes.</p>';
+    const scheduleMarkup = recurringSchedulesCache.length ? recurringSchedulesCache.map(schedule => {
       const customer = profiles.get(schedule.customer_id);
       const itemNames = (schedule.items || []).map(item => item.weightGrams ? item.name + ' (' + item.weightGrams + ' g)' : item.name).join(' · ');
       const period = schedule.recurrence === 'fixed' ? 'Sem fechamento' : 'Ciclo até ' + new Date(schedule.cycle_ends_on + 'T12:00:00').toLocaleDateString('pt-BR');
-      return '<article class="recurring-manager__item"><div><strong>' + escapeHtml(customer?.name || 'Cliente cadastrado') + '</strong><span>' + escapeHtml(names[schedule.recurrence] || schedule.recurrence) + ' · ' + escapeHtml(period) + '</span><small>' + escapeHtml(itemNames) + '</small><small>' + (schedule.active ? 'Ativo' : 'Pausado') + '</small></div><div class="recurring-manager__actions"><button type="button" data-recurring-edit="' + escapeHtml(schedule.id) + '" ' + (schedule.active ? '' : 'disabled') + '>Editar</button><button type="button" data-recurring-active="' + escapeHtml(schedule.id) + '" data-active="' + String(!schedule.active) + '">' + (schedule.active ? 'Pausar' : 'Reativar') + '</button><button type="button" data-recurring-delete="' + escapeHtml(schedule.id) + '">Excluir</button></div></article>';
+      const dayNames = (schedule.weekdays || [1,2,3,4,5,6]).map(day => weekdayNames[Number(day)]).filter(Boolean).join(', ');
+      return '<article class="recurring-manager__item"><div><strong>' + escapeHtml(customer?.name || 'Cliente cadastrado') + '</strong><span>' + escapeHtml(names[schedule.recurrence] || schedule.recurrence) + ' · ' + escapeHtml(period) + '</span><small>Dias: ' + escapeHtml(dayNames) + '</small><small>' + escapeHtml(itemNames) + '</small><small>' + (schedule.active ? 'Ativo' : 'Pausado') + '</small></div><div class="recurring-manager__actions"><button type="button" data-recurring-edit="' + escapeHtml(schedule.id) + '" ' + (schedule.active ? '' : 'disabled') + '>Editar</button><button type="button" data-recurring-active="' + escapeHtml(schedule.id) + '" data-active="' + String(!schedule.active) + '">' + (schedule.active ? 'Pausar' : 'Reativar') + '</button><button type="button" data-recurring-delete="' + escapeHtml(schedule.id) + '">Excluir</button></div></article>';
     }).join('') : '<p class="recurring-manager__empty">Ainda não há pedidos recorrentes cadastrados.</p>';
+    host.innerHTML = requestMarkup + '<h3 class="recurring-manager__section-title">Programações recorrentes</h3>' + scheduleMarkup;
     feedback.textContent = '';
   } catch (cause) {
     feedback.textContent = 'Não foi possível carregar as recorrências: ' + cause.message;
@@ -792,6 +804,23 @@ form.elements.recurrence.addEventListener('change', () => {
 document.getElementById('manage-recurring-orders').addEventListener('click', showRecurringManager);
 if (recurringManager) recurringManager.addEventListener('click', async event => {
   if (event.target.closest('[data-recurring-close]')) { recurringManager.close(); return; }
+  const reviewButton = event.target.closest('[data-recurring-review]');
+  if (reviewButton) {
+    reviewButton.disabled = true;
+    try {
+      await live.reviewRecurringRequest(reviewButton.dataset.recurringReview, reviewButton.dataset.approve === 'true');
+      orders = readOrders();
+      await showRecurringManager();
+      const currentFeedback = recurringManager.querySelector('.recurring-manager__feedback');
+      if (currentFeedback) currentFeedback.textContent = reviewButton.dataset.approve === 'true'
+        ? 'Solicitação aprovada; programação recorrente criada.' : 'Solicitação recusada.';
+    } catch (cause) {
+      const currentFeedback = recurringManager.querySelector('.recurring-manager__feedback');
+      if (currentFeedback) currentFeedback.textContent = 'Não foi possível analisar a solicitação: ' + cause.message;
+      reviewButton.disabled = false;
+    }
+    return;
+  }
   const editButton = event.target.closest('[data-recurring-edit]');
   if (editButton) {
     const schedule = recurringSchedulesCache.find(item => item.id === editButton.dataset.recurringEdit);
