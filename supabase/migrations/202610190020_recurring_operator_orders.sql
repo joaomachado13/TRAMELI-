@@ -125,7 +125,6 @@ returns integer
 language plpgsql security definer set search_path = '' as $$
 declare
   v_schedule public.trameli_recurring_orders%rowtype;
-  v_new_schedule public.trameli_recurring_orders%rowtype;
   v_line jsonb;
   v_items jsonb;
   v_subtotal bigint;
@@ -160,15 +159,11 @@ begin
       else
         v_cycle_end := (date_trunc('month', p_delivery_date)::date + interval '1 month - 1 day')::date;
       end if;
-      update public.trameli_recurring_orders set active = false, updated_at = now()
-        where id = v_schedule.id;
-      insert into public.trameli_recurring_orders(
-        customer_id, recurrence, starts_on, cycle_ends_on, active, notes, fee_cents, items, created_by
-      ) values (
-        v_schedule.customer_id, v_schedule.recurrence, p_delivery_date, v_cycle_end, true,
-        v_schedule.notes, v_schedule.fee_cents, v_schedule.items, auth.uid()
-      ) returning * into v_new_schedule;
-      v_schedule := v_new_schedule;
+      update public.trameli_recurring_orders set
+        starts_on = p_delivery_date, cycle_ends_on = v_cycle_end, updated_at = now()
+      where id = v_schedule.id;
+      v_schedule.starts_on := p_delivery_date;
+      v_schedule.cycle_ends_on := v_cycle_end;
     end if;
 
     if exists (
