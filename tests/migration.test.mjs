@@ -230,7 +230,8 @@ try {
     null, $1::uuid, $2::uuid, 'fortnightly', '2026-11-14'::date, true, 'Pedido fixo do ciclo', 200, $3::jsonb
   ) as id`, [
     '12121212-1212-4121-8121-121212121212', customerA,
-    JSON.stringify([{ name: 'Pão de queijo', quantity: 2, priceCents: 130 }]),
+    JSON.stringify([{ name: 'Pão de queijo', quantity: 2, priceCents: 130 },
+      { productId: mozzarella.rows[0].id, name: 'Mussarela', quantity: 1, weightGrams: 150, kgPriceCents: 6999, priceCents: 1050 }]),
   ]);
   const scheduleId = recurring.rows[0].id;
   const firstOccurrence = await db.query("select public.trameli_materialize_recurring_orders('2026-11-14'::date) as count");
@@ -245,9 +246,17 @@ try {
     from public.trameli_orders o join public.trameli_recurring_occurrences x on x.order_id=o.id
     where x.delivery_date in ('2026-11-14'::date,'2026-11-16'::date) order by o.delivery_date`);
   assert.deepEqual(recurringRows.rows.map(row => [row.customer_id, row.status, new Date(row.delivery_date).toISOString().slice(0, 10), Number(row.total_cents)]), [
-    [customerA, 'confirmed', '2026-11-14', 460],
-    [customerA, 'confirmed', '2026-11-16', 460],
+    [customerA, 'confirmed', '2026-11-14', 1510],
+    [customerA, 'confirmed', '2026-11-16', 1510],
   ]);
+  const recurringWeight = await db.query(`select items from public.trameli_orders
+    where delivery_date = '2026-11-14'::date and customer_id = $1 order by created_at desc limit 1`, [customerA]);
+  const weightedLine = recurringWeight.rows[0].items.find(item => item.weightGrams);
+  assert.deepEqual(
+    [weightedLine.productId, weightedLine.name, weightedLine.quantity, weightedLine.weightGrams, weightedLine.kgPriceCents, weightedLine.priceCents],
+    [mozzarella.rows[0].id, 'Mussarela', 1, 150, 6999, 1050],
+    'Recurring orders preserve weighted product metadata',
+  );
   const linkedManual = await db.query(`select public.trameli_operator_order_for_customer(
     null, $1::uuid, null, '2026-11-17'::date, 'Nome digitado errado', '000', 'Endereço errado', '', 200, $2::jsonb, $3::uuid
   ) as id`, [
