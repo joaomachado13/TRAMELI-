@@ -284,7 +284,7 @@ try {
   const weekdaySchedule = await db.query(`select public.trameli_save_recurring_order_with_days(
     null, $1::uuid, $2::uuid, 'fixed', '2026-11-23'::date, true, 'Seg qua sex', 200, $3::jsonb, $4::smallint[]
   ) as id`, [
-    '14141414-1414-4141-8141-141414141414', customerB,
+    '14141414-1414-4141-8141-141414141414', customerA,
     JSON.stringify([{ name: 'Pão de queijo', quantity: 1, priceCents: 130 }]),
     [1, 3, 5],
   ]);
