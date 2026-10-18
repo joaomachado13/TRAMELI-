@@ -256,8 +256,26 @@ export class LiveData {
       p_lines: lines,
     });
     if (error) throw error;
-    await this.load(true);
-    return this.orders.find(item => item.id === data);
+
+    // A confirmação da RPC significa que o pedido já foi gravado. Uma falha
+    // na atualização do cache não deve transformar a gravação em erro no checkout.
+    let refreshError = null;
+    try { await this.load(true); }
+    catch (cause) { refreshError = cause; }
+
+    const saved = this.orders.find(item => item.id === data);
+    if (saved) return saved;
+
+    const fallback = {
+      ...order,
+      id: data || order.id,
+      publicCode: order.publicCode || '',
+      status: order.status || 'received',
+      source: order.source || 'portal',
+      items: order.items || [],
+    };
+    if (refreshError) console.warn('Pedido registrado; atualização da lista será repetida depois.', refreshError.code || refreshError.name);
+    return fallback;
   }
 
   async cancelCustomerOrder(order) {

@@ -559,9 +559,17 @@ import { billingReminder, daysUntil, nextBillingDeadline } from '../src/billing-
         checkoutDeliveryDate = null;
         persistCart();
         error = '';
+        // A confirmação pertence sempre à loja, inclusive quando a conta que
+        // está testando também tem acesso à Operação.
+        if (location.hash !== '#loja') location.hash = '#loja';
         view = 'success';
         render();
-      } catch (cause) { error = `Não foi possível registrar: ${cause.message}`; render(true); }
+      } catch (cause) {
+        // Não deixar um erro do checkout expor a tela da Operação.
+        if (location.hash !== '#loja') location.hash = '#loja';
+        error = `Não foi possível registrar: ${cause.message}`;
+        render(true);
+      }
       finally { submitting = false; }
       return;
     }
