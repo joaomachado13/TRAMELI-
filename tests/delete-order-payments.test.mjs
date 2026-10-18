@@ -67,8 +67,35 @@ try {
   assert.equal(await count('trameli_payments'), 2);
   assert.equal(await count('trameli_payment_allocations'), 1);
 
+  // Excluir uma programação remove somente os pedidos ligados a ela e preserva pagamentos.
+  const generatedA = await makeOrder(), generatedB = await makeOrder(), unrelated = await makeOrder();
+  const scheduleId = randomUUID();
+  await db.exec('reset role');
+  await db.query(`insert into public.trameli_recurring_orders
+    (id, customer_id, recurrence, starts_on, active, notes, fee_cents, items, created_by)
+    values ($1,$2,'fixed',$3,true,'',200,'[{"name":"Teste","quantity":1,"priceCents":1000}]'::jsonb,$4)`,
+    [scheduleId, customer, today, master]);
+  await db.query(`insert into public.trameli_recurring_occurrences(schedule_id,delivery_date,order_id)
+    values ($1,$2,$3),($1,$2::date + 1,$4)`, [scheduleId, today, generatedA, generatedB]);
+  await as(master);
+  const recurringPayment = await pay(1200, [{ order_id: generatedA, amount_cents: 1200 }]);
+  const beforeRecurringDelete = await count('trameli_payments');
+  const deletedCount = (await db.query('select public.trameli_delete_recurring_order($1) as n', [scheduleId])).rows[0].n;
+  assert.equal(Number(deletedCount), 2);
+  assert.equal((await db.query('select 1 from public.trameli_recurring_orders where id=$1', [scheduleId])).rows.length, 0);
+  assert.equal((await db.query('select 1 from public.trameli_recurring_occurrences where schedule_id=$1', [scheduleId])).rows.length, 0);
+  assert.equal((await db.query('select 1 from public.trameli_orders where id=any($1::uuid[])', [[generatedA, generatedB]])).rows.length, 0);
+  assert.equal((await db.query('select 1 from public.trameli_orders where id=$1', [unrelated])).rows.length, 1);
+  assert.equal((await db.query('select 1 from public.trameli_orders where id=$1', [b])).rows.length, 1);
+  assert.equal(await count('trameli_orders'), 2, 'Pedidos manuais não relacionados continuam existindo.');
+  assert.equal(await count('trameli_payments'), beforeRecurringDelete, 'O registro de pagamento é preservado.');
+  assert.equal((await db.query('select 1 from public.trameli_payments where id=$1', [recurringPayment])).rows.length, 1);
+  assert.equal((await db.query('select 1 from public.trameli_payment_allocations where order_id=$1', [generatedA])).rows.length, 0);
+  assert.equal((await db.query('select 1 from public.trameli_payment_allocations where order_id=$1', [b])).rows.length, 1);
+
   // Clientes e operadores comuns não executam.
   await as(customer);
   await assert.rejects(del(b, 'delete'), /Master|restrito|permission/i);
-  console.log('Exclusão de pedido com pagamento vinculado (manter ou excluir): OK.');
+  await assert.rejects(db.query('select public.trameli_delete_recurring_order($1)', [scheduleId]), /operator access required|permission/i);
+  console.log('Exclusão de pedido com pagamento vinculado e programação recorrente: OK.');
 } finally { await db.close(); }
