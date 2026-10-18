@@ -494,6 +494,20 @@ import { billingReminder, daysUntil, nextBillingDeadline } from '../src/billing-
 
   function render(preserveScroll = false) {
     if (location.hash !== '#loja') return;
+    // A confirmação precisa ser sempre interativa: encerra qualquer camada global
+    // de navegação/transição que possa ter ficado aberta antes do checkout.
+    if (view === 'success' || view === 'weekSuccess') {
+      window.TrameliMenu?.close();
+      document.body.classList.remove('menu-open');
+      const menuOverlay = document.querySelector('.menu-overlay');
+      if (menuOverlay) menuOverlay.hidden = true;
+      // Um dialog da Operação fica no top layer mesmo quando o shell é ocultado.
+      // Feche-o para que o backdrop não bloqueie toda a loja após a confirmação.
+      document.querySelectorAll('dialog[open]').forEach(dialog => {
+        if (!dialog.closest('#portal-view')) dialog.close();
+      });
+      motion()?.cancelTransition?.();
+    }
     const scroll = motion()?.scrollTop() ?? scrollY;
     const changedView = view !== renderedView || !portalVisible;
     const focus = preserveScroll ? rememberFocus() : null;

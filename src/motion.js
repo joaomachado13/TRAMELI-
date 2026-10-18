@@ -22,7 +22,9 @@ function pauseScroll() {
 
 function syncScroll() {
   if (!enabled) return;
-  const useSmoother = shouldMove() && desktopQuery.matches;
+  // O portal do cliente fica dentro de #smooth-content. Não aplique ScrollSmoother
+  // nessa rota: transformações globais podem interferir em camadas fixas e cliques.
+  const useSmoother = shouldMove() && desktopQuery.matches && !document.body.classList.contains('portal-mode');
   if (!useSmoother && smoother) {
     const position = smoother.scrollTop();
     smoother.kill(); smoother = null;
