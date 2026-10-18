@@ -32,16 +32,20 @@ try {
   await db.exec(publicCodeMigration);
   const billingFrequencyMigration = await readFile(new URL('../supabase/migrations/202610180017_customer_billing_frequency.sql', import.meta.url), 'utf8');
   await db.exec(billingFrequencyMigration);
+  const recurringOrdersMigration = await readFile(new URL('../supabase/migrations/202610190020_recurring_operator_orders.sql', import.meta.url), 'utf8');
+  await db.exec(recurringOrdersMigration);
   const tables = await db.query(`select tablename from pg_tables where schemaname = 'public' and tablename like 'trameli_%' order by tablename`);
   assert.deepEqual(tables.rows.map(row => row.tablename), [
     'trameli_operators', 'trameli_order_costs', 'trameli_order_events', 'trameli_orders',
-    'trameli_product_costs', 'trameli_products', 'trameli_profiles',
+    'trameli_product_costs', 'trameli_products', 'trameli_profiles', 'trameli_recurring_occurrences', 'trameli_recurring_orders',
   ]);
   await db.exec('set role anon');
   const publicProducts = await db.query('select count(*)::integer as count from public.trameli_products');
   assert.equal(publicProducts.rows[0].count, 79);
   await assert.rejects(db.query('select count(*) from public.trameli_orders'), /permission denied/);
   await assert.rejects(db.query('select count(*) from public.trameli_product_costs'), /permission denied/);
+  await assert.rejects(db.query('select count(*) from public.trameli_recurring_orders'), /permission denied/);
+  await assert.rejects(db.query('select count(*) from public.trameli_recurring_occurrences'), /permission denied/);
   await assert.rejects(db.query('select count(*) from private.trameli_order_code_counters'), /permission denied/);
   await assert.rejects(db.query('select public.trameli_is_operator()'), /permission denied/);
   await assert.rejects(db.query('select public.trameli_audit_order()'), /permission denied/);
@@ -222,6 +226,35 @@ try {
     db.query('select public.trameli_set_customer_billing_frequency($1, $2)', [customerA, 'every day']),
     /invalid billing frequency/,
   );
+  const recurring = await db.query(`select public.trameli_save_recurring_order(
+    null, $1::uuid, $2::uuid, 'fortnightly', '2026-10-14'::date, true, 'Pedido fixo do ciclo', 200, $3::jsonb
+  ) as id`, [
+    '12121212-1212-4121-8121-121212121212', customerA,
+    JSON.stringify([{ name: 'Pão de queijo', quantity: 2, priceCents: 130 }]),
+  ]);
+  const scheduleId = recurring.rows[0].id;
+  const firstOccurrence = await db.query("select public.trameli_materialize_recurring_orders('2026-10-15'::date) as count");
+  assert.equal(firstOccurrence.rows[0].count, 1);
+  const secondOccurrence = await db.query("select public.trameli_materialize_recurring_orders('2026-10-16'::date) as count");
+  assert.equal(secondOccurrence.rows[0].count, 1, 'Quinzenal schedule rolls into the next closing cycle');
+  const repeatedOccurrence = await db.query("select public.trameli_materialize_recurring_orders('2026-10-16'::date) as count");
+  assert.equal(repeatedOccurrence.rows[0].count, 0, 'A delivery date is materialized only once');
+  const sundayOccurrence = await db.query("select public.trameli_materialize_recurring_orders('2026-10-18'::date) as count");
+  assert.equal(sundayOccurrence.rows[0].count, 0, 'Recurring schedules skip Sundays');
+  const recurringRows = await db.query(`select o.customer_id, o.status::text, o.delivery_date, o.total_cents
+    from public.trameli_orders o join public.trameli_recurring_occurrences x on x.order_id=o.id
+    where x.delivery_date in ('2026-10-15'::date,'2026-10-16'::date) order by o.delivery_date`);
+  assert.deepEqual(recurringRows.rows.map(row => [row.customer_id, row.status, String(row.delivery_date), Number(row.total_cents)]), [
+    [customerA, 'confirmed', '2026-10-15', 460],
+    [customerA, 'confirmed', '2026-10-16', 460],
+  ]);
+  const cycles = await db.query('select active, starts_on, cycle_ends_on from public.trameli_recurring_orders order by starts_on');
+  assert.equal(cycles.rows.length, 2);
+  assert.equal(cycles.rows[0].active, false);
+  assert.equal(String(cycles.rows[0].cycle_ends_on), '2026-10-15');
+  assert.equal(cycles.rows[1].active, true);
+  assert.equal(String(cycles.rows[1].starts_on), '2026-10-16');
+  assert.equal(String(cycles.rows[1].cycle_ends_on), '2026-10-31');
   console.log('Migração PostgreSQL: OK');
 } finally {
   await db.close();
