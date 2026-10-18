@@ -19,7 +19,7 @@ let socket;
 
 try {
   let page;
-  for (let attempt = 0; attempt < 60; attempt++) {
+  for (let attempt = 0; attempt < 120; attempt++) {
     try {
       const tabs = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
       page = tabs.find(tab => tab.type === 'page' && tab.url.startsWith(url));
