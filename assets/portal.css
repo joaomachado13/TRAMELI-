@@ -264,3 +264,120 @@ body:not(.portal-mode) #portal-floating-host,body:not(.portal-mode) .portal-bott
   border-radius: 9999px !important;
   text-align: center !important;
 }
+
+
+/* Confirmação independente: fora do host dinâmico e de qualquer transformação da loja. */
+#portal-success-screen{
+  position:fixed;
+  inset:0;
+  z-index:2147483647;
+  display:grid;
+  place-items:center;
+  overflow:auto;
+  padding:24px;
+  background:var(--color-background);
+  color:var(--color-text-primary);
+  pointer-events:auto;
+  isolation:isolate;
+  overscroll-behavior:contain;
+}
+#portal-success-screen .portal-success-card{
+  width:min(100%,620px);
+  margin:auto;
+  padding:clamp(24px,5vw,48px);
+  border:1px solid var(--color-border);
+  border-radius:24px;
+  background:var(--color-surface-alternate);
+  box-shadow:0 24px 80px var(--color-shadow);
+  text-align:center;
+}
+#portal-success-screen .portal-success-mark{
+  display:grid;
+  place-items:center;
+  width:72px;
+  height:72px;
+  margin:0 auto 24px;
+  border:1px solid var(--color-border);
+  border-radius:50%;
+  background:var(--color-primary);
+  color:var(--color-on-primary);
+  font-size:2rem;
+  font-weight:700;
+}
+#portal-success-screen .portal-eyebrow{
+  color:var(--color-primary);
+  font-size:.7rem;
+  font-weight:800;
+  letter-spacing:.16em;
+}
+#portal-success-screen h1{
+  margin:14px auto 12px;
+  max-width:520px;
+  font:500 clamp(2rem,5vw,3.4rem)/1.05 var(--font-display,serif);
+  letter-spacing:-.035em;
+}
+#portal-success-screen p{
+  max-width:470px;
+  margin:0 auto;
+  color:var(--color-text-secondary);
+  line-height:1.6;
+}
+#portal-success-screen .portal-success-receipt{
+  display:grid;
+  gap:0;
+  margin:28px 0 16px;
+  padding:8px 18px;
+  border:1px solid var(--color-border);
+  border-radius:14px;
+  background:var(--color-background);
+  text-align:left;
+}
+#portal-success-screen .portal-success-receipt>div{
+  display:grid;
+  grid-template-columns:minmax(95px,.65fr) minmax(0,1.35fr);
+  gap:16px;
+  padding:12px 0;
+  border-bottom:1px solid var(--color-border);
+}
+#portal-success-screen .portal-success-receipt>div:last-child{border-bottom:0}
+#portal-success-screen .portal-success-receipt dt{color:var(--color-text-secondary);font-size:.85rem}
+#portal-success-screen .portal-success-receipt dd{margin:0;text-align:right;font-size:.9rem;font-weight:700;overflow-wrap:anywhere}
+#portal-success-screen .portal-payment-note{margin:12px auto 0;font-size:.78rem}
+#portal-success-screen .portal-success-actions{
+  display:grid;
+  gap:10px;
+  margin-top:26px;
+}
+#portal-success-screen .portal-success-actions button{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  min-height:50px;
+  border-radius:12px;
+  cursor:pointer;
+  pointer-events:auto;
+  touch-action:manipulation;
+}
+#portal-success-screen .portal-success-actions .portal-primary{
+  border:0;
+  background:var(--color-primary);
+  color:var(--color-on-primary);
+  font-weight:800;
+}
+#portal-success-screen .portal-success-actions .portal-link{
+  border:1px solid var(--color-border);
+  background:transparent;
+  color:var(--color-text-primary);
+  font-weight:700;
+}
+#portal-success-screen button:focus-visible{
+  outline:3px solid var(--color-focus-ring);
+  outline-offset:3px;
+}
+@media(max-width:480px){
+  #portal-success-screen{padding:14px}
+  #portal-success-screen .portal-success-card{padding:24px 18px;border-radius:18px}
+  #portal-success-screen .portal-success-receipt{padding:6px 12px}
+  #portal-success-screen .portal-success-receipt>div{grid-template-columns:85px minmax(0,1fr);gap:10px}
+}
