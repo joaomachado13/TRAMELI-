@@ -6,7 +6,7 @@ import './payments.css';
 const money = cents => new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' }).format(Number(cents || 0)/100);
 const labels = { open:'Em aberto', partial:'Parcialmente pago', paid:'Pago', refunded:'Estornado', refund_due:'Devolução pendente', cancelled:'Cancelado' };
 const orderLabels = { received:'A conferir', confirmed:'Conferido', packing:'Em separação', ready:'Pronto', delivered:'Entregue', cancelled:'Cancelado' };
-const methods = { pix_manual:'Pix conferido manualmente', cash:'Dinheiro', bank:'Transferência', other:'Acordado com a proprietária' };
+const methods = { pix_manual:'Pix conferido manualmente', cash:'Método antigo', bank:'Método antigo', other:'Método antigo' };
 const short = id => String(id).slice(0,8);
 const today = () => new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 const dateLabel = date => new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR');
@@ -204,7 +204,7 @@ export function initPayments(live) {
           <span>Total selecionado</span>
           <strong data-allocation-total>R$ 0,00</strong>
         </div>
-        ${intent?'':`<label class="payment-method-simple">Recebido por<select name="method"><option value="pix_manual">Pix</option><option value="cash">Dinheiro</option><option value="other">Acordado com a proprietária</option></select></label>`}
+        ${intent?'':`<input type="hidden" name="method" value="pix_manual"><p class="payment-method-simple">Recebimento via Pix</p>`}
         <details class="payment-proof-optional">
           <summary>Anexar comprovante (opcional)</summary>
           <label>Arquivo<input type="file" name="operatorProof" accept="image/jpeg,image/png,application/pdf"></label>
