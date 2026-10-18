@@ -194,9 +194,16 @@ function addItem(item = {}) {
 }
 
 function customerProfiles() {
-  return (window.TrameliPayments?.api?.profiles || [])
-    .filter(profile => profile?.user_id && profile?.name)
-    .slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  if (live) {
+    return (window.TrameliPayments?.api?.profiles || [])
+      .filter(profile => profile?.user_id && profile?.name)
+      .slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  }
+  return (window.TrameliClients?.list() || []).map(client => ({
+    user_id: client.customerId || client.key || client.name,
+    name: client.name, phone: client.phone || '', address: client.address || '',
+  })).filter(profile => profile.user_id && profile.name)
+    .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
 }
 function syncSelectedCustomer() {
   const profile = customerProfiles().find(item => item.user_id === form.elements.customerId.value);
@@ -910,6 +917,10 @@ printSettingsHost?.addEventListener('change', event => {
 });
 
 render();
+if (live?.operator && dateInput.value) {
+  live.materializeRecurringOrders(dateInput.value).then(() => { orders = readOrders(); render(); })
+    .catch(cause => { kanbanFeedback.textContent = 'Não foi possível carregar pedidos recorrentes: ' + cause.message; });
+}
 window.addEventListener('trameli:orders-changed', () => { resetCosts(); orders = readOrders(); render(); });
 window.addEventListener('storage', event => {
   if (event.key === storageKey) { orders = readOrders(); render(); }
@@ -921,14 +932,16 @@ function openNewOrder(prefill = {}) {
   location.hash = '#operacao';
   setTimeout(() => {
     openForm();
-    form.elements.customer.value = prefill.customer || '';
-    form.elements.phone.value = prefill.phone || '';
-    form.elements.address.value = prefill.address || '';
+    fillCustomerOptions('', prefill.customer || '');
     form.elements.date.value = prefill.date || dateInput.value;
     form.elements.notes.value = prefill.notes || '';
     if (Array.isArray(prefill.items) && prefill.items.length) {
-      itemsHost.replaceChildren();
-      prefill.items.forEach(item => addItem(item));
+      const products = live?.products || window.TrameliCatalog?.list() || [];
+      for (const item of prefill.items) {
+        const product = products.find(candidate => candidate.active && candidate.name.toLocaleLowerCase('pt-BR') === String(item.name || '').toLocaleLowerCase('pt-BR'));
+        if (product) selectedProductQuantities.set(product.id, Math.min(product.unit === 'kg' ? 99 : 999, Math.max(1, Number(item.quantity) || 1)));
+      }
+      renderProductCatalog();
       updateFormTotal();
     }
   }, 260);
