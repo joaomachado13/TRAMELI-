@@ -30,6 +30,7 @@ function readOrders() {
 
 let orders = readOrders();
 let editingId = null;
+let editingScheduleId = null;
 let detailId = null;
 let submitting = false;
 let requestId = null;
@@ -277,25 +278,41 @@ function updateFormTotal() {
   document.getElementById('form-delivery-summary').hidden = !hasItems;
   document.getElementById('form-total').textContent = !hasItems ? money(0) : valid ? money(productsTotal + fee) : '—';
 }
-function openForm(order = null) {
+function openForm(order = null, schedule = null) {
   editingId = order?.id || null;
-  requestId = order ? null : crypto.randomUUID();
+  editingScheduleId = schedule?.id || null;
+  requestId = schedule?.request_id || (order ? null : crypto.randomUUID());
   form.reset();
   formError.hidden = true;
   itemsHost.replaceChildren();
   selectedProductQuantities.clear();
-  form.elements.date.value = order?.date || dateInput.value;
-  form.elements.fee.value = '2,00';
-  fillCustomerOptions(order?.customerId || '', order?.customer || '');
-  form.elements.notes.value = order?.notes || '';
-  form.elements.recurrence.value = 'once';
+  form.elements.date.value = schedule?.starts_on || order?.date || dateInput.value;
+  form.elements.fee.value = ((schedule?.fee_cents ?? 200) / 100).toFixed(2).replace('.', ',');
+  fillCustomerOptions(schedule?.customer_id || order?.customerId || '', order?.customer || '');
+  form.elements.notes.value = schedule?.notes || order?.notes || '';
+  form.elements.recurrence.value = schedule?.recurrence || 'once';
   form.elements.recurrence.disabled = Boolean(order);
+  form.elements.recurrence.querySelector('option[value="once"]').disabled = Boolean(schedule);
   catalogHost.hidden = Boolean(order);
   itemsHost.hidden = !order;
   document.getElementById('add-item').hidden = !order;
-  if (order) (order.items || [{}]).forEach(addItem);
-  else renderProductCatalog();
-  document.getElementById('dialog-title').textContent = order ? 'Editar pedido' : 'Novo pedido';
+  if (order) {
+    (order.items || [{}]).forEach(addItem);
+  } else {
+    if (schedule) {
+      const products = live?.products || window.TrameliCatalog?.list() || [];
+      for (const line of schedule.items || []) {
+        const product = products.find(candidate => candidate.active && String(line.name || '').startsWith(candidate.name));
+        if (!product) continue;
+        const grams = String(line.name || '').match(/\((\d{2,4})\s*g\)/i);
+        const quantity = product.unit === 'kg' ? Math.max(1, Math.min(99, Math.round(Number(grams?.[1] || 50) / 50)))
+          : Math.max(1, Math.min(999, Number(line.quantity) || 1));
+        selectedProductQuantities.set(product.id, quantity);
+      }
+    }
+    renderProductCatalog();
+  }
+  document.getElementById('dialog-title').textContent = schedule ? 'Editar pedido recorrente' : order ? 'Editar pedido' : 'Novo pedido';
   updateFormTotal();
   dialog.showModal();
   form.elements.customerId.focus();
@@ -829,7 +846,7 @@ form.addEventListener('submit', async event => {
   const customer = customerProfile?.name || '';
   const address = customerProfile?.address || '';
   const phone = customerProfile?.phone || '';
-  const recurrence = editingId ? 'once' : form.elements.recurrence.value;
+  const recurrence = editingScheduleId ? form.elements.recurrence.value : editingId ? 'once' : form.elements.recurrence.value;
   if (!customerId || !customer || !address || !form.elements.date.value || !items.length
     || items.some(item => !item.name || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 999
       || !Number.isInteger(item.priceCents) || item.priceCents < 0
@@ -866,7 +883,7 @@ form.addEventListener('submit', async event => {
         await live.saveRecurringOrder({
           customerId, recurrence, startDate: order.date, notes: order.notes, feeCents,
           items: items.map(({ name, quantity, priceCents }) => ({ name, quantity, priceCents })),
-        }, requestId);
+        }, requestId, editingScheduleId);
         await live.materializeRecurringOrders(order.date);
       }
       orders = readOrders();
