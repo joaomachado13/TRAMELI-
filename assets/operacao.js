@@ -81,6 +81,8 @@ const detailDrawer = document.getElementById('order-detail-drawer');
 const detailContent = document.getElementById('order-detail-content');
 const form = document.getElementById('order-form');
 const itemsHost = document.getElementById('form-items');
+const catalogHost = document.getElementById('form-catalog');
+const selectedProductQuantities = new Map();
 const formError = document.getElementById('form-error');
 const printSettingsHost = document.getElementById('print-settings');
 const historyDialog = live ? document.createElement('dialog') : null;
@@ -191,7 +193,59 @@ function addItem(item = {}) {
   syncItemMode();
 }
 
+function customerProfiles() {
+  return (window.TrameliPayments?.api?.profiles || [])
+    .filter(profile => profile?.user_id && profile?.name)
+    .slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+}
+function syncSelectedCustomer() {
+  const profile = customerProfiles().find(item => item.user_id === form.elements.customerId.value);
+  form.elements.phone.value = profile?.phone || '';
+  form.elements.address.value = profile?.address || '';
+}
+function fillCustomerOptions(selectedId = '', selectedName = '') {
+  const profiles = customerProfiles();
+  const select = form.elements.customerId;
+  select.innerHTML = '<option value="">Selecione um cliente…</option>' + profiles.map(profile =>
+    '<option value="' + escapeHtml(profile.user_id) + '">' + escapeHtml(profile.name) + '</option>'
+  ).join('');
+  let target = profiles.find(profile => profile.user_id === selectedId);
+  if (!target && selectedName) target = profiles.find(profile => profile.name.trim().toLocaleLowerCase('pt-BR') === selectedName.trim().toLocaleLowerCase('pt-BR'));
+  select.value = target?.user_id || '';
+  syncSelectedCustomer();
+  select.disabled = profiles.length === 0;
+}
+function renderProductCatalog() {
+  const products = (live?.products || window.TrameliCatalog?.list() || [])
+    .filter(product => product.active && Number.isSafeInteger(product.priceCents) && product.priceCents >= 0)
+    .slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  catalogHost.innerHTML = products.length ? products.map(product => {
+    const quantity = selectedProductQuantities.get(product.id) || 0;
+    const weighted = product.unit === 'kg';
+    const image = product.image ? '<img src="' + escapeHtml(product.image) + '" alt="" loading="lazy">' : '<span class="admin-product-card__placeholder">PD</span>';
+    const price = weighted ? money(product.priceCents) + ' / kg' : money(product.priceCents);
+    const amount = weighted ? (quantity ? (quantity * 50) + ' g' : '0 g') : quantity;
+    return '<article class="admin-product-card' + (quantity ? ' is-selected' : '') + '" data-product-card="' + escapeHtml(product.id) + '">' +
+      '<div class="admin-product-card__photo">' + image + '</div><div class="admin-product-card__body"><strong>' + escapeHtml(product.name) +
+      '</strong><small>' + price + '</small><div class="admin-product-card__controls"><button type="button" data-product-step="-1" data-product-id="' + escapeHtml(product.id) + '" aria-label="Diminuir ' + escapeHtml(product.name) + '"' + (quantity ? '' : ' disabled') + '>−</button><span>' + amount +
+      '</span><button type="button" data-product-step="1" data-product-id="' + escapeHtml(product.id) + '" aria-label="Adicionar ' + escapeHtml(product.name) + '">+</button></div></div></article>';
+  }).join('') : '<p class="admin-product-empty">Não há produtos ativos no catálogo.</p>';
+}
 function formItems() {
+  if (!catalogHost.hidden) {
+    const products = live?.products || window.TrameliCatalog?.list() || [];
+    return [...selectedProductQuantities.entries()].map(([id, quantity]) => {
+      const product = products.find(item => item.id === id && item.active);
+      if (!product || quantity < 1) return null;
+      if (product.unit === 'kg') {
+        const weightGrams = quantity * 50;
+        return { productId: product.id, name: product.name + ' (' + weightGrams + ' g)', quantity: 1,
+          weightGrams, kgPriceCents: product.priceCents,
+          priceCents: window.TrameliOrderMath.weightPriceCents(product.priceCents, weightGrams) };
+      }
+      return { productId: product.id, name: product.name, quantity, priceCents: product.priceCents };
+    }).filter(Boolean);
+  }
   return [...itemsHost.children].map(row => {
     const name = row.querySelector('.item-name').value.trim();
     const enteredPrice = parseMoney(row.querySelector('.item-price').value);
@@ -204,37 +258,40 @@ function formItems() {
     return { name, quantity: Number(row.querySelector('.item-quantity').value), priceCents: enteredPrice };
   });
 }
-
 function updateFormTotal() {
-  const fee = parseMoney(form.elements.fee.value);
+  const fee = parseMoney(form.elements.fee.value || '2,00');
   const items = formItems();
   const valid = fee !== null && items.every(item => Number.isInteger(item.quantity) && item.quantity > 0
     && item.priceCents !== null && (item.weightGrams === undefined || (Number.isInteger(item.weightGrams)
       && item.weightGrams >= 50 && item.weightGrams <= 4950 && item.weightGrams % 50 === 0)));
   const productsTotal = items.reduce((sum, item) => sum + itemTotal(item), 0);
-  const hasItems = items.some(item => item.name && item.priceCents !== null && item.quantity > 0);
+  const hasItems = items.length > 0 && items.some(item => item.name && item.priceCents !== null && item.quantity > 0);
   document.getElementById('form-subtotal').textContent = !hasItems ? money(0) : valid ? money(productsTotal) : '—';
   document.getElementById('form-delivery-summary').hidden = !hasItems;
   document.getElementById('form-total').textContent = !hasItems ? money(0) : valid ? money(productsTotal + fee) : '—';
 }
-
 function openForm(order = null) {
   editingId = order?.id || null;
   requestId = order ? null : crypto.randomUUID();
   form.reset();
   formError.hidden = true;
   itemsHost.replaceChildren();
+  selectedProductQuantities.clear();
   form.elements.date.value = order?.date || dateInput.value;
   form.elements.fee.value = '2,00';
-  form.elements.customer.value = order?.customer || '';
-  form.elements.phone.value = order?.phone || '';
-  form.elements.address.value = order?.address || '';
+  fillCustomerOptions(order?.customerId || '', order?.customer || '');
   form.elements.notes.value = order?.notes || '';
-  (order?.items || [{}]).forEach(addItem);
+  form.elements.recurrence.value = 'once';
+  form.elements.recurrence.disabled = Boolean(order);
+  catalogHost.hidden = Boolean(order);
+  itemsHost.hidden = !order;
+  document.getElementById('add-item').hidden = !order;
+  if (order) (order.items || [{}]).forEach(addItem);
+  else renderProductCatalog();
   document.getElementById('dialog-title').textContent = order ? 'Editar pedido' : 'Novo pedido';
   updateFormTotal();
   dialog.showModal();
-  form.elements.customer.focus();
+  form.elements.customerId.focus();
 }
 
 function selectedOrders() {
