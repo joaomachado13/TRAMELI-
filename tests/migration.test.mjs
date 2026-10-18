@@ -227,34 +227,34 @@ try {
     /invalid billing frequency/,
   );
   const recurring = await db.query(`select public.trameli_save_recurring_order(
-    null, $1::uuid, $2::uuid, 'fortnightly', '2026-10-14'::date, true, 'Pedido fixo do ciclo', 200, $3::jsonb
+    null, $1::uuid, $2::uuid, 'fortnightly', '2026-11-14'::date, true, 'Pedido fixo do ciclo', 200, $3::jsonb
   ) as id`, [
     '12121212-1212-4121-8121-121212121212', customerA,
     JSON.stringify([{ name: 'Pão de queijo', quantity: 2, priceCents: 130 }]),
   ]);
   const scheduleId = recurring.rows[0].id;
-  const firstOccurrence = await db.query("select public.trameli_materialize_recurring_orders('2026-10-15'::date) as count");
+  const firstOccurrence = await db.query("select public.trameli_materialize_recurring_orders('2026-11-14'::date) as count");
   assert.equal(firstOccurrence.rows[0].count, 1);
-  const secondOccurrence = await db.query("select public.trameli_materialize_recurring_orders('2026-10-16'::date) as count");
+  const secondOccurrence = await db.query("select public.trameli_materialize_recurring_orders('2026-11-16'::date) as count");
   assert.equal(secondOccurrence.rows[0].count, 1, 'Quinzenal schedule rolls into the next closing cycle');
   const repeatedOccurrence = await db.query("select public.trameli_materialize_recurring_orders('2026-10-16'::date) as count");
   assert.equal(repeatedOccurrence.rows[0].count, 0, 'A delivery date is materialized only once');
-  const sundayOccurrence = await db.query("select public.trameli_materialize_recurring_orders('2026-10-18'::date) as count");
+  const sundayOccurrence = await db.query("select public.trameli_materialize_recurring_orders('2026-11-15'::date) as count");
   assert.equal(sundayOccurrence.rows[0].count, 0, 'Recurring schedules skip Sundays');
   const recurringRows = await db.query(`select o.customer_id, o.status::text, o.delivery_date, o.total_cents
     from public.trameli_orders o join public.trameli_recurring_occurrences x on x.order_id=o.id
-    where x.delivery_date in ('2026-10-15'::date,'2026-10-16'::date) order by o.delivery_date`);
+    where x.delivery_date in ('2026-11-14'::date,'2026-11-16'::date) order by o.delivery_date`);
   assert.deepEqual(recurringRows.rows.map(row => [row.customer_id, row.status, new Date(row.delivery_date).toISOString().slice(0, 10), Number(row.total_cents)]), [
-    [customerA, 'confirmed', '2026-10-15', 460],
-    [customerA, 'confirmed', '2026-10-16', 460],
+    [customerA, 'confirmed', '2026-11-14', 460],
+    [customerA, 'confirmed', '2026-11-16', 460],
   ]);
   const cycles = await db.query('select active, starts_on, cycle_ends_on from public.trameli_recurring_orders order by starts_on');
   assert.equal(cycles.rows.length, 2);
   assert.equal(cycles.rows[0].active, false);
-  assert.equal(String(cycles.rows[0].cycle_ends_on), '2026-10-15');
+  assert.equal(String(cycles.rows[0].cycle_ends_on), '2026-11-15');
   assert.equal(cycles.rows[1].active, true);
-  assert.equal(String(cycles.rows[1].starts_on), '2026-10-16');
-  assert.equal(String(cycles.rows[1].cycle_ends_on), '2026-10-31');
+  assert.equal(String(cycles.rows[1].starts_on), '2026-11-16');
+  assert.equal(String(cycles.rows[1].cycle_ends_on), '2026-11-30');
   console.log('Migração PostgreSQL: OK');
 } finally {
   await db.close();
