@@ -207,8 +207,10 @@
   }
 
   function openForm(id = null) {
-    const client = clients.find(item => item.id === id);
-    editingId = client?.id || null;
+    const client = live
+      ? lastCards.find(item => item.key === id && item.customerId)
+      : clients.find(item => item.id === id);
+    editingId = live ? (client?.customerId || null) : (client?.id || null);
     form.reset();
     error.hidden = true;
     form.elements.name.value = client?.name || '';
@@ -372,7 +374,7 @@
           ${client.phone ? `<div class="client-contact__actions"><a href="tel:${escapeHtml(client.phone)}">${escapeHtml(formatPhone(client.phone))}</a><a href="https://wa.me/55${escapeHtml(String(client.phone).replace(/\D/g, '').replace(/^55/, ''))}" target="_blank" rel="noopener noreferrer">Abrir WhatsApp</a></div>` : ''}
         </section>
       </div>
-      <footer class="entity-detail__actions"><button class="screen-primary" type="button" data-client-action="new-order" data-key="${escapeHtml(client.key)}">+ Novo pedido</button>${client.id && !live ? `<button type="button" data-client-action="edit" data-id="${escapeHtml(client.id)}">Editar dados</button>` : ''}</footer>
+      <footer class="entity-detail__actions"><button class="screen-primary" type="button" data-client-action="new-order" data-key="${escapeHtml(client.key)}">+ Novo pedido</button>${live && client.customerId ? `<button type="button" data-client-action="edit-live" data-key="${escapeHtml(client.key)}">Editar cadastro</button>` : client.id && !live ? `<button type="button" data-client-action="edit" data-id="${escapeHtml(client.id)}">Editar dados</button>` : ''}</footer>
     </div>`;
     if (!detailDrawer.open) detailDrawer.showModal();
   }
@@ -476,6 +478,7 @@
     if (action === 'view') { openDetail(button.dataset.key); return; }
     if (action === 'new' && !live) { openForm(); return; }
     if (action === 'edit' && !live) { detailDrawer.close(); openForm(button.dataset.id); return; }
+    if (action === 'edit-live' && live) { openForm(button.dataset.key); return; }
     if (action === 'new-order') {
       const client = lastCards.find(item => item.key === button.dataset.key);
       if (client) { detailDrawer.close(); window.TrameliOperation?.openNew({ customer: client.name, phone: client.phone, address: client.address }); }
@@ -484,15 +487,39 @@
 
   formDialog.querySelector('.client-close').addEventListener('click', () => formDialog.close());
   formDialog.querySelector('.client-cancel').addEventListener('click', () => formDialog.close());
-  form.addEventListener('submit', event => {
+  form.addEventListener('submit', async event => {
     event.preventDefault();
-    if (live) return;
     const name = form.elements.name.value.trim();
     const address = form.elements.address.value.trim();
-    if (!name || !address) { error.textContent = 'Informe nome e endereço.'; error.hidden = false; return; }
-    const client = { id: editingId || crypto.randomUUID(), name, address, phone: formatPhone(form.elements.phone.value) };
-    const next = editingId ? clients.map(item => item.id === editingId ? client : item) : [...clients, client];
-    if (save(next)) { rerender(); formDialog.close(); }
+    const phone = formatPhone(form.elements.phone.value);
+    if (!name || name.length < 2 || !address || address.length < 3) {
+      error.textContent = 'Informe um nome válido e o endereço do cliente.';
+      error.hidden = false;
+      return;
+    }
+    const submit = form.querySelector('[type="submit"]');
+    submit.disabled = true;
+    error.hidden = true;
+    try {
+      if (live) {
+        if (!live.operator || !editingId) throw new Error('Selecione um cadastro existente para editar.');
+        await live.updateCustomerProfile({ id: editingId, name, phone, address });
+        await window.TrameliPayments?.api?.load?.(true);
+        await live.load(true);
+        rerender();
+        formDialog.close();
+        openDetail(`account:${editingId}`);
+        return;
+      }
+      const client = { id: editingId || crypto.randomUUID(), name, address, phone };
+      const next = editingId ? clients.map(item => item.id === editingId ? client : item) : [...clients, client];
+      if (save(next)) { rerender(); formDialog.close(); }
+    } catch (cause) {
+      error.textContent = cause.message || 'Não foi possível salvar o cadastro.';
+      error.hidden = false;
+    } finally {
+      submit.disabled = false;
+    }
   });
 
   window.addEventListener('trameli:payments-changed', () => {
