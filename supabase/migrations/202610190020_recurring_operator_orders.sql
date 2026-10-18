@@ -125,6 +125,8 @@ returns integer
 language plpgsql security definer set search_path = '' as $$
 declare
   v_schedule public.trameli_recurring_orders%rowtype;
+  v_schedule_ids uuid[];
+  v_schedule_id uuid;
   v_line jsonb;
   v_items jsonb;
   v_subtotal bigint;
@@ -142,12 +144,18 @@ begin
   -- Sunday deliveries are never generated.
   if extract(dow from p_delivery_date) = 0 then return 0; end if;
 
-  for v_schedule in
-    select * from public.trameli_recurring_orders
-    where active and starts_on <= p_delivery_date
-    order by created_at, id
-    for update
-  loop
+  select coalesce(array_agg(id order by created_at, id), '{}'::uuid[])
+    into v_schedule_ids
+    from public.trameli_recurring_orders
+    where active and starts_on <= p_delivery_date;
+
+  foreach v_schedule_id in array v_schedule_ids loop
+    select * into v_schedule
+      from public.trameli_recurring_orders
+      where id = v_schedule_id
+      for update;
+    if not found or not v_schedule.active then continue; end if;
+
     -- Start a new billing cycle only when a new date is requested; never pre-create future rows.
     if v_schedule.recurrence <> 'fixed'
        and v_schedule.cycle_ends_on is not null
