@@ -87,7 +87,7 @@ export function initPayments(live) {
     return `<section class="payment-panel payment-customer"><span class="payment-customer__eyebrow">PAGAMENTOS</span><h2>Meus pagamentos</h2><p class="payment-customer__intro">Veja o que já foi confirmado e o que ainda falta pagar. O pagamento só aparece como concluído depois que a operação confere o recebimento.</p><div data-payment-content="customer">${warning()?`<p role="status">${esc(warning())}</p>`:customerContent()}</div></section>`;
   }
   function upcomingRecurringMarkup() {
-    const upcoming=(api?.upcoming||[]).filter(row=>row.order_id && row.delivery_date);
+    const upcoming=Array.isArray(api?.upcoming)?api.upcoming.filter(row=>row.order_id && row.delivery_date):[];
     if(!upcoming.length) return '';
     return `<section class="payment-upcoming"><h3>Pedidos recorrentes agendados</h3><p>Estes pedidos já estão programados. Eles entram no saldo de pagamento na data da entrega, para evitar cobrança antecipada.</p><div class="payment-customer-orders">${upcoming.map(row=>`<article class="payment-order-card payment-order-card--upcoming"><div class="payment-order-card__main"><div class="payment-order-card__heading"><div><strong>Pedido #${esc(row.public_code||String(row.order_id).slice(0,8))}</strong><small>Entrega ${dateLabel(row.delivery_date)}</small></div><span class="payment-status is-open">Agendado</span></div><div class="payment-order-card__values"><div><span>Valor previsto</span><strong>${money(row.total_cents)}</strong></div><div><span>Pagamento</span><strong>Na data da entrega</strong></div></div></div></article>`).join('')}</div></section>`;
   }
