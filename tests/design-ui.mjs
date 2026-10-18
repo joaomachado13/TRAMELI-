@@ -254,7 +254,7 @@ try {
   await send('DOM.enable'); await send('CSS.enable');
   const documentNode = await send('DOM.getDocument');
   const primaryNode = (await send('DOM.querySelector', {nodeId:documentNode.root.nodeId,selector:'#new-order'})).nodeId;
-  for (const [state, expected] of [['hover','rgb(135, 56, 35)'],['active','rgb(113, 48, 29)'],['focus-visible','rgb(158, 67, 44)']]) {
+  for (const [state, expected] of [['hover','rgb(122, 51, 28)'],['active','rgb(102, 43, 23)'],['focus-visible','rgba(143, 61, 34, 0.15)']]) {
     await send('CSS.forcePseudoState', {nodeId:primaryNode,forcedPseudoClasses:[state]});
     await pause(180);
     assert(await evaluate(`getComputedStyle(document.querySelector('#new-order')).${state==='focus-visible'?'outlineColor':'backgroundColor'} === '${expected}'`), `Estado ${state} não usa a paleta oficial.`);

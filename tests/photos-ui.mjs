@@ -151,7 +151,7 @@ try {
   await evaluate('document.getElementById("new-order").click()');
   assert.match(await evaluate('document.getElementById("form-subtotal").textContent'), /0,00/);
   assert.equal(await evaluate('document.getElementById("form-delivery-summary").hidden'), true);
-  await evaluate(`const name = document.querySelector('.item-name'); name.value = 'Pão francês'; name.dispatchEvent(new Event('change', { bubbles:true }));`);
+  await evaluate(`(() => { const card = [...document.querySelectorAll('#form-catalog .admin-product-card')].find(item => item.querySelector('.admin-product-card__body > strong')?.textContent.trim() === 'Pão francês'); if (!card) throw new Error('Card de Pão francês não encontrado.'); card.querySelector('[data-product-step="1"]').click(); })()`);
   assert.match(await evaluate('document.getElementById("form-subtotal").textContent'), /1,40/);
   assert.match(await evaluate('document.getElementById("form-total").textContent'), /3,40/);
   assert.equal(await evaluate('document.getElementById("form-delivery-summary").hidden'), false);
