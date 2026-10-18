@@ -237,7 +237,7 @@ try {
   assert.equal(firstOccurrence.rows[0].count, 1);
   const secondOccurrence = await db.query("select public.trameli_materialize_recurring_orders('2026-11-16'::date) as count");
   assert.equal(secondOccurrence.rows[0].count, 1, 'Quinzenal schedule rolls into the next closing cycle');
-  const repeatedOccurrence = await db.query("select public.trameli_materialize_recurring_orders('2026-10-16'::date) as count");
+  const repeatedOccurrence = await db.query("select public.trameli_materialize_recurring_orders('2026-11-16'::date) as count");
   assert.equal(repeatedOccurrence.rows[0].count, 0, 'A delivery date is materialized only once');
   const sundayOccurrence = await db.query("select public.trameli_materialize_recurring_orders('2026-11-15'::date) as count");
   assert.equal(sundayOccurrence.rows[0].count, 0, 'Recurring schedules skip Sundays');
