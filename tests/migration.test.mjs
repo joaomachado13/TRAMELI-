@@ -251,8 +251,8 @@ try {
   const cycles = await db.query('select active, starts_on, cycle_ends_on from public.trameli_recurring_orders order by starts_on');
   assert.equal(cycles.rows.length, 1, 'Cycle rollover must not duplicate the recurring template');
   assert.equal(cycles.rows[0].active, true);
-  assert.equal(String(cycles.rows[0].starts_on), '2026-11-16');
-  assert.equal(String(cycles.rows[0].cycle_ends_on), '2026-11-30');
+  assert.equal(new Date(cycles.rows[0].starts_on).toISOString().slice(0, 10), '2026-11-16');
+  assert.equal(new Date(cycles.rows[0].cycle_ends_on).toISOString().slice(0, 10), '2026-11-30');
   console.log('Migração PostgreSQL: OK');
 } finally {
   await db.close();
