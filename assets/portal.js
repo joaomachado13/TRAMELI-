@@ -501,6 +501,11 @@ import { billingReminder, daysUntil, nextBillingDeadline } from '../src/billing-
       document.body.classList.remove('menu-open');
       const menuOverlay = document.querySelector('.menu-overlay');
       if (menuOverlay) menuOverlay.hidden = true;
+      // Um dialog da Operação fica no top layer mesmo quando o shell é ocultado.
+      // Feche-o para que o backdrop não bloqueie toda a loja após a confirmação.
+      document.querySelectorAll('dialog[open]').forEach(dialog => {
+        if (!dialog.closest('#portal-view')) dialog.close();
+      });
       motion()?.cancelTransition?.();
     }
     const scroll = motion()?.scrollTop() ?? scrollY;
