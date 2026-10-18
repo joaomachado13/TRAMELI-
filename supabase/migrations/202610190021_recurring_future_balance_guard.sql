@@ -1,4 +1,4 @@
--- Future recurring deliveries are operationally visible but not payable until their delivery date.
+-- Recurring orders become payable on the day before delivery; later dates remain scheduled.
 begin;
 
 create or replace function public.trameli_payment_balances()
@@ -27,7 +27,7 @@ language sql stable security definer set search_path = '' as $$
         select 1
         from public.trameli_recurring_occurrences recurring
         where recurring.order_id=o.id
-          and recurring.delivery_date > (now() at time zone 'America/Sao_Paulo')::date
+          and recurring.delivery_date > (now() at time zone 'America/Sao_Paulo')::date + 1
       )
   )
   select id,customer_id,customer_name,delivery_date,status::text,charge,received,refunded,paid,
