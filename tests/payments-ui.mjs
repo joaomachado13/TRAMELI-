@@ -75,13 +75,13 @@ try {
   assert.match(await evaluate('document.body.textContent'),/Saldo em aberto/);
   assert.match(await evaluate('document.body.textContent'),/Parcialmente pago/);
   assert.equal(await evaluate('!!document.querySelector("[data-pay-refund]")'),false);
-  const beforePix=await evaluate('paymentFixture.state.calls.length');
+  const beforePix=await evaluate('paymentFixture.state.calls.filter(c=>c.name==="trameli_record_payment").length');
   await evaluate('(async()=>{paymentFixture.state.balances.push({...paymentFixture.state.balances[0],order_id:"other-order",due_cents:5000,paid_cents:0,payment_status:"open"});await paymentFixture.render(true);const selected=document.querySelector(`[data-pix-select="${paymentFixture.order}"]`);selected.checked=true;selected.dispatchEvent(new Event("change",{bubbles:true}));document.querySelector(`[data-pix-order="selected"]`).click()})()');
   for(let i=0;i<40&&!await evaluate('!!document.querySelector(".pix-qr")');i++)await pause(100);
   assert.match(await evaluate('document.querySelector(".pix-amount").textContent'),/8,00/);
   assert.equal(await evaluate('document.querySelector(".pix-qr").complete'),true);
   assert.equal(await evaluate('document.querySelector("[data-pix-payload]").value.includes("54048.00")'),true);
-  assert.equal(await evaluate('paymentFixture.state.calls.length'),beforePix,'QR cannot post a payment');
+  assert.equal(await evaluate('paymentFixture.state.calls.filter(c=>c.name==="trameli_record_payment").length'),beforePix,'QR cannot post a payment');
   assert.match(await evaluate('document.querySelector(".pix-dialog").textContent'),/não pague de novo/);
   assert.ok(await evaluate('document.querySelector(".pix-dialog").scrollWidth<=document.querySelector(".pix-dialog").clientWidth'),'QR dialog fits mobile');
   const pixShot=await send('Page.captureScreenshot',{format:'png'});

@@ -86,10 +86,16 @@ export function initPayments(live) {
   function customerRender() {
     return `<section class="payment-panel payment-customer"><span class="payment-customer__eyebrow">PAGAMENTOS</span><h2>Meus pagamentos</h2><p class="payment-customer__intro">Veja o que já foi confirmado e o que ainda falta pagar. O pagamento só aparece como concluído depois que a operação confere o recebimento.</p><div data-payment-content="customer">${warning()?`<p role="status">${esc(warning())}</p>`:customerContent()}</div></section>`;
   }
+  function upcomingRecurringMarkup() {
+    const upcoming=Array.isArray(api?.upcoming)?api.upcoming.filter(row=>row.order_id && row.delivery_date):[];
+    if(!upcoming.length) return '';
+    return `<section class="payment-upcoming"><h3>Pedidos recorrentes agendados</h3><p>Estes pedidos já estão programados. Eles entram no saldo de pagamento na data da entrega, para evitar cobrança antecipada.</p><div class="payment-customer-orders">${upcoming.map(row=>`<article class="payment-order-card payment-order-card--upcoming"><div class="payment-order-card__main"><div class="payment-order-card__heading"><div><strong>Pedido #${esc(row.public_code||String(row.order_id).slice(0,8))}</strong><small>Entrega ${dateLabel(row.delivery_date)}</small></div><span class="payment-status is-open">Agendado</span></div><div class="payment-order-card__values"><div><span>Valor previsto</span><strong>${money(row.total_cents)}</strong></div><div><span>Pagamento</span><strong>Na data da entrega</strong></div></div></div></article>`).join('')}</div></section>`;
+  }
   function customerContent() {
     // An operator opening the storefront must not see other customers in "Minha conta".
     const rows=api.balances.filter(row=>row.customer_id===live.user.id);
-    if(!rows.length) return '<div class="payment-customer-empty"><strong>Nenhum pagamento pendente.</strong><p>Quando você tiver pedidos vinculados à sua conta, o resumo aparecerá aqui.</p></div>';
+    const upcomingMarkup=upcomingRecurringMarkup();
+    if(!rows.length) return upcomingMarkup || '<div class="payment-customer-empty"><strong>Nenhum pagamento pendente.</strong><p>Quando você tiver pedidos vinculados à sua conta, o resumo aparecerá aqui.</p></div>';
     const t=totals(rows), openRows=rows.filter(row=>Number(row.due_cents)>0);
     const pixReady=window.TrameliPix && openRows.length>0;
     const reminder=billingReminder(rows,today());
@@ -109,7 +115,7 @@ export function initPayments(live) {
     <div class="payment-customer-list-head"><div><span>SEUS PEDIDOS</span><h3>${openRows.length?'Escolha o que deseja pagar':'Pedidos desta conta'}</h3><p>${openRows.length>1?'Marque mais de um pedido para gerar um único Pix com a soma dos saldos.':openRows.length===1?'Você pode pagar este pedido diretamente pelo botão abaixo.':'Consulte os valores já confirmados.'}</p></div></div>
     ${customerOrders(rows,openRows.length>1,openRows.length>1)}
     ${pixReady && openRows.length>1?`<div class="payment-selection-bar" data-payment-selection><div><span>Seleção</span><strong data-payment-selection-summary>Nenhum pedido selecionado</strong></div><button type="button" data-pix-order="selected" disabled>Pagar selecionados</button></div>`:''}
-    ${customerStatement(rows)}`;
+    ${customerStatement(rows)}${upcomingMarkup}`;
   }
   function operatorContent() {
     if (warning()) return `<p role="status">${esc(warning())}</p><button type="button" data-pay-refresh>Verificar novamente</button>`;

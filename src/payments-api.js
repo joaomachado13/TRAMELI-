@@ -1,7 +1,7 @@
 export class PaymentsApi {
   constructor(live) {
     this.live = live; this.ready = null; this.error = ''; this.pending = null;
-    this.balances = []; this.statement = []; this.payments = []; this.allocations = []; this.intents = []; this.receipts = []; this.profiles = [];
+    this.balances = []; this.upcoming = []; this.statement = []; this.payments = []; this.allocations = []; this.intents = []; this.receipts = []; this.profiles = [];
     this.snapshot = '';
   }
   async rows(factory, sort) {
@@ -21,6 +21,9 @@ export class PaymentsApi {
       try {
         const c = this.live.client;
         const balances = await this.rows(() => c.rpc('trameli_payment_balances'), ['order_id']);
+        const upcomingResult = await c.rpc('trameli_upcoming_recurring_orders');
+        if (upcomingResult.error && upcomingResult.error.code !== 'PGRST202') throw upcomingResult.error;
+        const upcoming = upcomingResult.error ? [] : (upcomingResult.data || []);
         const statement = await this.rows(() => c.rpc('trameli_payment_statement'), ['payment_id', 'order_id']);
         const payments = this.live.operator ? await this.rows(() => c.from('trameli_payments').select('id,kind,amount_cents,method,reference,note,reverses_id,actor_id,recorded_at'), ['id']) : [];
         const allocations = this.live.operator ? await this.rows(() => c.from('trameli_payment_allocations').select('payment_id,order_id,amount_cents'), ['payment_id', 'order_id']) : [];
@@ -40,10 +43,10 @@ export class PaymentsApi {
           if (receiptResult.error && receiptResult.error.code !== 'PGRST205') throw receiptResult.error;
           receipts = receiptResult.error ? [] : receiptResult.data;
         }
-        const snapshot = JSON.stringify({ balances, statement, payments, allocations, intents, receipts, profiles });
+        const snapshot = JSON.stringify({ balances, upcoming, statement, payments, allocations, intents, receipts, profiles });
         const changed = snapshot !== this.snapshot || this.ready !== true;
         this.snapshot = snapshot;
-        Object.assign(this, { balances, statement, payments, allocations, intents, receipts, profiles, ready: true, error: '' });
+        Object.assign(this, { balances, upcoming, statement, payments, allocations, intents, receipts, profiles, ready: true, error: '' });
         if (changed) window.dispatchEvent(new Event('trameli:payments-changed'));
       } catch (error) {
         this.ready = ['PGRST202', 'PGRST205'].includes(error.code) ? false : this.ready;
