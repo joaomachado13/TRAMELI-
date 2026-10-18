@@ -182,6 +182,22 @@ import { billingReminder, daysUntil, nextBillingDeadline } from '../src/billing-
   }
   function renderFloating() {
     if (!floatingHost) return;
+    // Não deixe a barra fixa da sacola/semana ficar por cima da confirmação.
+    // O conteúdo da barra é animado e pode continuar presente após o checkout.
+    if (view === 'success' || view === 'weekSuccess') {
+      clearTimeout(floatingTimer);
+      clearTimeout(floatingSyncTimer);
+      floatingHost.classList.remove(
+        'is-week-entering', 'is-week-leaving', 'is-cart-entering',
+        'is-cart-leaving', 'is-floating-syncing'
+      );
+      floatingHost.innerHTML = '';
+      floatingHost.hidden = true;
+      floatingMode = 'none';
+      floatingPendingMode = 'none';
+      floatingPendingHtml = '';
+      return;
+    }
     const isPortal = location.hash === '#loja';
     const cartVisible = isPortal && view === 'catalog' && count() > 0;
     let weekHtml = '';
