@@ -305,7 +305,9 @@ function openForm(order = null, schedule = null) {
     if (schedule) {
       const products = live?.products || window.TrameliCatalog?.list() || [];
       for (const line of schedule.items || []) {
-        const product = products.find(candidate => candidate.active && String(line.name || '').startsWith(candidate.name));
+        const baseName = String(line.name || '').replace(/\s+\(\d{2,4}\s*g\)$/i, '').trim();
+        const product = products.find(candidate => candidate.active && candidate.name === baseName)
+          || products.filter(candidate => candidate.active && baseName.startsWith(candidate.name)).sort((a, b) => b.name.length - a.name.length)[0];
         if (!product) continue;
         const grams = String(line.name || '').match(/\((\d{2,4})\s*g\)/i);
         const quantity = product.unit === 'kg' ? Math.max(1, Math.min(99, Math.round(Number(grams?.[1] || 50) / 50)))
