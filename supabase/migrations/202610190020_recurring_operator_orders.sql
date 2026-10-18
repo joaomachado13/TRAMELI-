@@ -229,6 +229,28 @@ begin
   return v_id;
 end;
 $;
+
+create or replace function public.trameli_set_recurring_order_active(
+  p_schedule_id uuid,
+  p_active boolean
+) returns void
+language plpgsql security definer set search_path = '' as $
+begin
+  if not public.trameli_is_operator() then
+    raise exception 'operator access required' using errcode = '42501';
+  end if;
+  if p_schedule_id is null or p_active is null then
+    raise exception 'schedule and active state required' using errcode = '22023';
+  end if;
+  update public.trameli_recurring_orders
+     set active = p_active, updated_at = now()
+   where id = p_schedule_id;
+  if not found then raise exception 'recurring order not found' using errcode = 'P0002'; end if;
+end;
+$;
+revoke all on function public.trameli_set_recurring_order_active(uuid,boolean) from public, anon;
+grant execute on function public.trameli_set_recurring_order_active(uuid,boolean) to authenticated;
+
 revoke all on function public.trameli_operator_order_for_customer(uuid,uuid,integer,date,text,text,text,text,integer,jsonb,uuid) from public, anon;
 grant execute on function public.trameli_operator_order_for_customer(uuid,uuid,integer,date,text,text,text,text,integer,jsonb,uuid) to authenticated;
 
