@@ -156,9 +156,15 @@ function suggestedOperationDate() {
   const [hour, minute] = operationRolloverTime().split(':').map(Number);
   const afterRollover = clock.hour * 60 + clock.minute >= hour * 60 + minute;
   const todayPending = orders.some(order => order.date === today && !['delivered', 'cancelled'].includes(orderStatus(order)));
-  if (!afterRollover || todayPending) return today;
-  const next = new Date(Date.UTC(clock.year, clock.month - 1, clock.day + 1));
-  return `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, '0')}-${String(next.getUTCDate()).padStart(2, '0')}`;
+  let candidate;
+  if (!afterRollover || todayPending) candidate = today;
+  else {
+    const nextDate = new Date(Date.UTC(clock.year, clock.month - 1, clock.day + 1));
+    candidate = `${nextDate.getUTCFullYear()}-${String(nextDate.getUTCMonth() + 1).padStart(2, '0')}-${String(nextDate.getUTCDate()).padStart(2, '0')}`;
+  }
+  const deliveryDate = new Date(candidate + 'T12:00:00');
+  if (deliveryDate.getDay() === 0) deliveryDate.setDate(deliveryDate.getDate() + 1);
+  return `${deliveryDate.getFullYear()}-${String(deliveryDate.getMonth() + 1).padStart(2, '0')}-${String(deliveryDate.getDate()).padStart(2, '0')}`;
 }
 
 dateInput.value = suggestedOperationDate();
