@@ -31,7 +31,7 @@ export class PaymentsApi {
         let profiles = [];
         if (this.live.operator) {
           profiles = await this.rows(
-            () => c.from('trameli_profiles').select('user_id,name,phone,address,order_blocked,order_blocked_at,order_block_reason'),
+            () => c.from('trameli_profiles').select('user_id,name,phone,address,billing_frequency,order_blocked,order_blocked_at,order_block_reason'),
             ['user_id']
           );
           const receiptResult = await c.from('trameli_payment_receipts')
