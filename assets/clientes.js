@@ -267,7 +267,7 @@
           const payment = paymentData(client);
           return `<button class="record-row client-row client-row--simple" type="button" data-client-action="view" data-key="${escapeHtml(client.key)}">
             <span class="record-avatar" aria-hidden="true">${escapeHtml(client.name.slice(0, 1).toUpperCase())}</span>
-            <span class="record-main"><strong>${escapeHtml(client.name)}</strong><small>${escapeHtml(formatPhone(client.phone) || 'Telefone não informado')}</small><small class="record-address">${escapeHtml(client.address || 'Endereço não informado')}</small></span>
+            <span class="record-main"><strong>${escapeHtml(client.name)}</strong><small>${escapeHtml(formatPhone(client.phone) || 'Telefone não informado')}</small><small class="record-address">${escapeHtml(client.address || 'Endereço não informado')}</small><small class="client-billing-frequency">${escapeHtml(({ semanal:'Semanal', quinzenal:'Quinzenal', mensal:'Mensal' })[payment.profile?.billing_frequency] || 'Frequência não definida')}</small></span>
             <span class="client-payment-badge ${statusClass(payment.status)}">${statusLabel(payment.status)}</span>
             <span class="record-chevron" aria-hidden="true">→</span>
           </button>`;
@@ -360,6 +360,7 @@
           <div><span>Em aberto</span><strong>${money(payment.dueCents)}</strong></div>
           <div><span>Pedidos</span><strong>${client.active.length}</strong></div>
         </section>
+        ${live && payment.customerId ? `<section class="entity-block client-billing-frequency"><div class="entity-block__heading"><div><h3>Frequência de pagamento</h3><p>Defina como este cliente combina o pagamento com a Shirley.</p></div></div><form data-client-billing-frequency data-customer-id="${escapeHtml(payment.customerId)}" data-client-key="${escapeHtml(client.key)}"><label>Periodicidade<select name="billing_frequency" required><option value="" ${!payment.profile?.billing_frequency ? 'selected' : ''}>Não definida</option><option value="semanal" ${payment.profile?.billing_frequency === 'semanal' ? 'selected' : ''}>Semanal</option><option value="quinzenal" ${payment.profile?.billing_frequency === 'quinzenal' ? 'selected' : ''}>Quinzenal</option><option value="mensal" ${payment.profile?.billing_frequency === 'mensal' ? 'selected' : ''}>Mensal</option></select></label><p class="entity-muted">Essa informação fica salva no cadastro e não altera a aprovação, os pedidos ou os pagamentos já registrados.</p><button class="screen-primary" type="submit">Salvar frequência</button><p class="catalog-error" role="alert" hidden></p></form></section>` : ''}
         ${paymentBlock(client, payment)}
         <section class="entity-block">
           <div class="entity-block__heading"><h3>Pedidos e cobrança</h3><span>${client.active.length}</span></div>
@@ -383,6 +384,33 @@
     const input = document.getElementById('client-search');
     input?.focus({ preventScroll: true });
     input?.setSelectionRange(query.length, query.length);
+  });
+
+  document.addEventListener('submit', async event => {
+    const frequencyForm = event.target.closest('form[data-client-billing-frequency]');
+    if (!frequencyForm) return;
+    event.preventDefault();
+    const submit = frequencyForm.querySelector('button[type="submit"]');
+    const feedback = frequencyForm.querySelector('[role="alert"]');
+    const frequency = frequencyForm.elements.billing_frequency.value || null;
+    if (!['semanal', 'quinzenal', 'mensal', null].includes(frequency)) return;
+    if (submit) submit.disabled = true;
+    if (feedback) feedback.hidden = true;
+    try {
+      const api = window.TrameliPayments?.api;
+      if (!api?.ready) throw new Error('A conexão com o banco ainda não está pronta. Tente novamente.');
+      await api.call('trameli_set_customer_billing_frequency', {
+        p_customer_id: frequencyForm.dataset.customerId,
+        p_billing_frequency: frequency,
+      });
+      await api.load(true);
+      rerender();
+      openDetail(frequencyForm.dataset.clientKey);
+    } catch (cause) {
+      if (feedback) { feedback.textContent = cause.message || 'Não foi possível salvar a frequência.'; feedback.hidden = false; }
+    } finally {
+      if (submit) submit.disabled = false;
+    }
   });
 
   document.addEventListener('click', async event => {
