@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { PDFDocument } from 'pdf-lib';
-import { supplierGroups, supplierTotals, supplierText, itemCheckKey } from '../src/supplier-checklist.js';
+import { supplierGroups, supplierTotals, supplierText, itemCheckKey, filterSupplierGroups } from '../src/supplier-checklist.js';
 import { createSupplierPdf, createSeparationPdf } from '../src/supplier-pdf.js';
 
 const date = '2026-10-07';
@@ -29,6 +29,11 @@ assert(text.includes('1050 g Mussarela') && text.includes('15× Pão francês'))
 assert(!text.includes('PEDIDOS POR CLIENTE'));
 assert(!/123456|234567|telefone privado|R\$|cancelado|outro-dia/.test(JSON.stringify(groups) + text));
 assert(!text.includes('Ana Gonçalves'), 'O texto de repasse não deve incluir nomes de clientes.');
+const supplierFixture = [{ customer: 'Cliente', address: 'Rua A', orders: [{ id: 'supplier-test', lines: [
+  { name: 'Broa', label: '1× Broa' }, { name: 'Pão francês', label: '2× Pão francês' },
+] }] }];
+assert.deepEqual(filterSupplierGroups(supplierFixture, 'sandra').flatMap(g => g.orders.flatMap(o => o.lines.map(l => l.name))), ['Broa']);
+assert.deepEqual(filterSupplierGroups(supplierFixture, 'divano').flatMap(g => g.orders.flatMap(o => o.lines.map(l => l.name))), ['Pão francês']);
 const changed = { ...first, items: [{ ...first.items[0], quantity: 6 }, first.items[1]] };
 assert(!supplierGroups([changed], date, checks)[0].orders[0].checked, 'Mudanças nos itens devem invalidar a conferência anterior.');
 assert.equal(itemCheckKey(first, 0), itemCheckKey({ ...first, items: first.items.map(item => ({ ...item, priceCents: 999 })) }, 0));

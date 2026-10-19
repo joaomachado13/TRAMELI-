@@ -1,5 +1,5 @@
 import { stages, statusPath, progressOrder } from '../src/operation-flow.js';
-import { supplierGroups, supplierTotals, supplierText, supplierDayCost, downloadSupplierPdf, downloadSeparationPdf, itemCheckKey } from '../src/supplier-checklist.js';
+import { supplierGroups, supplierTotals, supplierText, supplierDayCost, downloadSupplierPdf, downloadSeparationPdf, itemCheckKey, filterSupplierGroups, isSandraSupplierItem } from '../src/supplier-checklist.js';
 import { closingPeriod } from '../src/billing-cycle.js';
 import { costMapFromRows, supplierPeriodReport, supplierPeriodText, periodLabel, formatMoney as formatCost } from '../src/supplier-costs.js';
 import { downloadSupplierPeriodPdf } from '../src/supplier-period-pdf.js';
@@ -42,7 +42,7 @@ const supplierTotalsHost = document.getElementById('supplier-list-totals');
 const supplierCopy = document.getElementById('copy-supplier-list');
 const supplierPdf = document.getElementById('download-supplier-pdf');
 const supplierFeedback = document.getElementById('supplier-list-feedback');
-const separationSupplier = document.getElementById('separation-supplier');
+const supplierProvider = document.getElementById('supplier-provider');
 const separationPdf = document.getElementById('download-separation-pdf');
 const separationFeedback = document.getElementById('separation-list-feedback');
 const supplierPeriodSelect = document.getElementById('supplier-period');
@@ -379,6 +379,7 @@ function selectedOrders() {
 }
 
 function checklistGroups() { return supplierGroups(orders, dateInput.value, supplierChecks, costsAvailable() ? (supplierCostMap || new Map()) : null); }
+function repasseGroups() { return filterSupplierGroups(checklistGroups(), supplierProvider?.value || 'divano'); }
 function periodOrders(period) { return orders.filter(order => order.date >= period.from && order.date <= period.to && orderStatus(order) !== 'cancelled'); }
 function refreshPeriodLabel() {
   if (!supplierPeriodLabel) return;
@@ -393,7 +394,8 @@ function renderSupplierList() {
     supplierChecks = retained;
     try { localStorage.setItem(checklistKey, JSON.stringify([...supplierChecks])); } catch { /* Optional checklist persistence. */ }
   }
-  const groups = checklistGroups();
+  const allGroups = checklistGroups();
+  const groups = filterSupplierGroups(allGroups, supplierProvider?.value || 'divano');
   const totals = supplierTotals(groups);
   if (supplierTotalsHost) supplierTotalsHost.innerHTML = totals.length
     ? `<ul>${totals.map(product => `<li><strong>${product.grams ? `${product.grams} g` : `${product.quantity}×`}</strong><span>${escapeHtml(product.name)}</span>${product.hasCost ? `<em class="supplier-cost">${product.costMissing ? 'custo não informado' : escapeHtml(formatCost(product.costCents))}</em>` : ''}</li>`).join('')}</ul>${(() => { const day = supplierDayCost(groups); return day.withCosts ? `<p class="supplier-cost-total"><strong>Total a pagar à padaria (custo): ${escapeHtml(formatCost(day.totalCents))}</strong>${day.missing ? ` · ${day.missing} item(ns) sem custo, total incompleto` : ''}</p>` : ''; })()}`
@@ -404,7 +406,7 @@ function renderSupplierList() {
     input.indeterminate = !order.checked && order.lines.some(line => line.checked);
   });
   const hasExport = selectedPeriod().kind === 'diario' ? groups.length > 0 : periodOrders(selectedPeriod()).length > 0;
-  if (separationPdf) separationPdf.disabled = !groups.some(group => group.orders.some(order => order.lines.some(line => separationSupplier?.value === 'sandra' ? ['broa','biscoito provolone','bolacha de nata','biscoito de queijo','biscoito da vovó'].includes(line.name.trim().toLocaleLowerCase('pt-BR')) : !['broa','biscoito provolone','bolacha de nata','biscoito de queijo','biscoito da vovó'].includes(line.name.trim().toLocaleLowerCase('pt-BR')))));
+  if (separationPdf) separationPdf.disabled = !allGroups.some(group => group.orders.some(order => order.lines.length));
   supplierCopy.disabled = !hasExport;
   // Mantenha o botão de PDF clicável nos períodos agregados para que a própria ação informe se faltam pedidos ou custos, em vez de parecer que não responde.
   if (supplierPdf && !supplierPdf.dataset.busy) supplierPdf.disabled = selectedPeriod().kind === 'diario' && !hasExport;
@@ -895,15 +897,17 @@ async function buildPeriodReport() {
   const inPeriod = periodOrders(period);
   if (!inPeriod.length) throw new Error('Não há pedidos neste período.');
   await loadCostsFor(inPeriod);
-  return { period, report: supplierPeriodReport(orders, supplierCostMap || new Map(), period.from, period.to, live?.products || []) };
+  const report = supplierPeriodReport(orders, supplierCostMap || new Map(), period.from, period.to, live?.products || [], item => (supplierProvider?.value || 'divano') === 'sandra' ? isSandraSupplierItem(item.name) : !isSandraSupplierItem(item.name));
+  if (!report.orderCount) throw new Error('Não há itens dessa padaria neste período.');
+  return { period, report };
 }
 supplierPeriodSelect?.addEventListener('change', () => { supplierFeedback.textContent = ''; renderSupplierList(); });
 supplierCopy.addEventListener('click', async () => {
   let content;
   try {
     if (selectedPeriod().kind === 'diario') {
-      const groups = checklistGroups();
-      if (!groups.length) return;
+      const groups = repasseGroups();
+      if (!groups.length) throw new Error('Não há itens dessa padaria nesta data.');
       content = supplierText(groups, dateInput.value);
     } else {
       const { period, report } = await buildPeriodReport();
@@ -946,13 +950,7 @@ async function generateSeparationPdf() {
   separationPdf.dataset.busy = 'true'; separationPdf.disabled = true;
   if (separationFeedback) separationFeedback.textContent = 'Gerando PDF de separação…';
   try {
-    const provider = separationSupplier?.value || 'divano';
-    const isSandraItem = name => ['broa','biscoito provolone','bolacha de nata','biscoito de queijo','biscoito da vovó'].includes(String(name || '').trim().toLocaleLowerCase('pt-BR'));
-    const groups = checklistGroups().map(group => ({
-      ...group,
-      orders: group.orders.map(order => ({ ...order, lines: order.lines.filter(line => provider === 'sandra' ? isSandraItem(line.name) : !isSandraItem(line.name)) }))
-        .filter(order => order.lines.length)
-    })).filter(group => group.orders.length);
+    const groups = checklistGroups();
     if (!groups.length) throw new Error('Não há itens dessa padaria para separar na data selecionada.');
     await downloadSeparationPdf(groups, dateInput.value, businessLabel(), provider === 'sandra' ? 'Padaria Sandra' : 'Padaria do Divano');
     if (separationFeedback) separationFeedback.textContent = 'PDF de separação baixado. Clientes ordenados por endereço/rua e depois por nome; sem valores financeiros.';
@@ -965,7 +963,7 @@ async function generateSeparationPdf() {
   }
 }
 separationPdf?.addEventListener('click', generateSeparationPdf);
-separationSupplier?.addEventListener('change', renderSupplierList);
+supplierProvider?.addEventListener('change', () => { supplierFeedback.textContent = ''; renderSupplierList(); });
 
 supplierPdf?.addEventListener('click', async () => {
   if (supplierPdf.dataset.busy) return;
@@ -973,8 +971,8 @@ supplierPdf?.addEventListener('click', async () => {
   supplierFeedback.textContent = 'Gerando PDF…';
   try {
     if (selectedPeriod().kind === 'diario') {
-      const groups = checklistGroups();
-      if (!groups.length) throw new Error('Não há pedidos nesta data.');
+      const groups = repasseGroups();
+      if (!groups.length) throw new Error('Não há itens dessa padaria nesta data.');
       const exportDate = dateInput.value;
       if (costsAvailable()) await loadCostsFor(orders.filter(order => order.date === exportDate && orderStatus(order) !== 'cancelled'));
       await downloadSupplierPdf(checklistGroups(), exportDate, businessLabel());

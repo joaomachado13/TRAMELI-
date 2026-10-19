@@ -140,7 +140,7 @@ export async function createSeparationPdf(groups, date, { businessName = 'Pão D
   pdf.registerFontkit(fontkit);
   const font = await pdf.embedFont(regular, { subset: true });
   const strong = await pdf.embedFont(bold, { subset: true });
-  const WIDTH = 595.28, HEIGHT = 841.89, MARGIN = 42, BOTTOM = 52;
+  const WIDTH = 595.28, HEIGHT = 841.89, MARGIN = 30, BOTTOM = 38;
   const ink = rgb(43 / 255, 39 / 255, 36 / 255);
   const muted = rgb(98 / 255, 90 / 255, 85 / 255);
   const pale = rgb(244 / 255, 222 / 255, 213 / 255);
@@ -152,10 +152,10 @@ export async function createSeparationPdf(groups, date, { businessName = 'Pão D
   let page, y;
   function newPage() {
     page = pdf.addPage([WIDTH, HEIGHT]); y = HEIGHT - MARGIN;
-    page.drawText(businessName, { x: MARGIN, y, size: 9, font: strong, color: primary }); y -= 22;
-    page.drawText('Lista de separação', { x: MARGIN, y, size: 22, font: strong, color: ink }); y -= 25;
-    page.drawText(`${supplierName}  •  Entrega: ${dateLabel}`, { x: MARGIN, y, size: 11, font: strong, color: muted }); y -= 17;
-    page.drawText('Confira cada produto e quantidade. Lista sem preços.', { x: MARGIN, y, size: 9, font, color: muted }); y -= 25;
+    page.drawText(businessName, { x: MARGIN, y, size: 8, font: strong, color: primary }); y -= 17;
+    page.drawText('Lista de separação', { x: MARGIN, y, size: 18, font: strong, color: ink }); y -= 21;
+    page.drawText(`${supplierName}  •  Entrega: ${dateLabel}`, { x: MARGIN, y, size: 9, font: strong, color: muted }); y -= 13;
+    page.drawText('Confira produtos e quantidades. Sem preços.', { x: MARGIN, y, size: 8, font, color: muted }); y -= 18;
   }
   function wrap(value, size, width, selected = font) {
     const out = []; let line = '';
@@ -170,39 +170,39 @@ export async function createSeparationPdf(groups, date, { businessName = 'Pão D
   const sorted = [...groups].sort((a,b) => a.address.localeCompare(b.address, 'pt-BR', {sensitivity:'base'}) || a.customer.localeCompare(b.customer, 'pt-BR', {sensitivity:'base'}));
   newPage();
   for (const group of sorted) {
-    const heading = wrap(group.customer, 13, WIDTH - 2*MARGIN - 20, strong);
+    const heading = wrap(group.customer, 11, WIDTH - 2*MARGIN - 20, strong);
     const address = wrap(group.address || 'Endereço não informado', 9, WIDTH - 2*MARGIN - 20);
-    const needed = 18 + heading.length*16 + address.length*12 + group.orders.reduce((n,o)=>n+o.lines.reduce((m,l)=>m+Math.max(1,wrap(l.label,11,WIDTH-2*MARGIN-40).length)*16+4,0)+12,0);
+    const needed = 12 + heading.length*13 + address.length*10 + group.orders.reduce((n,o)=>n+o.lines.reduce((m,l)=>m+Math.max(1,wrap(l.label,9.5,WIDTH-2*MARGIN-36).length)*12+2,0)+7,0);
     if (y - Math.min(needed, HEIGHT) < BOTTOM) newPage();
-    const boxHeight = heading.length*16 + address.length*12 + 12;
+    const boxHeight = heading.length*13 + address.length*10 + 8;
     page.drawRectangle({x:MARGIN,y:y-boxHeight,width:WIDTH-2*MARGIN,height:boxHeight,color:pale});
     y -= 17;
-    for (const line of heading) { page.drawText(line,{x:MARGIN+10,y,size:13,font:strong,color:ink}); y-=16; }
-    for (const line of address) { page.drawText(line,{x:MARGIN+10,y,size:9,font,color:muted}); y-=12; }
-    y -= 7;
+    for (const line of heading) { page.drawText(line,{x:MARGIN+8,y,size:11,font:strong,color:ink}); y-=13; }
+    for (const line of address) { page.drawText(line,{x:MARGIN+8,y,size:8,font,color:muted}); y-=10; }
+    y -= 4;
     for (const order of group.orders) {
-      if (y-24 < BOTTOM) newPage();
-      page.drawText(`Pedido #${order.publicCode || order.id.slice(0,8)}`,{x:MARGIN+6,y,size:10,font:strong,color:ink}); y-=18;
+      if (y-18 < BOTTOM) newPage();
+      page.drawText(`#${order.publicCode || order.id.slice(0,8)}`,{x:MARGIN+8,y,size:8.5,font:strong,color:ink}); y-=13;
       for (const line of order.lines) {
-        const lines = wrap(`[ ]  ${line.label}`,11,WIDTH-2*MARGIN-30);
-        if (y-lines.length*15 < BOTTOM) newPage();
-        for (const text of lines) { page.drawText(text,{x:MARGIN+16,y,size:11,font,color:ink}); y-=15; }
-        y -= 3;
+        const lines = wrap(`[ ] ${line.label}`,9.5,WIDTH-2*MARGIN-30);
+        if (y-lines.length*12 < BOTTOM) newPage();
+        for (const text of lines) { page.drawText(text,{x:MARGIN+14,y,size:9.5,font,color:ink}); y-=12; }
+        y -= 1;
       }
       if (order.notes) {
-        for (const text of wrap(`Observação: ${order.notes}`,9,WIDTH-2*MARGIN-32)) {
-          if (y-12 < BOTTOM) newPage();
-          page.drawText(text,{x:MARGIN+16,y,size:9,font,color:muted}); y-=12;
+        for (const text of wrap(`Obs.: ${order.notes}`,8,WIDTH-2*MARGIN-32)) {
+          if (y-10 < BOTTOM) newPage();
+          page.drawText(text,{x:MARGIN+14,y,size:8,font,color:muted}); y-=10;
         }
       }
       y -= 7;
     }
-    y -= 10;
+    y -= 5;
   }
   const pages = pdf.getPages();
   pages.forEach((sheet,index) => {
-    sheet.drawText('Lista de separação • sem valores financeiros', {x:MARGIN,y:29,size:8,font,color:muted});
-    sheet.drawText(`${index+1} / ${pages.length}`, {x:WIDTH-MARGIN-32,y:29,size:8,font,color:muted});
+    sheet.drawText('Lista de separação • sem valores financeiros', {x:MARGIN,y:22,size:7,font,color:muted});
+    sheet.drawText(`${index+1} / ${pages.length}`, {x:WIDTH-MARGIN-32,y:22,size:7,font,color:muted});
   });
   return pdf.save();
 }
