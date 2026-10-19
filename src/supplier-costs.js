@@ -28,17 +28,19 @@ export function lineCost(costMap, orderId, index) {
 
 // Consolidado de um período: por produto, por dia e total, só com pedidos não cancelados.
 // O preço por kg é metadado de exibição; não altera custos por linha nem totais.
-export function supplierPeriodReport(orders, costMap, from, to, catalogProducts = []) {
+export function supplierPeriodReport(orders, costMap, from, to, catalogProducts = [], itemFilter = null) {
   const catalogCostById = new Map((catalogProducts || []).map(product => [product.id, product.costCents]));
   const inRange = orders.filter(order => order.date >= from && order.date <= to && statusOf(order) !== 'cancelled');
   const products = new Map();
   const days = new Map();
   let totalCents = 0; let missingLines = 0; let estimatedLines = 0;
   for (const order of inRange) {
+    const matchingItems = (order.items || []).map((item, index) => ({ item, index })).filter(({ item }) => !itemFilter || itemFilter(item));
+    if (!matchingItems.length) continue;
     const day = days.get(order.date) || { date: order.date, orders: 0, costCents: 0 };
     day.orders += 1;
     days.set(order.date, day);
-    (order.items || []).forEach((item, index) => {
+    matchingItems.forEach(({ item, index }) => {
       const cost = lineCost(costMap, order.id, index);
       const weighted = Number(item.weightGrams) > 0;
       const key = JSON.stringify([item.productId || normalize(item.name), weighted]);
