@@ -56,7 +56,7 @@ export function supplierText(groups, date) {
   const totals = supplierTotals(groups);
   const day = supplierDayCost(groups);
   const totalLine = product => product.hasCost ? `${product.label}${costTail(!product.costMissing, product.costCents)}` : product.label;
-  return `Repasse da padaria - ${date}\\n\\nLISTA CONSOLIDADA POR MATERIAL\\n${totals.map(totalLine).join('\\n')}${day.withCosts ? `\\n\\nTOTAL (preço de custo): ${formatMoney(day.totalCents)}${day.missing ? ` — ${day.missing} item(ns) sem custo, total incompleto` : ''}` : ''}`;
+  return `Repasse da padaria - ${date}\n\nLISTA CONSOLIDADA POR MATERIAL\n${totals.map(totalLine).join('\n')}${day.withCosts ? `\n\nTOTAL (preço de custo): ${formatMoney(day.totalCents)}${day.missing ? ` — ${day.missing} item(ns) sem custo, total incompleto` : ''}` : ''}`;
 }
 
 export async function downloadSeparationPdf(groups, date, businessName, supplierName) {
