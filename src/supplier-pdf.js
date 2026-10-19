@@ -125,39 +125,7 @@ export async function createSupplierPdf(groups, date, { businessName = 'Pão Doc
     y -= 40;
     if (day.missing) { page.drawText(`Atenção: ${day.missing} item(ns) sem custo cadastrado; total incompleto.`, { x: MARGIN, y, size: 9, font, color: muted }); y -= 14; }
   }
-  /* Repasse financeiro: somente o consolidado por material. A separação por cliente tem PDF próprio. */
-  for (const group of []) {
-    clientHeader(group);
-    for (const order of group.orders) {
-      if (y - 50 < BOTTOM) { newPage(); clientHeader(group, true); }
-      orderHeader(order);
-      const continueOrder = () => { newPage(); clientHeader(group, true); orderHeader(order, true); };
-      for (const line of order.lines) {
-        const lines = wrap(line.label, 11, WIDTH - 2 * MARGIN - (costed ? 150 : 32));
-        if (y - Math.min(lines.length * 16 + 10, 120) < BOTTOM) continueOrder();
-        checkbox(line.checked, MARGIN + 4, y, line.label);
-        if (costed) drawCost('costKnown' in line && line.costKnown ? formatMoney(line.costCents) : 'custo não informado', y, 10);
-        for (const text of lines) {
-          if (y - 16 < BOTTOM) continueOrder();
-          page.drawText(text, { x: MARGIN + 26, y, size: 11, font, color: ink });
-          y -= 16;
-        }
-        y -= 10;
-      }
-      if (order.notes) {
-        for (const text of wrap(`Observação: ${order.notes}`, 9, WIDTH - 2 * MARGIN - 26)) {
-          if (y - 14 < BOTTOM) continueOrder();
-          page.drawText(text, { x: MARGIN + 26, y, size: 9, font, color: muted }); y -= 14;
-        }
-      }
-      if (order.costCents != null) { drawCost(`Subtotal do pedido: ${formatMoney(order.costCents)}`, y, 9.5, strong); y -= 14; }
-      y -= 12;
-      page.drawLine({ start: { x: MARGIN, y }, end: { x: WIDTH - MARGIN, y }, thickness: 0.5, color: pale });
-      y -= 20;
-    }
-    y -= 4;
-  }
-  const pages = pdf.getPages();
+  // Repasse financeiro: somente o consolidado por material.\n  const pages = pdf.getPages();
   pages.forEach((sheet, index) => {
     sheet.drawText('Conferência da cópia em PDF - alterações não sincronizam com o site.',
       { x: MARGIN, y: 31, size: 8, font, color: muted });
