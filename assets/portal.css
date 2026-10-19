@@ -395,10 +395,10 @@ body:not(.portal-mode) #portal-floating-host,body:not(.portal-mode) .portal-bott
 
 
 /* Aviso de fechamento legível, sem painel branco, mantendo o catálogo disponível. */
-.portal-store-closed{margin:18px 0 0;padding:22px 24px;border:1px solid #a45a3c;border-left:5px solid #8e3e24;border-radius:14px;background:#f8e6d5;color:#45251b}
-.portal-store-closed__label{display:inline-block;margin-bottom:9px;color:#7b321f;font-size:.72rem;font-weight:800;letter-spacing:.1em}
-.portal-store-closed h2{max-width:780px;margin:0 0 10px;color:#45251b;font-size:clamp(1.2rem,2.5vw,1.65rem);line-height:1.25}
-.portal-store-closed p{max-width:780px;margin:0;color:#563326;font-size:1rem;line-height:1.6}
+.portal-store-closed{margin:18px 0 0;padding:22px 24px;border:1px solid #ffffff70;border-left:4px solid #ffffff;border-radius:14px;background:transparent;color:#fff}
+.portal-store-closed__label{display:inline-block;margin-bottom:9px;color:#fff;font-size:.72rem;font-weight:800;letter-spacing:.1em}
+.portal-store-closed h2{max-width:780px;margin:0 0 10px;color:#fff;font-size:clamp(1.2rem,2.5vw,1.65rem);line-height:1.25}
+.portal-store-closed p{max-width:780px;margin:0;color:#fff;font-size:1rem;line-height:1.6}
 .portal-store-closed__action{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;max-width:460px;min-height:54px;margin-top:18px;padding:13px 20px;border-radius:12px;background:#168b50;color:#fff;text-align:center;text-decoration:none;font-size:.98rem;font-weight:800;box-shadow:0 5px 15px #168b5033}
 .portal-store-closed__action svg{width:24px;height:24px;flex:0 0 24px}
 .portal-store-closed__action:hover{background:#107442;transform:translateY(-1px)}
