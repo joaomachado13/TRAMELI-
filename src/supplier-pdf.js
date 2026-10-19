@@ -216,7 +216,7 @@ export async function createSeparationPdf(groups, date, { businessName = 'Pão D
       if (y-24 < BOTTOM) newPage();
       page.drawText(`Pedido #${order.publicCode || order.id.slice(0,8)}`,{x:MARGIN+6,y,size:10,font:strong,color:ink}); y-=18;
       for (const line of order.lines) {
-        const lines = wrap(`□  ${line.label}`,11,WIDTH-2*MARGIN-30);
+        const lines = wrap(`[ ]  ${line.label}`,11,WIDTH-2*MARGIN-30);
         if (y-lines.length*15 < BOTTOM) newPage();
         for (const text of lines) { page.drawText(text,{x:MARGIN+16,y,size:11,font,color:ink}); y-=15; }
         y -= 3;
