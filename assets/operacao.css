@@ -352,3 +352,11 @@ dialog{width:min(670px,calc(100vw - 24px));max-height:min(90vh,900px);padding:0;
 #operation-view .kanban-column.is-collapsed>header>div:first-child{display:block;writing-mode:horizontal-tb;transform:none;min-width:0;flex:1}
 #operation-view .kanban-column.is-collapsed>header h3{font-size:.92rem;font-weight:600;line-height:1.25;letter-spacing:normal;white-space:normal;overflow-wrap:anywhere}
 #operation-view .kanban-column.is-collapsed .kanban-column__tools{margin-left:auto;flex:0 0 auto}
+
+
+/* Always-on summary inside collapsed Kanban columns. */
+#operation-view .kanban-column.is-collapsed .kanban-column__heading{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0;flex:1}
+#operation-view .kanban-column.is-collapsed .kanban-column__heading h3{margin:0;font-size:.92rem;font-weight:650;line-height:1.25;letter-spacing:normal}
+#operation-view .kanban-column.is-collapsed .kanban-column__summary{display:block;color:var(--color-text-secondary);font-size:.72rem;line-height:1.3;white-space:normal;overflow-wrap:anywhere}
+#operation-view .kanban-column.is-collapsed .kanban-progress{display:block;width:100%;height:4px;margin-top:2px;overflow:hidden;border-radius:99px;background:var(--color-border)}
+#operation-view .kanban-column.is-collapsed .kanban-progress span{display:block;height:100%;border-radius:inherit;background:var(--color-success,#4d936b);transition:width .2s ease}
