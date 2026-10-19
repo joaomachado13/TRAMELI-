@@ -132,7 +132,7 @@ function localOrderCode(createdAt) {
 }
 const statusLabels = { received: 'A conferir', confirmed: 'Conferido', packing: 'Em separação', ready: 'Pronto', delivered: 'Entregue', cancelled: 'Cancelado' };
 const nextStatus = { received: 'confirmed', confirmed: 'ready', packing: 'ready', ready: 'delivered' };
-const previousStatus = { confirmed: 'received', packing: 'confirmed', ready: 'confirmed' };
+const previousStatus = { confirmed: 'received', packing: 'confirmed', ready: 'confirmed', delivered: 'ready' };
 const orderStatus = order => order.status || (order.checked ? 'confirmed' : 'received');
 const paymentLabels = { pix_manual: 'Pix', cash: 'Dinheiro', bank: 'Transferência', other: 'Acordado com a proprietária', unspecified: 'Não informado' };
 const operationSettingsKey = 'trameli-operation-settings-v1';
@@ -158,9 +158,8 @@ function suggestedOperationDate() {
   const today = `${clock.year}-${String(clock.month).padStart(2, '0')}-${String(clock.day).padStart(2, '0')}`;
   const [hour, minute] = operationRolloverTime().split(':').map(Number);
   const afterRollover = clock.hour * 60 + clock.minute >= hour * 60 + minute;
-  const todayPending = orders.some(order => order.date === today && !['delivered', 'cancelled'].includes(orderStatus(order)));
   let candidate;
-  if (!afterRollover || todayPending) candidate = today;
+  if (!afterRollover) candidate = today;
   else {
     const nextDate = new Date(Date.UTC(clock.year, clock.month - 1, clock.day + 1));
     candidate = `${nextDate.getUTCFullYear()}-${String(nextDate.getUTCMonth() + 1).padStart(2, '0')}-${String(nextDate.getUTCDate()).padStart(2, '0')}`;
@@ -498,7 +497,7 @@ async function moveOrder(id, target) {
   if (!order || movingOrders.has(id)) return;
   const master = !live || live.role === 'master';
   if (!statusPath(orderStatus(order), target, master).length) {
-    kanbanFeedback.textContent = 'Esta mudança não está disponível. Pedidos entregues ficam finalizados; somente Master pode voltar etapas.';
+    kanbanFeedback.textContent = 'Esta mudança não está disponível. Somente a conta Master pode reabrir um pedido entregue.';
     return;
   }
   movingOrders.add(id);
@@ -925,6 +924,40 @@ dateInput.addEventListener('change', async () => {
   }
   render();
 });
+
+let lastAutomaticDate = dateInput.value;
+async function refreshAutomaticOperationDate() {
+  if (!live?.operator || document.hidden) return;
+  const clock = saoPauloClock();
+  const today = `${clock.year}-${String(clock.month).padStart(2, '0')}-${String(clock.day).padStart(2, '0')}`;
+  const [hour, minute] = operationRolloverTime().split(':').map(Number);
+  if (clock.hour * 60 + clock.minute < hour * 60 + minute) return;
+  const nextDate = suggestedOperationDate();
+  if (dateInput.value === today && nextDate !== today) {
+    dateInput.value = nextDate;
+    lastAutomaticDate = nextDate;
+    try {
+      await live.materializeRecurringOrders(nextDate);
+      orders = readOrders();
+    } catch (cause) {
+      kanbanFeedback.textContent = 'A data virou, mas não foi possível gerar as recorrências: ' + cause.message;
+      orders = readOrders();
+    }
+    render();
+    return;
+  }
+  // On first load after the cutoff, select the next delivery day even if the
+  // current date input was initialized before remote orders finished loading.
+  if (dateInput.value === today && lastAutomaticDate !== nextDate) {
+    dateInput.value = nextDate;
+    lastAutomaticDate = nextDate;
+    try { await live.materializeRecurringOrders(nextDate); orders = readOrders(); }
+    catch (cause) { kanbanFeedback.textContent = 'Não foi possível gerar as recorrências: ' + cause.message; }
+    render();
+  }
+}
+setInterval(() => { void refreshAutomaticOperationDate(); }, 30000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) void refreshAutomaticOperationDate(); });
 searchInput.addEventListener('input', render);
 const businessLabel = () => live?.settings?.business_name || window.TrameliSettings?.businessName || 'Pão Doce';
 async function buildPeriodReport() {
