@@ -394,17 +394,12 @@ body:not(.portal-mode) #portal-floating-host,body:not(.portal-mode) .portal-bott
 .portal-recurring-request fieldset p,.portal-recurring-request__status{margin:9px 0 0;color:var(--color-text-secondary);font-size:.76rem;line-height:1.5}
 
 
-/* Aviso de fechamento legível, sem painel branco, mantendo o catálogo disponível. */
-.portal-store-closed{margin:18px 0 0;padding:22px 24px;border:1px solid #ffffff70;border-left:4px solid #ffffff;border-radius:14px;background:transparent;color:#fff}
-.portal-store-closed__label{display:inline-block;margin-bottom:9px;color:#fff;font-size:.72rem;font-weight:800;letter-spacing:.1em}
-.portal-store-closed h2{max-width:780px;margin:0 0 10px;color:#fff;font-size:clamp(1.2rem,2.5vw,1.65rem);line-height:1.25}
-.portal-store-closed p{max-width:780px;margin:0;color:#fff;font-size:1rem;line-height:1.6}
-.portal-store-closed__action{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;max-width:460px;min-height:54px;margin-top:18px;padding:13px 20px;border-radius:12px;background:#168b50;color:#fff;text-align:center;text-decoration:none;font-size:.98rem;font-weight:800;box-shadow:0 5px 15px #168b5033}
-.portal-store-closed__action svg{width:24px;height:24px;flex:0 0 24px}
-.portal-store-closed__action:hover{background:#107442;transform:translateY(-1px)}
-.portal-support-whatsapp--closed{gap:12px;min-height:60px;padding:13px 18px;border:2px solid #fff;background:#168b50;color:#fff;box-shadow:0 10px 28px #08783e55;animation:portal-whatsapp-pulse 2s ease-in-out infinite}
-.portal-support-whatsapp--closed small{font-size:.68rem;opacity:1;letter-spacing:.04em}
-.portal-support-whatsapp--closed strong{font-size:.9rem}
-.portal-support-whatsapp--closed:hover{background:#107442}
-@keyframes portal-whatsapp-pulse{0%,100%{box-shadow:0 10px 28px #08783e55}50%{box-shadow:0 10px 32px #08783e88}}
-@media(max-width:700px){.portal-store-closed{margin-top:16px;padding:18px 16px}.portal-store-closed p{font-size:.94rem}.portal-store-closed__action{font-size:.92rem}.portal-support-whatsapp--closed{right:10px;bottom:78px;min-height:58px;padding:12px 15px}.portal-support-whatsapp--closed span{display:grid}.portal-support-whatsapp--closed strong{font-size:.8rem}}
+/* Aviso de fechamento: contraste reforçado no portal, inclusive contra regras globais de cards/aside. */
+.portal-welcome .portal-store-closed{display:block!important;margin:18px 0 0!important;padding:20px 22px!important;border:1px solid #ffffff90!important;border-left:4px solid #ffffff!important;border-radius:14px!important;background:transparent!important;background-color:transparent!important;color:#ffffff!important;box-shadow:none!important}
+.portal-welcome .portal-store-closed__label{display:inline-block!important;margin-bottom:9px!important;color:#ffffff!important;font-size:.76rem!important;font-weight:800!important;letter-spacing:.1em!important}
+.portal-welcome .portal-store-closed h2{max-width:780px!important;margin:0 0 10px!important;color:#ffffff!important;font-size:clamp(1.2rem,2.5vw,1.65rem)!important;font-weight:800!important;line-height:1.3!important;text-shadow:0 1px 2px #592715!important}
+.portal-welcome .portal-store-closed p{max-width:780px!important;margin:0!important;color:#ffffff!important;font-size:1rem!important;font-weight:600!important;line-height:1.65!important;text-shadow:0 1px 2px #592715!important}
+.portal-welcome .portal-store-closed__action{display:flex!important;align-items:center!important;justify-content:center!important;gap:12px!important;width:100%!important;max-width:460px!important;min-height:54px!important;margin-top:18px!important;padding:13px 20px!important;border-radius:12px!important;background:#168b50!important;color:#ffffff!important;text-align:center!important;text-decoration:none!important;font-size:.98rem!important;font-weight:800!important;box-shadow:0 5px 15px #168b5033!important}
+.portal-welcome .portal-store-closed__action svg{width:24px!important;height:24px!important;flex:0 0 24px!important}
+.portal-welcome .portal-store-closed__action:hover{background:#107442!important;transform:translateY(-1px)}
+@media(max-width:700px){.portal-welcome .portal-store-closed{margin-top:16px!important;padding:18px 16px!important}.portal-welcome .portal-store-closed p{font-size:.96rem!important}.portal-welcome .portal-store-closed__action{font-size:.92rem!important}}
