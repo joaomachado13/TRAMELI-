@@ -10,7 +10,7 @@ export const stages = [
 export function statusPath(from, to, master = false) {
   const start = stages.findIndex(stage => stage.key === from);
   const end = stages.findIndex(stage => stage.key === to);
-  if (start < 0 || end < 0 || start === end || from === 'delivered') return [];
+  if (start < 0 || end < 0 || start === end || (from === 'delivered' && !master)) return [];
   if (end < start && !master) return [];
   const step = end > start ? 1 : -1;
   const path = [];
