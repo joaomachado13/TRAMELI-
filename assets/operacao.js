@@ -1,5 +1,5 @@
 import { stages, statusPath, progressOrder } from '../src/operation-flow.js';
-import { supplierGroups, supplierTotals, supplierText, supplierDayCost, downloadSupplierPdf, itemCheckKey } from '../src/supplier-checklist.js';
+import { supplierGroups, supplierTotals, supplierText, supplierDayCost, downloadSupplierPdf, downloadSeparationPdf, itemCheckKey } from '../src/supplier-checklist.js';
 import { closingPeriod } from '../src/billing-cycle.js';
 import { costMapFromRows, supplierPeriodReport, supplierPeriodText, periodLabel, formatMoney as formatCost } from '../src/supplier-costs.js';
 import { downloadSupplierPeriodPdf } from '../src/supplier-period-pdf.js';
@@ -42,6 +42,9 @@ const supplierTotalsHost = document.getElementById('supplier-list-totals');
 const supplierCopy = document.getElementById('copy-supplier-list');
 const supplierPdf = document.getElementById('download-supplier-pdf');
 const supplierFeedback = document.getElementById('supplier-list-feedback');
+const separationSupplier = document.getElementById('separation-supplier');
+const separationPdf = document.getElementById('download-separation-pdf');
+const separationFeedback = document.getElementById('separation-list-feedback');
 const supplierPeriodSelect = document.getElementById('supplier-period');
 const supplierPeriodLabel = document.getElementById('supplier-period-label');
 const periodKinds = { diario: 'Diário', quinzenal: 'Quinzenal', mensal: 'Mensal' };
@@ -395,12 +398,13 @@ function renderSupplierList() {
   if (supplierTotalsHost) supplierTotalsHost.innerHTML = totals.length
     ? `<ul>${totals.map(product => `<li><strong>${product.grams ? `${product.grams} g` : `${product.quantity}×`}</strong><span>${escapeHtml(product.name)}</span>${product.hasCost ? `<em class="supplier-cost">${product.costMissing ? 'custo não informado' : escapeHtml(formatCost(product.costCents))}</em>` : ''}</li>`).join('')}</ul>${(() => { const day = supplierDayCost(groups); return day.withCosts ? `<p class="supplier-cost-total"><strong>Total a pagar à padaria (custo): ${escapeHtml(formatCost(day.totalCents))}</strong>${day.missing ? ` · ${day.missing} item(ns) sem custo, total incompleto` : ''}</p>` : ''; })()}`
     : '<p class="supplier-list__empty">Nenhum item nesta data.</p>';
-  supplierList.innerHTML = groups.length ? groups.map(group => `<section class="supplier-client"><header><h3>${escapeHtml(group.customer)}</h3><p>${escapeHtml(group.address)}</p></header>${group.orders.map(order => `<article class="supplier-order${order.checked ? ' is-complete' : ''}" data-supplier-order="${escapeHtml(order.id)}"><label class="supplier-order__heading"><input type="checkbox" data-supplier-check-order="${escapeHtml(order.id)}" ${order.checked ? 'checked' : ''}><strong>Pedido #${escapeHtml(orderCode(order))}</strong><span>${order.lines.filter(line => line.checked).length}/${order.lines.length} itens conferidos</span></label><ul>${order.lines.map((line, index) => `<li><label class="supplier-item${line.checked ? ' is-complete' : ''}"><input type="checkbox" data-supplier-check-item="${index}" data-id="${escapeHtml(order.id)}" ${line.checked ? 'checked' : ''}><span>${escapeHtml(line.label)}</span></label></li>`).join('')}</ul>${order.notes ? `<p class="supplier-order__notes">Observação: ${escapeHtml(order.notes)}</p>` : ''}</article>`).join('')}</section>`).join('') : '<p class="supplier-list__empty">Nenhum pedido nesta data.</p>';
-  supplierList.querySelectorAll('[data-supplier-check-order]').forEach(input => {
+  if (supplierList) supplierList.innerHTML = '';
+  supplierList?.querySelectorAll('[data-supplier-check-order]').forEach(input => {
     const order = groups.flatMap(group => group.orders).find(order => order.id === input.dataset.supplierCheckOrder);
     input.indeterminate = !order.checked && order.lines.some(line => line.checked);
   });
   const hasExport = selectedPeriod().kind === 'diario' ? groups.length > 0 : periodOrders(selectedPeriod()).length > 0;
+  if (separationPdf) separationPdf.disabled = !groups.some(group => group.orders.some(order => order.lines.some(line => separationSupplier?.value === 'sandra' ? ['broa','biscoito provolone','bolacha de nata','biscoito de queijo','biscoito da vovó'].includes(line.name.trim().toLocaleLowerCase('pt-BR')) : !['broa','biscoito provolone','bolacha de nata','biscoito de queijo','biscoito da vovó'].includes(line.name.trim().toLocaleLowerCase('pt-BR')))));
   supplierCopy.disabled = !hasExport;
   // Mantenha o botão de PDF clicável nos períodos agregados para que a própria ação informe se faltam pedidos ou custos, em vez de parecer que não responde.
   if (supplierPdf && !supplierPdf.dataset.busy) supplierPdf.disabled = selectedPeriod().kind === 'diario' && !hasExport;
@@ -932,10 +936,37 @@ supplierList.addEventListener('change', event => {
     supplierFeedback.textContent = 'Conferência salva neste navegador. Marcar itens não altera a etapa do pedido.';
   } catch { supplierFeedback.textContent = 'A conferência está marcada, mas este navegador não conseguiu salvá-la. Baixe o PDF antes de sair.'; }
   renderSupplierList();
-  [...supplierList.querySelectorAll('input')].find(current => index === undefined
+  [...supplierList?.querySelectorAll('input') || []].find(current => index === undefined
     ? current.dataset.supplierCheckOrder === orderId
     : current.dataset.id === orderId && current.dataset.supplierCheckItem === index)?.focus({ preventScroll: true });
 });
+
+async function generateSeparationPdf() {
+  if (!separationPdf || separationPdf.dataset.busy) return;
+  separationPdf.dataset.busy = 'true'; separationPdf.disabled = true;
+  if (separationFeedback) separationFeedback.textContent = 'Gerando PDF de separação…';
+  try {
+    const provider = separationSupplier?.value || 'divano';
+    const isSandraItem = name => ['broa','biscoito provolone','bolacha de nata','biscoito de queijo','biscoito da vovó'].includes(String(name || '').trim().toLocaleLowerCase('pt-BR'));
+    const groups = checklistGroups().map(group => ({
+      ...group,
+      orders: group.orders.map(order => ({ ...order, lines: order.lines.filter(line => provider === 'sandra' ? isSandraItem(line.name) : !isSandraItem(line.name)) }))
+        .filter(order => order.lines.length)
+    })).filter(group => group.orders.length);
+    if (!groups.length) throw new Error('Não há itens dessa padaria para separar na data selecionada.');
+    await downloadSeparationPdf(groups, dateInput.value, businessLabel(), provider === 'sandra' ? 'Padaria Sandra' : 'Padaria do Divano');
+    if (separationFeedback) separationFeedback.textContent = 'PDF de separação baixado. Clientes ordenados por endereço/rua e depois por nome; sem valores financeiros.';
+  } catch (error) {
+    if (separationFeedback) separationFeedback.textContent = `Não foi possível gerar a lista: ${error.message}`;
+  } finally {
+    delete separationPdf.dataset.busy;
+    if (separationPdf) separationPdf.disabled = false;
+    renderSupplierList();
+  }
+}
+separationPdf?.addEventListener('click', generateSeparationPdf);
+separationSupplier?.addEventListener('change', renderSupplierList);
+
 supplierPdf?.addEventListener('click', async () => {
   if (supplierPdf.dataset.busy) return;
   supplierPdf.dataset.busy = 'true'; supplierPdf.disabled = true;
@@ -948,8 +979,8 @@ supplierPdf?.addEventListener('click', async () => {
       if (costsAvailable()) await loadCostsFor(orders.filter(order => order.date === exportDate && orderStatus(order) !== 'cancelled'));
       await downloadSupplierPdf(checklistGroups(), exportDate, businessLabel());
       supplierFeedback.textContent = costsAvailable()
-        ? 'PDF baixado com a lista completa e os pedidos por cliente, com preço de custo e total. As marcações no PDF são independentes do site.'
-        : 'PDF baixado sem valores: os custos só aparecem com o banco conectado. As marcações no PDF são independentes do site.';
+        ? 'PDF de repasse baixado com a lista consolidada por material e os valores de custo.'
+        : 'PDF de repasse baixado com a lista consolidada por material. Os custos só aparecem com o banco conectado.';
     } else {
       const { period, report } = await buildPeriodReport();
       await downloadSupplierPeriodPdf(report, periodKinds[period.kind], businessLabel());

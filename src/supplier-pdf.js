@@ -22,7 +22,7 @@ export async function createSupplierPdf(groups, date, { businessName = 'Pão Doc
   const dateLabel = new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR');
   pdf.setTitle(`Repasse da padaria - ${dateLabel}`);
   pdf.setAuthor(businessName);
-  pdf.setSubject('Lista completa de itens e pedidos por cliente, sem valores, com caixas de conferência');
+  pdf.setSubject('Lista consolidada por material, com valores de custo quando disponíveis');
   let page;
   let y;
   let fieldIndex = 0;
@@ -61,7 +61,7 @@ export async function createSupplierPdf(groups, date, { businessName = 'Pão Doc
     y -= 34;
     page.drawText(`Entrega: ${dateLabel}   |   ${groups.length} clientes`, { x: MARGIN, y, size: 10, font, color: muted });
     y -= 20;
-    page.drawText(costed ? 'Marque os itens separados e o pedido completo. Valores pelo preço de custo.' : 'Marque os itens separados e o pedido completo. Sem valores.', { x: MARGIN, y, size: 9, font, color: muted });
+    page.drawText(costed ? 'Consolidado por material. Valores pelo preço de custo.' : 'Consolidado por material. Sem valores.', { x: MARGIN, y, size: 9, font, color: muted });
     y -= 25;
   }
 
@@ -125,45 +125,84 @@ export async function createSupplierPdf(groups, date, { businessName = 'Pão Doc
     y -= 40;
     if (day.missing) { page.drawText(`Atenção: ${day.missing} item(ns) sem custo cadastrado; total incompleto.`, { x: MARGIN, y, size: 9, font, color: muted }); y -= 14; }
   }
-  newPage();
-  page.drawText('2. Pedidos por cliente', { x: MARGIN, y, size: 13, font: strong, color: ink });
-  y -= 26;
-  for (const group of groups) {
-    clientHeader(group);
-    for (const order of group.orders) {
-      if (y - 50 < BOTTOM) { newPage(); clientHeader(group, true); }
-      orderHeader(order);
-      const continueOrder = () => { newPage(); clientHeader(group, true); orderHeader(order, true); };
-      for (const line of order.lines) {
-        const lines = wrap(line.label, 11, WIDTH - 2 * MARGIN - (costed ? 150 : 32));
-        if (y - Math.min(lines.length * 16 + 10, 120) < BOTTOM) continueOrder();
-        checkbox(line.checked, MARGIN + 4, y, line.label);
-        if (costed) drawCost('costKnown' in line && line.costKnown ? formatMoney(line.costCents) : 'custo não informado', y, 10);
-        for (const text of lines) {
-          if (y - 16 < BOTTOM) continueOrder();
-          page.drawText(text, { x: MARGIN + 26, y, size: 11, font, color: ink });
-          y -= 16;
-        }
-        y -= 10;
-      }
-      if (order.notes) {
-        for (const text of wrap(`Observação: ${order.notes}`, 9, WIDTH - 2 * MARGIN - 26)) {
-          if (y - 14 < BOTTOM) continueOrder();
-          page.drawText(text, { x: MARGIN + 26, y, size: 9, font, color: muted }); y -= 14;
-        }
-      }
-      if (order.costCents != null) { drawCost(`Subtotal do pedido: ${formatMoney(order.costCents)}`, y, 9.5, strong); y -= 14; }
-      y -= 12;
-      page.drawLine({ start: { x: MARGIN, y }, end: { x: WIDTH - MARGIN, y }, thickness: 0.5, color: pale });
-      y -= 20;
-    }
-    y -= 4;
-  }
-  const pages = pdf.getPages();
+  // Repasse financeiro: somente o consolidado por material.\n  const pages = pdf.getPages();
   pages.forEach((sheet, index) => {
     sheet.drawText('Conferência da cópia em PDF - alterações não sincronizam com o site.',
       { x: MARGIN, y: 31, size: 8, font, color: muted });
     sheet.drawText(`${index + 1} / ${pages.length}`, { x: WIDTH - MARGIN - 32, y: 31, size: 8, font, color: muted });
+  });
+  return pdf.save();
+}
+
+export async function createSeparationPdf(groups, date, { businessName = 'Pão Doce', supplierName = 'Padaria do Divano', regular, bold }) {
+  if (!groups.length) throw new Error('Não há pedidos para separar nesta data.');
+  const pdf = await PDFDocument.create();
+  pdf.registerFontkit(fontkit);
+  const font = await pdf.embedFont(regular, { subset: true });
+  const strong = await pdf.embedFont(bold, { subset: true });
+  const WIDTH = 595.28, HEIGHT = 841.89, MARGIN = 42, BOTTOM = 52;
+  const ink = rgb(43 / 255, 39 / 255, 36 / 255);
+  const muted = rgb(98 / 255, 90 / 255, 85 / 255);
+  const pale = rgb(244 / 255, 222 / 255, 213 / 255);
+  const primary = rgb(122 / 255, 59 / 255, 40 / 255);
+  const dateLabel = new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR');
+  pdf.setTitle(`Lista de separação - ${supplierName} - ${dateLabel}`);
+  pdf.setAuthor(businessName);
+  pdf.setSubject('Lista operacional por rua e cliente, sem valores');
+  let page, y;
+  function newPage() {
+    page = pdf.addPage([WIDTH, HEIGHT]); y = HEIGHT - MARGIN;
+    page.drawText(businessName, { x: MARGIN, y, size: 9, font: strong, color: primary }); y -= 22;
+    page.drawText('Lista de separação', { x: MARGIN, y, size: 22, font: strong, color: ink }); y -= 25;
+    page.drawText(`${supplierName}  •  Entrega: ${dateLabel}`, { x: MARGIN, y, size: 11, font: strong, color: muted }); y -= 17;
+    page.drawText('Confira cada produto e quantidade. Lista sem preços.', { x: MARGIN, y, size: 9, font, color: muted }); y -= 25;
+  }
+  function wrap(value, size, width, selected = font) {
+    const out = []; let line = '';
+    for (const word of String(value || '').split(/\s+/).filter(Boolean)) {
+      const next = line ? `${line} ${word}` : word;
+      if (selected.widthOfTextAtSize(next, size) <= width) line = next;
+      else { if (line) out.push(line); line = word; }
+    }
+    if (line) out.push(line);
+    return out.length ? out : [''];
+  }
+  const sorted = [...groups].sort((a,b) => a.address.localeCompare(b.address, 'pt-BR', {sensitivity:'base'}) || a.customer.localeCompare(b.customer, 'pt-BR', {sensitivity:'base'}));
+  newPage();
+  for (const group of sorted) {
+    const heading = wrap(group.customer, 13, WIDTH - 2*MARGIN - 20, strong);
+    const address = wrap(group.address || 'Endereço não informado', 9, WIDTH - 2*MARGIN - 20);
+    const needed = 18 + heading.length*16 + address.length*12 + group.orders.reduce((n,o)=>n+o.lines.reduce((m,l)=>m+Math.max(1,wrap(l.label,11,WIDTH-2*MARGIN-40).length)*16+4,0)+12,0);
+    if (y - Math.min(needed, HEIGHT) < BOTTOM) newPage();
+    const boxHeight = heading.length*16 + address.length*12 + 12;
+    page.drawRectangle({x:MARGIN,y:y-boxHeight,width:WIDTH-2*MARGIN,height:boxHeight,color:pale});
+    y -= 17;
+    for (const line of heading) { page.drawText(line,{x:MARGIN+10,y,size:13,font:strong,color:ink}); y-=16; }
+    for (const line of address) { page.drawText(line,{x:MARGIN+10,y,size:9,font,color:muted}); y-=12; }
+    y -= 7;
+    for (const order of group.orders) {
+      if (y-24 < BOTTOM) newPage();
+      page.drawText(`Pedido #${order.publicCode || order.id.slice(0,8)}`,{x:MARGIN+6,y,size:10,font:strong,color:ink}); y-=18;
+      for (const line of order.lines) {
+        const lines = wrap(`[ ]  ${line.label}`,11,WIDTH-2*MARGIN-30);
+        if (y-lines.length*15 < BOTTOM) newPage();
+        for (const text of lines) { page.drawText(text,{x:MARGIN+16,y,size:11,font,color:ink}); y-=15; }
+        y -= 3;
+      }
+      if (order.notes) {
+        for (const text of wrap(`Observação: ${order.notes}`,9,WIDTH-2*MARGIN-32)) {
+          if (y-12 < BOTTOM) newPage();
+          page.drawText(text,{x:MARGIN+16,y,size:9,font,color:muted}); y-=12;
+        }
+      }
+      y -= 7;
+    }
+    y -= 10;
+  }
+  const pages = pdf.getPages();
+  pages.forEach((sheet,index) => {
+    sheet.drawText('Lista de separação • sem valores financeiros', {x:MARGIN,y:29,size:8,font,color:muted});
+    sheet.drawText(`${index+1} / ${pages.length}`, {x:WIDTH-MARGIN-32,y:29,size:8,font,color:muted});
   });
   return pdf.save();
 }
