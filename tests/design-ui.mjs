@@ -172,6 +172,14 @@ try {
       assert(await evaluate('!document.querySelector("[data-report-print]").disabled'), 'PDF do relatório permaneceu indisponível com dados.');
     }
     if (route === 'loja') {
+      // O teste de checkout semanal precisa ser independente do horário em que o CI roda.
+      // Simula a loja aberta apenas no navegador de teste; não altera configuração de produção.
+      await evaluate(`(() => {
+        const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Sao_Paulo', hour: '2-digit', hourCycle: 'h23' })
+          .formatToParts(new Date()).filter(part => part.type !== 'literal').map(part => [part.type, Number(part.value)]));
+        const cutoffTime = parts.hour < 6 ? '05:59' : '23:59';
+        window.TrameliSettings = { ...(window.TrameliSettings || {}), cutoffTime };
+      })()`);
       await evaluate('Object.keys(localStorage).filter(key=>key.startsWith("trameli-weekly-plan-v1:")).forEach(key=>localStorage.removeItem(key))');
       await evaluate('document.querySelector("[data-view=week]").click()');
       await waitFor('.portal-week');
