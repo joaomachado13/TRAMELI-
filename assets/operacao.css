@@ -360,3 +360,19 @@ dialog{width:min(670px,calc(100vw - 24px));max-height:min(90vh,900px);padding:0;
 #operation-view .kanban-column.is-collapsed .kanban-column__summary{display:block;color:var(--color-text-secondary);font-size:.72rem;line-height:1.3;white-space:normal;overflow-wrap:anywhere}
 #operation-view .kanban-column.is-collapsed .kanban-progress{display:block;width:100%;height:4px;margin-top:2px;overflow:hidden;border-radius:99px;background:var(--color-border)}
 #operation-view .kanban-column.is-collapsed .kanban-progress span{display:block;height:100%;border-radius:inherit;background:var(--color-success,#4d936b);transition:width .2s ease}
+
+
+/* Kanban AOD: recolhido vira um resumo baixo e horizontal, sem cartões vazios altos. */
+#operation-view .kanban{align-items:start;grid-auto-rows:max-content}
+#operation-view .kanban-column.is-collapsed{height:auto;min-height:0;max-height:none;min-width:0;width:100%;max-width:none;align-self:start;padding:10px 12px;border-radius:13px}
+#operation-view .kanban-column.is-collapsed>header{display:flex;flex-direction:row;align-items:center;gap:10px;min-height:0;padding:0}
+#operation-view .kanban-column.is-collapsed .kanban-column__heading{display:grid;grid-template-columns:minmax(0,1fr);gap:3px;min-width:0;flex:1}
+#operation-view .kanban-column.is-collapsed .kanban-column__heading h3{font-size:.9rem;font-weight:650;line-height:1.2;white-space:nowrap}
+#operation-view .kanban-column.is-collapsed .kanban-column__summary{font-size:.72rem;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#operation-view .kanban-column.is-collapsed .kanban-column__tools{display:flex;align-items:center;gap:7px;flex:0 0 auto;margin-left:0}
+#operation-view .kanban-column.is-collapsed .kanban-column__tools>strong{min-width:26px;height:28px;font-size:.84rem}
+#operation-view .kanban-column.is-collapsed .kanban-collapse{width:30px;height:30px;flex-basis:30px;border-radius:9px}
+#operation-view .kanban-column.is-collapsed .kanban-progress{height:3px;margin-top:3px}
+#operation-view .kanban-column.is-collapsed .kanban-column__cards{display:none}
+@media(min-width:900px){#operation-view .kanban{grid-auto-columns:minmax(0,1fr);grid-auto-flow:column;overflow-x:visible;gap:12px}}
+@media(max-width:899px){#operation-view .kanban{grid-auto-columns:minmax(220px,78vw)}}
