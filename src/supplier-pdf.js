@@ -191,7 +191,7 @@ export async function createSeparationPdf(groups, date, { businessName = 'Pão D
   }
   function wrap(value, size, width, selected = font) {
     const out = []; let line = '';
-    for (const word of String(value || '').split(/\\s+/).filter(Boolean)) {
+    for (const word of String(value || '').split(/\s+/).filter(Boolean)) {
       const next = line ? `${line} ${word}` : word;
       if (selected.widthOfTextAtSize(next, size) <= width) line = next;
       else { if (line) out.push(line); line = word; }
