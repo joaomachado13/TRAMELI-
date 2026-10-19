@@ -25,7 +25,7 @@ export function supplierGroups(orders, date, checked = new Set(), costMap = null
       checked: lines.length > 0 && lines.every(line => line.checked),
       ...(costMap ? { costCents: lines.reduce((sum, line) => sum + (line.costCents || 0), 0), costMissing: lines.filter(line => !line.costKnown).length } : {}) });
   }
-  return [...groups.values()].sort((a, b) => a.customer.localeCompare(b.customer, 'pt-BR'));
+  return [...groups.values()].sort((a, b) => a.address.localeCompare(b.address, 'pt-BR', { sensitivity: 'base' }) || a.customer.localeCompare(b.customer, 'pt-BR', { sensitivity: 'base' }));
 }
 
 export function supplierTotals(groups) {
@@ -56,11 +56,30 @@ export function supplierText(groups, date) {
   const totals = supplierTotals(groups);
   const day = supplierDayCost(groups);
   const totalLine = product => product.hasCost ? `${product.label}${costTail(!product.costMissing, product.costCents)}` : product.label;
-  const lineText = line => 'costKnown' in line ? `${line.label}${costTail(line.costKnown, line.costCents)}` : line.label;
-  return `Repasse da padaria - ${date}\n\n1. LISTA COMPLETA DE ITENS\n${totals.map(totalLine).join('\n')}${day.withCosts ? `\n\nTOTAL (preço de custo): ${formatMoney(day.totalCents)}${day.missing ? ` — ${day.missing} item(ns) sem custo, total incompleto` : ''}` : ''}\n\n2. PEDIDOS POR CLIENTE\n\n${groups.map(group =>
-    `${group.customer}\n${group.address}\n${group.orders.map(order =>
-      `Pedido #${order.publicCode || order.id.slice(0, 8)}\n${order.lines.map(line => `[${line.checked ? 'x' : ' '}] ${lineText(line)}`).join('\n')}${order.costCents != null ? `\nSubtotal de custo: ${formatMoney(order.costCents)}` : ''}${order.notes ? `\nObservação: ${order.notes}` : ''}`
-    ).join('\n\n')}`).join('\n\n')}`;
+  return `Repasse da padaria - ${date}\\n\\nLISTA CONSOLIDADA POR MATERIAL\\n${totals.map(totalLine).join('\\n')}${day.withCosts ? `\\n\\nTOTAL (preço de custo): ${formatMoney(day.totalCents)}${day.missing ? ` — ${day.missing} item(ns) sem custo, total incompleto` : ''}` : ''}`;
+}
+
+export async function downloadSeparationPdf(groups, date, businessName, supplierName) {
+  const { createSeparationPdf } = await import('./supplier-pdf.js');
+  const [regular, bold] = await Promise.all([
+    fetch(new URL('../assets/manrope-400.ttf', import.meta.url)).then(response => {
+      if (!response.ok) throw new Error('Não foi possível carregar a fonte do PDF.');
+      return response.arrayBuffer();
+    }),
+    fetch(new URL('../assets/manrope-600.ttf', import.meta.url)).then(response => {
+      if (!response.ok) throw new Error('Não foi possível carregar a fonte do PDF.');
+      return response.arrayBuffer();
+    }),
+  ]);
+  const bytes = await createSeparationPdf(groups, date, { businessName, supplierName, regular, bold });
+  const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `separacao-${String(supplierName).toLocaleLowerCase('pt-BR').replace(/[^a-z0-9]+/g, '-')}-${date}.pdf`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
 export async function downloadSupplierPdf(groups, date, businessName) {
