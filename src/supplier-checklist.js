@@ -2,6 +2,18 @@ import { statusOf, itemLabel } from './order-math.js';
 import { lineCost, formatMoney } from './supplier-costs.js';
 
 const normalize = value => String(value || '').trim().toLocaleLowerCase('pt-BR');
+
+export const SANDRA_ITEMS = Object.freeze(['broa', 'biscoito provolone', 'bolacha de nata', 'biscoito de queijo', 'biscoito da vovó']);
+export const isSandraSupplierItem = name => SANDRA_ITEMS.includes(normalize(name));
+export function filterSupplierGroups(groups, supplier = 'divano') {
+  return groups.map(group => ({
+    ...group,
+    orders: group.orders.map(order => ({
+      ...order,
+      lines: order.lines.filter(line => supplier === 'sandra' ? isSandraSupplierItem(line.name) : !isSandraSupplierItem(line.name)),
+    })).filter(order => order.lines.length),
+  })).filter(group => group.orders.length);
+}
 const signature = order => encodeURIComponent(JSON.stringify(order.items.map(item =>
   [item.productId || '', item.name, item.quantity, item.weightGrams || 0])));
 
