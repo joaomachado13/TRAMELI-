@@ -33,10 +33,11 @@ export function supplierPeriodReport(orders, costMap, from, to, catalogProducts 
   const inRange = orders.filter(order => order.date >= from && order.date <= to && statusOf(order) !== 'cancelled');
   const products = new Map();
   const days = new Map();
-  let totalCents = 0; let missingLines = 0; let estimatedLines = 0;
+  let totalCents = 0; let missingLines = 0; let estimatedLines = 0; let matchedOrderCount = 0;
   for (const order of inRange) {
     const matchingItems = (order.items || []).map((item, index) => ({ item, index })).filter(({ item }) => !itemFilter || itemFilter(item));
     if (!matchingItems.length) continue;
+    matchedOrderCount += 1;
     const day = days.get(order.date) || { date: order.date, orders: 0, costCents: 0 };
     day.orders += 1;
     days.set(order.date, day);
@@ -79,7 +80,7 @@ export function supplierPeriodReport(orders, costMap, from, to, catalogProducts 
       : product.quantity ? Math.round(product.costCents / product.quantity) : null,
   }));
   return {
-    from, to, orderCount: inRange.length, products: list,
+    from, to, orderCount: matchedOrderCount, products: list,
     days: [...days.values()].sort((a, b) => a.date.localeCompare(b.date)),
     totalCents, missingLines, estimatedLines,
   };
