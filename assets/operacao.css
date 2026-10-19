@@ -341,3 +341,14 @@ dialog{width:min(670px,calc(100vw - 24px));max-height:min(90vh,900px);padding:0;
 #operation-view .kanban-column.is-collapsed>header p{display:none}
 #operation-view .kanban-column.is-collapsed .kanban-column__cards{display:none}
 #operation-view .kanban-column.is-collapsed .kanban-column__tools{margin-left:auto}
+
+
+/* Alinhamento final do cabeçalho do Kanban, inclusive nas colunas recolhidas. */
+#operation-view .kanban-column>header{align-items:center;min-height:44px}
+#operation-view .kanban-column__tools{display:flex;flex-direction:row;align-items:center;justify-content:flex-end;gap:8px;min-height:32px;margin-left:auto}
+#operation-view .kanban-column__tools>strong{display:grid;place-items:center;box-sizing:border-box;min-width:30px;height:30px;line-height:1;margin:0}
+#operation-view .kanban-column__tools>.kanban-collapse{display:grid;place-items:center;box-sizing:border-box;flex:0 0 30px;width:30px;min-width:30px;height:30px;margin:0;padding:0;line-height:1;align-self:center}
+#operation-view .kanban-column.is-collapsed>header{flex-direction:row;align-items:center;min-height:44px;gap:10px}
+#operation-view .kanban-column.is-collapsed>header>div:first-child{display:block;writing-mode:horizontal-tb;transform:none;min-width:0;flex:1}
+#operation-view .kanban-column.is-collapsed>header h3{font-size:.92rem;font-weight:600;line-height:1.25;letter-spacing:normal;white-space:normal;overflow-wrap:anywhere}
+#operation-view .kanban-column.is-collapsed .kanban-column__tools{margin-left:auto;flex:0 0 auto}
