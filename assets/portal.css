@@ -392,3 +392,21 @@ body:not(.portal-mode) #portal-floating-host,body:not(.portal-mode) .portal-bott
 .portal-recurring-request input{accent-color:var(--color-primary)}
 .portal-recurring-request button{margin-top:12px;min-height:40px;padding:8px 14px;border:0;border-radius:9px;background:var(--color-primary);color:var(--color-on-primary);font-weight:700;cursor:pointer}
 .portal-recurring-request fieldset p,.portal-recurring-request__status{margin:9px 0 0;color:var(--color-text-secondary);font-size:.76rem;line-height:1.5}
+
+
+/* Aviso de fechamento e contato prioritário com a Shirley. */
+.portal-welcome--closed{background:var(--color-surface-alternate);color:var(--color-text-primary);padding-bottom:30px}
+.portal-welcome--closed .portal-eyebrow{color:var(--color-primary)}
+.portal-store-closed{margin-top:24px;padding:clamp(22px,4vw,34px);border:2px solid #a83d2a;border-radius:20px;background:#fff2e9;color:#482217}
+.portal-store-closed__label{display:inline-block;margin-bottom:12px;color:#9d3022;font-size:.72rem;font-weight:800;letter-spacing:.12em}
+.portal-store-closed h2{max-width:720px;margin:0 0 12px;font-size:clamp(1.4rem,3vw,2rem);line-height:1.15}
+.portal-store-closed p{max-width:720px;margin:0;color:#633b2e;font-size:1rem;line-height:1.6}
+.portal-store-closed__action{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;max-width:520px;min-height:58px;margin-top:24px;padding:15px 22px;border-radius:14px;background:#168b50;color:#fff;text-align:center;text-decoration:none;font-size:1rem;font-weight:800;box-shadow:0 8px 22px #168b5040}
+.portal-store-closed__action svg{width:25px;height:25px;flex:0 0 25px}
+.portal-store-closed__action:hover{background:#107442;transform:translateY(-1px)}
+.portal-support-whatsapp--closed{gap:12px;min-height:60px;padding:13px 18px;border:2px solid #fff;background:#168b50;color:#fff;box-shadow:0 10px 28px #08783e55;animation:portal-whatsapp-pulse 2s ease-in-out infinite}
+.portal-support-whatsapp--closed small{font-size:.68rem;opacity:1;letter-spacing:.04em}
+.portal-support-whatsapp--closed strong{font-size:.9rem}
+.portal-support-whatsapp--closed:hover{background:#107442}
+@keyframes portal-whatsapp-pulse{0%,100%{box-shadow:0 10px 28px #08783e55}50%{box-shadow:0 10px 32px #08783e88}}
+@media(max-width:700px){.portal-welcome--closed{margin:12px 12px 0;padding:25px 18px}.portal-store-closed{margin-top:18px;padding:22px 18px}.portal-store-closed__action{font-size:.92rem}.portal-support-whatsapp--closed{right:10px;bottom:78px;min-height:58px;padding:12px 15px}.portal-support-whatsapp--closed span{display:grid}.portal-support-whatsapp--closed strong{font-size:.8rem}}

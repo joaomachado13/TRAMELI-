@@ -178,8 +178,13 @@ import { billingReminder, daysUntil, nextBillingDeadline } from '../src/billing-
     const visible = location.hash === '#loja' && Boolean(phone);
     supportLink.hidden = !visible;
     if (!visible) return;
-    supportLink.href = `https://wa.me/${phone}?text=${encodeURIComponent('Olá! Estou com uma dúvida sobre meu pedido no Pão Doce.')}`;
-    supportLink.innerHTML = `${whatsappIcon}<span><small>Dúvidas?</small><strong>Falar no WhatsApp</strong></span>`;
+    const closed = storeClosed();
+    const message = closed
+      ? 'Olá, Shirley! Vi que a loja está fechada e gostaria de tirar uma dúvida.'
+      : 'Olá! Estou com uma dúvida sobre meu pedido no Pão Doce.';
+    supportLink.href = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    supportLink.classList.toggle('portal-support-whatsapp--closed', closed);
+    supportLink.innerHTML = `${whatsappIcon}<span><small>${closed ? 'LOJA FECHADA' : 'Dúvidas?'}</small><strong>${closed ? 'Falar com Shirley no WhatsApp' : 'Falar no WhatsApp'}</strong></span>`;
   }
   function renderFloating() {
     if (!floatingHost) return;
@@ -393,6 +398,11 @@ import { billingReminder, daysUntil, nextBillingDeadline } from '../src/billing-
     const categories = ['Todos', ...new Set(all.map(product => product.category || 'Outros'))];
     const visible = filteredProducts();
     const notice=unavailable.length?`<aside class="portal-review-notice" role="status"><strong>Indisponíveis para a próxima entrega</strong><ul>${unavailable.map(item=>{const substitute=allProducts().find(candidate=>candidate.id===item.substituteProductId&&!unavailableFor(candidate));return `<li>${escapeHtml(item.name)}${substitute?` — sugestão: ${escapeHtml(substitute.name)}`:''}</li>`;}).join('')}</ul><p>A troca não é automática; escolha a sugestão no catálogo se desejar.</p></aside>`:'';
+    if (storeClosed()) {
+      const phone = live && !live.operator ? whatsappNumber(live.settings?.contact) : '';
+      const whatsapp = phone ? `<a class="portal-store-closed__action" href="https://wa.me/${phone}?text=${encodeURIComponent('Olá, Shirley! Vi que a loja está fechada e gostaria de tirar uma dúvida.')}" target="_blank" rel="noopener noreferrer">${whatsappIcon}<span>Falar com Shirley no WhatsApp</span></a>` : '';
+      return `<section class="portal-welcome portal-welcome--closed"><div class="portal-welcome__heading"><div><span class="portal-eyebrow">PÃO DOCE DELIVERY</span><h1>A loja está fechada.</h1></div></div><aside class="portal-store-closed" role="status" aria-live="polite"><span class="portal-store-closed__label">PEDIDOS ENCERRADOS POR HOJE</span><h2>Não estamos recebendo novos pedidos neste momento.</h2><p>Voltamos a aceitar pedidos às 6h, no horário de Brasília. Se você já tem um pedido ou precisa de alguma coisa, fale diretamente com a Shirley pelo WhatsApp.</p>${whatsapp}</aside></section>`;
+    }
     return `<section class="portal-welcome"><div class="portal-welcome__heading"><div><span class="portal-eyebrow">${greeting().toLocaleUpperCase('pt-BR')}${firstName() ? `, ${escapeHtml(firstName()).toLocaleUpperCase('pt-BR')}` : ''}</span><h1>${greeting()}${firstName() ? `, ${escapeHtml(firstName())}` : ''}.</h1></div>${paymentCountdown()}</div><p>Seu pedido em três passos simples.</p><ol><li><strong>1</strong> Escolha os produtos</li><li><strong>2</strong> Revise a sacola</li><li><strong>3</strong> Confirme entrega e pagamento</li></ol><a class="portal-welcome__action" href="#portal-products">Escolher produtos ↓</a></section><section class="portal-quick-actions">${lastOrderCard()}<article><span>PLANEJE COM CALMA</span><strong>Pedidos da semana</strong><p>Organize cada dia sem confirmar nada automaticamente.</p><button type="button" data-view="week">Montar minha semana</button></article></section><section id="portal-products" class="portal-section">${notice}<div class="portal-section__head"><div><span class="portal-eyebrow">FEITO PARA O SEU DIA</span><h2>Produtos da padaria</h2></div><span>${all.length} opções</span></div><label class="portal-search">Buscar produto<input id="portal-search" type="search" value="${escapeHtml(query)}" placeholder="Pão, bolo, suco..."></label><div class="portal-categories" aria-label="Categorias">${categories.map(item => `<button type="button" data-category="${escapeHtml(item)}" aria-pressed="${String(item === category)}">${escapeHtml(item)}</button>`).join('')}</div>${personalFilters()}<div class="portal-grid" id="portal-grid">${visible.length ? visible.map(card).join('') : '<p class="portal-empty">Não encontramos produtos nessa busca.</p>'}</div></section>`;
   }
   function cartView() {
