@@ -22,7 +22,7 @@ export async function createSupplierPdf(groups, date, { businessName = 'Pão Doc
   const dateLabel = new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR');
   pdf.setTitle(`Repasse da padaria - ${dateLabel}`);
   pdf.setAuthor(businessName);
-  pdf.setSubject('Lista completa de itens e pedidos por cliente, sem valores, com caixas de conferência');
+  pdf.setSubject('Lista consolidada por material, com valores de custo quando disponíveis');
   let page;
   let y;
   let fieldIndex = 0;
@@ -61,7 +61,7 @@ export async function createSupplierPdf(groups, date, { businessName = 'Pão Doc
     y -= 34;
     page.drawText(`Entrega: ${dateLabel}   |   ${groups.length} clientes`, { x: MARGIN, y, size: 10, font, color: muted });
     y -= 20;
-    page.drawText(costed ? 'Marque os itens separados e o pedido completo. Valores pelo preço de custo.' : 'Marque os itens separados e o pedido completo. Sem valores.', { x: MARGIN, y, size: 9, font, color: muted });
+    page.drawText(costed ? 'Consolidado por material. Valores pelo preço de custo.' : 'Consolidado por material. Sem valores.', { x: MARGIN, y, size: 9, font, color: muted });
     y -= 25;
   }
 
