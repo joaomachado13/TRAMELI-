@@ -131,8 +131,8 @@ function localOrderCode(createdAt) {
   return `${prefix}${String(next).padStart(3, '0')}`;
 }
 const statusLabels = { received: 'A conferir', confirmed: 'Conferido', packing: 'Em separação', ready: 'Pronto', delivered: 'Entregue', cancelled: 'Cancelado' };
-const nextStatus = { received: 'confirmed', confirmed: 'packing', packing: 'ready', ready: 'delivered' };
-const previousStatus = { confirmed: 'received', packing: 'confirmed', ready: 'packing' };
+const nextStatus = { received: 'confirmed', confirmed: 'ready', packing: 'ready', ready: 'delivered' };
+const previousStatus = { confirmed: 'received', packing: 'confirmed', ready: 'confirmed' };
 const orderStatus = order => order.status || (order.checked ? 'confirmed' : 'received');
 const paymentLabels = { pix_manual: 'Pix', cash: 'Dinheiro', bank: 'Transferência', other: 'Acordado com a proprietária', unspecified: 'Não informado' };
 const operationSettingsKey = 'trameli-operation-settings-v1';
@@ -450,10 +450,16 @@ function render() {
     const movable = destinations.length > 0 && !busy;
     return `<article class="kanban-card${busy ? ' is-moving' : ''}" data-card-id="${escapeHtml(order.id)}" aria-busy="${busy}"><button class="order-card order-card--${state}" type="button" data-action="open" data-id="${escapeHtml(order.id)}" draggable="${movable}" aria-label="Abrir pedido de ${escapeHtml(order.customer)}"><span class="order-card__top"><span class="order-card__id">#${escapeHtml(orderCode(order))}</span><span class="status status--${state}">${escapeHtml(statusLabels[state])}</span></span><strong class="order-card__customer">${escapeHtml(order.customer)}</strong><span class="order-card__meta">${itemCount} ${itemCount === 1 ? 'item' : 'itens'} · ${money(orderTotal(order))}</span><span class="order-card__delivery">Entrega ${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</span>${order.notes ? '<span class="order-card__alert">Tem observação</span>' : ''}<span class="order-card__open">Ver pedido <span aria-hidden="true">→</span></span></button>${destinations.length ? `<div class="kanban-card__move"><button type="button" class="kanban-drag-handle" data-drag-id="${escapeHtml(order.id)}" aria-label="Arrastar pedido de ${escapeHtml(order.customer)}" aria-describedby="kanban-help" ${busy ? 'disabled' : ''}><span aria-hidden="true">⠿</span></button><label><span class="sr-only">Mover pedido de ${escapeHtml(order.customer)} para</span><select data-move-id="${escapeHtml(order.id)}" ${busy ? 'disabled' : ''}><option value="">${busy ? 'Movendo…' : 'Mover para…'}</option>${destinations.map(stage => `<option value="${stage.key}">${stage.title}</option>`).join('')}</select></label></div>` : ''}</article>`;
   };
-  const columns = stages;
-  list.innerHTML = `<div class="kanban" aria-label="Pedidos por etapa">${columns.map(column => {
-    const columnOrders = filtered.filter(order => column.key === orderStatus(order));
-    return `<section class="kanban-column kanban-column--${column.key}" data-drop-status="${column.key}" aria-labelledby="kanban-${column.key}"><header><div><h3 id="kanban-${column.key}">${column.title}</h3><p>${column.note}</p></div><strong aria-label="${columnOrders.length} pedidos">${columnOrders.length}</strong></header><div class="kanban-column__cards">${columnOrders.length ? columnOrders.map(card).join('') : `<p class="kanban-empty">${displayOrders.length ? 'Nenhum pedido nesta etapa.' : column.key === 'received' ? 'Os novos pedidos aparecerão aqui.' : 'Nada por aqui ainda.'}</p>`}</div></section>`;
+  const columns = stages.filter(column => column.key !== 'packing');
+  const collapsedColumns = new Set();
+  try { const saved = JSON.parse(localStorage.getItem('trameli-kanban-collapsed-v1') || '[]'); if (Array.isArray(saved)) saved.forEach(key => collapsedColumns.add(key)); } catch { /* Use expanded columns. */ }
+  const activeOrders = displayOrders.filter(order => orderStatus(order) !== 'cancelled');
+  const deliveredOrders = activeOrders.filter(order => orderStatus(order) === 'delivered');
+  const bulkDisabled = !activeOrders.some(order => orderStatus(order) !== 'delivered');
+  list.innerHTML = `<div class="kanban-toolbar"><span>${activeOrders.length} pedidos ativos · ${deliveredOrders.length} entregues</span><button class="button button--primary" type="button" data-kanban-bulk-deliver ${bulkDisabled ? 'disabled' : ''}>Marcar todos como entregues</button></div><div class="kanban" aria-label="Pedidos por etapa">${columns.map(column => {
+    const columnOrders = filtered.filter(order => column.key === 'ready' ? ['ready','packing'].includes(orderStatus(order)) : column.key === orderStatus(order));
+    const collapsed = collapsedColumns.has(column.key);
+    return `<section class="kanban-column kanban-column--${column.key}${collapsed ? ' is-collapsed' : ''}" data-drop-status="${column.key}" aria-labelledby="kanban-${column.key}"><header><div><h3 id="kanban-${column.key}">${column.title}</h3><p>${column.note}</p></div><div class="kanban-column__tools"><strong aria-label="${columnOrders.length} pedidos">${columnOrders.length}</strong><button type="button" class="kanban-collapse" data-kanban-collapse="${column.key}" aria-expanded="${!collapsed}" aria-label="${collapsed ? 'Expandir' : 'Recolher'} coluna ${column.title}">${collapsed ? '＋' : '−'}</button></div></header><div class="kanban-column__cards">${columnOrders.length ? columnOrders.map(card).join('') : `<p class="kanban-empty">${displayOrders.length ? 'Nenhum pedido nesta etapa.' : column.key === 'received' ? 'Os novos pedidos aparecerão aqui.' : 'Nada por aqui ainda.'}</p>`}</div></section>`;
   }).join('')}</div>${displayOrders.length ? '' : '<div class="operation-first-order"><p>O dia ainda está em branco.</p><button class="button button--primary" type="button" data-action="new">+ Lançar primeiro pedido</button></div>'}`;
 
   if (detailDrawer.open) {
@@ -570,6 +576,30 @@ list.addEventListener('drop', event => {
   if (matches && target) moveOrder(id, target);
 });
 list.addEventListener('dragend', () => { clearDrag(); suppressClickUntil = Date.now() + 350; });
+list.addEventListener('click', async event => {
+  const toggle = event.target.closest('[data-kanban-collapse]');
+  if (toggle) {
+    const key = toggle.dataset.kanbanCollapse, column = toggle.closest('.kanban-column');
+    const collapsed = column.classList.toggle('is-collapsed');
+    toggle.textContent = collapsed ? '＋' : '−'; toggle.setAttribute('aria-expanded', String(!collapsed));
+    toggle.setAttribute('aria-label', (collapsed ? 'Expandir' : 'Recolher') + ' coluna ' + key);
+    try { const saved = JSON.parse(localStorage.getItem('trameli-kanban-collapsed-v1') || '[]'); const keys = new Set(Array.isArray(saved) ? saved : []); collapsed ? keys.add(key) : keys.delete(key); localStorage.setItem('trameli-kanban-collapsed-v1', JSON.stringify([...keys])); } catch { /* Temporary collapse still works. */ }
+    return;
+  }
+  if (event.target.closest('[data-kanban-bulk-deliver]')) {
+    const pending = orders.filter(order => order.date === dateInput.value && orderStatus(order) !== 'cancelled' && orderStatus(order) !== 'delivered');
+    if (!pending.length) { kanbanFeedback.textContent = 'Todos os pedidos ativos desta data já estão entregues.'; return; }
+    if (!window.confirm('Marcar os ' + pending.length + ' pedidos ainda não entregues desta data como Entregue? Cada alteração será registrada no histórico.')) return;
+    const button = list.querySelector('[data-kanban-bulk-deliver]'); if (button) button.disabled = true;
+    let completed = 0, failed = 0;
+    for (const order of pending) {
+      await moveOrder(order.id, 'delivered');
+      if (orderStatus(orders.find(current => current.id === order.id) || {}) === 'delivered') completed++; else failed++;
+    }
+    kanbanFeedback.textContent = failed ? 'Concluído parcialmente: ' + completed + ' entregues, ' + failed + ' com falha. Confira as etapas.' : 'Pronto! ' + completed + ' pedidos foram marcados como entregues.';
+    render(); return;
+  }
+});
 list.addEventListener('change', event => {
   const select = event.target.closest('[data-move-id]');
   if (select?.value) moveOrder(select.dataset.moveId, select.value);
