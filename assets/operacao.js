@@ -952,7 +952,7 @@ async function generateSeparationPdf() {
   try {
     const groups = checklistGroups();
     if (!groups.length) throw new Error('Não há itens dessa padaria para separar na data selecionada.');
-    await downloadSeparationPdf(groups, dateInput.value, businessLabel(), provider === 'sandra' ? 'Padaria Sandra' : 'Padaria do Divano');
+    await downloadSeparationPdf(groups, dateInput.value, businessLabel(), 'Lista única');
     if (separationFeedback) separationFeedback.textContent = 'PDF de separação baixado. Clientes ordenados por endereço/rua e depois por nome; sem valores financeiros.';
   } catch (error) {
     if (separationFeedback) separationFeedback.textContent = `Não foi possível gerar a lista: ${error.message}`;
