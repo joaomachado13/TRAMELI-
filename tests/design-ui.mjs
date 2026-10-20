@@ -308,8 +308,8 @@ try {
     assert(addButton?.text === 'Adicionar', `botão Adicionar perdeu o texto em ${width}px.`);
     assert(addButton.width >= addButton.parentWidth * .9 && addButton.width > 70, `botão Adicionar voltou a ficar estreito/bolinha em ${width}px: ${JSON.stringify(addButton)}`);
     assert(addButton.height >= 40 && addButton.radius < addButton.height / 2, `botão Adicionar voltou a ficar circular em ${width}px: ${JSON.stringify(addButton)}`);
-    assert.equal(await evaluate('document.querySelectorAll(".portal-category-group").length'), 0, `catálogo voltou a ser separado visualmente por categoria em ${width}px.`);
-    assert.equal(await evaluate('document.querySelectorAll(".portal-product__category").length'), 0, `badge de categoria voltou para dentro dos cards em ${width}px.`);
+    assert((await evaluate('document.querySelectorAll(".portal-category-group").length')) === 0, `catálogo voltou a ser separado visualmente por categoria em ${width}px.`);
+    assert((await evaluate('document.querySelectorAll(".portal-product__category").length')) === 0, `badge de categoria voltou para dentro dos cards em ${width}px.`);
   }
   assert(!identityIssues.length, `Identidade: ${JSON.stringify(identityIssues)}`);
   process.stdout.write('Identidade: Manrope, contraste, dez rotas Master/Portal, modal e responsividade 390/1440px OK.\n');
