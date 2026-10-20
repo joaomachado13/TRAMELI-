@@ -357,9 +357,14 @@ import '../src/featured-products.css';
       && (category === 'Todos' || (product.category || 'Outros') === category)
       && (!query || product.name.toLocaleLowerCase('pt-BR').includes(query.toLocaleLowerCase('pt-BR'))));
   }
+  function personalFilterNote() {
+    return shopping()?.message || (personalFilter === 'frequent'
+      ? 'Produtos presentes em pelo menos dois dos seus pedidos não cancelados.'
+      : personalFilter === 'favorites' ? 'Seus favoritos disponíveis no catálogo atual.' : '');
+  }
   function personalFilters() {
     if (!shopping()) return '';
-    return `<div class="portal-personal-filters" aria-label="Seleção pessoal">${[['all','Todos os produtos'],['favorites','Meus favoritos'],['frequent','Comprados com frequência']].map(([id,label]) => `<button type="button" data-personal-filter="${id}" aria-pressed="${personalFilter === id}" ${id === 'favorites' && !shopping().ready ? 'disabled' : ''}>${label}</button>`).join('')}</div><p class="portal-filter-note">${escapeHtml(shopping().message || (personalFilter === 'frequent' ? 'Produtos presentes em pelo menos dois dos seus pedidos não cancelados.' : personalFilter === 'favorites' ? 'Seus favoritos disponíveis no catálogo atual.' : ''))}</p>`;
+    return `<div class="portal-personal-filters" aria-label="Seleção pessoal">${[['all','Todos os produtos'],['favorites','Meus favoritos'],['frequent','Comprados com frequência']].map(([id,label]) => `<button type="button" data-personal-filter="${id}" aria-pressed="${personalFilter === id}" ${id === 'favorites' && !shopping().ready ? 'disabled' : ''}>${label}</button>`).join('')}</div><p class="portal-filter-note">${escapeHtml(personalFilterNote())}</p>`;
   }
   function card(product) {
     const inCart = (cart[product.id] || 0) > 0;
@@ -411,6 +416,96 @@ import '../src/featured-products.css';
   function catalogMarkup(items) {
     if (!items.length) return '<p class="portal-empty">Não encontramos produtos nessa busca.</p>';
     return items.map(card).join('');
+  }
+
+  let catalogTransitionSerial = 0;
+  let catalogSearchTimer = 0;
+  const reducedCatalogMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches
+    || localStorage.getItem('trameli-reduced-motion') === 'true';
+
+  function syncCatalogFilterChrome() {
+    host.querySelectorAll('[data-category]').forEach(button => {
+      button.setAttribute('aria-pressed', String(button.dataset.category === category));
+    });
+    host.querySelectorAll('[data-personal-filter]').forEach(button => {
+      button.setAttribute('aria-pressed', String(button.dataset.personalFilter === personalFilter));
+      if (button.dataset.personalFilter === 'favorites') button.disabled = !shopping()?.ready;
+    });
+    const note = host.querySelector('.portal-filter-note');
+    if (note) note.textContent = personalFilterNote();
+    const highlights = host.querySelector('.featured-products');
+    if (highlights) highlights.hidden = Boolean(query.trim()) || category !== 'Todos' || personalFilter !== 'all';
+  }
+
+  function centerActiveCategory() {
+    const rail = host.querySelector('.portal-categories');
+    const active = rail?.querySelector('[aria-pressed="true"]');
+    if (!rail || !active) return;
+    const left = active.offsetLeft - (rail.clientWidth - active.clientWidth) / 2;
+    rail.scrollTo({ left: Math.max(0, left), behavior: reducedCatalogMotion() ? 'auto' : 'smooth' });
+  }
+
+  async function refreshCatalogResults({ scrollToGrid = false, centerCategory = false, animate = true } = {}) {
+    const grid = host.querySelector('#portal-grid');
+    if (!grid) { render(true); return; }
+    const serial = ++catalogTransitionSerial;
+    syncCatalogFilterChrome();
+    if (centerCategory) centerActiveCategory();
+    const visible = filteredProducts();
+    const commit = () => {
+      if (serial !== catalogTransitionSerial) return false;
+      grid.innerHTML = catalogMarkup(visible);
+      return true;
+    };
+    const finish = () => {
+      if (serial !== catalogTransitionSerial) return;
+      grid.removeAttribute('data-filter-transitioning');
+      grid.style.removeProperty('min-height');
+      grid.style.removeProperty('overflow');
+      motion()?.refresh();
+    };
+    if (!animate || reducedCatalogMotion()) {
+      commit();
+      if (scrollToGrid) motion()?.scrollTo('#portal-grid', true, innerWidth <= 640 ? 155 : 170);
+      finish();
+      return;
+    }
+
+    grid.getAnimations().forEach(animation => animation.cancel());
+    grid.dataset.filterTransitioning = 'true';
+    const previousHeight = grid.getBoundingClientRect().height;
+    if (previousHeight > 0) grid.style.minHeight = `${Math.min(previousHeight, Math.max(360, innerHeight * 0.72))}px`;
+    grid.style.overflow = 'clip';
+
+    const out = grid.animate([
+      { opacity: 1, transform: 'translateY(0)' },
+      { opacity: 0.22, transform: 'translateY(7px)' },
+    ], { duration: 135, easing: 'cubic-bezier(.4,0,1,1)', fill: 'forwards' });
+    try { await out.finished; } catch { /* A newer filter can cancel this animation. */ }
+    if (serial !== catalogTransitionSerial) return;
+
+    grid.getAnimations().forEach(animation => animation.cancel());
+    if (!commit()) return;
+    if (scrollToGrid) motion()?.scrollTo('#portal-grid', true, innerWidth <= 640 ? 155 : 170);
+
+    const incoming = grid.animate([
+      { opacity: 0.35, transform: 'translateY(10px)' },
+      { opacity: 1, transform: 'translateY(0)' },
+    ], { duration: 310, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'both' });
+
+    [...grid.querySelectorAll('.portal-product')].slice(0, 12).forEach((card, index) => {
+      card.animate([
+        { opacity: 0.25, transform: 'translateY(8px) scale(.995)' },
+        { opacity: 1, transform: 'translateY(0) scale(1)' },
+      ], {
+        duration: 300,
+        delay: Math.min(index * 18, 126),
+        easing: 'cubic-bezier(.16,1,.3,1)',
+        fill: 'both',
+      });
+    });
+    try { await incoming.finished; } catch { /* A newer filter can cancel this animation. */ }
+    finish();
   }
   function catalog() {
     const all = products();
@@ -644,15 +739,16 @@ import '../src/featured-products.css';
     if (next) cart[id] = next; else delete cart[id];
     persistCart();
     if (view === 'catalog') {
-      const current = [...host.querySelectorAll('.portal-stepper')].filter(element => element.querySelector('[data-id]')?.dataset.id === id);
+      const current = [...host.querySelectorAll('.portal-stepper, .portal-add-slot')].filter(element => element.querySelector('[data-id]')?.dataset.id === id);
       if (current.length) {
-        const clicked = source?.closest('.portal-stepper');
+        const clicked = source?.closest('.portal-stepper, .portal-add-slot');
         let updated;
         for (const element of current) {
           const container = document.createElement('div'); container.innerHTML = stepper(product);
-          const nextStepper = container.firstElementChild;
-          element.replaceWith(nextStepper);
-          if (element === clicked) updated = nextStepper;
+          const nextControl = container.firstElementChild;
+          element.replaceWith(nextControl);
+          nextControl.closest('.portal-product')?.classList.toggle('is-in-cart', next > 0);
+          if (element === clicked) updated = nextControl;
         }
         (updated?.querySelector(`[data-qty="${delta}"]`) || updated?.querySelector("[data-qty]"))?.focus({ preventScroll: true });
         updateCounters();
@@ -785,7 +881,11 @@ import '../src/featured-products.css';
     }
     if (event.target.closest('[data-week-all]')) { error=''; view='weekCheckout'; render(); return; }
     const filter = event.target.closest('[data-personal-filter]');
-    if (filter) { personalFilter = filter.dataset.personalFilter; render(true); return; }
+    if (filter) {
+      personalFilter = filter.dataset.personalFilter;
+      refreshCatalogResults({ animate: true });
+      return;
+    }
     const reorder = event.target.closest('[data-reorder]');
     if (reorder) {
       if (reordering || submitting) return;
@@ -819,16 +919,7 @@ import '../src/featured-products.css';
     const categoryButton = event.target.closest('[data-category]');
     if (categoryButton) {
       category = categoryButton.dataset.category;
-      render(true);
-      requestAnimationFrame(() => {
-        const rail = host.querySelector('.portal-categories');
-        const active = rail?.querySelector('[aria-pressed="true"]');
-        if (rail && active) {
-          const left = active.offsetLeft - (rail.clientWidth - active.clientWidth) / 2;
-          rail.scrollTo({ left: Math.max(0, left), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
-        }
-        motion()?.scrollTo('#portal-grid', true, innerWidth <= 640 ? 155 : 170);
-      });
+      refreshCatalogResults({ scrollToGrid: true, centerCategory: true, animate: true });
       return;
     }
     const viewButton = event.target.closest('[data-view]');
@@ -870,12 +961,8 @@ import '../src/featured-products.css';
   host.addEventListener('input', event => {
     if (event.target.id !== 'portal-search') return;
     query = event.target.value;
-    const highlights = host.querySelector('.featured-products');
-    if (highlights) highlights.hidden = Boolean(query.trim()) || category !== 'Todos' || personalFilter !== 'all';
-    const visible = filteredProducts();
-    motion()?.reset(host);
-    document.getElementById('portal-grid').innerHTML = catalogMarkup(visible);
-    motion()?.refresh();
+    clearTimeout(catalogSearchTimer);
+    catalogSearchTimer = setTimeout(() => refreshCatalogResults({ animate: true }), 110);
   });
   floatingHost?.addEventListener('click', event => {
     if (event.target.closest('[data-view="cart"]')) {
@@ -951,7 +1038,9 @@ import '../src/featured-products.css';
     } else if (!isPortal) { portalVisible = false; renderFloating(); }
   }
   window.addEventListener('trameli:portal-open', syncPortalFrame);
-  window.addEventListener('trameli:shopping-changed', () => { if (view === 'catalog') render(true); });
+  window.addEventListener('trameli:shopping-changed', () => {
+    if (view === 'catalog') refreshCatalogResults({ animate: true });
+  });
   window.addEventListener('trameli:payments-changed', () => { if (view === 'catalog' && location.hash === '#loja') render(true); });
   window.addEventListener('trameli:catalog-changed', () => render(true));
   if (live) window.addEventListener('trameli:orders-changed', () => { if (view === 'orders' || (view === 'catalog' && personalFilter === 'frequent')) render(true); });
