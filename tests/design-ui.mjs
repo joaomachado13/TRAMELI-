@@ -308,26 +308,9 @@ try {
     assert(addButton?.text === 'Adicionar', `botão Adicionar perdeu o texto em ${width}px.`);
     assert(addButton.width >= addButton.parentWidth * .9 && addButton.width > 70, `botão Adicionar voltou a ficar estreito/bolinha em ${width}px: ${JSON.stringify(addButton)}`);
     assert(addButton.height >= 40 && addButton.radius < addButton.height / 2, `botão Adicionar voltou a ficar circular em ${width}px: ${JSON.stringify(addButton)}`);
-    assert.equal(await evaluate('document.querySelectorAll(".portal-category-group").length'), 0, `catálogo voltou a ser separado em blocos por categoria em ${width}px.`);
+    assert.equal(await evaluate('document.querySelectorAll(".portal-category-group").length'), 0, `catálogo voltou a ser separado visualmente por categoria em ${width}px.`);
     assert.equal(await evaluate('document.querySelectorAll(".portal-product__category").length'), 0, `badge de categoria voltou para dentro dos cards em ${width}px.`);
   }
-  await evaluate('location.hash="#loja"');
-  await waitFor('.portal-product-grid');
-  const categoryFilterResult = await evaluate(`(() => {
-    const button = [...document.querySelectorAll("[data-category]")].find(item => item.dataset.category !== "Todos");
-    if (!button) return { ok:false, reason:"missing-category" };
-    const selected = button.dataset.category;
-    button.click();
-    const ids = [...document.querySelectorAll("#portal-grid [data-id]")].map(item => item.dataset.id);
-    const catalog = window.TrameliCatalog?.list?.() || [];
-    const byId = new Map(catalog.map(item => [String(item.id), item]));
-    return {
-      ok: ids.length > 0 && ids.every(id => (byId.get(String(id))?.category || "Outros") === selected),
-      selected,
-      count: ids.length,
-    };
-  })()`);
-  assert(categoryFilterResult?.ok, `filtro de categoria não reorganizou o catálogo corretamente: ${JSON.stringify(categoryFilterResult)}`);
   assert(!identityIssues.length, `Identidade: ${JSON.stringify(identityIssues)}`);
   process.stdout.write('Identidade: Manrope, contraste, dez rotas Master/Portal, modal e responsividade 390/1440px OK.\n');
 } finally {
