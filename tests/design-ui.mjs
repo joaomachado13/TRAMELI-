@@ -264,6 +264,10 @@ try {
   await pause(180);
   assert(await evaluate('getComputedStyle(document.querySelector("#new-order")).backgroundColor === "rgb(216, 201, 193)"'), 'Estado disabled não usa a paleta oficial.');
   await evaluate('document.querySelector("#new-order").disabled=false; document.querySelector("#new-order").click()');
+  await waitFor('#shirley-portal-view:not([hidden])');
+  assert(await evaluate('!document.querySelector(".app-shell").hidden && !document.body.classList.contains("portal-mode")'), 'Portal da Shirley deve preservar o painel interno.');
+  await audit('portal da Shirley');
+  await evaluate('window.TrameliOperation.openNew()');
   await waitFor('#operation-dialog[open]'); await pause(250); await audit('formulário pedido');
   await evaluate('document.querySelector("#close-dialog").click()');
 

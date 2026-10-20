@@ -1222,8 +1222,7 @@ window.addEventListener('storage', event => {
   }
 });
 function openNewOrder(prefill = {}) {
-  location.hash = '#operacao';
-  setTimeout(() => {
+  const showForm = () => {
     openForm();
     fillCustomerOptions('', prefill.customer || '');
     form.elements.date.value = prefill.date || dateInput.value;
@@ -1237,7 +1236,18 @@ function openNewOrder(prefill = {}) {
       renderProductCatalog();
       updateFormTotal();
     }
-  }, 260);
+  };
+  if (location.hash === '#operacao' && !document.getElementById('operation-view').hidden) {
+    showForm();
+    return;
+  }
+  const onRoute = event => {
+    if (event.detail?.route !== 'operacao') return;
+    window.removeEventListener('trameli:route-rendered', onRoute);
+    showForm();
+  };
+  window.addEventListener('trameli:route-rendered', onRoute);
+  location.hash = '#operacao';
 }
 function openOrderById(id) {
   orders = readOrders();

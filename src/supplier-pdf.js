@@ -125,7 +125,8 @@ export async function createSupplierPdf(groups, date, { businessName = 'Pão Doc
     y -= 40;
     if (day.missing) { page.drawText(`Atenção: ${day.missing} item(ns) sem custo cadastrado; total incompleto.`, { x: MARGIN, y, size: 9, font, color: muted }); y -= 14; }
   }
-  // Repasse financeiro: somente o consolidado por material.\n  const pages = pdf.getPages();
+  // Repasse financeiro: somente o consolidado por material.
+  const pages = pdf.getPages();
   pages.forEach((sheet, index) => {
     sheet.drawText('Conferência da cópia em PDF - alterações não sincronizam com o site.',
       { x: MARGIN, y: 31, size: 8, font, color: muted });

@@ -1,6 +1,6 @@
-/* Portal operacional da Shirley — identidade compartilhada com o portal do cliente. */
+/* Portal operacional da Shirley integrado ao painel e à navegação compartilhada. */
 body.shirley-portal-mode .portal-bottom-nav{display:none!important}
-.shirley-portal{min-height:100vh;background:var(--color-surface)}
+.shirley-portal{min-width:0;background:transparent}
 .shirley-portal__back{display:inline-flex;align-items:center;min-height:42px;padding:0 15px;border:1px solid var(--color-border);border-radius:999px;color:var(--color-text-primary);text-decoration:none;font-size:.8rem;font-weight:700}
 .shirley-portal__hero{max-width:1180px;margin:24px auto 0;padding:36px 42px 24px;border:1px solid var(--color-border);border-radius:22px;background:var(--color-surface-alternate)}
 .shirley-portal__hero h1{margin:8px 0;font-size:clamp(2.2rem,4.8vw,3.7rem);letter-spacing:-.045em;color:var(--color-text-primary)}

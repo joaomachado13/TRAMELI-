@@ -49,7 +49,7 @@ assert(supplierPeriodText(report, 'Quinzenal').includes('sem custo'));
 const regular = await readFile(new URL('../assets/manrope-400.ttf', import.meta.url));
 const bold = await readFile(new URL('../assets/manrope-600.ttf', import.meta.url));
 const daily = await PDFDocument.load(await createSupplierPdf(groups, '2026-10-15', { regular, bold }));
-assert(daily.getPageCount() >= 2);
+assert(daily.getPageCount() >= 1, 'O consolidado diário deve caber em uma página quando houver poucos materiais.');
 const periodPdf = await PDFDocument.load(await createSupplierPeriodPdf(month, 'Mensal', { regular, bold }));
 assert(periodPdf.getPageCount() >= 1);
 await assert.rejects(createSupplierPeriodPdf(supplierPeriodReport(orders, costMap, '2027-01-01', '2027-01-31'), 'Mensal', { regular, bold }), /Não há pedidos/);

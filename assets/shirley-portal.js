@@ -36,7 +36,10 @@
     if(p.unit==='kg'){const weightGrams=quantity*50;return {productId:p.id,name:p.name,quantity:1,weightGrams,kgPriceCents:p.priceCents,priceCents:window.TrameliOrderMath.weightPriceCents(p.priceCents,weightGrams)};}
     return {productId:p.id,name:p.name,quantity,priceCents:p.priceCents};
   });
-  const totalCents = () => chosenLines().reduce((sum,line)=>sum+line.priceCents,0)+200;
+  const totalCents = () => {
+    const items = chosenLines();
+    return items.length ? window.TrameliOrderMath.totalCents({ items, feeCents: 200 }) : 0;
+  };
   function setTab(tab){
     activeTab=tab;
     tabPanels.forEach(panel=>panel.hidden=panel.dataset.shirleyPanel!==tab);

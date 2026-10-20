@@ -36,6 +36,7 @@ export default defineConfig(({ command, mode }) => {
       authFixture: resolve('tests/auth-fixture.html'),
       paymentsFixture: resolve('tests/payments-fixture.html'),
       photosFixture: resolve('tests/photos-fixture.html'),
+      shirleyFixture: resolve('tests/shirley-fixture.html'),
     });
   }
   return {
