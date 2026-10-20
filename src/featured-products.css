@@ -47,9 +47,9 @@
 #portal-content .featured-product__price small{font-size:12px;color:var(--color-text-secondary)}
 #portal-content .featured-product h3{min-height:2.6em;margin:0 0 12px;font-size:14px;font-weight:700}
 #portal-content .featured-product__controls .portal-stepper{min-height:44px;border-radius:12px}
-#portal-content .featured-product__controls .portal-stepper--empty{padding:0;border:0;background:transparent}
-#portal-content .featured-product__controls .portal-add-button{width:100%;min-height:44px;border:1px solid var(--color-primary);border-radius:12px;background:var(--color-primary);color:var(--color-on-primary);font-size:13px;font-weight:800}
-#portal-content .featured-product__controls .portal-stepper:not(.portal-stepper--empty)>button{flex:0 0 40px;width:40px;min-width:40px;height:40px;min-height:40px;border-radius:8px}
+#portal-content .featured-product__controls .portal-add-slot{display:block;width:100%}
+#portal-content .featured-product__controls .portal-add-button{display:flex;width:100%;min-height:42px;align-items:center;justify-content:center;border:1px solid var(--color-primary);border-radius:10px;background:var(--color-primary);color:var(--color-on-primary);font-size:13px;font-weight:800}
+#portal-content .featured-product__controls .portal-stepper>button{flex:0 0 40px;width:40px;min-width:40px;height:40px;min-height:40px;border-radius:8px}
 @media(max-width:1100px){#portal-content .featured-products__rail{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:900px){#portal-content .featured-products__rail{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:min(36vw,220px)}}
 @media(max-width:640px){
@@ -77,21 +77,22 @@ body.portal-mode #portal-content .featured-product__photo{aspect-ratio:4/3}
 body.portal-mode #portal-content .featured-product__body{padding:14px}
 body.portal-mode #portal-content .featured-product h3{min-height:auto;font-size:15px}
 body.portal-mode #portal-content .featured-product__price{font-size:18px}
-body.portal-mode #portal-content .featured-product__controls .portal-stepper--empty .portal-add-button{
+@media(max-width:700px){
+  body.portal-mode #portal-content>.featured-products{padding:0 16px}
+  body.portal-mode #portal-content .featured-products__rail{grid-auto-columns:min(72vw,250px);gap:12px}
+}
+
+body.portal-mode #portal-content .featured-product__controls .portal-add-slot .portal-add-button{
   display:flex!important;
   width:100%!important;
   min-width:0!important;
-  min-height:44px!important;
+  min-height:42px!important;
   align-items:center!important;
   justify-content:center!important;
-  padding:0 14px!important;
-  border-radius:12px!important;
+  padding:0 12px!important;
+  border-radius:10px!important;
   color:#FFF9F5!important;
   background:#8F3D22!important;
   border-color:#8F3D22!important;
   white-space:nowrap!important;
-}
-@media(max-width:700px){
-  body.portal-mode #portal-content>.featured-products{padding:0 16px}
-  body.portal-mode #portal-content .featured-products__rail{grid-auto-columns:min(72vw,250px);gap:12px}
 }
