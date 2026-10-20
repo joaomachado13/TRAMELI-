@@ -1,5 +1,6 @@
 import { featuredProductsMarkup } from '../src/featured-products.js';
 import '../src/featured-products.css';
+import { weekdayNames, recurringItemsText, recurringScheduleText } from '../src/recurring-days.js';
 
 (() => {
   const root = document.getElementById('shirley-portal-view');
@@ -11,6 +12,10 @@ import '../src/featured-products.css';
   const today = () => { const p = new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()); const v=Object.fromEntries(p.map(x=>[x.type,x.value])); return v.year+'-'+v.month+'-'+v.day; };
   const shiftDate = value => { const d = new Date(value+'T12:00:00'); if (d.getDay()===0) d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); };
   let selectedQuantities = new Map();
+  let retainedLines = [];
+  const dayDrafts = new Map();
+  let editingDay = null;
+  let editingDailySchedule = false;
   let selectedCustomerId = '';
   let editingScheduleId = null;
   let profiles = [];
@@ -30,16 +35,53 @@ import '../src/featured-products.css';
   const ordersSearch = $('#shirley-orders-search');
   const weekdayHost = $('#shirley-weekdays');
   const recurrenceInput = $('#shirley-recurrence');
+  const dailyInput = $('#shirley-daily-items');
+  const recurringOptions = $('#shirley-recurring-options');
+  const dayEditor = $('#shirley-day-editor');
+  const selectedDays = () => [...weekdayHost.querySelectorAll('input:checked')].map(input => Number(input.value));
+  const dailyMode = () => recurrenceInput.value !== 'once' && dailyInput.checked;
   const recurrenceFeedback = $('#shirley-recurring-feedback');
   const tabPanels = [...root.querySelectorAll('[data-shirley-panel]')];
   const setFeedback = (node,message,kind='') => { node.textContent=message; node.dataset.kind=kind; };
   const activeProducts = () => products.filter(p=>p.active && Number.isSafeInteger(p.priceCents) && p.priceCents>=0).slice().sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
   const selectedProfile = () => profiles.find(p=>p.user_id===selectedCustomerId);
-  const chosenLines = () => activeProducts().filter(p=>(selectedQuantities.get(p.id)||0)>0).map(p=>{
-    const quantity=selectedQuantities.get(p.id);
+  const linesFor = (quantities, extra = []) => [...activeProducts().filter(p=>(quantities.get(p.id)||0)>0).map(p=>{
+    const quantity=quantities.get(p.id);
     if(p.unit==='kg'){const weightGrams=quantity*50;return {productId:p.id,name:p.name,quantity:1,weightGrams,kgPriceCents:p.priceCents,priceCents:window.TrameliOrderMath.weightPriceCents(p.priceCents,weightGrams)};}
     return {productId:p.id,name:p.name,quantity,priceCents:p.priceCents};
-  });
+  }), ...extra];
+  const chosenLines = () => linesFor(selectedQuantities, retainedLines);
+  const cloneDraft = () => ({ quantities: new Map(selectedQuantities), extra: retainedLines.map(line => ({ ...line })) });
+  function draftFromLines(lines) {
+    const quantities = new Map(), extra = [];
+    for (const line of lines || []) {
+      const product = activeProducts().find(p => p.id === line.productId) || activeProducts().find(p => p.name === line.name);
+      if (!product) { extra.push({ ...line }); continue; }
+      quantities.set(product.id, product.unit === 'kg' ? Math.max(1, Math.round(Number(line.weightGrams || 50) / 50)) : Math.max(1, Number(line.quantity) || 1));
+    }
+    return { quantities, extra };
+  }
+  function activateDay(day) {
+    if (!dayDrafts.has(day)) dayDrafts.set(day, cloneDraft());
+    editingDay = day;
+    selectedQuantities = dayDrafts.get(day).quantities;
+    retainedLines = dayDrafts.get(day).extra;
+  }
+  function renderDayEditor() {
+    dayEditor.hidden = !dailyMode();
+    if (!dailyMode()) return;
+    const days = selectedDays();
+    const focusedDay = document.activeElement?.dataset.editWeekday;
+    $('#shirley-day-tabs').innerHTML = days.map(day => {
+      const draft = dayDrafts.get(day);
+      const lines = draft ? linesFor(draft.quantities, draft.extra) : [];
+      return `<button type="button" class="shirley-recurring__day" data-edit-weekday="${day}" aria-pressed="${day === editingDay}"><strong>${weekdayNames[day]}</strong><small>${lines.length ? `${lines.length} ${lines.length === 1 ? 'produto' : 'produtos'}` : 'Sem produtos'}</small></button>`;
+    }).join('');
+    if (focusedDay) $('#shirley-day-tabs').querySelector(`[data-edit-weekday="${focusedDay}"]`)?.focus({ preventScroll: true });
+    $('#shirley-day-heading').textContent = editingDay ? `Montando o pedido de ${weekdayNames[editingDay].toLocaleLowerCase('pt-BR')}. Os produtos e o total abaixo pertencem somente a este dia.` : 'Selecione pelo menos um dia de entrega.';
+    const checked = new Set([...$('#shirley-copy-days').querySelectorAll('input:checked')].map(input => Number(input.value)));
+    $('#shirley-copy-days').innerHTML = days.filter(day => day !== editingDay).map(day => `<label><input type="checkbox" value="${day}" ${checked.has(day) ? 'checked' : ''}>${weekdayNames[day]}</label>`).join('');
+  }
   const totalCents = () => {
     const items = chosenLines();
     return items.length ? window.TrameliOrderMath.totalCents({ items, feeCents: 200 }) : 0;
@@ -68,29 +110,35 @@ import '../src/featured-products.css';
     const q=productSearch.value.trim().toLocaleLowerCase('pt-BR');
     const list=activeProducts().filter(p=>p.name.toLocaleLowerCase('pt-BR').includes(q));
     const featuredScroll = highlightsHost.querySelector('.featured-products__rail')?.scrollLeft || 0;
-    const focused = highlightsHost.contains(document.activeElement) ? { id: document.activeElement.dataset.productId, step: document.activeElement.dataset.productStep } : null;
+    const focused = root.contains(document.activeElement) ? { id: document.activeElement.dataset.productId, step: document.activeElement.dataset.productStep, scope: highlightsHost.contains(document.activeElement) ? '#shirley-featured-products' : '#shirley-products' } : null;
     const availableHighlights = activeProducts().filter(p => !(p.unavailableFrom && p.unavailableUntil && dateInput.value >= p.unavailableFrom && dateInput.value <= p.unavailableUntil));
     highlightsHost.innerHTML = featuredProductsMarkup(availableHighlights, {
       headingId: 'shirley-featured-title', hidden: Boolean(q),
       renderPhoto: p => p.image ? `<img src="${esc(p.image)}" alt="${esc(p.name)}" loading="lazy">` : '<span class="shirley-portal__empty">Foto em breve</span>',
       renderControls: p => {
         const qty = selectedQuantities.get(p.id) || 0;
-        return `<div class="shirley-portal__stepper"><button type="button" data-product-step="-1" data-product-id="${esc(p.id)}" aria-label="Diminuir ${esc(p.name)}" ${qty ? '' : 'disabled'}>−</button><span>${p.unit === 'kg' ? `${qty * 50} g` : qty}</span><button type="button" data-product-step="1" data-product-id="${esc(p.id)}" aria-label="Adicionar ${esc(p.name)}" ${qty >= (p.unit === 'kg' ? 99 : 999) ? 'disabled' : ''}>+</button></div>`;
+        return `<div class="shirley-portal__stepper"><button type="button" class="button--icon-round" data-product-step="-1" data-product-id="${esc(p.id)}" aria-label="Diminuir ${esc(p.name)}" ${qty ? '' : 'disabled'}>−</button><span>${p.unit === 'kg' ? `${qty * 50} g` : qty}</span><button type="button" class="button--icon-round" data-product-step="1" data-product-id="${esc(p.id)}" aria-label="Adicionar ${esc(p.name)}" ${qty >= (p.unit === 'kg' ? 99 : 999) ? 'disabled' : ''}>+</button></div>`;
       },
     });
     const rail = highlightsHost.querySelector('.featured-products__rail');
     if (rail) rail.scrollLeft = featuredScroll;
-    if (focused?.id) highlightsHost.querySelector(`[data-product-id="${CSS.escape(focused.id)}"][data-product-step="${focused.step}"]`)?.focus({ preventScroll: true });
     productsHost.innerHTML=list.length?list.map(p=>{
       const qty=selectedQuantities.get(p.id)||0;
       const image=p.image||p.photo||'';
       const price=p.unit==='kg'?money(p.priceCents)+' / kg':money(p.priceCents);
       const amount=p.unit==='kg'?(qty?qty*50+' g':'0 g'):qty;
-      return '<article class="shirley-portal__product"><div class="shirley-portal__product-photo">'+(image?'<img src="'+esc(image)+'" alt="" loading="lazy">':'')+'</div><div class="shirley-portal__product-info"><strong>'+esc(p.name)+'</strong><small>'+price+'</small><div class="shirley-portal__stepper"><button type="button" data-product-step="-1" data-product-id="'+esc(p.id)+'" aria-label="Diminuir '+esc(p.name)+'" '+(!qty?'disabled':'')+'>−</button><span>'+amount+'</span><button type="button" data-product-step="1" data-product-id="'+esc(p.id)+'" aria-label="Adicionar '+esc(p.name)+'">+</button></div></div></article>';
+      return '<article class="shirley-portal__product"><div class="shirley-portal__product-photo">'+(image?'<img src="'+esc(image)+'" alt="" loading="lazy">':'')+'</div><div class="shirley-portal__product-info"><strong>'+esc(p.name)+'</strong><small>'+price+'</small><div class="shirley-portal__stepper"><button type="button" class="button--icon-round" data-product-step="-1" data-product-id="'+esc(p.id)+'" aria-label="Diminuir '+esc(p.name)+'" '+(!qty?'disabled':'')+'>−</button><span>'+amount+'</span><button type="button" class="button--icon-round" data-product-step="1" data-product-id="'+esc(p.id)+'" aria-label="Adicionar '+esc(p.name)+'">+</button></div></div></article>';
     }).join(''):'<p class="shirley-portal__empty">Nenhum produto ativo corresponde à pesquisa.</p>';
     const count=chosenLines().reduce((sum,line)=>sum+(line.weightGrams?1:line.quantity),0);
     $('#shirley-item-count').textContent=count+' '+(count===1?'item selecionado':'itens selecionados');
     $('#shirley-order-total').textContent=money(totalCents());
+    $('#shirley-retained-items').innerHTML = retainedLines.map((line, index) => `<article><span>${esc(recurringItemsText([line]))} — item da programação anterior</span><button type="button" class="shirley-portal__secondary" data-remove-retained="${index}">Retirar item</button></article>`).join('');
+    renderDayEditor();
+    if (focused?.id) {
+      const selector = `${focused.scope} [data-product-id="${CSS.escape(focused.id)}"]`;
+      const button = root.querySelector(`${selector}[data-product-step="${focused.step}"]:not(:disabled)`) || root.querySelector(`${selector}:not(:disabled)`);
+      button?.focus({ preventScroll: true });
+    }
   }
   function renderOrders(){
     if(!live?.operator){$('#shirley-orders-list').innerHTML='<p class="shirley-portal__empty">A consulta exige uma conta operacional.</p>';return;}
@@ -100,7 +148,7 @@ import '../src/featured-products.css';
       const status=({received:'A conferir',confirmed:'Conferido',packing:'Em separação',ready:'Pronto',delivered:'Entregue',cancelled:'Cancelado'})[o.status||'received']||'A conferir';
       const items=(o.items||[]).map(i=>(i.weightGrams?i.weightGrams+' g de ':i.quantity+'× ')+i.name).join(' · ');
       const total=window.TrameliOrderMath.totalCents(o);
-      return '<article class="shirley-portal__record"><div class="shirley-portal__record-main"><strong>'+esc(o.customer)+' · '+esc(o.publicCode||'Pedido')+'</strong><small>'+esc(o.address||'')+' · '+esc(status)+' · '+money(total)+'</small><p>'+esc(items)+'</p></div><div class="shirley-portal__record-actions"><button type="button" data-edit-order="'+esc(o.id)+'">Editar pedido</button></div></article>';
+      return '<article class="shirley-portal__record"><div class="shirley-portal__record-main"><strong>'+esc(o.customer)+' · '+esc(o.publicCode||'Pedido')+'</strong><small>'+esc(o.address||'')+' · '+esc(status)+' · '+money(total)+'</small><p>'+esc(items)+'</p></div><div class="shirley-portal__record-actions"><button type="button" class="shirley-portal__secondary" data-edit-order="'+esc(o.id)+'">Editar pedido</button></div></article>';
     }).join(''):'<p class="shirley-portal__empty">Nenhum pedido encontrado para essa data e pesquisa.</p>';
   }
   async function loadSchedules(){
@@ -113,40 +161,76 @@ import '../src/featured-products.css';
       $('#shirley-recurring-list').innerHTML=schedules.length?schedules.map(s=>{
         const p=profiles.find(x=>x.user_id===s.customer_id);
         const days=(s.weekdays||[1,2,3,4,5,6]).map(d=>weekdayNames[Number(d)]).filter(Boolean).join(', ');
-        const items=(s.items||[]).map(i=>(i.weightGrams?i.weightGrams+' g de ':i.quantity+'× ')+i.name).join(' · ');
-        return '<article class="shirley-portal__record"><div class="shirley-portal__record-main"><strong>'+esc(p?.name||'Cliente')+'</strong><small>'+esc(names[s.recurrence]||s.recurrence)+' · '+esc(s.active?'Ativo':'Pausado')+'</small><small>Dias: '+esc(days)+'</small><p>'+esc(items)+'</p></div><div class="shirley-portal__record-actions"><button type="button" data-edit-schedule="'+esc(s.id)+'" '+(!s.active?'disabled':'')+'>Editar programação</button><button type="button" data-toggle-schedule="'+esc(s.id)+'" data-active="'+String(!s.active)+'">'+(s.active?'Pausar':'Reativar')+'</button><button type="button" data-delete-schedule="'+esc(s.id)+'">Excluir</button></div></article>';
+        const items=recurringScheduleText(s).map(text => `<p>${esc(text)}</p>`).join('');
+        return '<article class="shirley-portal__record"><div class="shirley-portal__record-main"><strong>'+esc(p?.name||'Cliente')+'</strong><small>'+esc(names[s.recurrence]||s.recurrence)+' · '+esc(s.active?'Ativo':'Pausado')+'</small><small>Dias: '+esc(days)+'</small>'+items+'</div><div class="shirley-portal__record-actions"><button type="button" class="shirley-portal__secondary" data-edit-schedule="'+esc(s.id)+'" '+(!s.active?'disabled':'')+'>Editar programação</button><button type="button" class="shirley-portal__secondary" data-toggle-schedule="'+esc(s.id)+'" data-active="'+String(!s.active)+'">'+(s.active?'Pausar':'Reativar')+'</button><button type="button" class="shirley-portal__secondary" data-delete-schedule="'+esc(s.id)+'">Excluir</button></div></article>';
       }).join(''):'<p class="shirley-portal__empty">Nenhuma programação recorrente cadastrada.</p>';
       recurrenceFeedback.textContent='';
     }catch(error){setFeedback(recurrenceFeedback,'Não foi possível carregar as recorrências: '+error.message,'error');}
   }
   function startScheduleEdit(schedule){
+    profiles=window.TrameliPayments?.api?.profiles||profiles; products=live.products||[];
     editingScheduleId=schedule.id; selectedCustomerId=schedule.customer_id; customerId.value=schedule.customer_id;
     const p=profiles.find(x=>x.user_id===schedule.customer_id); customerSearch.value=p?.name||'';
     $('#shirley-selected-customer').textContent=[p?.name,p?.address,p?.phone].filter(Boolean).join(' · ');
-    dateInput.value=schedule.start_date||today(); recurrenceInput.value=schedule.recurrence;
+    dateInput.value=schedule.starts_on||schedule.start_date||today(); recurrenceInput.value=schedule.recurrence;
     form.querySelector('.shirley-portal__step').textContent='EDITAR RECORRÊNCIA';
     $('#shirley-form-title').textContent='Editar programação';
     $('#shirley-order-notes').value=schedule.notes||'';
     weekdayHost.querySelectorAll('input[type=checkbox]').forEach(input=>input.checked=(schedule.weekdays||[1,2,3,4,5,6]).map(Number).includes(Number(input.value)));
-    selectedQuantities.clear();
-    for(const line of schedule.items||[]){
-      const product=activeProducts().find(p=>p.id===line.productId)||activeProducts().find(p=>p.name===line.name);
-      if(!product)continue;
-      selectedQuantities.set(product.id,product.unit==='kg'?Math.max(1,Math.round(Number(line.weightGrams||50)/50)):Math.max(1,Number(line.quantity)||1));
+    dayDrafts.clear(); editingDay=null;
+    const draft=draftFromLines(schedule.items);
+    selectedQuantities=draft.quantities; retainedLines=draft.extra;
+    editingDailySchedule=Boolean(schedule.items_by_weekday); dailyInput.checked=editingDailySchedule;
+    if(dailyInput.checked){
+      for(const day of selectedDays()) dayDrafts.set(day,draftFromLines(schedule.items_by_weekday[String(day)]));
+      activateDay(selectedDays()[0]);
     }
+    recurrenceInput.querySelector('option[value="once"]').disabled=true;
     $('#shirley-order-feedback').textContent='Você está editando uma recorrência existente. Salvar atualizará a programação futura.';
     setTab('new'); syncRecurrence(); renderProducts();
   }
   function resetForm(){
-    form.reset(); editingScheduleId=null; selectedCustomerId=''; customerId.value=''; selectedQuantities.clear();
+    form.reset(); editingScheduleId=null; selectedCustomerId=''; customerId.value=''; selectedQuantities=new Map();retainedLines=[];
+    dayDrafts.clear();editingDay=null;editingDailySchedule=false;dailyInput.checked=false;
+    recurrenceInput.querySelector('option[value="once"]').disabled=false;
     dateInput.value=shiftDate(today()); recurrenceInput.value='once'; weekdayHost.hidden=true;
     $('#shirley-selected-customer').textContent='Nenhum cliente selecionado';
     form.querySelector('.shirley-portal__step').textContent='01 / PEDIDO';
     $('#shirley-form-title').textContent='Novo pedido';
     setFeedback(feedback,'');
-    renderProducts();
+    syncRecurrence(); renderProducts();
   }
-  function syncRecurrence(){weekdayHost.hidden=recurrenceInput.value==='once';}
+  function syncRecurrence(){
+    const once=recurrenceInput.value==='once';
+    weekdayHost.hidden=once;recurringOptions.hidden=once;
+    if(dailyMode()){
+      const days=selectedDays();
+      for(const day of days) if(!dayDrafts.has(day)) dayDrafts.set(day,cloneDraft());
+      if(!days.includes(editingDay)) { if(days.length) activateDay(days[0]); else editingDay=null; }
+    }
+    renderDayEditor();
+  }
+  dailyInput.addEventListener('change',()=>{
+    if(!dailyInput.checked && !confirm('Usar o pedido deste dia em todos os dias selecionados?')){dailyInput.checked=true;return;}
+    if(!dailyInput.checked){selectedQuantities=new Map(selectedQuantities);retainedLines=retainedLines.map(line=>({...line}));dayDrafts.clear();editingDay=null;}
+    syncRecurrence();renderProducts();
+  });
+  weekdayHost.addEventListener('change',()=>{syncRecurrence();renderProducts();});
+  $('#shirley-day-tabs').addEventListener('click',event=>{
+    const button=event.target.closest('[data-edit-weekday]');if(!button)return;
+    activateDay(Number(button.dataset.editWeekday));$('#shirley-copy-feedback').textContent='';renderProducts();
+  });
+  $('#shirley-copy-items').addEventListener('click',()=>{
+    const days=[...$('#shirley-copy-days').querySelectorAll('input:checked')].map(input=>Number(input.value));
+    if(!days.length){$('#shirley-copy-feedback').textContent='Selecione os dias que receberão a cópia.';return;}
+    if(days.some(day=>{const draft=dayDrafts.get(day);return draft&&linesFor(draft.quantities,draft.extra).length;})&&!confirm('Substituir os produtos dos dias selecionados pelo pedido deste dia?'))return;
+    for(const day of days)dayDrafts.set(day,cloneDraft());
+    renderDayEditor();$('#shirley-copy-feedback').textContent='Pedido copiado para '+days.map(day=>weekdayNames[day]).join(', ')+'.';
+  });
+  $('#shirley-retained-items').addEventListener('click',event=>{
+    const button=event.target.closest('[data-remove-retained]');if(!button)return;
+    retainedLines.splice(Number(button.dataset.removeRetained),1);renderProducts();
+  });
   customerSearch.addEventListener('input',()=>{selectedCustomerId='';customerId.value='';$('#shirley-selected-customer').textContent='Selecione o cliente correto na lista.';renderCustomers();});
   customerSearch.addEventListener('focus',()=>renderCustomers());
   customerResults.addEventListener('click',event=>{const button=event.target.closest('[data-customer-id]');if(button)chooseCustomer(button.dataset.customerId);});
@@ -177,9 +261,15 @@ import '../src/featured-products.css';
     if(del){if(!confirm('Excluir esta programação e os pedidos gerados por ela?'))return;del.disabled=true;try{await live.deleteRecurringSchedule(del.dataset.deleteSchedule);await loadSchedules();}catch(error){setFeedback(recurrenceFeedback,'Não foi possível excluir: '+error.message,'error');}finally{del.disabled=false;}}
   });
   form.addEventListener('submit',async event=>{
-    event.preventDefault(); if(!live?.operator){setFeedback(feedback,'Esta área exige uma conta operacional conectada.','error');return;}
+    event.preventDefault(); if(form.querySelector('[type=submit]').disabled)return;
+    if(!live?.operator){setFeedback(feedback,'Esta área exige uma conta operacional conectada.','error');return;}
     const profile=selectedProfile(); const date=dateInput.value; const recurrence=recurrenceInput.value;
     const items=chosenLines(); const weekdays=[...weekdayHost.querySelectorAll('input:checked')].map(input=>Number(input.value)).filter(day=>day>=1&&day<=6);
+    const itemsByWeekday=dailyMode()?Object.fromEntries(weekdays.map(day=>{
+      const draft=dayDrafts.get(day);return [String(day),draft?linesFor(draft.quantities,draft.extra):[]];
+    })):null;
+    const emptyDay=dailyMode()?weekdays.find(day=>!itemsByWeekday[String(day)].length):null;
+    if(emptyDay){activateDay(emptyDay);renderProducts();setFeedback(feedback,`Adicione pelo menos um produto para ${weekdayNames[emptyDay].toLocaleLowerCase('pt-BR')}.`,'error');return;}
     if(!profile||!date||new Date(date+'T12:00:00').getDay()===0||!items.length||(recurrence!=='once'&& !weekdays.length)){
       setFeedback(feedback,new Date(date+'T12:00:00').getDay()===0?'Não fazemos entregas aos domingos. Escolha outra data.':!profile?'Selecione um cliente cadastrado na lista.':!items.length?'Adicione pelo menos um produto.':'Selecione os dias da recorrência.','error');return;
     }
@@ -195,16 +285,17 @@ import '../src/featured-products.css';
         const order={id:null,publicCode:'',createdAt:new Date().toISOString(),checked:false,status:'received',editedAt:null,customerId:profile.user_id,customer:profile.name,address:profile.address||'',phone:profile.phone||'',date,feeCents:200,items,notes};
         await live.saveOperatorOrder(order,requestId,profile.user_id);
       }else{
-        await live.saveRecurringOrder({customerId:profile.user_id,recurrence:recurrence==='once'?'fixed':recurrence,startDate:date,notes,feeCents:200,weekdays,items:items.map(i=>({...i}))},requestId,editingScheduleId);
+        await live.saveRecurringOrder({customerId:profile.user_id,recurrence:recurrence==='once'?'fixed':recurrence,startDate:date,notes,feeCents:200,weekdays,items:items.map(i=>({...i})),...((dailyMode()||editingDailySchedule)?{itemsByWeekday}:{})},requestId,editingScheduleId);
         await live.materializeRecurringOrders(date);
       }
       await live.load();
       ordersDate.value=date;resetForm();setTab('orders');renderOrders();
-      setFeedback($('#shirley-orders-feedback'),'Pedido salvo com sucesso.','success');
+      setFeedback($('#shirley-orders-feedback'),recurrence==='once'?'Pedido salvo com sucesso.':'Programação salva. Os pedidos serão gerados nos dias selecionados.','success');
     }catch(error){setFeedback(feedback,'Não foi possível salvar: '+error.message,'error');}
     finally{submit.disabled=false;}
   });
   window.addEventListener('trameli:orders-changed',()=>{if(activeTab==='orders')renderOrders();});
+  window.addEventListener('trameli:shirley-edit-schedule',event=>startScheduleEdit(event.detail));
   window.addEventListener('trameli:catalog-changed',()=>{products=live?.products||[];renderProducts();});
   window.addEventListener('trameli:payments-changed',()=>{profiles=window.TrameliPayments?.api?.profiles||profiles;});
   window.addEventListener('trameli:shirley-portal-open',async()=>{

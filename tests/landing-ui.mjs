@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { browserPath, headlessFlags } from './browser-path.mjs';
@@ -89,6 +89,7 @@ try {
   await evaluate('document.querySelector(\'.nav__item[href="#portal-shirley"]\').click()');
   await until('!document.querySelector("#shirley-portal-view").hidden && (!document.querySelector(".route-transition") || document.querySelector(".route-transition").hidden)');
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+  await evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
   assert.ok(await evaluate('document.documentElement.scrollWidth <= innerWidth'), 'Portal da Shirley não deve transbordar no celular.');
   await evaluate('document.querySelector(".mobile-menu-button").click()');
   await until('document.body.classList.contains("menu-open") && !document.querySelector("#main-navigation-panel").inert');
@@ -129,6 +130,74 @@ try {
   assert.equal(await evaluate('shirleySaved[0].order.items[1].weightGrams'), 150);
   assert.match(await evaluate('document.querySelector("#shirley-orders-list").textContent'), /6,50/);
   console.log('Portal da Shirley: quantidades, peso, taxa, seleção de cliente e lançamento com resumo consistente OK.');
+
+  await evaluate(`document.querySelector('[data-shirley-tab="new"]').click()`);
+  await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
+  const alignment = await evaluate(`(() => {
+    const fields=['#shirley-customer-search','#shirley-delivery-date','#shirley-recurrence'].map(selector=>document.querySelector(selector).getBoundingClientRect());
+    const buttons=[document.querySelector('#shirley-featured-products [data-product-step="1"]'),document.querySelector('#shirley-products [data-product-step="1"]')].map(button=>{const r=button.getBoundingClientRect(),s=getComputedStyle(button);return {width:r.width,height:r.height,padding:s.padding,radius:s.borderRadius,color:s.backgroundColor};});
+    return {tops:fields.map(r=>r.top),heights:fields.map(r=>r.height),buttons};
+  })()`);
+  assert.ok(Math.max(...alignment.tops)-Math.min(...alignment.tops)<1,'Os três campos precisam começar na mesma linha.');
+  assert.ok(Math.max(...alignment.heights)-Math.min(...alignment.heights)<1,'Os campos precisam ter a mesma altura.');
+  for(const button of alignment.buttons){assert.equal(button.width,button.height);assert.equal(button.padding,'0px');assert.ok(parseFloat(button.radius)>=button.width/2);}
+  assert.equal(alignment.buttons[0].color,alignment.buttons[1].color,'Vitrine e catálogo devem usar o mesmo estilo de botão.');
+  await evaluate(`(() => {
+    const search=document.querySelector('#shirley-customer-search');search.value='Cliente';search.dispatchEvent(new Event('input',{bubbles:true}));document.querySelector('[data-customer-id="cliente-teste"]').click();
+    document.querySelector('#shirley-delivery-date').value='2026-10-21';
+    const recurrence=document.querySelector('#shirley-recurrence');recurrence.value='monthly';recurrence.dispatchEvent(new Event('change',{bubbles:true}));
+    document.querySelector('#shirley-daily-items').click();
+    for(let i=0;i<6;i++)document.querySelector('[data-product-id="pao-teste"][data-product-step="1"]').click();
+    for(const day of ['3','5'])document.querySelector('#shirley-copy-days input[value="'+day+'"]').checked=true;
+    document.querySelector('#shirley-copy-items').click();
+    document.querySelector('#shirley-order-form').requestSubmit();
+    window.shirleyEmptyDayMessage=document.querySelector('#shirley-order-feedback').textContent;
+    document.querySelector('[data-edit-weekday="2"]').click();
+    for(let i=0;i<6;i++)document.querySelector('[data-product-id="pao-teste"][data-product-step="1"]').click();
+    for(let i=0;i<3;i++)document.querySelector('[data-product-id="queijo-teste"][data-product-step="1"]').click();
+    for(const input of document.querySelectorAll('#shirley-copy-days input'))input.checked=['4','6'].includes(input.value);
+    document.querySelector('#shirley-copy-items').click();
+  })()`);
+  assert.match(await evaluate('document.querySelector("#shirley-order-total").textContent'),/9,50/);
+  assert.match(await evaluate('window.shirleyEmptyDayMessage'),/produto para terça/,'Salvar deve indicar o dia que ainda está sem produtos.');
+  assert.equal(await evaluate('window.shirleyRecurringSaved.length'),0,'Dia vazio não deve criar programação parcial.');
+  const dayStyles=await evaluate(`[...document.querySelectorAll('#shirley-day-tabs button')].map(button=>({day:button.dataset.editWeekday,pressed:button.getAttribute('aria-pressed'),background:getComputedStyle(button).backgroundColor}))`);
+  assert.notEqual(dayStyles.find(day=>day.pressed==='true')?.background,dayStyles.find(day=>day.pressed==='false')?.background,JSON.stringify(dayStyles));
+  await evaluate(`document.querySelector('[data-edit-weekday="1"]').click()`);
+  assert.match(await evaluate('document.querySelector("#shirley-order-total").textContent'),/8,00/);
+  await evaluate(`document.querySelector('#shirley-order-form').requestSubmit()`);
+  await until('window.shirleyRecurringSaved.length===1');
+  const savedSchedule=await evaluate('window.shirleyRecurringSaved[0].schedule');
+  assert.equal(savedSchedule.recurrence,'monthly');
+  for(const day of [1,3,5]){assert.equal(savedSchedule.itemsByWeekday[day].length,1);assert.equal(savedSchedule.itemsByWeekday[day][0].quantity,6);}
+  for(const day of [2,4,6]){assert.equal(savedSchedule.itemsByWeekday[day].length,2);assert.equal(savedSchedule.itemsByWeekday[day][1].weightGrams,150);}
+  await until('!document.querySelector(\'[data-shirley-panel="orders"]\').hidden');
+  await evaluate(`document.querySelector('[data-shirley-tab="recurring"]').click()`);
+  await until('!!document.querySelector("[data-edit-schedule]")');
+  assert.match(await evaluate('document.querySelector("#shirley-recurring-list").textContent'),/Segunda: 6× Pão de teste/);
+  assert.match(await evaluate('document.querySelector("#shirley-recurring-list").textContent'),/Terça:.*150 g/);
+  await evaluate('document.querySelector("[data-edit-schedule]").click()');
+  assert.equal(await evaluate('document.querySelector("#shirley-delivery-date").value'),'2026-10-21','Editar deve preservar o início da programação.');
+  await evaluate(`document.querySelector('[data-edit-weekday="2"]').click()`);
+  assert.match(await evaluate('document.querySelector("#shirley-order-total").textContent'),/9,50/);
+  await mkdir(new URL('../assets/crops/',import.meta.url),{recursive:true});
+  for(const width of [1440,390]){
+    await send('Emulation.setDeviceMetricsOverride',{width,height:1000,deviceScaleFactor:1,mobile:width<600});
+    await pause(300);
+    await evaluate(`Promise.all([...document.querySelectorAll('#shirley-featured-products img')].map(image=>image.decode()))`);
+    assert.ok(await evaluate('document.documentElement.scrollWidth<=innerWidth'),'A edição por dia não deve criar rolagem horizontal.');
+    await evaluate('document.querySelector("#shirley-recurring-options").scrollIntoView({block:"start"})');
+    const shot=await send('Page.captureScreenshot',{format:'png'});
+    await writeFile(new URL(`../assets/crops/shirley-daily-${width}.png`,import.meta.url),Buffer.from(shot.data,'base64'));
+  }
+  await evaluate(`document.querySelector('#shirley-products [data-product-id="queijo-teste"][data-product-step="-1"]').click()`);
+  await evaluate('document.querySelector("#shirley-order-form").requestSubmit()');
+  await until('window.shirleyRecurringSaved.length===2');
+  const edited=await evaluate('window.shirleyRecurringSaved[1]');
+  assert.equal(edited.scheduleId,'recorrencia-teste');
+  assert.equal(edited.schedule.itemsByWeekday[2][1].weightGrams,100);
+  assert.equal(edited.schedule.itemsByWeekday[4][1].weightGrams,150,'Editar terça não deve alterar quinta.');
+  console.log('Shirley: campos alinhados, botões circulares, montagem/cópia por dia, pesos, edição independente e layouts desktop/mobile OK.');
 } finally {
   socket?.close();
   browser.kill();

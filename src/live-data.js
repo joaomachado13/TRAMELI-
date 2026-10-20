@@ -208,12 +208,15 @@ export class LiveData {
   async saveRecurringOrder(schedule, requestId, scheduleId = null) {
     if (!this.operator) throw new Error('Acesso restrito à operação.');
     const weekdays = [...new Set((schedule.weekdays || [1, 2, 3, 4, 5, 6]).map(Number))].sort((a, b) => a - b);
-    const { data, error } = await this.client.rpc('trameli_save_recurring_order_with_days', {
+    const daily = schedule.itemsByWeekday !== undefined;
+    const { data, error } = await this.client.rpc(daily ? 'trameli_save_recurring_order_daily' : 'trameli_save_recurring_order_with_days', {
       p_schedule_id: scheduleId, p_request_id: requestId,
       p_customer_id: schedule.customerId, p_recurrence: schedule.recurrence,
       p_start_date: schedule.startDate, p_active: true, p_notes: schedule.notes,
       p_fee_cents: schedule.feeCents, p_items: schedule.items, p_weekdays: weekdays,
+      ...(daily ? { p_items_by_weekday: schedule.itemsByWeekday } : {}),
     });
+    if (error?.code === 'PGRST202' && daily) throw new Error('A opção de produtos por dia ainda precisa ser ativada no banco.');
     if (error) throw error;
     return data;
   }

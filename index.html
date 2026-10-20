@@ -110,9 +110,9 @@
         <section id="shirley-portal-view" class="view shirley-portal" hidden aria-label="Portal da Shirley">
           <section class="shirley-portal__hero"><p class="portal-eyebrow">CENTRAL DE PEDIDOS</p><h1>Pedidos da Shirley<span>.</span></h1><p>Pesquise clientes, monte pedidos em uma tela ampla e gerencie as programações recorrentes.</p>
             <nav class="shirley-portal__tabs" aria-label="Seções do portal">
-              <button type="button" data-shirley-tab="new" aria-pressed="true">Novo pedido</button>
-              <button type="button" data-shirley-tab="orders" aria-pressed="false">Pesquisar pedidos</button>
-              <button type="button" data-shirley-tab="recurring" aria-pressed="false">Recorrências</button>
+              <button type="button" class="shirley-portal__tab" data-shirley-tab="new" aria-pressed="true">Novo pedido</button>
+              <button type="button" class="shirley-portal__tab" data-shirley-tab="orders" aria-pressed="false">Pesquisar pedidos</button>
+              <button type="button" class="shirley-portal__tab" data-shirley-tab="recurring" aria-pressed="false">Recorrências</button>
             </nav>
           </section>
           <section class="shirley-portal__workspace" data-shirley-panel="new">
@@ -132,9 +132,19 @@
                 <label><input type="checkbox" value="1" checked> Segunda</label><label><input type="checkbox" value="2" checked> Terça</label><label><input type="checkbox" value="3" checked> Quarta</label><label><input type="checkbox" value="4" checked> Quinta</label><label><input type="checkbox" value="5" checked> Sexta</label><label><input type="checkbox" value="6" checked> Sábado</label>
                 <p>Domingo não recebe entregas.</p>
               </fieldset>
+              <section id="shirley-recurring-options" class="shirley-recurring" hidden aria-label="Produtos da recorrência">
+                <label class="shirley-recurring__toggle"><input id="shirley-daily-items" type="checkbox"> Produtos diferentes por dia</label>
+                <p>Mensal e quinzenal definem o fechamento da cobrança. Os dias selecionados definem as entregas.</p>
+                <div id="shirley-day-editor" hidden>
+                  <div id="shirley-day-tabs" class="shirley-recurring__days" role="group" aria-label="Escolha o dia para montar o pedido"></div>
+                  <p id="shirley-day-heading" role="status"></p>
+                  <details class="shirley-recurring__copy"><summary>Copiar este pedido para outros dias</summary><div id="shirley-copy-days"></div><button type="button" id="shirley-copy-items" class="shirley-portal__secondary">Copiar pedido</button><p id="shirley-copy-feedback" role="status"></p></details>
+                </div>
+              </section>
               <div id="shirley-featured-products"></div>
               <div class="shirley-portal__section-head shirley-portal__section-head--products"><div><p class="portal-eyebrow">CATÁLOGO</p><h2>Escolha os produtos</h2></div><label class="shirley-portal__search">Pesquisar produto<input id="shirley-product-search" type="search" placeholder="Nome do produto…"></label></div>
               <div id="shirley-products" class="shirley-portal__products"></div>
+              <div id="shirley-retained-items" class="shirley-recurring__retained"></div>
               <label class="shirley-portal__field shirley-portal__notes">Observação (opcional)<textarea id="shirley-order-notes" rows="3" maxlength="280" placeholder="Instruções para este pedido…"></textarea></label>
               <div class="shirley-portal__summary"><div><span id="shirley-item-count">0 itens selecionados</span><small>Taxa de entrega fixa: R$ 2,00</small></div><strong id="shirley-order-total">R$ 0,00</strong></div>
               <p id="shirley-order-feedback" class="shirley-portal__feedback" role="status" aria-live="polite"></p>
