@@ -518,7 +518,7 @@ function showRoute(force = false) {
   if (route === activeRoute && !force) { ++routeRevision; motion.cancelTransition(); setMenu(false); return; }
   const revision = ++routeRevision;
   const previous = activeRoute;
-  const finish = () => { if (revision !== routeRevision) return; renderRoute(route, force && previous === route); if (previous !== null && !force && route !== 'loja') animateRouteIn(route); else motion.refresh(); };
+  const finish = () => { if (revision !== routeRevision) return; renderRoute(route, force && previous === route); if (previous !== null && !force && route !== 'loja' && route !== 'portal-shirley') animateRouteIn(route); else motion.refresh(); };
   if (previous !== null && previous !== 'loja' && previous !== 'portal-shirley' && route !== 'loja' && route !== 'portal-shirley' && !force && !motionDisabled()) {
     const outgoing = previous === 'inicio' ? homeView : previous === 'operacao' ? operationView : screenView;
     const style = ({ inicio: 'curve', operacao: 'swipe', pedidos: 'swipe', clientes: 'swipe', produtos: 'diagonal', agenda: 'wave', financeiro: 'curve', relatorios: 'diagonal', configuracoes: 'wave', pendencias: 'curve' })[route] || 'curve';
