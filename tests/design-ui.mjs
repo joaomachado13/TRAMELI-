@@ -297,6 +297,17 @@ try {
     assert(await evaluate('getComputedStyle(document.querySelector(".portal-filterbar")).position === "sticky"'), `filtros da loja não ficaram sticky em ${width}px.`);
     const columns = await evaluate('getComputedStyle(document.querySelector(".portal-product-grid")).gridTemplateColumns.split(" ").filter(Boolean).length');
     assert(columns === expectedColumns, `grade da loja em ${width}px deveria ter ${expectedColumns} colunas e tem ${columns}.`);
+    const addButton = await evaluate(`(() => {
+      const button = document.querySelector(".portal-product .portal-add-button");
+      if (!button) return null;
+      const rect = button.getBoundingClientRect();
+      const parent = button.parentElement.getBoundingClientRect();
+      const style = getComputedStyle(button);
+      return { text: button.textContent.trim(), width: rect.width, parentWidth: parent.width, height: rect.height, radius: parseFloat(style.borderRadius) || 0 };
+    })()`);
+    assert(addButton?.text === 'Adicionar', `botão Adicionar perdeu o texto em ${width}px.`);
+    assert(addButton.width >= addButton.parentWidth * .9 && addButton.width > 70, `botão Adicionar voltou a ficar estreito/bolinha em ${width}px: ${JSON.stringify(addButton)}`);
+    assert(addButton.height >= 40 && addButton.radius < addButton.height / 2, `botão Adicionar voltou a ficar circular em ${width}px: ${JSON.stringify(addButton)}`);
   }
   assert(!identityIssues.length, `Identidade: ${JSON.stringify(identityIssues)}`);
   process.stdout.write('Identidade: Manrope, contraste, dez rotas Master/Portal, modal e responsividade 390/1440px OK.\n');
