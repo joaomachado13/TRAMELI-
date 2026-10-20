@@ -4,9 +4,10 @@ const live = window.TrameliLive;
 const operationView = document.getElementById('operation-view');
 const screenView = document.getElementById('screen-view');
 const portalView = document.getElementById('portal-view');
+const shirleyPortalView = document.getElementById('shirley-portal-view');
 const appShell = document.querySelector('.app-shell');
 const navigation = [...document.querySelectorAll('.nav__item')];
-const routes = new Set(['operacao', 'inicio', 'pendencias', 'pedidos', 'clientes', 'produtos', 'agenda', 'financeiro', 'relatorios', 'configuracoes', 'loja']);
+const routes = new Set(['operacao', 'portal-shirley', 'inicio', 'pendencias', 'pedidos', 'clientes', 'produtos', 'agenda', 'financeiro', 'relatorios', 'configuracoes', 'loja']);
 const systemReducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 let userReducedMotion = false;
 try { userReducedMotion = localStorage.getItem('trameli-reduced-motion') === 'true'; } catch { /* Storage may be unavailable on file URLs. */ }
@@ -446,13 +447,17 @@ window.TrameliMenu = { close: () => setMenu(false) };
 
 function renderRoute(route, preserveScroll = false) {
   const isPortal = route === 'loja';
+  const isShirleyPortal = route === 'portal-shirley';
+  const isStandalonePortal = isPortal || isShirleyPortal;
   portalView.hidden = !isPortal;
-  appShell.hidden = isPortal;
-  document.body.classList.toggle('portal-mode', isPortal);
-  if (isPortal) {
-    document.title = `Peça para amanhã — ${readSettings().businessName}`;
+  shirleyPortalView.hidden = !isShirleyPortal;
+  appShell.hidden = isStandalonePortal;
+  document.body.classList.toggle('portal-mode', isStandalonePortal);
+  document.body.classList.toggle('shirley-portal-mode', isShirleyPortal);
+  if (isStandalonePortal) {
+    document.title = isShirleyPortal ? `Portal da Shirley — ${readSettings().businessName}` : `Peça para amanhã — ${readSettings().businessName}`;
     navigation.forEach(link => {
-      const active = link.getAttribute('href') === '#loja';
+      const active = link.getAttribute('href') === `#${route}`;
       link.classList.toggle('btn', active);
       link.classList.toggle('lnk', !active);
       if (active) link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current');
@@ -460,7 +465,8 @@ function renderRoute(route, preserveScroll = false) {
     setMenu(false);
     if (!preserveScroll) motion.scrollTo(0, false);
     activeRoute = route;
-    window.dispatchEvent(new Event('trameli:portal-open'));
+    if (isPortal) window.dispatchEvent(new Event('trameli:portal-open'));
+    if (isShirleyPortal) window.dispatchEvent(new Event('trameli:shirley-portal-open'));
     return;
   }
   const isHome = route === 'inicio';
@@ -513,7 +519,7 @@ function showRoute(force = false) {
   const revision = ++routeRevision;
   const previous = activeRoute;
   const finish = () => { if (revision !== routeRevision) return; renderRoute(route, force && previous === route); if (previous !== null && !force && route !== 'loja') animateRouteIn(route); else motion.refresh(); };
-  if (previous !== null && previous !== 'loja' && route !== 'loja' && !force && !motionDisabled()) {
+  if (previous !== null && previous !== 'loja' && previous !== 'portal-shirley' && route !== 'loja' && route !== 'portal-shirley' && !force && !motionDisabled()) {
     const outgoing = previous === 'inicio' ? homeView : previous === 'operacao' ? operationView : screenView;
     const style = ({ inicio: 'curve', operacao: 'swipe', pedidos: 'swipe', clientes: 'swipe', produtos: 'diagonal', agenda: 'wave', financeiro: 'curve', relatorios: 'diagonal', configuracoes: 'wave', pendencias: 'curve' })[route] || 'curve';
     motion.leave(outgoing, finish, { style });
