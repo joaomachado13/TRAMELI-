@@ -340,7 +340,7 @@ import '../src/featured-products.css';
     const quantity = cart[product.id] || 0;
     const quantityLabel = weighted(product) ? 'Peso' : 'Quantidade';
     if (!quantity) {
-      return `<div class="portal-stepper portal-stepper--empty" data-has-items="false" aria-label="${quantityLabel} de ${escapeHtml(product.name)}"><button type="button" class="portal-add-button" data-qty="1" data-id="${escapeHtml(product.id)}" aria-label="Adicionar ${escapeHtml(product.name)} em ${weighted(product) ? '50 gramas' : 'uma unidade'}">Adicionar</button></div>`;
+      return `<div class="portal-add-slot" data-has-items="false" aria-label="${quantityLabel} de ${escapeHtml(product.name)}"><button type="button" class="portal-add-button" data-qty="1" data-id="${escapeHtml(product.id)}" aria-label="Adicionar ${escapeHtml(product.name)} em ${weighted(product) ? '50 gramas' : 'uma unidade'}">Adicionar</button></div>`;
     }
     return `<div class="portal-stepper" data-has-items="true" aria-label="${quantityLabel} de ${escapeHtml(product.name)}"><button type="button" class="button button--icon-round" data-qty="-1" data-id="${escapeHtml(product.id)}" aria-label="Diminuir ${escapeHtml(product.name)} em ${weighted(product) ? '50 gramas' : 'uma unidade'}">−</button><span>${weighted(product) ? `${quantity * 50} g` : quantity}</span><button type="button" class="button button--icon-round" data-qty="1" data-id="${escapeHtml(product.id)}" aria-label="Adicionar ${escapeHtml(product.name)} em ${weighted(product) ? '50 gramas' : 'uma unidade'}" ${quantity >= 99 ? 'disabled' : ''}>+</button></div>`;
   }
