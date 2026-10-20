@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { PDFDocument } from 'pdf-lib';
-import { supplierGroups, supplierTotals, supplierText, itemCheckKey, filterSupplierGroups } from '../src/supplier-checklist.js';
+import { supplierGroups, supplierTotals, supplierText, itemCheckKey, filterSupplierGroups, compareSupplierGroups } from '../src/supplier-checklist.js';
 import { createSupplierPdf, createSeparationPdf } from '../src/supplier-pdf.js';
 
 const date = '2026-10-07';
@@ -15,6 +15,13 @@ const checks = new Set(first.items.map((_, index) => itemCheckKey(first, index))
 const groups = supplierGroups(orders, date, checks);
 assert.equal(groups.length, 2);
 assert.equal(groups[0].orders.length, 2);
+const streetOrder = [
+  { customer: 'Zuleica', address: 'Rua 2, casa 1' },
+  { customer: 'Ana', address: 'Rua 2, casa 20' },
+  { customer: 'Bruno', address: 'Rua 10, casa 3' },
+].sort(compareSupplierGroups);
+assert.deepEqual(streetOrder.map(group => group.customer), ['Ana', 'Zuleica', 'Bruno'],
+  'A lista de separação deve ordenar ruas numericamente e, na mesma rua, clientes alfabeticamente.');
 assert(groups[0].orders[0].checked);
 assert(!groups[0].orders[1].checked);
 assert(groups[0].orders[0].lines[1].label.includes('350 g'));
