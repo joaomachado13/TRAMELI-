@@ -443,7 +443,7 @@ body:has(#loja:target){
 #portal-floating-host button:focus-visible{outline:3px solid rgba(143,61,34,.28);outline-offset:2px}
 .portal-header{max-width:1280px;padding:20px 32px;background:var(--portal-bg)}
 .portal-header__actions button{min-height:42px}
-.portal-welcome{max-width:1220px;margin:32px auto 0;padding:32px;border:1px solid var(--portal-border);border-radius:var(--portal-radius-3);background:linear-gradient(135deg,#FFFBF6 0%,#F8EADC 100%);color:var(--portal-ink);box-shadow:var(--portal-shadow-card)}
+.portal-welcome{max-width:1220px;margin:32px auto 0;padding:32px;border:1px solid var(--portal-border);border-radius:var(--portal-radius-3);background-color:#FFFBF6;background-image:linear-gradient(135deg,#FFFBF6 0%,#F8EADC 100%);color:var(--portal-ink);box-shadow:var(--portal-shadow-card)}
 .portal-welcome__layout{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(260px,.65fr);gap:32px;align-items:stretch}
 .portal-welcome__copy{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;min-height:220px}
 .portal-welcome h1{margin:8px 0 10px;color:var(--portal-ink);font-size:clamp(2.7rem,5vw,4.6rem)}
