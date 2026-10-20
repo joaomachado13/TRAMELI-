@@ -473,7 +473,7 @@ body:has(#loja:target){
 .portal-categories::-webkit-scrollbar{display:none}
 .portal-categories button{flex:0 0 auto;min-height:40px;padding:0 14px;border:1px solid var(--portal-border);border-radius:999px;background:var(--portal-surface);color:var(--portal-text-secondary);font-size:13px;font-weight:650}
 .portal-categories button[aria-pressed="true"]{border-color:var(--portal-accent);background:var(--portal-accent);color:#FFF9F5;font-weight:800}
-.portal-catalog-groups{display:grid;gap:48px;margin-top:32px}
+.portal-catalog-groups{display:grid;grid-template-columns:1fr!important;gap:48px;margin-top:32px}
 .portal-category-group{min-width:0}
 .portal-category-group__heading{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--portal-border)}
 .portal-category-group__heading h3{margin:0;color:var(--portal-ink);font:500 clamp(1.75rem,3vw,2.25rem)/1 var(--font-display,serif)}
