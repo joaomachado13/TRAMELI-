@@ -501,7 +501,6 @@ body:has(#loja:target){
 .portal-add-button:hover{background:var(--portal-accent-hover)}
 .portal-photo-empty{display:flex;width:100%;height:100%;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:linear-gradient(145deg,#F4E5D7,#FBF3E9);color:var(--portal-text-secondary);font-size:12px;font-weight:650;letter-spacing:0;text-transform:none}
 .portal-photo-empty__mark{display:grid;width:46px;height:46px;place-items:center;border:1px solid #D7B8A4;border-radius:50%;background:#FFFBF6;color:var(--portal-accent);font:600 1.5rem var(--font-display,serif)}
-#portal-floating-host{left:50%;right:auto;width:min(760px,calc(100% - 32px));transform:translateX(-50%)}
 #portal-floating-host .portal-catalog__footer{padding:12px 14px calc(12px + env(safe-area-inset-bottom));border:1px solid var(--portal-border);border-radius:var(--portal-radius-3);background:var(--portal-surface);box-shadow:var(--portal-shadow-fixed)}
 #portal-floating-host .portal-catalog__footer>span strong{font-size:14px}
 #portal-floating-host .portal-catalog__footer>span small{color:var(--portal-text-secondary);font-size:12px}
@@ -544,7 +543,6 @@ body:has(#loja:target){
   .portal-stepper{min-height:42px}
   .portal-stepper>button.button--icon-round{width:38px;min-width:38px;height:38px;min-height:38px}
   .portal-add-button{min-height:42px}
-  #portal-floating-host{width:calc(100% - 20px)}
   #portal-floating-host .portal-catalog__footer{gap:10px;padding:10px}
   #portal-floating-host .portal-catalog__footer>div{flex:0 0 auto}
   #portal-floating-host .portal-catalog__footer .portal-primary{padding:0 14px;font-size:12px}
