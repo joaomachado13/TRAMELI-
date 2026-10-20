@@ -29,6 +29,7 @@
 
           <nav class="nav__links" id="main-navigation">
             <a class="lnk nav__item nav__item--operation" href="#operacao"><span class="ico ico--nav ico--orders" aria-hidden="true"></span><span class="nav__label">Operação diária</span></a>
+            <a class="lnk nav__item" href="#portal-shirley"><span class="ico ico--nav ico--cart" aria-hidden="true"></span><span class="nav__label">Portal da Shirley</span></a>
             <a class="lnk nav__item" href="#inicio"><span class="ico ico--nav ico--home" aria-hidden="true"></span><span class="nav__label">Visão geral</span></a>
             <a class="lnk nav__item" href="#pendencias"><span class="ico ico--nav ico--notification" aria-hidden="true"></span><span class="nav__label">Pendências</span></a>
             <a class="lnk nav__item" href="#pedidos"><span class="ico ico--nav ico--orders" aria-hidden="true"></span><span class="nav__label">Pedidos</span><span class="nav__count" id="nav-pending-count" aria-label="0 pedidos precisam de atenção">0</span></a>
@@ -114,6 +115,55 @@
       <header class="portal-header"><a class="portal-brand" href="#loja" aria-label="Pão Doce, início da loja"><img class="portal-brand__logo" src="assets/logo-pao-doce.png" alt="" width="44" height="44">Pão Doce<span class="portal-brand__dot">.</span><small>PADARIA NO SEU TEMPO</small></a><div class="portal-header__actions"><button type="button" id="portal-admin-link" hidden>Painel</button><button type="button" id="portal-orders-link">Meus pedidos</button><button type="button" id="portal-cart-link" aria-label="Abrir carrinho">Sacola <span id="portal-cart-count">0</span></button></div></header>
       <div class="portal-prototype" role="note">Modo de demonstração · dados salvos apenas neste navegador.</div>
       <div id="portal-content" aria-live="polite"></div>
+    </main>
+    <main id="shirley-portal-view" class="portal shirley-portal" hidden>
+      <header class="portal-header">
+        <a class="portal-brand" href="#portal-shirley" aria-label="Pão Doce, Portal da Shirley"><img class="portal-brand__logo" src="assets/logo-pao-doce.png" alt="" width="44" height="44">Pão Doce<span class="portal-brand__dot">.</span><small>PORTAL DA SHIRLEY</small></a>
+        <div class="portal-header__actions"><a class="shirley-portal__back" href="#operacao">Voltar à operação</a></div>
+      </header>
+      <section class="shirley-portal__hero"><p class="portal-eyebrow">CENTRAL DE PEDIDOS</p><h1>Pedidos da Shirley<span>.</span></h1><p>Pesquise clientes, monte pedidos em uma tela ampla e gerencie as programações recorrentes.</p>
+        <nav class="shirley-portal__tabs" aria-label="Seções do portal">
+          <button type="button" data-shirley-tab="new" aria-pressed="true">Novo pedido</button>
+          <button type="button" data-shirley-tab="orders" aria-pressed="false">Pesquisar pedidos</button>
+          <button type="button" data-shirley-tab="recurring" aria-pressed="false">Recorrências</button>
+        </nav>
+      </section>
+      <section class="shirley-portal__workspace" data-shirley-panel="new">
+        <form id="shirley-order-form" novalidate>
+          <div class="shirley-portal__section-head"><div><p class="portal-eyebrow">LANÇAMENTO MANUAL</p><h2 id="shirley-form-title">Novo pedido</h2></div><span class="shirley-portal__step">01 / PEDIDO</span></div>
+          <div class="shirley-portal__form-grid">
+            <label class="shirley-portal__field shirley-portal__field--wide">Pesquisar cliente
+              <input id="shirley-customer-search" type="search" placeholder="Digite o nome do cliente…" autocomplete="off" required>
+              <input id="shirley-customer-id" type="hidden">
+              <div id="shirley-customer-results" class="shirley-portal__customer-results" hidden></div>
+              <small id="shirley-selected-customer" class="shirley-portal__selected">Nenhum cliente selecionado</small>
+            </label>
+            <label class="shirley-portal__field">Data da entrega<input id="shirley-delivery-date" type="date" required></label>
+            <label class="shirley-portal__field">Repetição<select id="shirley-recurrence"><option value="once">Pedido único</option><option value="fixed">Fixo por dias da semana</option><option value="fortnightly">Quinzenal (fechamento)</option><option value="monthly">Mensal (fechamento)</option></select></label>
+          </div>
+          <fieldset id="shirley-weekdays" class="shirley-portal__weekdays" hidden><legend>Repetir nos dias</legend>
+            <label><input type="checkbox" value="1" checked> Segunda</label><label><input type="checkbox" value="2" checked> Terça</label><label><input type="checkbox" value="3" checked> Quarta</label><label><input type="checkbox" value="4" checked> Quinta</label><label><input type="checkbox" value="5" checked> Sexta</label><label><input type="checkbox" value="6" checked> Sábado</label>
+            <p>Domingo não recebe entregas.</p>
+          </fieldset>
+          <div class="shirley-portal__section-head shirley-portal__section-head--products"><div><p class="portal-eyebrow">CATÁLOGO</p><h2>Escolha os produtos</h2></div><label class="shirley-portal__search">Pesquisar produto<input id="shirley-product-search" type="search" placeholder="Nome do produto…"></label></div>
+          <div id="shirley-products" class="shirley-portal__products"></div>
+          <label class="shirley-portal__field shirley-portal__notes">Observação (opcional)<textarea id="shirley-order-notes" rows="3" maxlength="280" placeholder="Instruções para este pedido…"></textarea></label>
+          <div class="shirley-portal__summary"><div><span id="shirley-item-count">0 itens selecionados</span><small>Taxa de entrega fixa: R$ 2,00</small></div><strong id="shirley-order-total">R$ 0,00</strong></div>
+          <p id="shirley-order-feedback" class="shirley-portal__feedback" role="status" aria-live="polite"></p>
+          <div class="shirley-portal__actions"><button type="button" class="shirley-portal__secondary" data-shirley-tab="orders">Ver pedidos existentes</button><button type="submit" class="shirley-portal__primary">Salvar pedido</button></div>
+        </form>
+      </section>
+      <section class="shirley-portal__workspace" data-shirley-panel="orders" hidden>
+        <div class="shirley-portal__section-head"><div><p class="portal-eyebrow">CONSULTA</p><h2>Pesquisar pedidos</h2></div></div>
+        <div class="shirley-portal__filters"><label>Data da entrega<input id="shirley-orders-date" type="date"></label><label>Pesquisar por cliente ou produto<input id="shirley-orders-search" type="search" placeholder="Nome, endereço ou item…"></label></div>
+        <div id="shirley-orders-list" class="shirley-portal__records"></div>
+      </section>
+      <section class="shirley-portal__workspace" data-shirley-panel="recurring" hidden>
+        <div class="shirley-portal__section-head"><div><p class="portal-eyebrow">PROGRAMAÇÃO</p><h2>Pedidos recorrentes</h2></div><button type="button" class="shirley-portal__secondary" data-shirley-tab="new">Criar pedido</button></div>
+        <p class="shirley-portal__help">Cada data gera no máximo uma ocorrência. Edite a programação para mudar os próximos pedidos ou abra um pedido específico na pesquisa para alterar somente aquela data.</p>
+        <p id="shirley-recurring-feedback" class="shirley-portal__feedback" role="status"></p>
+        <div id="shirley-recurring-list" class="shirley-portal__records"></div>
+      </section>
     </main>
     </div></div>
     <div id="portal-floating-host" hidden></div>
