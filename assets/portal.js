@@ -817,7 +817,20 @@ import '../src/featured-products.css';
     const quantity = event.target.closest('[data-qty]');
     if (quantity) { changeQuantity(quantity.dataset.id, Number(quantity.dataset.qty), quantity); return; }
     const categoryButton = event.target.closest('[data-category]');
-    if (categoryButton) { category = categoryButton.dataset.category; render(true); return; }
+    if (categoryButton) {
+      category = categoryButton.dataset.category;
+      render(true);
+      requestAnimationFrame(() => {
+        const rail = host.querySelector('.portal-categories');
+        const active = rail?.querySelector('[aria-pressed="true"]');
+        if (rail && active) {
+          const left = active.offsetLeft - (rail.clientWidth - active.clientWidth) / 2;
+          rail.scrollTo({ left: Math.max(0, left), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+        }
+        motion()?.scrollTo('#portal-grid', true, innerWidth <= 640 ? 155 : 170);
+      });
+      return;
+    }
     const viewButton = event.target.closest('[data-view]');
     if (viewButton) { view = viewButton.dataset.view; error = ''; render(); return; }
     const editButton = event.target.closest('[data-edit-order]');
