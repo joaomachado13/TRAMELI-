@@ -363,7 +363,7 @@ import '../src/featured-products.css';
   }
   function card(product) {
     const inCart = (cart[product.id] || 0) > 0;
-    return `<article class="portal-product${inCart ? ' is-in-cart' : ''}"><div class="portal-product__photo">${photo(product)}${favoriteButton(product)}</div><div class="portal-product__body"><h3>${escapeHtml(product.name)}</h3><p class="portal-product__price">${money(product.priceCents)}</p><div class="portal-product__meta"><span>${escapeHtml(product.unit)}</span><span class="portal-product__category">${escapeHtml(product.category || 'Padaria')}</span></div>${weighted(product) ? `<small class="portal-weight-hint">50 g = ${money(linePrice(product, 1))}</small>` : ''}${stepper(product)}</div></article>`;
+    return `<article class="portal-product${inCart ? ' is-in-cart' : ''}"><div class="portal-product__photo">${photo(product)}${favoriteButton(product)}</div><div class="portal-product__body"><h3>${escapeHtml(product.name)}</h3><p class="portal-product__price">${money(product.priceCents)}</p><div class="portal-product__meta"><span>${escapeHtml(product.unit)}</span></div>${weighted(product) ? `<small class="portal-weight-hint">50 g = ${money(linePrice(product, 1))}</small>` : ''}${stepper(product)}</div></article>`;
   }
   const greeting = () => {
     const hour = saoPauloClock().hour;
@@ -408,18 +408,9 @@ import '../src/featured-products.css';
     if (!order) return `<article class="portal-first-order"><span>SEU PRIMEIRO PEDIDO</span><strong>Escolha seus produtos</strong><p>Sua sacola fica disponível enquanto você navega.</p><a href="#portal-products">Começar agora ↓</a></article>`;
     return `<article class="portal-last-order"><div><span>SEU ÚLTIMO PEDIDO</span><h2>${order.items.slice(0, 3).map(item => escapeHtml(item.name)).join(' · ')}${order.items.length > 3 ? ` +${order.items.length - 3}` : ''}</h2><p>${formatDate(order.date)} · ${money(orderValue(order))}</p></div><button type="button" data-reorder="${escapeHtml(order.id)}">Pedir novamente</button></article>`;
   }
-  function catalogGroupsMarkup(items) {
+  function catalogMarkup(items) {
     if (!items.length) return '<p class="portal-empty">Não encontramos produtos nessa busca.</p>';
-    const groups = new Map();
-    items.forEach(product => {
-      const groupName = product.category || 'Outros';
-      if (!groups.has(groupName)) groups.set(groupName, []);
-      groups.get(groupName).push(product);
-    });
-    return [...groups.entries()].map(([groupName, groupProducts], index) => {
-      const groupId = `portal-category-${index}`;
-      return `<section class="portal-category-group" aria-labelledby="${groupId}"><header class="portal-category-group__heading"><h3 id="${groupId}">${escapeHtml(groupName)}</h3><span>${groupProducts.length} ${groupProducts.length === 1 ? 'item' : 'itens'}</span></header><div class="portal-product-grid">${groupProducts.map(card).join('')}</div></section>`;
-    }).join('');
+    return items.map(card).join('');
   }
   function catalog() {
     const all = products();
@@ -436,7 +427,7 @@ import '../src/featured-products.css';
       const whatsapp = phone ? `<a class="portal-store-closed__action" href="https://wa.me/${phone}?text=${encodeURIComponent('Olá, Shirley! Vi que a loja está fechada e gostaria de tirar uma dúvida.')}" target="_blank" rel="noopener noreferrer">${whatsappIcon}<span>Falar com Shirley no WhatsApp</span></a>` : '';
       return `<aside class="portal-store-closed" role="status" aria-live="polite"><span class="portal-store-closed__label">AVISO DE FUNCIONAMENTO</span><h2>${greeting()}! A loja está fechada para novos pedidos.</h2><p>Você pode consultar o catálogo à vontade, mas não será possível finalizar pedidos agora. Voltamos a aceitar pedidos às 6h, no horário de Brasília. Se precisar de ajuda, fale com a Shirley pelo WhatsApp.</p>${whatsapp}</aside>`;
     })() : '';
-    return `<section class="portal-welcome"><div class="portal-welcome__layout"><div class="portal-welcome__copy"><span class="portal-eyebrow">${greeting().toLocaleUpperCase('pt-BR')}${firstName() ? `, ${escapeHtml(firstName()).toLocaleUpperCase('pt-BR')}` : ''}</span><h1>${greeting()}${firstName() ? `, ${escapeHtml(firstName())}` : ''}.</h1><p>Seu pedido em três passos simples.</p><a class="portal-welcome__action" href="#portal-products">Escolher produtos ↓</a></div>${paymentCountdown()}</div><ol class="portal-welcome__steps"><li><strong>1</strong><span>Escolha os produtos</span></li><li><strong>2</strong><span>Revise a sacola</span></li><li><strong>3</strong><span>Confirme entrega e pagamento</span></li></ol>${closedNotice}</section>${highlights}<section class="portal-quick-actions">${lastOrderCard()}<article><span>PLANEJE COM CALMA</span><strong>Pedidos da semana</strong><p>Organize cada dia sem confirmar nada automaticamente.</p><button type="button" data-view="week">Montar minha semana</button></article></section><section id="portal-products" class="portal-section">${notice}<div class="portal-section__head"><div><span class="portal-eyebrow">FEITO PARA O SEU DIA</span><h2>Produtos da padaria</h2></div><span>${all.length} opções</span></div><div class="portal-filterbar"><label class="portal-search">Buscar produto<input id="portal-search" type="search" value="${escapeHtml(query)}" placeholder="Pão, bolo, suco..."></label>${personalFilters()}<div class="portal-categories" aria-label="Categorias">${categories.map(item => `<button type="button" data-category="${escapeHtml(item)}" aria-pressed="${String(item === category)}">${escapeHtml(item)}</button>`).join('')}</div></div><div class="portal-grid portal-catalog-groups" id="portal-grid">${catalogGroupsMarkup(visible)}</div></section>`;
+    return `<section class="portal-welcome"><div class="portal-welcome__layout"><div class="portal-welcome__copy"><span class="portal-eyebrow">${greeting().toLocaleUpperCase('pt-BR')}${firstName() ? `, ${escapeHtml(firstName()).toLocaleUpperCase('pt-BR')}` : ''}</span><h1>${greeting()}${firstName() ? `, ${escapeHtml(firstName())}` : ''}.</h1><p>Seu pedido em três passos simples.</p><a class="portal-welcome__action" href="#portal-products">Escolher produtos ↓</a></div>${paymentCountdown()}</div><ol class="portal-welcome__steps"><li><strong>1</strong><span>Escolha os produtos</span></li><li><strong>2</strong><span>Revise a sacola</span></li><li><strong>3</strong><span>Confirme entrega e pagamento</span></li></ol>${closedNotice}</section>${highlights}<section class="portal-quick-actions">${lastOrderCard()}<article><span>PLANEJE COM CALMA</span><strong>Pedidos da semana</strong><p>Organize cada dia sem confirmar nada automaticamente.</p><button type="button" data-view="week">Montar minha semana</button></article></section><section id="portal-products" class="portal-section">${notice}<div class="portal-section__head"><div><span class="portal-eyebrow">FEITO PARA O SEU DIA</span><h2>Produtos da padaria</h2></div><span>${all.length} opções</span></div><div class="portal-filterbar"><label class="portal-search">Buscar produto<input id="portal-search" type="search" value="${escapeHtml(query)}" placeholder="Pão, bolo, suco..."></label>${personalFilters()}<div class="portal-categories" aria-label="Categorias">${categories.map(item => `<button type="button" data-category="${escapeHtml(item)}" aria-pressed="${String(item === category)}">${escapeHtml(item)}</button>`).join('')}</div></div><div class="portal-grid portal-product-grid" id="portal-grid">${catalogMarkup(visible)}</div></section>`;
   }
   function cartView() {
     const lines = cartLines();
@@ -870,7 +861,7 @@ import '../src/featured-products.css';
     if (highlights) highlights.hidden = Boolean(query.trim()) || category !== 'Todos' || personalFilter !== 'all';
     const visible = filteredProducts();
     motion()?.reset(host);
-    document.getElementById('portal-grid').innerHTML = catalogGroupsMarkup(visible);
+    document.getElementById('portal-grid').innerHTML = catalogMarkup(visible);
     motion()?.refresh();
   });
   floatingHost?.addEventListener('click', event => {
