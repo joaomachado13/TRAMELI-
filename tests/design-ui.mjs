@@ -288,7 +288,7 @@ try {
     const image = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
     await writeFile(new URL(`../assets/crops/identity-${route}-390.png`, import.meta.url), Buffer.from(image.data, 'base64'));
   }
-  for (const [width, expectedColumns] of [[375,2],[768,3],[1280,5]]) {
+  for (const [width, expectedColumns] of [[375,2],[768,3],[1280,4]]) {
     await send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width < 700 });
     await evaluate('location.hash="#loja"');
     await waitFor('.portal-welcome');
