@@ -1,6 +1,5 @@
 import { statusOf, itemLabel } from './order-math.js';
-
-const normalize = value => String(value || '').trim().toLocaleLowerCase('pt-BR');
+import { supplierProductIdentity } from './supplier-product-identity.js';
 
 export const formatMoney = cents => (Number(cents || 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -31,6 +30,7 @@ export function lineCost(costMap, orderId, index) {
 export function supplierPeriodReport(orders, costMap, from, to, catalogProducts = [], itemFilter = null) {
   const catalogCostById = new Map((catalogProducts || []).map(product => [product.id, product.costCents]));
   const inRange = orders.filter(order => order.date >= from && order.date <= to && statusOf(order) !== 'cancelled');
+  const identify = supplierProductIdentity(inRange.flatMap(order => order.items || []), catalogProducts);
   const products = new Map();
   const days = new Map();
   let totalCents = 0; let missingLines = 0; let estimatedLines = 0; let matchedOrderCount = 0;
@@ -43,10 +43,9 @@ export function supplierPeriodReport(orders, costMap, from, to, catalogProducts 
     days.set(order.date, day);
     matchingItems.forEach(({ item, index }) => {
       const cost = lineCost(costMap, order.id, index);
-      const weighted = Number(item.weightGrams) > 0;
-      const key = JSON.stringify([item.productId || normalize(item.name), weighted]);
+      const { weighted, key, productId } = identify(item);
       const current = products.get(key) || {
-        productId: item.productId || null, name: item.name, weighted, quantity: 0, grams: 0, costCents: 0,
+        productId, name: item.name, weighted, quantity: 0, grams: 0, costCents: 0,
         missing: 0, estimatedCount: 0, referenceUnitCents: null,
       };
       current.quantity += Number(item.quantity) || 0;

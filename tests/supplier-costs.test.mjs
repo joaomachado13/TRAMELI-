@@ -32,6 +32,40 @@ const text = supplierText(groups, '2026-10-15');
 assert(text.includes('TOTAL (preço de custo): R$ 26,10'.replace(/ /g, ' ')) || /TOTAL \(preço de custo\): R\$\s26,10/.test(text));
 assert(!/140|2100/.test(text.replace(/\d{4}-\d{2}-\d{2}/, '')), 'Preço de venda nunca entra no repasse.');
 
+// Same product with/without its ID must consolidate; preserve all historical costs.
+const splitOrders = [
+  mk('id-order', '2026-10-20', [{ productId: 'bread', name: 'Pão francês', quantity: 124, priceCents: 140 }]),
+  mk('legacy-order', '2026-10-20', [{ name: 'Pão francês', quantity: 117, priceCents: 140 }]),
+];
+const splitCosts = costMapFromRows([
+  { order_id: 'id-order', line_index: 1, quantity: 124, unit_cost_cents: 90, total_cost_cents: 11160 },
+  { order_id: 'legacy-order', line_index: 1, quantity: 117, unit_cost_cents: 90, total_cost_cents: 10530 },
+]);
+const combined = supplierTotals(supplierGroups(splitOrders, '2026-10-20', new Set(), splitCosts));
+assert.equal(combined.length, 1);
+assert.equal(combined[0].quantity, 241);
+assert.equal(combined[0].costCents, 21690);
+for (const [from, to] of [['2026-10-20','2026-10-20'],['2026-10-16','2026-10-31'],['2026-10-01','2026-10-31']]) {
+  const consolidated = supplierPeriodReport(splitOrders, splitCosts, from, to);
+  assert.equal(consolidated.products.length, 1);
+  assert.equal(consolidated.products[0].quantity, 241);
+  assert.equal(consolidated.totalCents, 21690);
+  assert.equal(consolidated.orderCount, 2, 'Consolidar materiais não elimina pedidos.');
+}
+const distinct = [
+  mk('a','2026-10-20',[{productId:'a',name:'Cookies',quantity:2,priceCents:200}]),
+  mk('b','2026-10-20',[{productId:'b',name:'Cookies',quantity:3,priceCents:200}]),
+];
+assert.equal(supplierPeriodReport(distinct,new Map(),'2026-10-20','2026-10-20').products.length,2,'IDs diferentes não podem ser fundidos só pelo nome.');
+const weighted = [
+  mk('w1','2026-10-20',[{productId:'cheese',name:'Mussarela',quantity:1,weightGrams:200,priceCents:1400}]),
+  mk('w2','2026-10-20',[{name:' Mussarela ',quantity:1,weightGrams:300,priceCents:2100}]),
+];
+const weightTotals=supplierTotals(supplierGroups(weighted,'2026-10-20'));
+assert.equal(weightTotals.length,1);assert.equal(weightTotals[0].grams,500);
+const unitAndWeight=[...weighted,mk('unit','2026-10-20',[{name:'Mussarela',quantity:1,priceCents:100}])];
+assert.equal(supplierTotals(supplierGroups(unitAndWeight,'2026-10-20')).length,2,'Peso e unidades continuam separados.');
+
 // Período quinzenal alinhado ao fechamento (1–15 e 16–31).
 const first = closingPeriod('2026-10-15', 'quinzenal');
 const report = supplierPeriodReport(orders, costMap, first.from, first.to);
