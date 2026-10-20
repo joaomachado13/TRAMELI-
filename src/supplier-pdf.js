@@ -1,6 +1,6 @@
 import { PDFDocument, PDFName, PDFHexString, rgb } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
-import { supplierTotals, supplierDayCost } from './supplier-checklist.js';
+import { supplierTotals, supplierDayCost, compareSupplierGroups } from './supplier-checklist.js';
 import { formatMoney } from './supplier-costs.js';
 
 const WIDTH = 595.28;
@@ -167,7 +167,7 @@ export async function createSeparationPdf(groups, date, { businessName = 'Pão D
     if (line) out.push(line);
     return out.length ? out : [''];
   }
-  const sorted = [...groups].sort((a,b) => a.address.localeCompare(b.address, 'pt-BR', {sensitivity:'base'}) || a.customer.localeCompare(b.customer, 'pt-BR', {sensitivity:'base'}));
+  const sorted = [...groups].sort(compareSupplierGroups);
   newPage();
   for (const group of sorted) {
     const heading = wrap(group.customer, 11, WIDTH - 2*MARGIN - 20, strong);
