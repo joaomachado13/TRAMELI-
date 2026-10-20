@@ -22,10 +22,12 @@ export function itemCheckKey(order, index) {
   return `${order.date}:${order.id}:${signature(order)}:${index}`;
 }
 
-// Rua numerada em ordem natural; dentro da mesma rua, cliente em ordem alfabética.
+// Ordena pela rua e, dentro dela, pelo número da casa. Nome só desempata endereços iguais.
 export function compareSupplierGroups(a, b) {
-  const streetA = parseStreetAddress(a.address).streetNumber;
-  const streetB = parseStreetAddress(b.address).streetNumber;
+  const addressA = parseStreetAddress(a.address);
+  const addressB = parseStreetAddress(b.address);
+  const streetA = addressA.streetNumber;
+  const streetB = addressB.streetNumber;
   if (streetA != null && streetB != null && streetA !== streetB) return streetA - streetB;
   if (streetA != null && streetB == null) return -1;
   if (streetA == null && streetB != null) return 1;
@@ -33,6 +35,11 @@ export function compareSupplierGroups(a, b) {
     const addressOrder = String(a.address || '').localeCompare(String(b.address || ''), 'pt-BR', { numeric: true, sensitivity: 'base' });
     if (addressOrder) return addressOrder;
   }
+  const houseA = addressA.houseNumber;
+  const houseB = addressB.houseNumber;
+  if (houseA != null && houseB != null && houseA !== houseB) return houseA - houseB;
+  if (houseA != null && houseB == null) return -1;
+  if (houseA == null && houseB != null) return 1;
   return String(a.customer || '').localeCompare(String(b.customer || ''), 'pt-BR', { numeric: true, sensitivity: 'base' });
 }
 
