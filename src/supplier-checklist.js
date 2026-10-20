@@ -1,5 +1,6 @@
 import { statusOf, itemLabel } from './order-math.js';
 import { lineCost, formatMoney } from './supplier-costs.js';
+import { parseStreetAddress } from './address-sort.js';
 
 const normalize = value => String(value || '').trim().toLocaleLowerCase('pt-BR');
 
@@ -21,6 +22,20 @@ export function itemCheckKey(order, index) {
   return `${order.date}:${order.id}:${signature(order)}:${index}`;
 }
 
+// Rua numerada em ordem natural; dentro da mesma rua, cliente em ordem alfabética.
+export function compareSupplierGroups(a, b) {
+  const streetA = parseStreetAddress(a.address).streetNumber;
+  const streetB = parseStreetAddress(b.address).streetNumber;
+  if (streetA != null && streetB != null && streetA !== streetB) return streetA - streetB;
+  if (streetA != null && streetB == null) return -1;
+  if (streetA == null && streetB != null) return 1;
+  if (streetA == null && streetB == null) {
+    const addressOrder = String(a.address || '').localeCompare(String(b.address || ''), 'pt-BR', { numeric: true, sensitivity: 'base' });
+    if (addressOrder) return addressOrder;
+  }
+  return String(a.customer || '').localeCompare(String(b.customer || ''), 'pt-BR', { numeric: true, sensitivity: 'base' });
+}
+
 // Explicit projection: financial and contact fields never enter the supplier document.
 export function supplierGroups(orders, date, checked = new Set(), costMap = null) {
   const groups = new Map();
@@ -37,7 +52,7 @@ export function supplierGroups(orders, date, checked = new Set(), costMap = null
       checked: lines.length > 0 && lines.every(line => line.checked),
       ...(costMap ? { costCents: lines.reduce((sum, line) => sum + (line.costCents || 0), 0), costMissing: lines.filter(line => !line.costKnown).length } : {}) });
   }
-  return [...groups.values()].sort((a, b) => a.address.localeCompare(b.address, 'pt-BR', { sensitivity: 'base' }) || a.customer.localeCompare(b.customer, 'pt-BR', { sensitivity: 'base' }));
+  return [...groups.values()].sort(compareSupplierGroups);
 }
 
 export function supplierTotals(groups) {
