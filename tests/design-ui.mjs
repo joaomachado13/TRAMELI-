@@ -336,6 +336,8 @@ try {
   }
   await evaluate(`(() => {
     window.scrollTo(0, 0);
+    window.__portalWelcomeBeforeFilter=document.querySelector(".portal-welcome");
+    window.__portalGridBeforeFilter=document.querySelector("#portal-grid");
     const button=[...document.querySelectorAll("[data-category]")].find(item => item.dataset.category !== "Todos");
     if (!button) throw new Error("Categoria de teste ausente");
     button.click();
@@ -348,6 +350,8 @@ try {
   })()`);
   assert(categoryNavigation.selected && categoryNavigation.selected !== 'Todos', `clique em categoria não ativou o filtro: ${JSON.stringify(categoryNavigation)}`);
   assert(categoryNavigation.scrollY > 100 && categoryNavigation.gridTop >= 100 && categoryNavigation.gridTop <= 280, `categoria não levou o cliente até os produtos filtrados: ${JSON.stringify(categoryNavigation)}`);
+  assert(await evaluate('window.__portalWelcomeBeforeFilter===document.querySelector(".portal-welcome")'), 'filtro de categoria reconstruiu o hero do portal');
+  assert(await evaluate('window.__portalGridBeforeFilter===document.querySelector("#portal-grid")'), 'filtro de categoria substituiu o contêiner inteiro da grade');
   assert(!identityIssues.length, `Identidade: ${JSON.stringify(identityIssues)}`);
   process.stdout.write('Identidade: Manrope, contraste, dez rotas Master/Portal, modal e responsividade 390/1440px OK.\n');
 } finally {
