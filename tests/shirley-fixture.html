@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teste isolado — Portal da Shirley</title>
+<link rel="stylesheet" href="/assets/styles.css"><link rel="stylesheet" href="/assets/design-system.css">
+<link rel="stylesheet" href="/assets/identity.css"><link rel="stylesheet" href="/assets/shirley-portal.css">
+</head><body><script type="module">
+import * as orderMath from '/src/order-math.js';
+// Exercise the production portal with synthetic data and no backend credentials.
+const markup = new DOMParser().parseFromString(await (await fetch('/index.html')).text(), 'text/html');
+markup.querySelectorAll('script').forEach(script => script.remove());
+document.body.innerHTML = markup.body.innerHTML;
+document.querySelector('.app-shell').hidden = false;
+document.querySelector('#shirley-portal-view').hidden = false;
+document.querySelector('#operation-view').hidden = true;
+window.TrameliOrderMath = orderMath;
+window.shirleySaved = [];
+window.TrameliPayments = { api: { profiles: [
+  { user_id: 'cliente-teste', name: 'Cliente Teste', address: 'Rua 1, casa 10', phone: '34999999999' },
+] } };
+window.TrameliLive = {
+  operator: true,
+  products: [
+    { id: 'pao-teste', name: 'Pão de teste', unit: 'unidade', priceCents: 100, active: true },
+    { id: 'queijo-teste', name: 'Queijo de teste', unit: 'kg', priceCents: 1000, active: true },
+  ],
+  orders: [],
+  async saveOperatorOrder(order, requestId, customerId) {
+    window.shirleySaved.push({ order, requestId, customerId });
+    this.orders.push({ ...order, id: 'pedido-teste', publicCode: 'PD-TESTE', customerId });
+  },
+  async load() { dispatchEvent(new Event('trameli:orders-changed')); },
+};
+await import('/assets/shirley-portal.js');
+window.shirleyReady = true;
+</script></body></html>

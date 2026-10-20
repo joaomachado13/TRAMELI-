@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
+
+const migrationFiles = (await readdir(new URL('../supabase/migrations/', import.meta.url))).filter(name => name.endsWith('.sql')).sort();
+const versions = migrationFiles.map(name => name.split('_')[0]);
+assert.equal(new Set(versions).size, versions.length, 'Cada migration deve ter um identificador único.');
+const recurringSequence = ['20261018172627', '20261018183146', '20261018184606', '20261018192431', '20261018194059', '20261018203008', '20261018213719', '20261018235457', '20261020115055'];
+assert.deepEqual(versions.filter(version => recurringSequence.includes(version)), recurringSequence, 'Preserve a ordem das migrations já aplicadas de recorrência e funcionamento.');
 
 const db = new PGlite({ extensions: { pgcrypto } });
 try {
@@ -30,14 +36,14 @@ try {
   await db.exec(hardeningMigration);
   const publicCodeMigration = await readFile(new URL('../supabase/migrations/202610130016_order_public_codes.sql', import.meta.url), 'utf8');
   await db.exec(publicCodeMigration);
-  const billingFrequencyMigration = await readFile(new URL('../supabase/migrations/202610180017_customer_billing_frequency.sql', import.meta.url), 'utf8');
+  const billingFrequencyMigration = await readFile(new URL('../supabase/migrations/20261018172627_customer_billing_frequency.sql', import.meta.url), 'utf8');
   await db.exec(billingFrequencyMigration);
-  const recurringOrdersMigration = await readFile(new URL('../supabase/migrations/202610190020_recurring_operator_orders.sql', import.meta.url), 'utf8');
+  const recurringOrdersMigration = await readFile(new URL('../supabase/migrations/20261018183146_recurring_operator_orders.sql', import.meta.url), 'utf8');
   await db.exec(recurringOrdersMigration);
-  const futureBalanceGuard = await readFile(new URL('../supabase/migrations/202610190021_recurring_future_balance_guard.sql', import.meta.url), 'utf8');
+  const futureBalanceGuard = await readFile(new URL('../supabase/migrations/20261018184606_recurring_future_balance_guard.sql', import.meta.url), 'utf8');
   assert.match(futureBalanceGuard, /recurring\.delivery_date > \(now\(\) at time zone 'America\/Sao_Paulo'\)::date/);
   assert.match(futureBalanceGuard, /where recurring\.order_id=o\.id/);
-  const recurringWeekdaysMigration = await readFile(new URL('../supabase/migrations/202610190022_recurring_weekdays_and_requests.sql', import.meta.url), 'utf8');
+  const recurringWeekdaysMigration = await readFile(new URL('../supabase/migrations/20261018235457_recurring_weekdays_and_requests.sql', import.meta.url), 'utf8');
   await db.exec(recurringWeekdaysMigration);
 
   const tables = await db.query(`select tablename from pg_tables where schemaname = 'public' and tablename like 'trameli_%' order by tablename`);

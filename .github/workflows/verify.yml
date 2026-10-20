@@ -2,7 +2,9 @@ name: Verificar Trameli
 
 on:
   push:
+    branches-ignore: [main]
   pull_request:
+  workflow_call:
 
 permissions:
   contents: read
@@ -18,7 +20,5 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
-      - name: Teste específico do formulário de operação
-        run: TRAMELI_UI_TEST=operation-ui.mjs npm run test:ui
       - run: npm run test:ui
       - run: npm audit --omit=dev --audit-level=high

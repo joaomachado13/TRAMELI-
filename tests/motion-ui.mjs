@@ -70,8 +70,9 @@ try {
   assert.ok(await evaluate('document.querySelector(".nav2").getBoundingClientRect().bottom < 0'), 'Header remained fixed during scrolling');
   assert.equal(await evaluate('getComputedStyle(document.querySelector(".nav2")).position'), 'relative');
   assert.equal(await evaluate('document.querySelectorAll(".pin-spacer").length'), 0, 'Header kept a pin spacer');
-  await evaluate('document.querySelector("#new-order").click()');
-  await pause(150);
+  await evaluate('window.TrameliOperation.openNew()');
+  for (let i = 0; i < 60 && !(await evaluate('document.querySelector("#operation-dialog").open')); i++) await pause(100);
+  assert.ok(await evaluate('document.querySelector("#operation-dialog").open'), 'O editor deve abrir antes de testar a rolagem do modal');
   const modalPosition = await evaluate('scrollY');
   await send('Input.dispatchMouseEvent', { type:'mouseWheel', x:20, y:800, deltaX:0, deltaY:300 });
   await pause(120);
@@ -83,7 +84,7 @@ try {
   await evaluate('document.querySelector(".nav__close").click()');
   assert.ok(await evaluate('document.body.classList.contains("sidebar-collapsed")'), 'Collapse button reopened the sidebar');
   await mkdir(new URL('../assets/crops/', import.meta.url), { recursive: true });
-  for (const [route, style] of [['inicio','curve'],['clientes','swipe'],['relatorios','diagonal'],['agenda','wave']]) {
+  for (const [route, style] of [['inicio','curve'],['portal-shirley','curve'],['clientes','swipe'],['relatorios','diagonal'],['agenda','wave']]) {
     await evaluate(`document.querySelector('.nav__item[href="#${route}"] .ico').click()`);
     await pause(160);
     assert.ok(await evaluate('document.body.classList.contains("sidebar-collapsed")'), 'Navigation icon expanded the sidebar during the transition');
@@ -97,6 +98,10 @@ try {
     await waitTransition();
     assert.equal(await evaluate('document.querySelector(".route-transition").hidden'), true, 'Swipe remained over the content');
     assert.ok(await evaluate('document.body.classList.contains("sidebar-collapsed")'), 'Navigation changed the collapsed sidebar preference');
+    if (route === 'portal-shirley') {
+      assert.ok(await evaluate('!document.querySelector(".app-shell").hidden && !document.querySelector("#shirley-portal-view").hidden && !document.querySelector("#main-navigation-panel").inert'), 'Portal da Shirley perdeu o painel ou a navegação');
+      assert.ok(await evaluate('window.TrameliMotion.active()'), 'Portal da Shirley desativou a rolagem das páginas internas');
+    }
   }
   await evaluate('document.querySelector("#main-navigation-panel").click()');
   assert.ok(await evaluate('!document.body.classList.contains("sidebar-collapsed")'), 'Empty sidebar area did not expand the menu');

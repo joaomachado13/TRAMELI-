@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const migration = await readFile(new URL('../supabase/migrations/202610200032_order_deduplication_and_edit_flags.sql', import.meta.url), 'utf8');
+const migration = await readFile(new URL('../supabase/migrations/20261020115055_order_deduplication_and_edit_flags.sql', import.meta.url), 'utf8');
 const liveData = await readFile(new URL('../src/live-data.js', import.meta.url), 'utf8');
 const portal = await readFile(new URL('../assets/portal.js', import.meta.url), 'utf8');
 const operation = await readFile(new URL('../assets/operacao.js', import.meta.url), 'utf8');

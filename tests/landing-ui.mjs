@@ -64,7 +64,7 @@ try {
   assert.match(initialCss, /body\.app-booting #smooth-wrapper/, 'A operação não está protegida contra flash.');
 
   await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
-  await until('location.hash === "#loja" && !document.querySelector("#portal-view").hidden && !!document.querySelector(".portal-welcome")');
+  await until('location.hash === "#loja" && !document.querySelector("#portal-view").hidden && !!document.querySelector(".portal-welcome") && !document.body.classList.contains("app-booting")');
   assert.equal(await evaluate('document.body.classList.contains("app-booting")'), false, 'A tela de carregamento não foi removida.');
   assert.equal(await evaluate('document.body.classList.contains("portal-mode")'), true, 'A rota raiz não ativou o portal.');
   assert.equal(await evaluate('document.querySelector(".app-shell").hidden'), true, 'A operação ficou visível na entrada.');
@@ -74,11 +74,55 @@ try {
   await evaluate('location.hash = "#operacao"');
   await until('location.hash === "#operacao" && !document.querySelector(".app-shell").hidden && !document.querySelector("#operation-view").hidden');
   assert.equal(await evaluate('document.body.classList.contains("portal-mode")'), false, 'A rota da operação deixou o modo portal ativo.');
+
+  await evaluate('window.scrollTo(0, 600); document.querySelector(\'.nav__item[href="#portal-shirley"]\').click()');
+  await until('!document.querySelector("#shirley-portal-view").hidden && (!document.querySelector(".route-transition") || document.querySelector(".route-transition").hidden)');
+  assert.equal(await evaluate('document.body.classList.contains("portal-mode")'), false, 'Shirley deve abrir como página interna.');
+  assert.equal(await evaluate('document.querySelector(".app-shell").hidden'), false);
+  assert.equal(await evaluate('!!document.querySelector("#shirley-portal-view").closest(".app-shell")'), true);
+  assert.equal(await evaluate('document.querySelector("#main-navigation-panel").inert'), false);
+  assert.equal(await evaluate('document.querySelector(\'.nav__item[href="#portal-shirley"]\').getAttribute("aria-current")'), 'page');
+  assert.ok(await evaluate('document.querySelector(".nav").getBoundingClientRect().right > 0'), 'Sidebar deve continuar visível.');
+  assert.ok(await evaluate('document.documentElement.scrollWidth <= innerWidth'), 'Portal da Shirley não deve criar rolagem horizontal.');
+  await evaluate('document.querySelector(\'.nav__item[href="#clientes"]\').click()');
+  await until('!document.querySelector("#screen-view").hidden && document.querySelector("#shirley-portal-view").hidden');
+  await evaluate('document.querySelector(\'.nav__item[href="#portal-shirley"]\').click()');
+  await until('!document.querySelector("#shirley-portal-view").hidden && (!document.querySelector(".route-transition") || document.querySelector(".route-transition").hidden)');
+  await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+  assert.ok(await evaluate('document.documentElement.scrollWidth <= innerWidth'), 'Portal da Shirley não deve transbordar no celular.');
+  await evaluate('document.querySelector(".mobile-menu-button").click()');
+  await until('document.body.classList.contains("menu-open") && !document.querySelector("#main-navigation-panel").inert');
+  await evaluate('document.querySelector(\'.nav__item[href="#operacao"]\').click()');
+  await until('!document.querySelector("#operation-view").hidden && !document.body.classList.contains("menu-open")');
   
   await evaluate('location.hash = "#loja"');
   await until('!document.querySelector("#portal-view").hidden && !!document.querySelector(".portal-welcome")');
   assert.equal(await evaluate('document.querySelector(".app-shell").hidden'), true);
-  console.log('Entrada pública: splash sem flash, portal do cliente por padrão e operação acessível por rota explícita OK.');
+  console.log('Navegação: entrada pública, Portal da Shirley dentro do painel, sidebar desktop e menu mobile OK.');
+
+  await send('Page.navigate', { url: new URL('tests/shirley-fixture.html', baseUrl).href });
+  await until('window.shirleyReady === true');
+  assert.match(await evaluate('document.querySelector("#shirley-order-total").textContent'), /0,00/);
+  await evaluate(`(() => {
+    const search = document.querySelector('#shirley-customer-search');
+    search.value = 'Cliente'; search.dispatchEvent(new Event('input', { bubbles: true }));
+    document.querySelector('[data-customer-id="cliente-teste"]').click();
+    document.querySelector('#shirley-delivery-date').value = '2026-10-21';
+    for (let i = 0; i < 3; i++) document.querySelector('[data-product-id="pao-teste"][data-product-step="1"]').click();
+  })()`);
+  assert.match(await evaluate('document.querySelector("#shirley-order-total").textContent'), /5,00/, 'Três unidades de R$ 1,00 mais taxa devem totalizar R$ 5,00.');
+  await evaluate(`(() => {
+    for (let i = 0; i < 3; i++) document.querySelector('[data-product-id="queijo-teste"][data-product-step="1"]').click();
+  })()`);
+  assert.match(await evaluate('document.querySelector("#shirley-order-total").textContent'), /6,50/, '150 g a R$ 10/kg somam R$ 1,50 à compra.');
+  await evaluate('document.querySelector("#shirley-order-form").requestSubmit()');
+  await until('window.shirleySaved.length === 1 && !document.querySelector(\'[data-shirley-panel="orders"]\').hidden');
+  assert.equal(await evaluate('TrameliOrderMath.totalCents(shirleySaved[0].order)'), 650);
+  assert.equal(await evaluate('shirleySaved[0].customerId'), 'cliente-teste');
+  assert.equal(await evaluate('shirleySaved[0].order.items[0].quantity'), 3);
+  assert.equal(await evaluate('shirleySaved[0].order.items[1].weightGrams'), 150);
+  assert.match(await evaluate('document.querySelector("#shirley-orders-list").textContent'), /6,50/);
+  console.log('Portal da Shirley: quantidades, peso, taxa, seleção de cliente e lançamento com resumo consistente OK.');
 } finally {
   socket?.close();
   browser.kill();

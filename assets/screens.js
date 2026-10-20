@@ -448,14 +448,13 @@ window.TrameliMenu = { close: () => setMenu(false) };
 function renderRoute(route, preserveScroll = false) {
   const isPortal = route === 'loja';
   const isShirleyPortal = route === 'portal-shirley';
-  const isStandalonePortal = isPortal || isShirleyPortal;
   portalView.hidden = !isPortal;
   shirleyPortalView.hidden = !isShirleyPortal;
-  appShell.hidden = isStandalonePortal;
-  document.body.classList.toggle('portal-mode', isStandalonePortal);
+  appShell.hidden = isPortal;
+  document.body.classList.toggle('portal-mode', isPortal);
   document.body.classList.toggle('shirley-portal-mode', isShirleyPortal);
-  if (isStandalonePortal) {
-    document.title = isShirleyPortal ? `Portal da Shirley — ${readSettings().businessName}` : `Peça para amanhã — ${readSettings().businessName}`;
+  if (isPortal) {
+    document.title = `Peça para amanhã — ${readSettings().businessName}`;
     navigation.forEach(link => {
       const active = link.getAttribute('href') === `#${route}`;
       link.classList.toggle('btn', active);
@@ -465,16 +464,17 @@ function renderRoute(route, preserveScroll = false) {
     setMenu(false);
     if (!preserveScroll) motion.scrollTo(0, false);
     activeRoute = route;
-    if (isPortal) window.dispatchEvent(new Event('trameli:portal-open'));
-    if (isShirleyPortal) window.dispatchEvent(new Event('trameli:shirley-portal-open'));
+    window.dispatchEvent(new Event('trameli:portal-open'));
+    window.dispatchEvent(new CustomEvent('trameli:route-rendered', { detail: { route } }));
     return;
   }
   const isHome = route === 'inicio';
   const isOperation = route === 'operacao';
   homeView.hidden = !isHome;
   operationView.hidden = !isOperation;
-  screenView.hidden = isHome || isOperation;
-  if (!isHome && !isOperation) { motion.reset(screenView); screenView.innerHTML = pages[route](); }
+  screenView.hidden = isHome || isOperation || isShirleyPortal;
+  if (!isHome && !isOperation && !isShirleyPortal) { motion.reset(screenView); screenView.innerHTML = pages[route](); }
+  if (isShirleyPortal) window.dispatchEvent(new Event('trameli:shirley-portal-open'));
   if (route === 'relatorios' && reportState.generated) renderReportResults();
   if (route === 'financeiro') renderCostSummary('finance-cost-summary', financeRange.from || null, financeRange.to || null);
   if (route === 'financeiro' && window.TrameliPayments) {
@@ -505,11 +505,12 @@ function renderRoute(route, preserveScroll = false) {
   setMenu(false);
   if (!preserveScroll) motion.scrollTo(0, false);
   activeRoute = route;
+  window.dispatchEvent(new CustomEvent('trameli:route-rendered', { detail: { route } }));
 }
 
 function animateRouteIn(route) {
   if (motionDisabled()) return;
-  motion.enter(route === 'inicio' ? homeView : route === 'operacao' ? operationView : screenView);
+  motion.enter(route === 'inicio' ? homeView : route === 'operacao' ? operationView : route === 'portal-shirley' ? shirleyPortalView : screenView);
 }
 
 function showRoute(force = false) {
@@ -518,9 +519,9 @@ function showRoute(force = false) {
   if (route === activeRoute && !force) { ++routeRevision; motion.cancelTransition(); setMenu(false); return; }
   const revision = ++routeRevision;
   const previous = activeRoute;
-  const finish = () => { if (revision !== routeRevision) return; renderRoute(route, force && previous === route); if (previous !== null && !force && route !== 'loja' && route !== 'portal-shirley') animateRouteIn(route); else motion.refresh(); };
-  if (previous !== null && previous !== 'loja' && previous !== 'portal-shirley' && route !== 'loja' && route !== 'portal-shirley' && !force && !motionDisabled()) {
-    const outgoing = previous === 'inicio' ? homeView : previous === 'operacao' ? operationView : screenView;
+  const finish = () => { if (revision !== routeRevision) return; renderRoute(route, force && previous === route); if (previous !== null && !force && route !== 'loja') animateRouteIn(route); else motion.refresh(); };
+  if (previous !== null && previous !== 'loja' && route !== 'loja' && !force && !motionDisabled()) {
+    const outgoing = previous === 'inicio' ? homeView : previous === 'operacao' ? operationView : previous === 'portal-shirley' ? shirleyPortalView : screenView;
     const style = ({ inicio: 'curve', operacao: 'swipe', pedidos: 'swipe', clientes: 'swipe', produtos: 'diagonal', agenda: 'wave', financeiro: 'curve', relatorios: 'diagonal', configuracoes: 'wave', pendencias: 'curve' })[route] || 'curve';
     motion.leave(outgoing, finish, { style });
   } else { motion.cancelTransition(); finish(); }

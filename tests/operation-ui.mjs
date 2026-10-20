@@ -83,11 +83,15 @@ try {
   await evaluate('location.hash = "#operacao"');
   await waitTransition();
   await evaluate('document.querySelector("#new-order").click()');
+  await waitTransition();
+  assert(await evaluate('location.hash === "#portal-shirley" && !document.querySelector("#shirley-portal-view").hidden && !document.querySelector(".app-shell").hidden'), 'Novo pedido deve abrir o Portal da Shirley dentro do painel.');
+  await evaluate('window.TrameliOperation.openNew()');
+  for (let i = 0; i < 60 && !(await evaluate('document.querySelector("#operation-dialog").open')); i++) await pause(100);
   assert(await evaluate('document.querySelector("#operation-dialog").open'), 'Formulário não abriu.');
   assert(await evaluate('[...document.querySelectorAll("#form-catalog .admin-product-card")].some(card => card.textContent.includes("Pão"))'), 'Produto não ficou disponível no catálogo do pedido.');
   await evaluate(`(() => { const f = document.querySelector('#order-form'); const d = new Date(); d.setDate(d.getDate() + 1); f.elements.date.value = [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('-'); const option = [...f.elements.customerId.options].find(item => item.textContent === 'Cliente Teste'); f.elements.customerId.value = option?.value || ''; f.elements.customerId.dispatchEvent(new Event('change', { bubbles: true })); for (let i = 0; i < 3; i++) { const card = [...document.querySelectorAll('#form-catalog .admin-product-card')].find(item => item.querySelector('.admin-product-card__body > strong')?.textContent.trim() === 'Pão'); card.querySelector('[data-product-step="1"]').click(); } f.requestSubmit(); })()`);
   const createdOrderDate = await evaluate('document.querySelector("#delivery-date").value');
-  assert(await evaluate('document.querySelectorAll(".kanban-column").length === 5'), 'Kanban não mostrou as cinco etapas operacionais.');
+  assert(await evaluate('document.querySelectorAll(".kanban-column").length === 3'), 'Kanban deve mostrar Novo, Conferido e Entregue.');
   await evaluate('document.querySelector(".order-card").click()');
   assert(await evaluate('document.querySelector("#order-detail-drawer").open && document.querySelector("#order-detail-content").textContent.includes("Bloco A, ap. 10")'), 'Detalhe lateral não mostrou o endereço reaproveitado.');
   assert(await evaluate('document.querySelector("#total-orders").textContent === "1"'), 'Pedido não foi salvo.');
@@ -105,7 +109,8 @@ try {
   assert(await evaluate('document.querySelector("#print-document").style.getPropertyValue("--print-offset-x") === "1.5mm" && document.querySelector("#print-document").style.getPropertyValue("--print-offset-y") === "-1mm"'), 'A calibração salva não foi aplicada na impressão sem recarregar a página.');
   await evaluate(`(() => { const value=${JSON.stringify(originalPrintSettings)}; if (value === null) localStorage.removeItem('trameli-print-settings-70x33-v1'); else localStorage.setItem('trameli-print-settings-70x33-v1', value); window.TrameliOperation.preparePrint(); })()`);
   await send('Emulation.setEmulatedMedia', { media: 'print' });
-  assert(await evaluate('getComputedStyle(document.querySelector(".nav")).display === "none" && getComputedStyle(document.querySelector("#print-document")).display === "block"'), 'Layout de impressão integrado não isolou as fichas.');
+  const printState = await evaluate('({navigation:getComputedStyle(document.querySelector(".nav")).display,document:getComputedStyle(document.querySelector("#print-document")).display,route:location.hash,booting:document.body.classList.contains("app-booting")})');
+  assert(printState.navigation === 'none' && printState.document === 'block', `Layout de impressão integrado não isolou as fichas: ${JSON.stringify(printState)}`);
   assert(await evaluate('(() => { const content=document.querySelector(".print-label__content"); const footer=content.querySelector("footer"); const contentRect=content.getBoundingClientRect(); const footerRect=footer.getBoundingClientRect(); return getComputedStyle(content).display==="flex" && getComputedStyle(content).flexDirection==="column" && Math.abs((contentRect.bottom-footerRect.bottom)-(3.4*96/25.4))<2; })()'), 'Total não ficou preso ao rodapé da etiqueta como no PDF de referência.');
   assert(await evaluate('(() => { const sheet=document.querySelector(".print-sheet"); const style=getComputedStyle(sheet); const label=document.querySelector(".print-label"); return Math.abs(parseFloat(style.width)-210*96/25.4)<1 && Math.abs(parseFloat(style.height)-297*96/25.4)<1 && style.position==="relative" && getComputedStyle(label).position==="absolute" && Math.abs(label.getBoundingClientRect().width-70*96/25.4)<1 && Math.abs(label.getBoundingClientRect().height-33*96/25.4)<1; })()'), 'Folha A4 ou dimensão fixa de etiqueta 70 × 33 mm incorreta.');
   const originalOrders = await evaluate('localStorage.getItem("trameli-operation-draft-v2")');
@@ -174,10 +179,8 @@ try {
   await pause(180);
   assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'), 'Rolagem horizontal no desktop.');
   assert(await evaluate('!document.querySelector("#main-navigation-panel").inert && getComputedStyle(document.querySelector(".mobile-menu-button")).display === "none"'), 'Sidebar desktop não permaneceu acessível sem controle visual.');
-  assert(await evaluate('!document.querySelector("#download-supplier-pdf").disabled && document.querySelector("#supplier-list-items").textContent.includes("4× Pão") && !document.querySelector("#supplier-list-items").textContent.includes("R$")'), 'Repasse não separou o pedido sem preços.');
+  assert(await evaluate('!document.querySelector("#download-supplier-pdf").disabled && document.querySelector("#supplier-list-items").childElementCount === 0'), 'Repasse não separou o pedido sem preços.');
   assert(await evaluate('document.querySelector("#supplier-list-totals").textContent.includes("4×Pão") && !document.querySelector("#supplier-list-totals").textContent.includes("R$")'), 'Consolidado de produtos não mostrou a quantidade sem preços.');
-  await evaluate('document.querySelector("[data-supplier-check-item]").click()');
-  assert(await evaluate('document.querySelector(".supplier-order").classList.contains("is-complete") && getComputedStyle(document.querySelector(".supplier-item span")).textDecorationLine.includes("line-through")'), 'Conferência não riscou o pedido completo.');
   const downloadPath = resolve('tmp/pdfs/ui-download');
   await mkdir(downloadPath, { recursive: true });
   await rm(join(downloadPath, `repasse-padaria-${createdOrderDate}.pdf`), { force: true });
@@ -189,11 +192,11 @@ try {
   }
   assert(Boolean(downloaded), 'Botão de PDF não gerou o download no navegador.');
   const downloadedPdf = await PDFDocument.load(downloaded);
-  assert(downloadedPdf.getForm().getFields().length === 3 && downloadedPdf.getForm().getFields().every(field => field.isChecked()), 'Download não preservou o consolidado, as caixas ou marcações da conferência.');
+  assert(downloadedPdf.getForm().getFields().length === 1, 'O PDF de repasse deve conter uma caixa por material consolidado.');
   await evaluate('window.TrameliMotion.scrollTo(".order-card", false, 180); document.querySelector("#orders-list .kanban").scrollLeft = 0');
   // Aguarda a suavização terminar antes de medir coordenadas para o arraste real.
   await pause(750);
-  const drag = await evaluate(`(() => { const a=document.querySelector('.order-card').getBoundingClientRect(), b=document.querySelector('[data-drop-status="packing"]').getBoundingClientRect(); return {x:a.x+a.width/2,y:a.y+30,tx:b.x+b.width/2,ty:b.y+90}; })()`);
+  const drag = await evaluate(`(() => { const a=document.querySelector('.order-card').getBoundingClientRect(), b=document.querySelector('[data-drop-status="confirmed"]').getBoundingClientRect(); return {x:a.x+a.width/2,y:a.y+30,tx:b.x+b.width/2,ty:b.y+90}; })()`);
   await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: drag.x, y: drag.y });
   await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: drag.x, y: drag.y, button: 'left', clickCount: 1 });
   for (let step = 1; step <= 12; step++) {
@@ -202,13 +205,13 @@ try {
   }
   await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: drag.tx, y: drag.ty, button: 'left', clickCount: 1 });
   await pause(100);
-  assert(await evaluate('!!document.querySelector(`[data-drop-status="packing"] .order-card`)'), 'Arraste com mouse não moveu o card para Em separação.');
+  assert(await evaluate('!!document.querySelector(`[data-drop-status="confirmed"] .order-card`)'), 'Arraste com mouse não moveu o card para Conferido.');
   assert(await evaluate('!document.querySelector("#order-detail-drawer").open'), 'Arraste abriu os detalhes indevidamente.');
   await evaluate(`(() => { const select=document.querySelector('[data-move-id]'); select.value='ready'; select.dispatchEvent(new Event('change',{bubbles:true})); })()`);
-  assert(await evaluate('!!document.querySelector(`[data-drop-status="ready"] .order-card`)'), 'Mover para não atualizou a etapa.');
+  assert(await evaluate('!!document.querySelector(`[data-drop-status="confirmed"] .order-card--ready`)'), 'Mover para não atualizou a etapa.');
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
   await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
-  await evaluate(`(() => { document.querySelector('[data-drop-status="ready"]').scrollIntoView({block:'center',inline:'center'}); })()`);
+  await evaluate(`(() => { document.querySelector('[data-drop-status="confirmed"]').scrollIntoView({block:'center',inline:'center'}); })()`);
   await pause(100);
   const touch = await evaluate(`(() => { const a=document.querySelector('[data-drag-id]').getBoundingClientRect();return {x:a.x+a.width/2,y:a.y+a.height/2}; })()`);
   await send('Input.dispatchTouchEvent', { type:'touchStart', touchPoints:[{x:touch.x,y:touch.y}] });
@@ -216,16 +219,16 @@ try {
   await pause(50);
   assert(await evaluate('!!document.querySelector(".kanban-drag-ghost")'), 'Arraste por toque não começou pela alça.');
   await send('Input.dispatchTouchEvent', { type:'touchCancel', touchPoints:[] });
-  assert(await evaluate('!document.querySelector(".kanban-drag-ghost") && !!document.querySelector(`[data-drop-status="ready"] .order-card`)'), 'Cancelar toque alterou o pedido ou deixou uma cópia visível.');
+  assert(await evaluate('!document.querySelector(".kanban-drag-ghost") && !!document.querySelector(`[data-drop-status="confirmed"] .order-card--ready`)'), 'Cancelar toque alterou o pedido ou deixou uma cópia visível.');
   const nextTouch = await evaluate(`(() => { const a=document.querySelector('[data-drag-id]').getBoundingClientRect();return {x:a.x+a.width/2,y:a.y+a.height/2}; })()`);
   await send('Input.dispatchTouchEvent', { type:'touchStart', touchPoints:[{x:nextTouch.x,y:nextTouch.y}] });
   const boardLeft = await evaluate('document.querySelector(".kanban").getBoundingClientRect().left');
   await send('Input.dispatchTouchEvent', { type:'touchMove', touchPoints:[{x:boardLeft+8,y:nextTouch.y-35}] });
   await pause(650);
-  const touchTarget = await evaluate(`(() => { const b=document.querySelector('[data-drop-status="packing"]').getBoundingClientRect();return {x:Math.max(50,b.x+Math.min(b.width/2,150)),y:b.y+100}; })()`);
+  const touchTarget = await evaluate(`(() => { const b=document.querySelector('[data-drop-status="received"]').getBoundingClientRect();return {x:Math.max(50,b.x+Math.min(b.width/2,150)),y:b.y+100}; })()`);
   await send('Input.dispatchTouchEvent', { type:'touchMove', touchPoints:[{x:touchTarget.x,y:touchTarget.y}] });
   await send('Input.dispatchTouchEvent', { type:'touchEnd', touchPoints:[] });
-  assert(await evaluate('!!document.querySelector(`[data-drop-status="packing"] .order-card`)'), `Arraste por toque não moveu para a coluna selecionada: ${JSON.stringify(await evaluate('({feedback:document.querySelector("#kanban-feedback").textContent,stage:document.querySelector(".order-card").closest("[data-drop-status]").dataset.dropStatus,scroll:document.querySelector(".kanban").scrollLeft})'))}`);
+  assert(await evaluate('!!document.querySelector(`[data-drop-status="received"] .order-card`)'), `Arraste por toque não moveu para a coluna selecionada: ${JSON.stringify(await evaluate('({feedback:document.querySelector("#kanban-feedback").textContent,stage:document.querySelector(".order-card").closest("[data-drop-status]").dataset.dropStatus,scroll:document.querySelector(".kanban").scrollLeft})'))}`);
   await evaluate(`(() => { const select=document.querySelector('[data-move-id]'); select.value='ready'; select.dispatchEvent(new Event('change',{bubbles:true})); })()`);
   await send('Emulation.setTouchEmulationEnabled', { enabled: false });
   await send('Emulation.setDeviceMetricsOverride', { width: 1350, height: 900, deviceScaleFactor: 1, mobile: false });
@@ -236,11 +239,11 @@ try {
   for (let attempt = 0; attempt < 60 && !(await evaluate('document.readyState === "complete" && !!window.TrameliOperation')); attempt++) await pause(100);
   await evaluate(`(() => { const input = document.querySelector('#delivery-date'); input.value = '${createdOrderDate}'; input.dispatchEvent(new Event('change')); })()`);
   assert(await evaluate('document.querySelector("#total-orders").textContent === "1"'), 'Pedido não persistiu após recarga.');
-  assert(await evaluate('!!document.querySelector(`[data-drop-status="ready"] .order-card`) && document.querySelector(".supplier-order").classList.contains("is-complete")'), 'Etapa ou checklist não persistiu após recarga.');
+  assert(await evaluate('!!document.querySelector(`[data-drop-status="confirmed"] .order-card--ready`) && document.querySelector("#supplier-list-totals").textContent.includes("4×Pão")'), 'Etapa ou consolidado não persistiu após recarga.');
   await evaluate('document.querySelector(".order-card").click()');
   await evaluate('document.querySelector("#order-detail-drawer [data-action=edit]").click()');
   await evaluate(`(() => { document.querySelector('.item-quantity').value='6'; document.querySelector('#order-form').requestSubmit(); })()`);
-  assert(await evaluate('!document.querySelector(".supplier-order").classList.contains("is-complete") && document.querySelector("#supplier-list-items").textContent.includes("6× Pão")'), 'Alterar os itens manteve uma conferência antiga.');
+  assert(await evaluate('document.querySelector("#supplier-list-totals").textContent.includes("6×Pão")'), 'Editar os itens não atualizou o consolidado.');
   assert(await evaluate('document.querySelector("#supplier-list-totals").textContent.includes("6×Pão")'), 'Consolidado não atualizou após editar a quantidade.');
   await evaluate('localStorage.setItem("trameli-operation-draft-v1", "dados-antigos")');
   await send('Page.reload');
@@ -253,7 +256,7 @@ try {
     document.querySelector('.orders-section').scrollIntoView({block:'start'});
   })()`);
   await pause(150);
-  await writeFile(new URL('../assets/crops/operation-kanban-five-stages.png', import.meta.url), Buffer.from((await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false})).data,'base64'));
+  await writeFile(new URL('../assets/crops/operation-kanban-three-columns.png', import.meta.url), Buffer.from((await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false})).data,'base64'));
   await evaluate('document.querySelector(".supplier-list").scrollIntoView({block:"start"})');
   await pause(150);
   await writeFile(new URL('../assets/crops/operation-supplier-by-client.png', import.meta.url), Buffer.from((await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false})).data,'base64'));

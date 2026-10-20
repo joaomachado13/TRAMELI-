@@ -5,7 +5,8 @@ assert.equal(stages.length, 5);
 assert.deepEqual(statusPath('received', 'ready', false), ['confirmed', 'packing', 'ready']);
 assert.deepEqual(statusPath('ready', 'received', true), ['packing', 'confirmed', 'received']);
 assert.deepEqual(statusPath('ready', 'packing', false), []);
-assert.deepEqual(statusPath('delivered', 'received', true), []);
+assert.deepEqual(statusPath('delivered', 'received', true), ['ready', 'packing', 'confirmed', 'received']);
+assert.deepEqual(statusPath('delivered', 'received', false), []);
 assert.deepEqual(statusPath('cancelled', 'packing', true), []);
 assert.deepEqual(statusPath('confirmed', 'confirmed', true), []);
 

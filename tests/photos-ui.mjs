@@ -148,7 +148,9 @@ try {
     location.hash = '#operacao';
   })()`);
   await pause(150);
-  await evaluate('document.getElementById("new-order").click()');
+  await evaluate('window.TrameliOperation.openNew()');
+  for (let i = 0; i < 60 && !(await evaluate('document.getElementById("operation-dialog").open')); i++) await pause(100);
+  assert.equal(await evaluate('document.getElementById("operation-dialog").open'), true);
   assert.match(await evaluate('document.getElementById("form-subtotal").textContent'), /0,00/);
   assert.equal(await evaluate('document.getElementById("form-delivery-summary").hidden'), true);
   await evaluate(`(() => { const card = [...document.querySelectorAll('#form-catalog .admin-product-card')].find(item => item.querySelector('.admin-product-card__body > strong')?.textContent.trim() === 'Pão francês'); if (!card) throw new Error('Card de Pão francês não encontrado.'); card.querySelector('[data-product-step="1"]').click(); })()`);
