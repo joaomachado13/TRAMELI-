@@ -110,8 +110,7 @@ function updateOverview() {
   const rollover = readSettings().rolloverTime;
   const clock = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date()).filter(part => part.type !== 'literal').map(part => [part.type, Number(part.value)]));
   const [rolloverHour, rolloverMinute] = rollover.split(':').map(Number);
-  const todayPending = orders.some(order => order.date === today && !['delivered', 'cancelled'].includes(orderState(order)));
-  const operationDay = clock.hour * 60 + clock.minute >= rolloverHour * 60 + rolloverMinute && !todayPending ? shiftDate(today, 1) : today;
+  const operationDay = clock.hour * 60 + clock.minute >= rolloverHour * 60 + rolloverMinute ? shiftDate(today, 1) : today;
   const nextDay = orders.filter(order => order.date === operationDay && orderState(order) !== 'delivered');
   const pending = orders.filter(order => orderState(order) === 'received').length;
   const todayDeliveries = orders.filter(order => order.date === today && orderState(order) !== 'delivered');
