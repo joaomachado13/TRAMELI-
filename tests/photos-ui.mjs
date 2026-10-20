@@ -83,7 +83,7 @@ try {
     await evaluate('document.querySelector(".featured-products").scrollIntoView({ behavior: "instant", block: "start" })');
     const highlightsShot = await send('Page.captureScreenshot', { format: 'png' });
     await writeFile(new URL(`../assets/crops/highlights-${width}.png`, import.meta.url), Buffer.from(highlightsShot.data, 'base64'));
-    await evaluate('document.querySelector(".portal-grid").scrollIntoView({ behavior: "instant", block: "start" })');
+    await evaluate('document.querySelector("#portal-grid").scrollIntoView({ behavior: "instant", block: "start" })');
     const shot = await send('Page.captureScreenshot', { format: 'png' });
     await writeFile(new URL(`../assets/crops/photos-${width}.png`, import.meta.url), Buffer.from(shot.data, 'base64'));
   }
