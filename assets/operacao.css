@@ -239,17 +239,17 @@ dialog{width:min(670px,calc(100vw - 24px));max-height:min(90vh,900px);padding:0;
   body:has(#operation-view:not([hidden])) .print-document{display:block!important;width:210mm!important;max-width:none!important;margin:0!important;padding:0!important;overflow:visible!important}
   .print-sheet{display:block;box-sizing:border-box;width:210mm;min-height:297mm;margin:0;padding:6mm;overflow:visible}
   .print-sheet--orders{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-flow:row;align-items:start;align-content:start;gap:2.5mm}
-  .print-label{display:block;box-sizing:border-box;position:relative;min-height:62mm;margin:0;padding:0;overflow:visible;border:1px solid #aaa;border-radius:2mm;background:#fff;color:#111;font:13pt "TrameliLabelDM",sans-serif;break-inside:avoid;page-break-inside:avoid}
-  .print-label__content{display:flex;flex-direction:column;box-sizing:border-box;min-height:62mm;margin:0;padding:4mm;overflow:visible;transform:translate(var(--print-offset-x,0mm),var(--print-offset-y,0mm))}
-  .print-label__top{display:flex;align-items:flex-start;justify-content:space-between;gap:3mm;padding-bottom:2mm;border-bottom:1px solid #bbb;font-size:18pt;line-height:1.12}
-  .print-label__top strong{display:block;min-width:0;font-weight:700;overflow-wrap:anywhere}
-  .print-label__top span{flex:none;font-size:12pt;font-weight:700;white-space:nowrap}
-  .print-label p{margin:2mm 0 0;overflow-wrap:anywhere;font-size:13pt;line-height:1.225}
-  .print-label ul{display:grid;gap:1.4mm;margin:3mm 0 0;padding:0;list-style:none}
-  .print-label li{margin:0;overflow-wrap:anywhere;font-size:11pt;line-height:1.2}
-  .print-label li strong{display:inline-block;min-width:9mm;font-size:14pt}
-  .print-label small{display:block;margin-top:2mm;font-size:10.5pt;line-height:1.25;overflow-wrap:anywhere}
-  .print-label footer{flex-shrink:0;margin-top:auto;padding-top:3mm;text-align:right;font-weight:700;font-size:12pt;line-height:1.2}
+  .print-label{display:block;box-sizing:border-box;position:relative;min-height:62mm;margin:0;padding:0;overflow:visible;border:1px solid #aaa;border-radius:2mm;background:#fff;color:#111;font:9pt "TrameliLabelDM",sans-serif;break-inside:avoid;page-break-inside:avoid}
+  .print-label__content{display:flex;flex-direction:column;box-sizing:border-box;min-height:62mm;margin:0;padding:3.2mm;overflow:visible;transform:translate(var(--print-offset-x,0mm),var(--print-offset-y,0mm))}
+  .print-label__top{display:flex;align-items:flex-start;justify-content:space-between;gap:1.5mm;padding-bottom:1.5mm;border-bottom:1px solid #bbb;font-size:11.5pt;line-height:1.12}
+  .print-label__top strong{display:block;min-width:0;flex:1;font-weight:700;overflow-wrap:normal;word-break:normal;hyphens:none}
+  .print-label__top span{flex:none;font-size:7pt;font-weight:700;white-space:nowrap}
+  .print-label p{margin:1.5mm 0 0;overflow-wrap:anywhere;font-size:8pt;line-height:1.2}
+  .print-label ul{display:grid;gap:.8mm;margin:2mm 0 0;padding:0;list-style:none}
+  .print-label li{margin:0;overflow-wrap:anywhere;font-size:8pt;line-height:1.18}
+  .print-label li strong{display:inline-block;min-width:6mm;font-size:9pt}
+  .print-label small{display:block;margin-top:1.5mm;font-size:7pt;line-height:1.2;overflow-wrap:anywhere}
+  .print-label footer{flex-shrink:0;margin-top:auto;padding-top:2mm;text-align:right;font-weight:700;font-size:8pt;line-height:1.2}
 }
 
 /* Exclusão de pedido com pagamento vinculado */
