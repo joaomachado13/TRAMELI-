@@ -432,14 +432,14 @@ function openLabelPrintDialog() {
       const printed = printedIdsForDate();
       let chosen = [];
       if (button.dataset.labelPrint === 'new') chosen = available.filter(order => orderStatus(order) === 'received').sort(compareByStreet);
-      else if (button.dataset.labelPrint === 'all') chosen = available;
+      else if (button.dataset.labelPrint === 'all') chosen = available.slice().sort(compareByStreet);
       else if (button.dataset.labelPrint === 'choose') {
         dialog.querySelector('#label-print-selection').hidden = false;
         dialog.querySelector('#label-print-orders').innerHTML = available.map(order => `<label class="label-print-dialog__order"><input type="checkbox" value="${escapeHtml(order.id)}" checked><span>${escapeHtml(order.customer)}</span><small>${escapeHtml(order.publicCode || '')} · ${money(orderTotal(order))}</small></label>`).join('');
         return;
       } else if (button.dataset.labelPrint === 'selected') {
         const ids = new Set([...dialog.querySelectorAll('#label-print-orders input:checked')].map(input => input.value));
-        chosen = available.filter(order => ids.has(order.id));
+        chosen = available.filter(order => ids.has(order.id)).sort(compareByStreet);
       }
       if (!chosen.length) { alert(button.dataset.labelPrint === 'new' ? 'Não há pedidos na etapa Novo para imprimir nesta data.' : 'Selecione pelo menos um pedido.'); return; }
       pendingPrintOrderIds = chosen.map(order => order.id);
