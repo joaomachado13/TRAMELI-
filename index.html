@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="assets/operacao.css">
     <link rel="stylesheet" href="assets/catalogo.css">
     <link rel="stylesheet" href="assets/portal.css?v=6">
+    <link rel="stylesheet" href="assets/shirley-portal.css">
     <link rel="stylesheet" href="assets/design-system.css?v=9">
     <link rel="stylesheet" href="assets/identity.css?v=9">
   </head>
@@ -156,7 +157,7 @@
       <section class="shirley-portal__workspace" data-shirley-panel="orders" hidden>
         <div class="shirley-portal__section-head"><div><p class="portal-eyebrow">CONSULTA</p><h2>Pesquisar pedidos</h2></div></div>
         <div class="shirley-portal__filters"><label>Data da entrega<input id="shirley-orders-date" type="date"></label><label>Pesquisar por cliente ou produto<input id="shirley-orders-search" type="search" placeholder="Nome, endereço ou item…"></label></div>
-        <div id="shirley-orders-list" class="shirley-portal__records"></div>
+        <p id="shirley-orders-feedback" class="shirley-portal__feedback" role="status"></p><div id="shirley-orders-list" class="shirley-portal__records"></div>
       </section>
       <section class="shirley-portal__workspace" data-shirley-panel="recurring" hidden>
         <div class="shirley-portal__section-head"><div><p class="portal-eyebrow">PROGRAMAÇÃO</p><h2>Pedidos recorrentes</h2></div><button type="button" class="shirley-portal__secondary" data-shirley-tab="new">Criar pedido</button></div>
