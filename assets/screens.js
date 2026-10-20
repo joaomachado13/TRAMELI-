@@ -577,7 +577,7 @@ document.querySelector('.notification-button').addEventListener('click', () => {
 document.addEventListener('click', async event => {
   const openOrder = event.target.closest('[data-open-order]');
   if (openOrder) { window.TrameliOperation?.openOrder(openOrder.dataset.openOrder); return; }
-  if (event.target.closest('[data-new-order]')) { window.TrameliOperation?.openNew(); return; }
+  if (event.target.closest('[data-new-order]')) { location.hash = '#portal-shirley'; return; }
   const agendaMode = event.target.closest('[data-agenda-mode]');
   if (agendaMode) { agendaState.mode = agendaMode.dataset.agendaMode; showRoute(true); return; }
   const agendaDay = event.target.closest('[data-agenda-day]');
