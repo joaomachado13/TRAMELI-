@@ -523,7 +523,7 @@ function render() {
     const busy = movingOrders.has(order.id);
     const destinations = stages.filter(stage => statusPath(state, stage.key, !live || live.role === 'master').length);
     const movable = destinations.length > 0 && !busy;
-    return `<article class="kanban-card${busy ? ' is-moving' : ''}" data-card-id="${escapeHtml(order.id)}" aria-busy="${busy}"><button class="order-card order-card--${state}" type="button" data-action="open" data-id="${escapeHtml(order.id)}" draggable="${movable}" aria-label="Abrir pedido de ${escapeHtml(order.customer)}"><span class="order-card__top"><span class="order-card__id">#${escapeHtml(orderCode(order))}</span><span class="status status--${state === 'packing' || state === 'ready' ? 'confirmed' : state}">${escapeHtml(statusLabels[state === 'packing' || state === 'ready' ? 'confirmed' : state])}</span></span><small class="order-card__origin">${escapeHtml(orderOriginLabel(order))}</small><strong class="order-card__customer">${escapeHtml(order.customer)}</strong><span class="order-card__meta">${itemCount} ${itemCount === 1 ? 'item' : 'itens'} · ${money(orderTotal(order))}</span><span class="order-card__delivery">Entrega ${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</span>${order.notes ? '<span class="order-card__alert">Tem observação</span>' : ''}<span class="order-card__open">Ver pedido <span aria-hidden="true">→</span></span></button>${destinations.length ? `<div class="kanban-card__move"><button type="button" class="kanban-drag-handle" data-drag-id="${escapeHtml(order.id)}" aria-label="Arrastar pedido de ${escapeHtml(order.customer)}" aria-describedby="kanban-help" ${busy ? 'disabled' : ''}><span aria-hidden="true">⠿</span></button><label><span class="sr-only">Mover pedido de ${escapeHtml(order.customer)} para</span><select data-move-id="${escapeHtml(order.id)}" ${busy ? 'disabled' : ''}><option value="">${busy ? 'Movendo…' : 'Mover para…'}</option>${destinations.map(stage => `<option value="${stage.key}">${stage.title}</option>`).join('')}</select></label></div>` : ''}</article>`;
+    return `<article class="kanban-card${busy ? ' is-moving' : ''}" data-card-id="${escapeHtml(order.id)}" aria-busy="${busy}"><button class="order-card order-card--${state}" type="button" data-action="open" data-id="${escapeHtml(order.id)}" draggable="${movable}" aria-label="Abrir pedido de ${escapeHtml(order.customer)}"><span class="order-card__top"><span class="order-card__id">#${escapeHtml(orderCode(order))}</span><span class="status status--${state === 'packing' || state === 'ready' ? 'confirmed' : state}">${escapeHtml(statusLabels[state === 'packing' || state === 'ready' ? 'confirmed' : state])}</span></span>${order.editedAt ? '<span class="order-edited-badge" role="status">EDITADO</span>' : ''}<small class="order-card__origin">${escapeHtml(orderOriginLabel(order))}</small><strong class="order-card__customer">${escapeHtml(order.customer)}</strong><span class="order-card__meta">${itemCount} ${itemCount === 1 ? 'item' : 'itens'} · ${money(orderTotal(order))}</span><span class="order-card__delivery">Entrega ${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</span>${order.notes ? '<span class="order-card__alert">Tem observação</span>' : ''}<span class="order-card__open">Ver pedido <span aria-hidden="true">→</span></span></button>${destinations.length ? `<div class="kanban-card__move"><button type="button" class="kanban-drag-handle" data-drag-id="${escapeHtml(order.id)}" aria-label="Arrastar pedido de ${escapeHtml(order.customer)}" aria-describedby="kanban-help" ${busy ? 'disabled' : ''}><span aria-hidden="true">⠿</span></button><label><span class="sr-only">Mover pedido de ${escapeHtml(order.customer)} para</span><select data-move-id="${escapeHtml(order.id)}" ${busy ? 'disabled' : ''}><option value="">${busy ? 'Movendo…' : 'Mover para…'}</option>${destinations.map(stage => `<option value="${stage.key}">${stage.title}</option>`).join('')}</select></label></div>` : ''}</article>`;
   };
   const columns = stages.filter(column => ['received', 'confirmed', 'delivered'].includes(column.key));
   const collapsedColumns = new Set();
@@ -588,7 +588,7 @@ async function moveOrder(id, target) {
       orders = readOrders();
     } else {
       const previous = orders;
-      orders = orders.map(item => item.id === id ? { ...item, status: target, checked: target !== 'received' } : item);
+      orders = orders.map(item => item.id === id ? { ...item, status: target, checked: target !== 'received', editedAt: target === 'confirmed' ? null : item.editedAt } : item);
       if (!saveOrders()) { orders = previous; throw new Error('Não foi possível salvar a movimentação neste navegador.'); }
     }
     kanbanFeedback.textContent = `Pedido de ${order.customer} movido para ${statusLabels[target]}.`;
@@ -1127,14 +1127,24 @@ form.addEventListener('submit', async event => {
     return;
   }
   const previous = orders.find(order => order.id === editingId);
+  if (!editingId && recurrence === 'once') {
+    const duplicate = orders.find(order => order.customerId === customerId && order.date === form.elements.date.value
+      && orderStatus(order) !== 'cancelled');
+    if (duplicate) {
+      formError.textContent = 'Este cliente já tem um pedido para essa data. Abra o pedido existente e escolha Editar pedido.';
+      formError.hidden = false;
+      return;
+    }
+  }
   const createdAt = previous?.createdAt || new Date().toISOString();
   const order = {
     id: editingId || (live ? null : (crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`)),
     publicCode: previous?.publicCode || (live ? '' : localOrderCode(createdAt)),
     version: previous?.version || null,
     createdAt,
-    checked: previous?.checked || false,
-    status: previous ? orderStatus(previous) : 'received',
+    checked: false,
+    status: 'received',
+    editedAt: previous ? new Date().toISOString() : null,
     customerId, customer, address, phone,
     date: form.elements.date.value, feeCents, items, notes: form.elements.notes.value.trim(),
   };
