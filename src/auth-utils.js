@@ -15,8 +15,12 @@ export function identityFields(method, value) {
 }
 
 export function validateNewPassword(password, confirmation) {
-  if (password.length < 8) throw new Error('Use uma senha com pelo menos 8 caracteres.');
-  if (password !== confirmation) throw new Error('As senhas não são iguais. Confira os dois campos.');
+  const value = String(password || '');
+  if (value.length < 8) throw new Error('Use uma senha com pelo menos 8 caracteres.');
+  if (!/[A-Z]/.test(value)) throw new Error('Inclua pelo menos uma letra maiúscula.');
+  if (!/[a-z]/.test(value)) throw new Error('Inclua pelo menos uma letra minúscula.');
+  if (!/\d/.test(value)) throw new Error('Inclua pelo menos um número.');
+  if (value !== confirmation) throw new Error('As senhas não são iguais. Confira os dois campos.');
 }
 
 export function displayName(user, profile) {
@@ -30,7 +34,7 @@ export function authError(error) {
   if (code === 'email_not_confirmed') return 'Falta confirmar seu e-mail. Confira a caixa de entrada e o spam ou reenvie a confirmação.';
   if (code === 'phone_not_confirmed') return 'Confirme seu telefone com o código recebido por SMS.';
   if (code === 'user_already_exists' || code === 'email_exists') return 'Essa conta já existe. Entre com sua senha ou use a recuperação.';
-  if (code === 'weak_password') return 'Escolha uma senha mais forte, com pelo menos 8 caracteres.';
+  if (code === 'weak_password') return 'Escolha uma senha com pelo menos 8 caracteres, uma maiúscula, uma minúscula e um número.';
   if (code === 'same_password') return 'Escolha uma senha diferente da atual.';
   if (code === 'reauthentication_needed') return 'Por segurança, saia e entre novamente antes de trocar a senha.';
   if (['over_email_send_rate_limit', 'over_sms_send_rate_limit', 'over_request_rate_limit'].includes(code) || error?.status === 429) return 'Muitas tentativas em pouco tempo. Aguarde alguns minutos antes de tentar novamente.';
