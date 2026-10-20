@@ -135,7 +135,7 @@ try {
   await pause(750);
   assert.equal(await evaluate('location.hash'), '#loja', 'Catalog CTA left the portal');
   assert.ok(await evaluate('scrollY > 200'), 'Catalog CTA did not scroll to products');
-  await evaluate('document.querySelector(".portal-product .portal-stepper button:last-child").click()');
+  await evaluate('document.querySelector(".portal-product .portal-add-button").click()');
   assert.equal(await evaluate('document.querySelector("#portal-cart-count").textContent'), '1');
   for (let i = 0; i < 20 && !await evaluate('!!document.querySelector("#portal-floating-host .portal-catalog__footer")'); i++) await pause(50);
   assert.equal(await evaluate('getComputedStyle(document.querySelector("#portal-floating-host .portal-catalog__footer")).position'), 'fixed');
