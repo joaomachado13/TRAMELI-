@@ -961,6 +961,7 @@ import '../src/featured-products.css';
   host.addEventListener('input', event => {
     if (event.target.id !== 'portal-search') return;
     query = event.target.value;
+    syncCatalogFilterChrome();
     clearTimeout(catalogSearchTimer);
     catalogSearchTimer = setTimeout(() => refreshCatalogResults({ animate: true }), 110);
   });
