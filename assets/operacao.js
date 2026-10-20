@@ -402,7 +402,7 @@ function rememberPrintedOrders() {
 }
 window.addEventListener('beforeprint', rememberPrintedOrders);
 
-function openLabelPrintDialog() {
+function openLabelPrintDialog(printMode = 'a4') {
   const dayOrders = selectedOrders();
   if (!dayOrders.length) { alert('Não há pedidos para imprimir na data selecionada.'); return; }
   let dialog = document.getElementById('label-print-dialog');
@@ -414,6 +414,10 @@ function openLabelPrintDialog() {
     dialog.innerHTML = `<form method="dialog" class="label-print-dialog__form">
       <p class="eyebrow">ETIQUETAS</p><h2 id="label-print-title">O que deseja imprimir?</h2>
       <p class="section-description" id="label-print-summary"></p>
+      <div class="label-print-dialog__mode">
+        <button class="button button--primary" type="button" data-print-mode="a4">A4</button>
+        <button class="button button--quiet" type="button" data-print-mode="mini">Mini impressora</button>
+      </div>
       <div class="label-print-dialog__actions">
         <button class="button button--primary" type="button" data-label-print="new">Imprimir pedidos em Novo</button>
         <button class="button button--quiet" type="button" data-label-print="all">Imprimir todos os pedidos</button>
@@ -425,6 +429,12 @@ function openLabelPrintDialog() {
     document.body.append(dialog);
     dialog.addEventListener('click', event => {
       if (event.target === dialog) { dialog.close(); return; }
+      const modeButton = event.target.closest('[data-print-mode]');
+      if (modeButton) {
+        dialog.dataset.printMode = modeButton.dataset.printMode;
+        dialog.querySelectorAll('[data-print-mode]').forEach(item => item.className = `button ${item === modeButton ? 'button--primary' : 'button--quiet'}`);
+        return;
+      }
       const button = event.target.closest('[data-label-print]');
       if (!button) return;
       const available = selectedOrders();
@@ -443,13 +453,15 @@ function openLabelPrintDialog() {
       if (!chosen.length) { alert(button.dataset.labelPrint === 'new' ? 'Não há pedidos na etapa Novo para imprimir nesta data.' : 'Selecione pelo menos um pedido.'); return; }
       pendingPrintOrderIds = chosen.map(order => order.id);
       dialog.close();
-      if (preparePrint(chosen)) window.print();
+      if (preparePrint(chosen, dialog.dataset.printMode || 'a4')) window.print();
     });
   }
   const newCount = dayOrders.filter(order => orderStatus(order) === 'received').length;
   const unprinted = dayOrders.filter(order => !printedIdsForDate().has(order.id)).length;
   dialog.querySelector('#label-print-summary').textContent = `${dayOrders.length} pedidos ativos nesta data; ${newCount} em Novo; ${unprinted} ainda não registrados em uma impressão.`;
   dialog.querySelector('#label-print-selection').hidden = true;
+  dialog.dataset.printMode = printMode;
+  dialog.querySelectorAll('[data-print-mode]').forEach(item => item.className = `button ${item.dataset.printMode === printMode ? 'button--primary' : 'button--quiet'}`);
   dialog.showModal();
 }
 
@@ -812,8 +824,8 @@ async function handleOrderAction(button) {
   render();
 }
 
-function preparePrint(orderSelection = null) {
-  const dayOrders = orderSelection || selectedOrders();
+function preparePrint(orderSelection = null, printMode = 'a4') {
+  const dayOrders = (orderSelection || selectedOrders()).slice().sort(compareByStreet);
   if (!dayOrders.length) { alert('Não há pedidos para imprimir na data selecionada.'); return false; }
   const printHost = document.getElementById('print-document');
 
@@ -842,7 +854,7 @@ function preparePrint(orderSelection = null) {
       '</div></article>';
   };
 
-  printHost.innerHTML = '<section class="print-sheet print-sheet--orders">' +
+  printHost.innerHTML = '<section class="print-sheet print-sheet--orders' + (printMode === 'mini' ? ' print-sheet--mini' : '') + '">' +
     dayOrders.map(renderOrder).join('') + '</section>';
   return true;
 }
