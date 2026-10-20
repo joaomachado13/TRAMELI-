@@ -58,3 +58,40 @@
   #portal-content .featured-products__rail{grid-auto-columns:min(58vw,210px);gap:12px}
 }
 @media(prefers-reduced-motion:reduce){#portal-content .featured-product{transition:none}#portal-content .featured-product:hover{transform:none}}
+
+/* Segunda passada da vitrine: os destaques são atalhos, não uma segunda grade pequena. */
+body.portal-mode #portal-content>.featured-products{margin-top:28px;margin-bottom:18px}
+body.portal-mode #portal-content .featured-products__rail{
+  display:grid;
+  grid-template-columns:none;
+  grid-auto-flow:column;
+  grid-auto-columns:minmax(230px,260px);
+  justify-content:start;
+  gap:16px;
+  overflow-x:auto;
+  padding:2px 2px 10px;
+  scroll-snap-type:x proximity;
+}
+body.portal-mode #portal-content .featured-product{scroll-snap-align:start}
+body.portal-mode #portal-content .featured-product__photo{aspect-ratio:4/3}
+body.portal-mode #portal-content .featured-product__body{padding:14px}
+body.portal-mode #portal-content .featured-product h3{min-height:auto;font-size:15px}
+body.portal-mode #portal-content .featured-product__price{font-size:18px}
+body.portal-mode #portal-content .featured-product__controls .portal-stepper--empty .portal-add-button{
+  display:flex!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:44px!important;
+  align-items:center!important;
+  justify-content:center!important;
+  padding:0 14px!important;
+  border-radius:12px!important;
+  color:#FFF9F5!important;
+  background:#8F3D22!important;
+  border-color:#8F3D22!important;
+  white-space:nowrap!important;
+}
+@media(max-width:700px){
+  body.portal-mode #portal-content>.featured-products{padding:0 16px}
+  body.portal-mode #portal-content .featured-products__rail{grid-auto-columns:min(72vw,250px);gap:12px}
+}
