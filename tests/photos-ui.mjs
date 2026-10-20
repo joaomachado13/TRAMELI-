@@ -152,6 +152,7 @@ try {
   assert.equal(await evaluate('localStorage.getItem("trameli-operation-draft-v2")===testOldOrders'),true);
   assert.ok(await evaluate('document.documentElement.scrollWidth <= innerWidth'));
   await evaluate(`document.querySelector('[data-view="catalog"]').click(); document.querySelector('[data-personal-filter="frequent"]').click()`);
+  await pause(520);
   assert.equal(await evaluate('document.querySelectorAll(".portal-product").length'),2);
   // Exercise asynchronous favorite persistence without any external account.
   await evaluate(`(async()=>{
