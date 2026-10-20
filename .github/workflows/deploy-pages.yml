@@ -2,7 +2,7 @@ name: Publicar Trameli
 
 on:
   push:
-    branches: [main]
+    branches: [preview/client-panel-refresh]
   workflow_dispatch:
 
 permissions:
