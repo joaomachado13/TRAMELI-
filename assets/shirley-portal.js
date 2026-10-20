@@ -179,7 +179,7 @@
       }
       await live.load();
       ordersDate.value=date;resetForm();setTab('orders');renderOrders();
-      setFeedback(feedback,'Pedido salvo com sucesso.','success');
+      setFeedback($('#shirley-orders-feedback'),'Pedido salvo com sucesso.','success');
     }catch(error){setFeedback(feedback,'Não foi possível salvar: '+error.message,'error');}
     finally{submit.disabled=false;}
   });
