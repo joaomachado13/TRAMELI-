@@ -20,8 +20,8 @@ const streetOrder = [
   { customer: 'Ana', address: 'Rua 2, casa 20' },
   { customer: 'Bruno', address: 'Rua 10, casa 3' },
 ].sort(compareSupplierGroups);
-assert.deepEqual(streetOrder.map(group => group.customer), ['Ana', 'Zuleica', 'Bruno'],
-  'A lista de separação deve ordenar ruas numericamente e, na mesma rua, clientes alfabeticamente.');
+assert.deepEqual(streetOrder.map(group => group.customer), ['Zuleica', 'Ana', 'Bruno'],
+  'A lista deve ordenar primeiro a rua e depois o número da casa.');
 assert(groups[0].orders[0].checked);
 assert(!groups[0].orders[1].checked);
 assert(groups[0].orders[0].lines[1].label.includes('350 g'));
