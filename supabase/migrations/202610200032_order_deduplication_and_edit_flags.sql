@@ -359,8 +359,7 @@ $$;
 
 revoke all on function public.trameli_customer_order(uuid,uuid,integer,date,text,text,text,text,text,jsonb) from public, anon;
 grant execute on function public.trameli_customer_order(uuid,uuid,integer,date,text,text,text,text,text,jsonb) to authenticated;
-revoke all on function public.trameli_operator_order(uuid,uuid,integer,date,text,text,text,text,integer,jsonb) from public, anon;
-grant execute on function public.trameli_operator_order(uuid,uuid,integer,date,text,text,text,text,integer,jsonb) to authenticated;
+revoke all on function public.trameli_operator_order(uuid,uuid,integer,date,text,text,text,text,integer,jsonb) from public, anon, authenticated;
 revoke all on function public.trameli_operator_order_for_customer(uuid,uuid,integer,date,text,text,text,text,integer,jsonb,uuid) from public, anon;
 grant execute on function public.trameli_operator_order_for_customer(uuid,uuid,integer,date,text,text,text,text,integer,jsonb,uuid) to authenticated;
 revoke all on function public.trameli_operator_status(uuid,integer,public.trameli_order_status) from public, anon;
