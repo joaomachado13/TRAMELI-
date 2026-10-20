@@ -911,7 +911,7 @@ function preparePrint(orderSelection = null) {
   return true;
 }
 
-document.getElementById('new-order').addEventListener('click', () => openForm());
+document.getElementById('new-order').addEventListener('click', () => { location.hash = '#portal-shirley'; });
 form.elements.recurrence.addEventListener('change', () => {
   const weekdaysFieldset = document.getElementById('recurrence-weekdays');
   if (weekdaysFieldset) weekdaysFieldset.hidden = form.elements.recurrence.value === 'once';
