@@ -232,7 +232,7 @@ try {
       await evaluate('document.querySelector("[data-qty=\\\"1\\\"]").click()');
       await waitFor('.portal-catalog__footer');
       assert(await evaluate('matchMedia("(prefers-reduced-motion: reduce)").matches || document.querySelector("#portal-floating-host").classList.contains("is-cart-entering")'), 'Catálogo normal não recebeu a nova animação de entrada.');
-      assert((await evaluate('document.querySelector(".portal-catalog__footer").textContent')).includes('Continuar para a sacola'), 'Catálogo normal perdeu a ação de continuar para a sacola.');
+      assert((await evaluate('document.querySelector(".portal-catalog__footer").textContent')).includes('Ver sacola'), 'Catálogo normal perdeu a ação de continuar para a sacola.');
       assert((await evaluate('document.querySelector(".portal-catalog__footer small").textContent')).length > 6, 'Catálogo normal perdeu o subtotal em dinheiro.');
       await evaluate('document.querySelector("[data-qty=\\\"1\\\"]").click();document.querySelector("[data-qty=\\\"1\\\"]").click()');
       assert((await evaluate('document.querySelector(".portal-catalog__footer strong").textContent')).startsWith('1 item'), 'Barra do catálogo atualizou durante a primeira cortina.');
@@ -287,6 +287,16 @@ try {
     await audit(`${route} mobile`);
     const image = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
     await writeFile(new URL(`../assets/crops/identity-${route}-390.png`, import.meta.url), Buffer.from(image.data, 'base64'));
+  }
+  for (const [width, expectedColumns] of [[375,2],[768,3],[1280,5]]) {
+    await send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width < 700 });
+    await evaluate('location.hash="#loja"');
+    await waitFor('.portal-welcome');
+    await pause(180);
+    assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'), `loja criou rolagem horizontal em ${width}px.`);
+    assert(await evaluate('getComputedStyle(document.querySelector(".portal-filterbar")).position === "sticky"'), `filtros da loja não ficaram sticky em ${width}px.`);
+    const columns = await evaluate('getComputedStyle(document.querySelector(".portal-product-grid")).gridTemplateColumns.split(" ").filter(Boolean).length');
+    assert(columns === expectedColumns, `grade da loja em ${width}px deveria ter ${expectedColumns} colunas e tem ${columns}.`);
   }
   assert(!identityIssues.length, `Identidade: ${JSON.stringify(identityIssues)}`);
   process.stdout.write('Identidade: Manrope, contraste, dez rotas Master/Portal, modal e responsividade 390/1440px OK.\n');
