@@ -295,8 +295,8 @@ try {
     await pause(180);
     assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'), `loja criou rolagem horizontal em ${width}px.`);
     assert(await evaluate('getComputedStyle(document.querySelector(".portal-filterbar")).position === "sticky"'), `filtros da loja não ficaram sticky em ${width}px.`);
-    const headerGeometry = await evaluate(`(() => { const r=document.querySelector(".portal-header").getBoundingClientRect(); return {left:r.left,width:r.width,viewport:innerWidth}; })()`);
-    assert(Math.abs(headerGeometry.left) <= 1 && headerGeometry.width >= headerGeometry.viewport - 2, `cabeçalho não ocupou toda a largura em ${width}px: ${JSON.stringify(headerGeometry)}`);
+    const headerGeometry = await evaluate(`(() => { const r=document.querySelector(".portal-header").getBoundingClientRect(); return {left:r.left,width:r.width,viewport:document.documentElement.clientWidth}; })()`);
+    assert(Math.abs(headerGeometry.left) <= 1 && headerGeometry.width >= headerGeometry.viewport - 2, `cabeçalho não ocupou toda a largura útil em ${width}px: ${JSON.stringify(headerGeometry)}`);
     const categoryVisual = await evaluate(`(() => {
       const rail=document.querySelector(".portal-categories");
       const active=rail?.querySelector('[aria-pressed="true"]');
