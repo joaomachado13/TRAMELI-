@@ -258,3 +258,86 @@ body.portal-mode .portal-add-slot .portal-add-button::after{content:none!importa
   body.portal-mode .portal-product__body{padding:11px}
   body.portal-mode .portal-add-slot .portal-add-button{height:42px!important;min-height:42px!important}
 }
+
+
+/* Preview refinement: full header + category rail */
+body.portal-mode .portal-header{
+  box-sizing:border-box;
+  width:100%;
+  max-width:none!important;
+  margin:0!important;
+  padding-left:max(24px,calc((100vw - 1220px)/2 + 24px))!important;
+  padding-right:max(24px,calc((100vw - 1220px)/2 + 24px))!important;
+  background:var(--portal-surface)!important;
+  border-bottom:1px solid var(--portal-border)!important;
+}
+
+body.portal-mode .portal-categories{
+  display:flex;
+  flex-wrap:nowrap;
+  gap:8px;
+  margin:14px 0 0;
+  padding:10px;
+  overflow-x:auto;
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:16px;
+  background:#6F2E1B;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+  scrollbar-width:none;
+  scroll-behavior:smooth;
+}
+body.portal-mode .portal-categories::-webkit-scrollbar{display:none}
+body.portal-mode .portal-categories button{
+  flex:0 0 auto;
+  min-height:40px;
+  padding:0 14px;
+  border:1px solid rgba(255,249,245,.18)!important;
+  border-radius:999px!important;
+  background:rgba(255,249,245,.08)!important;
+  color:#FFF3EA!important;
+  font-size:13px;
+  font-weight:700;
+  white-space:nowrap;
+}
+body.portal-mode .portal-categories button:hover:not(:disabled){
+  border-color:rgba(255,249,245,.34)!important;
+  background:rgba(255,249,245,.14)!important;
+  color:#FFF9F5!important;
+}
+body.portal-mode .portal-categories button[aria-pressed="true"]{
+  border-color:#FFF9F5!important;
+  background:#FFF9F5!important;
+  color:#7A331C!important;
+  font-weight:800!important;
+}
+body.portal-mode #portal-grid.portal-product-grid{
+  margin-top:32px!important;
+  scroll-margin-top:170px;
+}
+
+@media(max-width:850px){
+  body.portal-mode .portal-header{
+    padding-left:20px!important;
+    padding-right:20px!important;
+  }
+}
+@media(max-width:640px){
+  body.portal-mode .portal-header{
+    padding-left:16px!important;
+    padding-right:16px!important;
+  }
+  body.portal-mode .portal-categories{
+    margin-top:12px;
+    margin-right:-4px;
+    margin-left:-4px;
+    padding:9px;
+    border-radius:14px;
+  }
+  body.portal-mode #portal-grid.portal-product-grid{
+    margin-top:28px!important;
+    scroll-margin-top:155px;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  body.portal-mode .portal-categories{scroll-behavior:auto}
+}
