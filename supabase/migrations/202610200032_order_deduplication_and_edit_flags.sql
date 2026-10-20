@@ -110,7 +110,7 @@ begin
   else
     select * into v_order from public.trameli_orders where id = p_order_id for update;
     if not found or v_order.customer_id is distinct from v_user or v_order.source <> 'portal'
-      or v_order.status <> 'received' or v_order.version is distinct from p_expected_version
+      or v_order.status not in ('received','confirmed','packing','ready') or v_order.version is distinct from p_expected_version
       or v_local_now > v_order.delivery_date - 1 + v_cutoff
       or p_delivery_date is distinct from v_order.delivery_date then
       raise exception 'order changed, cutoff exceeded or order cannot be edited';
@@ -118,7 +118,7 @@ begin
     update public.trameli_orders set customer_name = btrim(p_name), phone = coalesce(p_phone,''),
       address = btrim(p_address), notes = coalesce(p_notes,''), items = v_items,
       payment_method_preference = p_payment_method, subtotal_cents = v_subtotal,
-      fee_cents = 200, edited_at = now(), version = version + 1, updated_at = now()
+      fee_cents = 200, status = 'received', edited_at = now(), version = version + 1, updated_at = now()
     where id = p_order_id returning id into v_id;
   end if;
   return v_id;
