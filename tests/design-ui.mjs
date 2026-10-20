@@ -295,6 +295,24 @@ try {
     await pause(180);
     assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'), `loja criou rolagem horizontal em ${width}px.`);
     assert(await evaluate('getComputedStyle(document.querySelector(".portal-filterbar")).position === "sticky"'), `filtros da loja não ficaram sticky em ${width}px.`);
+    const headerGeometry = await evaluate(`(() => { const r=document.querySelector(".portal-header").getBoundingClientRect(); return {left:r.left,width:r.width,viewport:innerWidth}; })()`);
+    assert(Math.abs(headerGeometry.left) <= 1 && headerGeometry.width >= headerGeometry.viewport - 2, `cabeçalho não ocupou toda a largura em ${width}px: ${JSON.stringify(headerGeometry)}`);
+    const categoryVisual = await evaluate(`(() => {
+      const rail=document.querySelector(".portal-categories");
+      const active=rail?.querySelector('[aria-pressed="true"]');
+      const grid=document.querySelector("#portal-grid");
+      if(!rail||!active||!grid) return null;
+      const railStyle=getComputedStyle(rail), activeStyle=getComputedStyle(active);
+      return {
+        radius:parseFloat(railStyle.borderRadius)||0,
+        railBg:railStyle.backgroundColor,
+        activeBg:activeStyle.backgroundColor,
+        gap:grid.getBoundingClientRect().top-rail.getBoundingClientRect().bottom
+      };
+    })()`);
+    assert(categoryVisual?.radius >= 14 && categoryVisual.railBg !== 'rgba(0, 0, 0, 0)', `seletor de categorias não virou um card único em ${width}px: ${JSON.stringify(categoryVisual)}`);
+    assert(categoryVisual.activeBg !== categoryVisual.railBg, `categoria ativa não ficou clara em ${width}px: ${JSON.stringify(categoryVisual)}`);
+    assert(categoryVisual.gap >= 24, `faltou respiro entre categorias e produtos em ${width}px: ${JSON.stringify(categoryVisual)}`);
     const columns = await evaluate('getComputedStyle(document.querySelector(".portal-product-grid")).gridTemplateColumns.split(" ").filter(Boolean).length');
     assert(columns === expectedColumns, `grade da loja em ${width}px deveria ter ${expectedColumns} colunas e tem ${columns}.`);
     const addButton = await evaluate(`(() => {
@@ -311,6 +329,20 @@ try {
     assert((await evaluate('document.querySelectorAll(".portal-category-group").length')) === 0, `catálogo voltou a ser separado visualmente por categoria em ${width}px.`);
     assert((await evaluate('document.querySelectorAll(".portal-product__category").length')) === 0, `badge de categoria voltou para dentro dos cards em ${width}px.`);
   }
+  await evaluate(`(() => {
+    window.scrollTo(0, 0);
+    const button=[...document.querySelectorAll("[data-category]")].find(item => item.dataset.category !== "Todos");
+    if (!button) throw new Error("Categoria de teste ausente");
+    button.click();
+  })()`);
+  await pause(650);
+  const categoryNavigation = await evaluate(`(() => {
+    const active=document.querySelector('.portal-categories [aria-pressed="true"]');
+    const grid=document.querySelector("#portal-grid");
+    return { selected:active?.dataset.category||"", scrollY, gridTop:grid?.getBoundingClientRect().top ?? -1 };
+  })()`);
+  assert(categoryNavigation.selected && categoryNavigation.selected !== 'Todos', `clique em categoria não ativou o filtro: ${JSON.stringify(categoryNavigation)}`);
+  assert(categoryNavigation.scrollY > 100 && categoryNavigation.gridTop >= 100 && categoryNavigation.gridTop <= 280, `categoria não levou o cliente até os produtos filtrados: ${JSON.stringify(categoryNavigation)}`);
   assert(!identityIssues.length, `Identidade: ${JSON.stringify(identityIssues)}`);
   process.stdout.write('Identidade: Manrope, contraste, dez rotas Master/Portal, modal e responsividade 390/1440px OK.\n');
 } finally {
