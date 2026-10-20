@@ -303,15 +303,20 @@ try {
       const grid=document.querySelector("#portal-grid");
       if(!rail||!active||!grid) return null;
       const railStyle=getComputedStyle(rail), activeStyle=getComputedStyle(active);
+      const inactive=[...rail.querySelectorAll('button')].find(button => button !== active);
+      const inactiveStyle=inactive ? getComputedStyle(inactive) : null;
       return {
         radius:parseFloat(railStyle.borderRadius)||0,
         railBg:railStyle.backgroundColor,
         activeBg:activeStyle.backgroundColor,
+        inactiveBg:inactiveStyle?.backgroundColor || '',
+        inactiveBorder:inactiveStyle?.borderTopColor || '',
         gap:grid.getBoundingClientRect().top-rail.getBoundingClientRect().bottom
       };
     })()`);
-    assert(categoryVisual?.radius >= 14 && categoryVisual.railBg !== 'rgba(0, 0, 0, 0)', `seletor de categorias não virou um card único em ${width}px: ${JSON.stringify(categoryVisual)}`);
-    assert(categoryVisual.activeBg !== categoryVisual.railBg, `categoria ativa não ficou clara em ${width}px: ${JSON.stringify(categoryVisual)}`);
+    assert(categoryVisual?.radius >= 20 && categoryVisual.railBg !== 'rgba(0, 0, 0, 0)', `seletor de categorias não virou um trilho único arredondado em ${width}px: ${JSON.stringify(categoryVisual)}`);
+    assert(categoryVisual.activeBg !== categoryVisual.railBg && categoryVisual.activeBg !== 'rgba(0, 0, 0, 0)', `categoria ativa não ficou como cápsula clara em ${width}px: ${JSON.stringify(categoryVisual)}`);
+    assert(categoryVisual.inactiveBg === 'rgba(0, 0, 0, 0)', `categorias inativas voltaram a parecer chips separados em ${width}px: ${JSON.stringify(categoryVisual)}`);
     assert(categoryVisual.gap >= 24, `faltou respiro entre categorias e produtos em ${width}px: ${JSON.stringify(categoryVisual)}`);
     const columns = await evaluate('getComputedStyle(document.querySelector(".portal-product-grid")).gridTemplateColumns.split(" ").filter(Boolean).length');
     assert(columns === expectedColumns, `grade da loja em ${width}px deveria ter ${expectedColumns} colunas e tem ${columns}.`);
