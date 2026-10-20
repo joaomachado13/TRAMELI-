@@ -4,7 +4,7 @@ import { parseStreetAddress } from './address-sort.js';
 
 const normalize = value => String(value || '').trim().toLocaleLowerCase('pt-BR');
 
-export const SANDRA_ITEMS = Object.freeze(['broa', 'biscoito provolone', 'bolacha de nata', 'biscoito de queijo', 'biscoito da vovó']);
+export const SANDRA_ITEMS = Object.freeze(['broa', 'biscoito provolone', 'bolacha de nata', 'biscoito de nata', 'biscoito de queijo', 'biscoito da vovó']);
 export const isSandraSupplierItem = name => SANDRA_ITEMS.includes(normalize(name));
 export function filterSupplierGroups(groups, supplier = 'divano') {
   return groups.map(group => ({
