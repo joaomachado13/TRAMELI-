@@ -70,6 +70,7 @@ await import('../assets/clientes.js');
 await import('../assets/operacao.js');
 await import('../assets/screens.js');
 await import('../assets/portal.js');
+await import('../assets/shirley-portal.js');
 initMotion();
 // Só revela a aplicação depois que a rota correta e seus componentes estão prontos.
 document.body.classList.remove('app-booting');
