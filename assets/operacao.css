@@ -250,6 +250,21 @@ dialog{width:min(670px,calc(100vw - 24px));max-height:min(90vh,900px);padding:0;
   .print-label li strong{display:inline-block;min-width:4.5mm;font-size:7.5pt}
   .print-label small{display:block;margin-top:1mm;font-size:6pt;line-height:1.15;overflow-wrap:anywhere}
   .print-label footer{flex-shrink:0;margin-top:1.2mm;padding-top:.8mm;border-top:.2mm solid #e0e0e0;text-align:right;font-weight:700;font-size:6.8pt;line-height:1.15}
+  /* Mini impressora: modo independente do layout A4. */
+  .print-sheet--mini{display:block!important;width:57mm!important;min-width:57mm!important;max-width:57mm!important;min-height:0!important;margin:0!important;padding:2mm!important;overflow:visible!important}
+  .print-sheet--mini .print-label{display:block!important;width:53mm!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;break-after:page;page-break-after:always}
+  .print-sheet--mini .print-label:last-child{break-after:auto;page-break-after:auto}
+  .print-sheet--mini .print-label__content{display:block!important;width:53mm!important;min-height:0!important;padding:2.2mm 2mm!important;transform:none!important;font-size:9pt!important}
+  .print-sheet--mini .print-label__top{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:2mm!important;padding-bottom:1.2mm!important;border-bottom:.25mm solid #bbb!important;font-size:12pt!important;line-height:1.12!important}
+  .print-sheet--mini .print-label__top strong{flex:1!important;padding:0!important;font-size:12pt!important}
+  .print-sheet--mini .print-label__top span{flex:none!important;margin:0!important;font-size:6.5pt!important;color:#444!important}
+  .print-sheet--mini .print-label p{margin:1.4mm 0 0!important;font-size:8.5pt!important;line-height:1.2!important}
+  .print-sheet--mini .print-label ul{display:grid!important;gap:.8mm!important;margin:1.8mm 0 0!important}
+  .print-sheet--mini .print-label li{font-size:9pt!important;line-height:1.18!important}
+  .print-sheet--mini .print-label li strong{min-width:6mm!important;font-size:10pt!important}
+  .print-sheet--mini .print-label small{margin-top:1.5mm!important;font-size:7.5pt!important;line-height:1.2!important}
+  .print-sheet--mini .print-label footer{margin-top:2mm!important;padding-top:1.2mm!important;border-top:.25mm solid #bbb!important;font-size:9pt!important;text-align:right!important}
+
 }
 
 /* Exclusão de pedido com pagamento vinculado */
