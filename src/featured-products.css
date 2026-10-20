@@ -49,7 +49,7 @@
 #portal-content .featured-product__controls .portal-stepper{min-height:44px;border-radius:12px}
 #portal-content .featured-product__controls .portal-stepper--empty{padding:0;border:0;background:transparent}
 #portal-content .featured-product__controls .portal-add-button{width:100%;min-height:44px;border:1px solid var(--color-primary);border-radius:12px;background:var(--color-primary);color:var(--color-on-primary);font-size:13px;font-weight:800}
-#portal-content .featured-product__controls .portal-stepper:not(.portal-stepper--empty)>button{flex:0 0 38px;width:38px;min-width:38px;height:38px;min-height:38px;border-radius:8px}
+#portal-content .featured-product__controls .portal-stepper:not(.portal-stepper--empty)>button{flex:0 0 40px;width:40px;min-width:40px;height:40px;min-height:40px;border-radius:8px}
 @media(max-width:1100px){#portal-content .featured-products__rail{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:900px){#portal-content .featured-products__rail{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:min(36vw,220px)}}
 @media(max-width:640px){
