@@ -1,6 +1,7 @@
 import { statusOf, itemLabel } from './order-math.js';
 import { lineCost, formatMoney } from './supplier-costs.js';
 import { parseStreetAddress } from './address-sort.js';
+import { supplierProductIdentity } from './supplier-product-identity.js';
 
 const normalize = value => String(value || '').trim().toLocaleLowerCase('pt-BR');
 
@@ -64,9 +65,9 @@ export function supplierGroups(orders, date, checked = new Set(), costMap = null
 
 export function supplierTotals(groups) {
   const products = new Map();
+  const identify = supplierProductIdentity(groups.flatMap(group => group.orders.flatMap(order => order.lines)));
   for (const group of groups) for (const order of group.orders) for (const line of order.lines) {
-    const weighted = line.weightGrams > 0;
-    const key = JSON.stringify([line.productId || normalize(line.name), weighted]);
+    const { key } = identify(line);
     const current = products.get(key) || { name: line.name, quantity: 0, grams: 0, checked: true, costCents: 0, costMissing: 0 };
     if ('costKnown' in line) { if (line.costKnown) current.costCents += line.costCents; else current.costMissing += 1; current.hasCost = true; }
     current.quantity += line.quantity;
