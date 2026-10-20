@@ -165,9 +165,8 @@ function suggestedOperationDate() {
   const today = `${clock.year}-${String(clock.month).padStart(2, '0')}-${String(clock.day).padStart(2, '0')}`;
   const [hour, minute] = operationRolloverTime().split(':').map(Number);
   const afterRollover = clock.hour * 60 + clock.minute >= hour * 60 + minute;
-  const todayPending = orders.some(order => order.date === today && !['delivered', 'cancelled'].includes(orderStatus(order)));
   let candidate;
-  if (!afterRollover || todayPending) candidate = today;
+  if (!afterRollover) candidate = today;
   else {
     const nextDate = new Date(Date.UTC(clock.year, clock.month - 1, clock.day + 1));
     candidate = `${nextDate.getUTCFullYear()}-${String(nextDate.getUTCMonth() + 1).padStart(2, '0')}-${String(nextDate.getUTCDate()).padStart(2, '0')}`;
