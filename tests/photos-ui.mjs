@@ -42,6 +42,36 @@ try {
   };
   for (let i = 0; i < 60 && !await evaluate('!!window.photosReady'); i++) await pause(100);
   assert.equal(await evaluate('!!window.photosReady'), true);
+  assert.equal(await evaluate('document.querySelector(".featured-product").dataset.featuredId'), '20260924-0000-4000-8000-000000000002');
+  assert.ok(await evaluate('!!(document.querySelector(".featured-products").compareDocumentPosition(document.querySelector(".portal-quick-actions")) & Node.DOCUMENT_POSITION_FOLLOWING)'), 'Destaques devem aparecer antes das ações secundárias e do catálogo completo.');
+  await evaluate(`(() => {
+    const button = document.querySelector('.featured-product [data-qty="1"]'); button.focus(); button.click();
+  })()`);
+  assert.equal(await evaluate('document.querySelector(\'#portal-grid [data-id="20260924-0000-4000-8000-000000000002"]\').parentElement.querySelector("span").textContent'), '1');
+  assert.ok(await evaluate('!!document.activeElement.closest(".featured-products")'), 'Adicionar deve preservar o foco na vitrine.');
+  await evaluate('document.querySelector(\'#portal-grid [data-id="20260924-0000-4000-8000-000000000002"][data-qty="1"]\').click()');
+  assert.equal(await evaluate('document.querySelector(".featured-product .portal-stepper>span").textContent'), '2');
+  await evaluate(`document.querySelector('.featured-product [data-qty="-1"]').click(); document.querySelector('.featured-product [data-qty="-1"]').click()`);
+  await evaluate('const input = document.querySelector("#portal-search"); input.value="queijo"; input.dispatchEvent(new Event("input",{bubbles:true}))');
+  assert.equal(await evaluate('document.querySelector(".featured-products").hidden'), true);
+  await evaluate('document.querySelector("#portal-search").value=""; document.querySelector("#portal-search").dispatchEvent(new Event("input",{bubbles:true}))');
+  assert.equal(await evaluate('document.querySelector(".featured-products").hidden'), false);
+  await evaluate(`(async () => {
+    const product = TrameliCatalog.list().find(p => p.active && p.featuredPosition == null && p.image);
+    window.featuredManagementProduct = product.id;
+    TrameliCatalog.open(product.id);
+    const form = document.querySelector('[data-featured-form]');
+    form.elements.featured.checked = true; form.elements.featured.dispatchEvent(new Event('change',{bubbles:true}));
+    form.elements.position.value = '5'; form.requestSubmit();
+  })()`);
+  for (let i = 0; i < 40 && !await evaluate('document.querySelector("[data-featured-feedback]").textContent.includes("atualizada")'); i++) await pause(50);
+  assert.equal(await evaluate('TrameliCatalog.list().find(p=>p.id===window.featuredManagementProduct).featuredPosition'), 5);
+  assert.ok(await evaluate('!!document.querySelector(`[data-featured-id="${window.featuredManagementProduct}"]`)'), 'A seleção da operação deve aparecer na vitrine.');
+  await evaluate('const form = document.querySelector("[data-featured-form]"); form.elements.featured.checked=false; form.requestSubmit()');
+  for (let i = 0; i < 40 && !await evaluate('TrameliCatalog.list().find(p=>p.id===window.featuredManagementProduct).featuredPosition === null'); i++) await pause(50);
+  assert.equal(await evaluate('!!document.querySelector(`[data-featured-id="${window.featuredManagementProduct}"]`)'), false);
+  await evaluate('document.querySelector("[data-product-close]").click()');
+  console.log('Vitrine: seleção e remoção em Produtos, ordem manual e quantidade sincronizada com o catálogo OK.');
   const expectedPhotos = await evaluate('TrameliCatalog.list().filter(product => product.image).length');
   assert.equal(await evaluate('document.querySelectorAll(".portal-product__photo img").length'), expectedPhotos);
   assert.equal(await evaluate('new DOMParser().parseFromString(TrameliCatalog.render(), "text/html").querySelectorAll(".catalog-card__image[src]").length'), expectedPhotos);
@@ -50,6 +80,9 @@ try {
   for (const width of [1280, 390]) {
     await send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width < 600 });
     assert.ok(await evaluate('document.documentElement.scrollWidth <= innerWidth'), 'Horizontal overflow');
+    await evaluate('document.querySelector(".featured-products").scrollIntoView({ behavior: "instant", block: "start" })');
+    const highlightsShot = await send('Page.captureScreenshot', { format: 'png' });
+    await writeFile(new URL(`../assets/crops/highlights-${width}.png`, import.meta.url), Buffer.from(highlightsShot.data, 'base64'));
     await evaluate('document.querySelector(".portal-grid").scrollIntoView({ behavior: "instant", block: "start" })');
     const shot = await send('Page.captureScreenshot', { format: 'png' });
     await writeFile(new URL(`../assets/crops/photos-${width}.png`, import.meta.url), Buffer.from(shot.data, 'base64'));
