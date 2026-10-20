@@ -1,4 +1,5 @@
 import { stages, statusPath, progressOrder } from '../src/operation-flow.js';
+import { compareByStreet } from '../src/address-sort.js';
 import { supplierGroups, supplierTotals, supplierText, supplierDayCost, downloadSupplierPdf, downloadSeparationPdf, itemCheckKey, filterSupplierGroups, isSandraSupplierItem } from '../src/supplier-checklist.js';
 import { closingPeriod } from '../src/billing-cycle.js';
 import { costMapFromRows, supplierPeriodReport, supplierPeriodText, periodLabel, formatMoney as formatCost } from '../src/supplier-costs.js';
@@ -414,7 +415,7 @@ function openLabelPrintDialog() {
       <p class="eyebrow">ETIQUETAS</p><h2 id="label-print-title">O que deseja imprimir?</h2>
       <p class="section-description" id="label-print-summary"></p>
       <div class="label-print-dialog__actions">
-        <button class="button button--primary" type="button" data-label-print="new">Imprimir novos pedidos</button>
+        <button class="button button--primary" type="button" data-label-print="new">Imprimir pedidos em Novo</button>
         <button class="button button--quiet" type="button" data-label-print="all">Imprimir todos os pedidos</button>
         <button class="button button--quiet" type="button" data-label-print="choose">Selecionar pedidos</button>
       </div>
@@ -429,7 +430,7 @@ function openLabelPrintDialog() {
       const available = selectedOrders();
       const printed = printedIdsForDate();
       let chosen = [];
-      if (button.dataset.labelPrint === 'new') chosen = available.filter(order => !printed.has(order.id));
+      if (button.dataset.labelPrint === 'new') chosen = available.filter(order => orderStatus(order) === 'received').sort(compareByStreet);
       else if (button.dataset.labelPrint === 'all') chosen = available;
       else if (button.dataset.labelPrint === 'choose') {
         dialog.querySelector('#label-print-selection').hidden = false;
@@ -439,14 +440,15 @@ function openLabelPrintDialog() {
         const ids = new Set([...dialog.querySelectorAll('#label-print-orders input:checked')].map(input => input.value));
         chosen = available.filter(order => ids.has(order.id));
       }
-      if (!chosen.length) { alert(button.dataset.labelPrint === 'new' ? 'Não há pedidos novos desde a última impressão.' : 'Selecione pelo menos um pedido.'); return; }
+      if (!chosen.length) { alert(button.dataset.labelPrint === 'new' ? 'Não há pedidos na etapa Novo para imprimir nesta data.' : 'Selecione pelo menos um pedido.'); return; }
       pendingPrintOrderIds = chosen.map(order => order.id);
       dialog.close();
       if (preparePrint(chosen)) window.print();
     });
   }
+  const newCount = dayOrders.filter(order => orderStatus(order) === 'received').length;
   const unprinted = dayOrders.filter(order => !printedIdsForDate().has(order.id)).length;
-  dialog.querySelector('#label-print-summary').textContent = `${dayOrders.length} pedidos ativos nesta data; ${unprinted} ainda não registrados em uma impressão.`;
+  dialog.querySelector('#label-print-summary').textContent = `${dayOrders.length} pedidos ativos nesta data; ${newCount} em Novo; ${unprinted} ainda não registrados em uma impressão.`;
   dialog.querySelector('#label-print-selection').hidden = true;
   dialog.showModal();
 }
