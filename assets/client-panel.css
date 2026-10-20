@@ -275,39 +275,44 @@ body.portal-mode .portal-header{
 body.portal-mode .portal-categories{
   display:flex;
   flex-wrap:nowrap;
-  gap:8px;
+  gap:0;
   margin:14px 0 0;
-  padding:10px;
+  padding:5px;
   overflow-x:auto;
-  border:1px solid rgba(255,255,255,.10);
-  border-radius:16px;
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:999px;
   background:#6F2E1B;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
   scrollbar-width:none;
   scroll-behavior:smooth;
 }
 body.portal-mode .portal-categories::-webkit-scrollbar{display:none}
 body.portal-mode .portal-categories button{
-  flex:0 0 auto;
+  position:relative;
+  flex:1 1 0;
+  min-width:0;
   min-height:40px;
-  padding:0 14px;
-  border:1px solid rgba(255,249,245,.18)!important;
+  padding:0 13px;
+  border:1px solid transparent!important;
   border-radius:999px!important;
-  background:rgba(255,249,245,.08)!important;
-  color:#FFF3EA!important;
+  background:transparent!important;
+  color:#F7D8C8!important;
+  box-shadow:none!important;
   font-size:13px;
   font-weight:700;
   white-space:nowrap;
+  transition:color .18s ease,background-color .22s ease,border-color .22s ease,box-shadow .22s ease!important;
 }
 body.portal-mode .portal-categories button:hover:not(:disabled){
-  border-color:rgba(255,249,245,.34)!important;
-  background:rgba(255,249,245,.14)!important;
+  border-color:transparent!important;
+  background:rgba(255,249,245,.08)!important;
   color:#FFF9F5!important;
 }
 body.portal-mode .portal-categories button[aria-pressed="true"]{
-  border-color:#FFF9F5!important;
-  background:#FFF9F5!important;
+  border-color:rgba(122,51,28,.28)!important;
+  background:#FCE6D7!important;
   color:#7A331C!important;
+  box-shadow:0 1px 2px rgba(45,17,9,.12),inset 0 0 0 1px rgba(255,255,255,.42)!important;
   font-weight:800!important;
 }
 body.portal-mode #portal-grid.portal-product-grid{
@@ -327,11 +332,17 @@ body.portal-mode #portal-grid.portal-product-grid{
     padding-right:16px!important;
   }
   body.portal-mode .portal-categories{
+    gap:0;
     margin-top:12px;
     margin-right:-4px;
     margin-left:-4px;
-    padding:9px;
-    border-radius:14px;
+    padding:5px;
+    border-radius:999px;
+  }
+  body.portal-mode .portal-categories button{
+    flex:0 0 auto;
+    min-width:max-content;
+    padding:0 14px;
   }
   body.portal-mode #portal-grid.portal-product-grid{
     margin-top:28px!important;
