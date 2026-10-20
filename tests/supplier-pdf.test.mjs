@@ -38,8 +38,9 @@ assert(!/123456|234567|telefone privado|R\$|cancelado|outro-dia/.test(JSON.strin
 assert(!text.includes('Ana Gonçalves'), 'O texto de repasse não deve incluir nomes de clientes.');
 const supplierFixture = [{ customer: 'Cliente', address: 'Rua A', orders: [{ id: 'supplier-test', lines: [
   { name: 'Broa', label: '1× Broa' }, { name: 'Pão francês', label: '2× Pão francês' },
+  { name: 'Biscoito de nata', label: '3× Biscoito de nata' },
 ] }] }];
-assert.deepEqual(filterSupplierGroups(supplierFixture, 'sandra').flatMap(g => g.orders.flatMap(o => o.lines.map(l => l.name))), ['Broa']);
+assert.deepEqual(filterSupplierGroups(supplierFixture, 'sandra').flatMap(g => g.orders.flatMap(o => o.lines.map(l => l.name))), ['Broa', 'Biscoito de nata']);
 assert.deepEqual(filterSupplierGroups(supplierFixture, 'divano').flatMap(g => g.orders.flatMap(o => o.lines.map(l => l.name))), ['Pão francês']);
 const changed = { ...first, items: [{ ...first.items[0], quantity: 6 }, first.items[1]] };
 assert(!supplierGroups([changed], date, checks)[0].orders[0].checked, 'Mudanças nos itens devem invalidar a conferência anterior.');
