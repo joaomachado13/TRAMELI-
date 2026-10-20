@@ -63,26 +63,26 @@ body:has(#loja:target){
 .portal-category-group__heading{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--portal-border)}
 .portal-category-group__heading h3{margin:0;color:var(--portal-ink);font:500 clamp(1.75rem,3vw,2.25rem)/1 var(--font-display,serif)}
 .portal-category-group__heading span{color:var(--portal-text-secondary);font-size:12px;font-weight:650}
-.portal-product-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}
+.portal-product-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
 .portal-product{position:relative;display:flex;min-width:0;flex-direction:column;overflow:hidden;border:1px solid var(--portal-border);border-radius:var(--portal-radius-3);background:var(--portal-surface);box-shadow:var(--portal-shadow-card);transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
 .portal-product:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(50,23,14,.11)}
 .portal-product.is-in-cart,
 .portal-product:has(.portal-stepper[data-has-items="true"]){border-color:var(--portal-accent);box-shadow:0 0 0 1px rgba(143,61,34,.12),var(--portal-shadow-card)}
-.portal-product__photo{position:relative;height:auto;aspect-ratio:4/3;overflow:hidden;background:#F2E5D8}
+.portal-product__photo{position:relative;height:auto;aspect-ratio:3/2;overflow:hidden;background:#F2E5D8}
 .portal-product__photo img{width:100%;height:100%;object-fit:cover;filter:saturate(1.03) contrast(1.02)}
 .portal-favorite{position:absolute;top:10px;right:10px;z-index:2;display:grid;width:40px;height:40px;place-items:center;margin:0;padding:0;border:1px solid rgba(255,255,255,.82);border-radius:50%;background:rgba(255,251,246,.94);color:var(--portal-accent);box-shadow:0 3px 10px rgba(50,23,14,.12);font-size:20px;line-height:1}
 .portal-favorite[aria-pressed="true"]{background:var(--portal-accent);color:#FFF9F5}
-.portal-product__body{display:flex;flex:1;flex-direction:column;padding:16px}
-.portal-product h3{min-height:2.7em;margin:0 0 8px;color:var(--portal-ink);font-size:16px;font-weight:700;line-height:1.35}
-.portal-product__price{margin:0!important;color:var(--portal-accent)!important;font-size:18px!important;font-weight:800!important;line-height:1.2}
-.portal-product__meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:6px 0 14px;color:var(--portal-text-secondary);font-size:12px}
+.portal-product__body{display:flex;flex:1;flex-direction:column;padding:13px}
+.portal-product h3{min-height:2.7em;margin:0 0 7px;color:var(--portal-ink);font-size:15px;font-weight:700;line-height:1.35}
+.portal-product__price{margin:0!important;color:var(--portal-accent)!important;font-size:17px!important;font-weight:800!important;line-height:1.2}
+.portal-product__meta{display:flex;flex-wrap:wrap;align-items:center;gap:5px 7px;margin:5px 0 11px;color:var(--portal-text-secondary);font-size:12px}
 .portal-product__category{display:inline-flex;margin:0;padding:3px 7px;border-radius:999px;background:#FBE3D0;color:#7A331C;font-size:12px;font-weight:700}
 .portal-product .portal-weight-hint{margin:-8px 0 12px;color:var(--portal-text-secondary);font-size:12px}
 .portal-stepper{display:flex;min-height:44px;align-items:center;justify-content:space-between;gap:8px;margin-top:auto;padding:3px;border:1px solid var(--portal-border);border-radius:var(--portal-radius-2);background:var(--portal-surface-soft)}
 .portal-stepper>span{min-width:40px;text-align:center;color:var(--portal-ink);font-size:14px;font-weight:800}
 .portal-stepper>button.button--icon-round{width:40px;min-width:40px;height:40px;min-height:40px;border-radius:var(--portal-radius-1);background:var(--portal-surface);color:var(--portal-accent)}
-.portal-stepper--empty{padding:0;border:0;background:transparent}
-.portal-add-button{display:flex;width:100%;min-height:44px;align-items:center;justify-content:center;border:1px solid var(--portal-accent);border-radius:12px;background:var(--portal-accent);color:#FFF9F5;font-size:13px;font-weight:800;line-height:1.2;white-space:nowrap}
+.portal-add-slot{display:block;width:100%;margin-top:auto}
+.portal-add-button{display:flex;width:100%;min-height:42px;align-items:center;justify-content:center;border:1px solid var(--portal-accent);border-radius:10px;background:var(--portal-accent);color:#FFF9F5;font-size:13px;font-weight:800;line-height:1.2;white-space:nowrap}
 .portal-add-button:hover{background:var(--portal-accent-hover)}
 .portal-photo-empty{display:flex;width:100%;height:100%;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:linear-gradient(145deg,#F4E5D7,#FBF3E9);color:var(--portal-text-secondary);font-size:12px;font-weight:650;letter-spacing:0;text-transform:none}
 .portal-photo-empty__mark{display:grid;width:46px;height:46px;place-items:center;border:1px solid #D7B8A4;border-radius:50%;background:#FFFBF6;color:var(--portal-accent);font:600 1.5rem var(--font-display,serif)}
@@ -189,24 +189,6 @@ body.portal-mode .portal-stepper:not(.portal-stepper--empty)>button{
   padding:0 !important;
   border-radius:8px !important;
 }
-body.portal-mode .portal-stepper--empty .portal-add-button{
-  width:100% !important;
-  min-width:100% !important;
-  height:auto !important;
-  min-height:44px !important;
-  padding:0 14px !important;
-  border:1px solid var(--portal-accent) !important;
-  border-radius:12px !important;
-  color:#FFF9F5 !important;
-  background:var(--portal-accent) !important;
-  font-size:13px !important;
-  font-weight:800 !important;
-}
-body.portal-mode .portal-stepper--empty .portal-add-button:hover:not(:disabled){
-  color:#FFF9F5 !important;
-  background:var(--portal-accent-hover) !important;
-  border-color:var(--portal-accent-hover) !important;
-}
 
 /* Segunda passada visual: mais legibilidade e menos sensação de grade esmagada. */
 body.portal-mode .portal-quick-actions article{min-height:112px;padding:20px 22px}
@@ -218,20 +200,6 @@ body.portal-mode .portal-category-group__heading h3{font-size:clamp(1.65rem,2.5v
 body.portal-mode .portal-product{box-shadow:0 5px 16px rgba(50,23,14,.07)}
 body.portal-mode .portal-product:hover{box-shadow:0 10px 24px rgba(50,23,14,.11)}
 body.portal-mode .portal-favorite{width:36px;height:36px;font-size:18px}
-body.portal-mode .portal-stepper--empty{width:100%}
-body.portal-mode .portal-stepper--empty .portal-add-button{
-  display:flex!important;
-  width:100%!important;
-  min-width:0!important;
-  min-height:44px!important;
-  align-items:center!important;
-  justify-content:center!important;
-  padding:0 14px!important;
-  border-radius:12px!important;
-  white-space:nowrap!important;
-  text-indent:0!important;
-  overflow:visible!important;
-}
 @media(min-width:1450px){
   body.portal-mode .portal-header,
   body.portal-mode .portal-welcome,
@@ -253,4 +221,40 @@ body.portal-mode .portal-stepper--empty .portal-add-button{
   body.portal-mode .portal-product-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
   body.portal-mode .portal-product__body{padding:12px}
   body.portal-mode .portal-product h3{font-size:14px}
+}
+
+/* Adicionar fica fora do stepper para não herdar o botão circular global. */
+body.portal-mode .portal-add-slot{display:block;width:100%;margin-top:auto}
+body.portal-mode .portal-add-slot .portal-add-button{
+  display:flex!important;
+  width:100%!important;
+  min-width:0!important;
+  height:42px!important;
+  min-height:42px!important;
+  align-items:center!important;
+  justify-content:center!important;
+  padding:0 12px!important;
+  border:1px solid var(--portal-accent)!important;
+  border-radius:10px!important;
+  color:#FFF9F5!important;
+  background:var(--portal-accent)!important;
+  font-size:13px!important;
+  font-weight:800!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+  text-indent:0!important;
+  overflow:hidden!important;
+  box-shadow:none!important;
+}
+body.portal-mode .portal-add-slot .portal-add-button:hover:not(:disabled){
+  color:#FFF9F5!important;
+  background:var(--portal-accent-hover)!important;
+  border-color:var(--portal-accent-hover)!important;
+}
+body.portal-mode .portal-add-slot .portal-add-button::before,
+body.portal-mode .portal-add-slot .portal-add-button::after{content:none!important;display:none!important}
+@media(max-width:700px){
+  body.portal-mode .portal-product__photo{aspect-ratio:4/3}
+  body.portal-mode .portal-product__body{padding:11px}
+  body.portal-mode .portal-add-slot .portal-add-button{height:42px!important;min-height:42px!important}
 }
