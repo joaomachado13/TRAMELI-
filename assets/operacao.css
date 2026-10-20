@@ -376,3 +376,11 @@ dialog{width:min(670px,calc(100vw - 24px));max-height:min(90vh,900px);padding:0;
 #operation-view .kanban-column.is-collapsed .kanban-column__cards{display:none}
 @media(min-width:900px){#operation-view .kanban{grid-auto-columns:minmax(0,1fr);grid-auto-flow:column;overflow-x:visible;gap:12px}}
 @media(max-width:899px){#operation-view .kanban{grid-auto-columns:minmax(220px,78vw)}}
+
+
+/* Edição de pedido: marcador âmbar com contraste alto; não recolore o card inteiro. */
+.order-edited-badge{display:inline-flex;align-items:center;justify-content:center;gap:5px;width:max-content;max-width:100%;padding:4px 8px;border:1px solid #92400e;border-radius:6px;background:#fef3c7;color:#78350f;font-size:.68rem;font-weight:800;letter-spacing:.045em;line-height:1.25}
+#operation-view .order-edited-badge{margin:5px 12px 0}
+.portal-history .order-edited-badge{margin:0 0 8px}
+.portal-history article.has-order-edited{border-inline-start:4px solid #b45309}
+
