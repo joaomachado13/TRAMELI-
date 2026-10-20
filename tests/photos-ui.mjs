@@ -166,8 +166,9 @@ try {
     };
     initShopping({client,user:{id:'fixture-user'}});
     await TrameliShopping.refresh();
-    document.querySelector('[data-favorite]').click();
   })()`);
+  await pause(520);
+  await evaluate(`document.querySelector('[data-favorite]').click()`);
   await pause(80);
   assert.equal(await evaluate('testFavoriteWrites'),1);
   await evaluate(`document.querySelector('[data-personal-filter="favorites"]').click()`);
