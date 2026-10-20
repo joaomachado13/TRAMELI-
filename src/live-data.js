@@ -24,6 +24,7 @@ const mapProduct = (row, cost) => ({
   costEstimated: Boolean(cost?.estimated),
   unavailableFrom: row.unavailable_from || null, unavailableUntil: row.unavailable_until || null,
   substituteProductId: row.substitute_product_id || null,
+  featuredPosition: row.featured_position ?? null,
 });
 
 export class LiveData {
@@ -111,6 +112,7 @@ export class LiveData {
         supplierName:item.supplierName,costEstimated:item.costEstimated,
         unavailableFrom:item.unavailableFrom,unavailableUntil:item.unavailableUntil,
         substituteProductId:item.substituteProductId,
+        featuredPosition:item.featuredPosition,
       })));
       const settingsSignature = value => JSON.stringify(value || null);
       const productsChanged = productSignature(this.products) !== productSignature(nextProducts);
@@ -143,6 +145,16 @@ export class LiveData {
     })();
     try { await this.loadingPromise; }
     finally { this.loadingPromise = null; }
+  }
+
+  async setProductFeatured(productId, position) {
+    if (!this.operator) throw new Error('Apenas a operação pode escolher os destaques.');
+    const { error } = await this.client.rpc('trameli_set_product_featured', {
+      p_product_id: productId, p_position: position,
+    });
+    if (error?.code === 'PGRST202') throw new Error('A vitrine ainda precisa ser ativada pela administração.');
+    if (error) throw error;
+    await this.load(true);
   }
 
   async saveProduct(product) {

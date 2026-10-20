@@ -26,7 +26,8 @@ window.TrameliProductPhoto = withOfficialProductPhoto;
 window.TrameliSourceCatalog = catalog.products.map(withOfficialProductPhoto);
 // Exercise the upgrade path: a previously seeded catalog with null images.
 localStorage.setItem('trameli-catalog-client-sheet-seeded-v2', 'true');
-localStorage.setItem('trameli-catalog-v1', JSON.stringify(catalog.products));
+const featuredIds = ['20260924-0000-4000-8000-000000000002', '20260924-0000-4000-8000-000000000004', '20260924-0000-4000-8000-000000000003', '20260924-0000-4000-8000-00000000001a'];
+localStorage.setItem('trameli-catalog-v1', JSON.stringify(catalog.products.map(product => ({ ...product, featuredPosition: featuredIds.includes(product.id) ? featuredIds.indexOf(product.id) + 1 : null }))));
 localStorage.removeItem('trameli-portal-cart-v1');
 await import('/assets/catalogo.js');
 location.hash = '#loja';

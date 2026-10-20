@@ -103,6 +103,12 @@ try {
   await send('Page.navigate', { url: new URL('tests/shirley-fixture.html', baseUrl).href });
   await until('window.shirleyReady === true');
   assert.match(await evaluate('document.querySelector("#shirley-order-total").textContent'), /0,00/);
+  await evaluate(`document.querySelector('#shirley-featured-products [data-product-step="1"]').click()`);
+  assert.match(await evaluate('document.querySelector("#shirley-order-total").textContent'), /3,40/);
+  assert.equal(await evaluate('document.querySelector(\'#shirley-products [data-product-id="20260924-0000-4000-8000-000000000002"]\').parentElement.querySelector("span").textContent'), '1');
+  await evaluate('document.querySelector(\'#shirley-products [data-product-id="20260924-0000-4000-8000-000000000002"][data-product-step="-1"]\').click()');
+  assert.equal(await evaluate('document.querySelector("#shirley-featured-products .shirley-portal__stepper>span").textContent'), '0');
+  assert.ok(await evaluate('document.documentElement.scrollWidth <= innerWidth'), 'Destaques da Shirley não devem transbordar no celular.');
   await evaluate(`(() => {
     const search = document.querySelector('#shirley-customer-search');
     search.value = 'Cliente'; search.dispatchEvent(new Event('input', { bubbles: true }));

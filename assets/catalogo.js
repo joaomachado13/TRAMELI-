@@ -249,8 +249,39 @@
     if (!product) return;
     const margin = product.costCents == null || !product.priceCents ? null : Math.round(((product.priceCents - product.costCents) / product.priceCents) * 100);
     detailDialog.innerHTML = `<div class="entity-detail"><header class="entity-detail__header"><div><p class="screen-eyebrow">PRODUTO</p><h2>${escapeHtml(product.name)}</h2><p>${escapeHtml(product.category || 'Sem categoria')} · ${product.active ? 'Disponível' : 'Indisponível'}</p></div><button type="button" data-product-close aria-label="Fechar">×</button></header><div class="entity-detail__body">${product.image ? `<div class="product-detail-photo-frame"><img class="product-detail-photo" src="${escapeHtml(product.image)}" style="${photoStyle(product.image)}" alt="${escapeHtml(product.name)}"></div>` : '<div class="product-detail-photo product-detail-photo--empty">Foto pendente</div>'}<section class="entity-summary"><div><span>Preço</span><strong>${money(product.priceCents)}</strong></div><div><span>Custo</span><strong>${product.costCents == null ? 'Pendente' : money(product.costCents)}</strong></div><div><span>Margem</span><strong>${margin == null ? '—' : `${margin}%`}</strong></div></section><section class="entity-block"><h3>Cadastro</h3><p>Unidade: ${escapeHtml(product.unit)}</p>${product.supplierName ? `<p>Fornecedor: ${escapeHtml(product.supplierName)}</p>` : ''}${product.unavailableFrom ? `<p>Indisponível de ${escapeHtml(product.unavailableFrom)} até ${escapeHtml(product.unavailableUntil)}</p>` : ''}</section></div><footer class="entity-detail__actions"><button class="screen-primary" type="button" data-catalog-action="edit" data-id="${escapeHtml(product.id)}">Editar produto</button>${live?.operator ? `<button type="button" data-catalog-action="history" data-id="${escapeHtml(product.id)}">Histórico</button>` : ''}<button type="button" class="entity-danger" data-catalog-action="delete" data-id="${escapeHtml(product.id)}">${live?.role === 'master' ? 'Excluir definitivamente' : live ? 'Desativar' : 'Excluir'}</button></footer></div>`;
+    if (!live || live.operator) {
+      detailDialog.querySelector('.entity-detail__body').insertAdjacentHTML('beforeend', `<section class="entity-block catalog-featured"><h3>Destaque na vitrine</h3><p>Escolha os produtos que aparecem no início da loja e do Portal da Shirley.</p><form data-featured-form data-product-id="${escapeHtml(product.id)}"><label class="catalog-check"><input name="featured" type="checkbox" ${product.featuredPosition != null ? 'checked' : ''}> Exibir este produto nos destaques</label><label>Posição na vitrine<input name="position" type="number" min="1" max="20" step="1" value="${product.featuredPosition ?? 1}" ${product.featuredPosition == null ? 'disabled' : ''}></label><small>1 aparece primeiro. Produtos indisponíveis ficam ocultos.</small><p data-featured-feedback role="status"></p><button type="submit" class="screen-primary">Salvar destaque</button></form></section>`);
+    }
     detailDialog.showModal();
   }
+
+  detailDialog.addEventListener('change', event => {
+    if (event.target.name !== 'featured') return;
+    event.target.form.elements.position.disabled = !event.target.checked;
+  });
+  detailDialog.addEventListener('submit', async event => {
+    const featureForm = event.target.closest('[data-featured-form]');
+    if (!featureForm) return;
+    event.preventDefault();
+    if (featureForm.dataset.busy) return;
+    const position = featureForm.elements.featured.checked ? Number(featureForm.elements.position.value) : null;
+    const feedback = featureForm.querySelector('[data-featured-feedback]');
+    if (position !== null && (!Number.isInteger(position) || position < 1 || position > 20)) {
+      feedback.textContent = 'Escolha uma posição de 1 a 20.'; return;
+    }
+    featureForm.dataset.busy = 'true';
+    const button = featureForm.querySelector('[type="submit"]'); button.disabled = true;
+    try {
+      const productId = featureForm.dataset.productId;
+      if (live) { await live.setProductFeatured(productId, position); products = read(); }
+      else if (!await save(products.map(product => product.id === productId ? { ...product, featuredPosition: position } : product))) {
+        throw new Error('Não foi possível salvar a vitrine neste navegador.');
+      }
+      rerender(); openDetail(productId);
+      detailDialog.querySelector('[data-featured-feedback]').textContent = 'Vitrine atualizada.';
+    } catch (cause) { feedback.textContent = cause.message || 'Não foi possível salvar os destaques.'; }
+    finally { delete featureForm.dataset.busy; button.disabled = false; }
+  });
 
   document.addEventListener('click', async event => {
     if (event.target.closest('[data-product-close]')) { detailDialog.close(); return; }

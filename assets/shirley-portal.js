@@ -1,3 +1,6 @@
+import { featuredProductsMarkup } from '../src/featured-products.js';
+import '../src/featured-products.css';
+
 (() => {
   const root = document.getElementById('shirley-portal-view');
   if (!root) return;
@@ -19,6 +22,7 @@
   const customerResults = $('#shirley-customer-results');
   const productSearch = $('#shirley-product-search');
   const productsHost = $('#shirley-products');
+  const highlightsHost = $('#shirley-featured-products');
   const form = $('#shirley-order-form');
   const feedback = $('#shirley-order-feedback');
   const dateInput = $('#shirley-delivery-date');
@@ -63,6 +67,20 @@
   function renderProducts(){
     const q=productSearch.value.trim().toLocaleLowerCase('pt-BR');
     const list=activeProducts().filter(p=>p.name.toLocaleLowerCase('pt-BR').includes(q));
+    const featuredScroll = highlightsHost.querySelector('.featured-products__rail')?.scrollLeft || 0;
+    const focused = highlightsHost.contains(document.activeElement) ? { id: document.activeElement.dataset.productId, step: document.activeElement.dataset.productStep } : null;
+    const availableHighlights = activeProducts().filter(p => !(p.unavailableFrom && p.unavailableUntil && dateInput.value >= p.unavailableFrom && dateInput.value <= p.unavailableUntil));
+    highlightsHost.innerHTML = featuredProductsMarkup(availableHighlights, {
+      headingId: 'shirley-featured-title', hidden: Boolean(q),
+      renderPhoto: p => p.image ? `<img src="${esc(p.image)}" alt="${esc(p.name)}" loading="lazy">` : '<span class="shirley-portal__empty">Foto em breve</span>',
+      renderControls: p => {
+        const qty = selectedQuantities.get(p.id) || 0;
+        return `<div class="shirley-portal__stepper"><button type="button" data-product-step="-1" data-product-id="${esc(p.id)}" aria-label="Diminuir ${esc(p.name)}" ${qty ? '' : 'disabled'}>−</button><span>${p.unit === 'kg' ? `${qty * 50} g` : qty}</span><button type="button" data-product-step="1" data-product-id="${esc(p.id)}" aria-label="Adicionar ${esc(p.name)}" ${qty >= (p.unit === 'kg' ? 99 : 999) ? 'disabled' : ''}>+</button></div>`;
+      },
+    });
+    const rail = highlightsHost.querySelector('.featured-products__rail');
+    if (rail) rail.scrollLeft = featuredScroll;
+    if (focused?.id) highlightsHost.querySelector(`[data-product-id="${CSS.escape(focused.id)}"][data-product-step="${focused.step}"]`)?.focus({ preventScroll: true });
     productsHost.innerHTML=list.length?list.map(p=>{
       const qty=selectedQuantities.get(p.id)||0;
       const image=p.image||p.photo||'';
@@ -134,7 +152,8 @@
   customerResults.addEventListener('click',event=>{const button=event.target.closest('[data-customer-id]');if(button)chooseCustomer(button.dataset.customerId);});
   document.addEventListener('click',event=>{if(!event.target.closest('#shirley-customer-search')&&!event.target.closest('#shirley-customer-results'))customerResults.hidden=true;});
   productSearch.addEventListener('input',renderProducts);
-  productsHost.addEventListener('click',event=>{
+  dateInput.addEventListener('change',renderProducts);
+  root.addEventListener('click',event=>{
     const button=event.target.closest('[data-product-step]');if(!button)return;
     const p=activeProducts().find(x=>x.id===button.dataset.productId);if(!p)return;
     const next=Math.max(0,Math.min(p.unit==='kg'?99:999,(selectedQuantities.get(p.id)||0)+Number(button.dataset.productStep)));

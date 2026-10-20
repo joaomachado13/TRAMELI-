@@ -1,5 +1,7 @@
 import { isDeliveryDate, nextAvailableDeliveryDate, rollingDeliveryWeek } from '../src/delivery-days.js';
 import { billingReminder, daysUntil, nextBillingDeadline } from '../src/billing-cycle.js';
+import { featuredProductsMarkup } from '../src/featured-products.js';
+import '../src/featured-products.css';
 
 (() => {
   const live = window.TrameliLive;
@@ -317,7 +319,10 @@ import { billingReminder, daysUntil, nextBillingDeadline } from '../src/billing-
     if (!host.contains(element)) return null;
     let selector = element.id ? `#${CSS.escape(element.id)}` : null;
     if (!selector && element.name) selector = `[name="${CSS.escape(element.name)}"]`;
-    if (!selector && element.dataset.id && element.dataset.qty) selector = `[data-id="${CSS.escape(element.dataset.id)}"][data-qty="${element.dataset.qty}"]`;
+    if (!selector && element.dataset.id && element.dataset.qty) {
+      const scope = element.closest('.featured-products') ? '.featured-products ' : element.closest('#portal-grid') ? '#portal-grid ' : '';
+      selector = `${scope}[data-id="${CSS.escape(element.dataset.id)}"][data-qty="${element.dataset.qty}"]`;
+    }
     if (!selector && element.dataset.category) selector = `[data-category="${CSS.escape(element.dataset.category)}"]`;
     return selector ? { selector, start: element.selectionStart, end: element.selectionEnd } : null;
   }
@@ -397,13 +402,17 @@ import { billingReminder, daysUntil, nextBillingDeadline } from '../src/billing-
     const unavailable = allProducts().filter(item => unavailableFor(item));
     const categories = ['Todos', ...new Set(all.map(product => product.category || 'Outros'))];
     const visible = filteredProducts();
+    const highlights = featuredProductsMarkup(all, {
+      headingId: 'portal-featured-title', renderPhoto: photo, renderControls: stepper,
+      hidden: Boolean(query.trim()) || category !== 'Todos' || personalFilter !== 'all',
+    });
     const notice=unavailable.length?`<aside class="portal-review-notice" role="status"><strong>Indisponíveis para a próxima entrega</strong><ul>${unavailable.map(item=>{const substitute=allProducts().find(candidate=>candidate.id===item.substituteProductId&&!unavailableFor(candidate));return `<li>${escapeHtml(item.name)}${substitute?` — sugestão: ${escapeHtml(substitute.name)}`:''}</li>`;}).join('')}</ul><p>A troca não é automática; escolha a sugestão no catálogo se desejar.</p></aside>`:'';
     const closedNotice = storeClosed() ? (() => {
       const phone = live && !live.operator ? whatsappNumber(live.settings?.contact) : '';
       const whatsapp = phone ? `<a class="portal-store-closed__action" href="https://wa.me/${phone}?text=${encodeURIComponent('Olá, Shirley! Vi que a loja está fechada e gostaria de tirar uma dúvida.')}" target="_blank" rel="noopener noreferrer">${whatsappIcon}<span>Falar com Shirley no WhatsApp</span></a>` : '';
       return `<aside class="portal-store-closed" role="status" aria-live="polite"><span class="portal-store-closed__label">AVISO DE FUNCIONAMENTO</span><h2>${greeting()}! A loja está fechada para novos pedidos.</h2><p>Você pode consultar o catálogo à vontade, mas não será possível finalizar pedidos agora. Voltamos a aceitar pedidos às 6h, no horário de Brasília. Se precisar de ajuda, fale com a Shirley pelo WhatsApp.</p>${whatsapp}</aside>`;
     })() : '';
-    return `<section class="portal-welcome"><div class="portal-welcome__heading"><div><span class="portal-eyebrow">${greeting().toLocaleUpperCase('pt-BR')}${firstName() ? `, ${escapeHtml(firstName()).toLocaleUpperCase('pt-BR')}` : ''}</span><h1>${greeting()}${firstName() ? `, ${escapeHtml(firstName())}` : ''}.</h1></div>${paymentCountdown()}</div><p>Seu pedido em três passos simples.</p><ol><li><strong>1</strong> Escolha os produtos</li><li><strong>2</strong> Revise a sacola</li><li><strong>3</strong> Confirme entrega e pagamento</li></ol><a class="portal-welcome__action" href="#portal-products">Escolher produtos ↓</a>${closedNotice}</section><section class="portal-quick-actions">${lastOrderCard()}<article><span>PLANEJE COM CALMA</span><strong>Pedidos da semana</strong><p>Organize cada dia sem confirmar nada automaticamente.</p><button type="button" data-view="week">Montar minha semana</button></article></section><section id="portal-products" class="portal-section">${notice}<div class="portal-section__head"><div><span class="portal-eyebrow">FEITO PARA O SEU DIA</span><h2>Produtos da padaria</h2></div><span>${all.length} opções</span></div><label class="portal-search">Buscar produto<input id="portal-search" type="search" value="${escapeHtml(query)}" placeholder="Pão, bolo, suco..."></label><div class="portal-categories" aria-label="Categorias">${categories.map(item => `<button type="button" data-category="${escapeHtml(item)}" aria-pressed="${String(item === category)}">${escapeHtml(item)}</button>`).join('')}</div>${personalFilters()}<div class="portal-grid" id="portal-grid">${visible.length ? visible.map(card).join('') : '<p class="portal-empty">Não encontramos produtos nessa busca.</p>'}</div></section>`;
+    return `<section class="portal-welcome"><div class="portal-welcome__heading"><div><span class="portal-eyebrow">${greeting().toLocaleUpperCase('pt-BR')}${firstName() ? `, ${escapeHtml(firstName()).toLocaleUpperCase('pt-BR')}` : ''}</span><h1>${greeting()}${firstName() ? `, ${escapeHtml(firstName())}` : ''}.</h1></div>${paymentCountdown()}</div><p>Seu pedido em três passos simples.</p><ol><li><strong>1</strong> Escolha os produtos</li><li><strong>2</strong> Revise a sacola</li><li><strong>3</strong> Confirme entrega e pagamento</li></ol><a class="portal-welcome__action" href="#portal-products">Escolher produtos ↓</a>${closedNotice}</section>${highlights}<section class="portal-quick-actions">${lastOrderCard()}<article><span>PLANEJE COM CALMA</span><strong>Pedidos da semana</strong><p>Organize cada dia sem confirmar nada automaticamente.</p><button type="button" data-view="week">Montar minha semana</button></article></section><section id="portal-products" class="portal-section">${notice}<div class="portal-section__head"><div><span class="portal-eyebrow">FEITO PARA O SEU DIA</span><h2>Produtos da padaria</h2></div><span>${all.length} opções</span></div><label class="portal-search">Buscar produto<input id="portal-search" type="search" value="${escapeHtml(query)}" placeholder="Pão, bolo, suco..."></label><div class="portal-categories" aria-label="Categorias">${categories.map(item => `<button type="button" data-category="${escapeHtml(item)}" aria-pressed="${String(item === category)}">${escapeHtml(item)}</button>`).join('')}</div>${personalFilters()}<div class="portal-grid" id="portal-grid">${visible.length ? visible.map(card).join('') : '<p class="portal-empty">Não encontramos produtos nessa busca.</p>'}</div></section>`;
   }
   function cartView() {
     const lines = cartLines();
@@ -591,10 +600,12 @@ import { billingReminder, daysUntil, nextBillingDeadline } from '../src/billing-
     const scroll = motion()?.scrollTop() ?? scrollY;
     const changedView = view !== renderedView || !portalVisible;
     const focus = preserveScroll ? rememberFocus() : null;
+    const featuredScroll = preserveScroll ? host.querySelector('.featured-products__rail')?.scrollLeft : null;
     const draft = preserveScroll && view === 'checkout' && host.querySelector('#portal-checkout-form')
       ? Object.fromEntries(new FormData(host.querySelector('#portal-checkout-form'))) : null;
     motion()?.reset(host);
     host.innerHTML = ({ catalog, cart: cartView, checkout, success, orders: ordersView, week: weekView, weekCheckout: weekCheckoutView, weekSuccess: weekSuccessView })[view]();
+    if (featuredScroll != null && host.querySelector('.featured-products__rail')) host.querySelector('.featured-products__rail').scrollLeft = featuredScroll;
     if (view === 'orders' && window.TrameliPayments) {
       host.querySelector('.portal-page').insertAdjacentHTML('beforeend', window.TrameliPayments.customerRender());
       window.TrameliPayments.refresh();
@@ -611,17 +622,23 @@ import { billingReminder, daysUntil, nextBillingDeadline } from '../src/billing-
     else motion()?.scrollTo(0, false);
     if (changedView && !preserveScroll) motion()?.enter(host); else motion()?.refresh();
   }
-  function changeQuantity(id, delta) {
+  function changeQuantity(id, delta, source) {
     const product = products().find(item => item.id === id);
     if (!product) return;
     const next = Math.max(0, Math.min(99, (cart[id] || 0) + delta));
     if (next) cart[id] = next; else delete cart[id];
     persistCart();
     if (view === 'catalog') {
-      const current = [...host.querySelectorAll('.portal-stepper')].find(element => element.querySelector('[data-id]')?.dataset.id === id);
-      if (current) {
-        current.outerHTML = stepper(product);
-        const updated = [...host.querySelectorAll('.portal-stepper')].find(element => element.querySelector('[data-id]')?.dataset.id === id);
+      const current = [...host.querySelectorAll('.portal-stepper')].filter(element => element.querySelector('[data-id]')?.dataset.id === id);
+      if (current.length) {
+        const clicked = source?.closest('.portal-stepper');
+        let updated;
+        for (const element of current) {
+          const container = document.createElement('div'); container.innerHTML = stepper(product);
+          const nextStepper = container.firstElementChild;
+          element.replaceWith(nextStepper);
+          if (element === clicked) updated = nextStepper;
+        }
         updated?.querySelector(`[data-qty="${delta}"]`)?.focus({ preventScroll: true });
         updateCounters();
         renderFloating();
@@ -783,7 +800,7 @@ import { billingReminder, daysUntil, nextBillingDeadline } from '../src/billing-
     const catalogJump = event.target.closest('a[href="#portal-products"]');
     if (catalogJump) { event.preventDefault(); motion()?.scrollTo('#portal-products', true, 16); return; }
     const quantity = event.target.closest('[data-qty]');
-    if (quantity) { changeQuantity(quantity.dataset.id, Number(quantity.dataset.qty)); return; }
+    if (quantity) { changeQuantity(quantity.dataset.id, Number(quantity.dataset.qty), quantity); return; }
     const categoryButton = event.target.closest('[data-category]');
     if (categoryButton) { category = categoryButton.dataset.category; render(true); return; }
     const viewButton = event.target.closest('[data-view]');
@@ -825,6 +842,8 @@ import { billingReminder, daysUntil, nextBillingDeadline } from '../src/billing-
   host.addEventListener('input', event => {
     if (event.target.id !== 'portal-search') return;
     query = event.target.value;
+    const highlights = host.querySelector('.featured-products');
+    if (highlights) highlights.hidden = Boolean(query.trim()) || category !== 'Todos' || personalFilter !== 'all';
     const visible = filteredProducts();
     motion()?.reset(host);
     document.getElementById('portal-grid').innerHTML = visible.length ? visible.map(card).join('') : '<p class="portal-empty">Não encontramos produtos nessa busca.</p>';
