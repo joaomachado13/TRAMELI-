@@ -816,9 +816,8 @@ async function handleOrderAction(button) {
 function preparePrint(orderSelection = null) {
   const dayOrders = orderSelection || selectedOrders();
   if (!dayOrders.length) { alert('Não há pedidos para imprimir na data selecionada.'); return false; }
-  const labels = window.TrameliOrderMath.labelsForPrint(dayOrders);
   const printHost = document.getElementById('print-document');
-  // Settings are edited in the SPA, so reload the saved calibration before every print.
+
   try {
     const saved = JSON.parse(localStorage.getItem(printSettingsKey) || '{}');
     for (const key of Object.keys(printDefaults)) {
@@ -829,86 +828,23 @@ function preparePrint(orderSelection = null) {
   printHost.style.setProperty('--print-offset-x', `${printSettings.offsetX}mm`);
   printHost.style.setProperty('--print-offset-y', `${printSettings.offsetY}mm`);
 
-  const LABEL_HEIGHT_MM = 33;
-  const estimateLines = (value, charsPerLine) => {
-    const text = String(value || '');
-    if (!text) return 0;
-    return text.split(/\r?\n/).reduce((sum, line) => sum + Math.max(1, Math.ceil(line.length / charsPerLine)), 0);
-  };
-  const estimateLabelHeight = (order, items, includeAddress, includeNotes, includeTotal) => {
-    const customerLines = Math.max(1, estimateLines(order.customer, 36));
-    const addressLines = includeAddress ? estimateLines(order.address, 62) : 0;
-    const itemLines = items.reduce((sum, item) => sum + Math.max(1, estimateLines(itemLabel(item), 62)), 0);
-    const noteLines = includeNotes ? estimateLines(order.notes, 62) : 0;
-    return Math.max(12, Math.ceil(
-      6.8 + customerLines * 4.1 +
-      (addressLines ? 0.5 + addressLines * 3.2 : 0) +
-      0.5 + itemLines * 3.2 +
-      (noteLines ? 0.4 + noteLines * 2.75 : 0) +
-      (includeTotal ? 0.4 + 3.2 : 0)
-    ));
-  };
-
-  const scaleForHeight = naturalHeight => naturalHeight > LABEL_HEIGHT_MM
-    ? Math.max(0.55, (LABEL_HEIGHT_MM - 3.2) / Math.max(1, naturalHeight - 3.2))
-    : 1;
-  const MAX_ITEMS_PER_LABEL = 3;
-
-  const prepareOrderLabels = order => {
-    const sourceItems = Array.isArray(order.items) ? order.items : [];
-    const chunks = [];
-    for (let start = 0; start < sourceItems.length; start += MAX_ITEMS_PER_LABEL) {
-      chunks.push(sourceItems.slice(start, start + MAX_ITEMS_PER_LABEL));
-    }
-    if (!chunks.length) chunks.push([]);
-
-    return chunks.map((items, index) => {
-      // O padrão da folha é de até três itens por etiqueta; os dados do pedido se repetem.
-      const includeAddress = Boolean(order.address);
-      const includeNotes = Boolean(order.notes);
-      const includeTotal = true;
-      const naturalHeight = estimateLabelHeight(order, items, includeAddress, includeNotes, includeTotal);
-      const scale = scaleForHeight(naturalHeight);
-      return {
-        order, items, part: index + 1, totalParts: chunks.length, scale,
-        includeAddress, includeNotes, includeTotal
-      };
-    });
-  };
-
-  const prepared = labels.flatMap(label => prepareOrderLabels(label.order));
-  const LABEL_WIDTH_MM = 70;
-  const renderLabel = ({ order, items, part, totalParts, scale, includeAddress, includeNotes, includeTotal }, globalPosition, sheetPosition) => {
-    const labelCode = totalParts > 1 ? part + '/' + totalParts : String(globalPosition + 1).padStart(2, '0');
-    const style = [
-      'left:' + ((sheetPosition % 3) * LABEL_WIDTH_MM) + 'mm',
-      'top:' + (Math.floor(sheetPosition / 3) * LABEL_HEIGHT_MM) + 'mm',
-      'height:' + LABEL_HEIGHT_MM + 'mm',
-      '--label-body-size:' + (7 * scale).toFixed(2) + 'pt',
-      '--label-header-size:' + (9 * scale).toFixed(2) + 'pt',
-      '--label-code-size:' + (9 * scale).toFixed(2) + 'pt',
-      '--label-small-size:' + (6 * scale).toFixed(2) + 'pt',
-      '--label-total-size:' + (7 * scale).toFixed(2) + 'pt',
-      '--label-line-height:' + Math.max(1.05, 1.3 * scale).toFixed(2)
-    ].join(';');
-    return '<article class="print-label" style="' + style + '"><div class="print-label__content">' +
+  // Novo padrão: um cartão por pedido. Não divide mais o pedido em 1/2, 2/2 etc.
+  // A dimensão final pode ser refinada quando o modelo/papel da mini impressora for confirmado.
+  const renderOrder = (order, position) => {
+    const items = Array.isArray(order.items) ? order.items : [];
+    return '<article class="print-label print-label--order">' +
+      '<div class="print-label__content">' +
       '<div class="print-label__top"><strong>' + escapeHtml(order.customer) + '</strong><span>' +
-      escapeHtml(labelCode) + '</span></div>' +
-      (includeAddress && order.address ? '<p>' + escapeHtml(order.address) + '</p>' : '') +
-      '<ul>' + items.map(item => '<li>' + escapeHtml(itemLabel(item)) + '</li>').join('') + '</ul>' +
-      (includeNotes && order.notes ? '<small>Obs.: ' + escapeHtml(order.notes) + '</small>' : '') +
-      (includeTotal ? '<footer>Total: ' + money(orderTotal(order)) + '</footer>' : '') +
+      escapeHtml(order.publicCode || String(position + 1).padStart(2, '0')) + '</span></div>' +
+      (order.address ? '<p class="print-label__address">' + escapeHtml(order.address) + '</p>' : '') +
+      '<ul>' + items.map(item => '<li><strong>' + escapeHtml(String(item.quantity ?? '')) + '×</strong> ' + escapeHtml(itemLabel(item).replace(/^\\s*\\d+(?:[.,]\\d+)?\\s*[x×]?\\s*/i, '')) + '</li>').join('') + '</ul>' +
+      (order.notes ? '<small>Obs.: ' + escapeHtml(order.notes) + '</small>' : '') +
+      '<footer>Total: ' + money(orderTotal(order)) + '</footer>' +
       '</div></article>';
   };
 
-  const LABELS_PER_SHEET = 27;
-  const sheets = [];
-  for (let index = 0; index < prepared.length; index += LABELS_PER_SHEET) {
-    const sheetNumber = Math.floor(index / LABELS_PER_SHEET) + 1;
-    const labelsHtml = prepared.slice(index, index + LABELS_PER_SHEET).map((label, position) => renderLabel(label, index + position, position)).join('');
-    sheets.push('<section class="print-sheet" aria-label="Folha ' + sheetNumber + '">' + labelsHtml + '</section>');
-  }
-  printHost.innerHTML = sheets.join('');
+  printHost.innerHTML = '<section class="print-sheet print-sheet--orders">' +
+    dayOrders.map(renderOrder).join('') + '</section>';
   return true;
 }
 
