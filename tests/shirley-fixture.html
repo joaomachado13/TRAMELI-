@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Teste isolado — Portal da Shirley</title>
+<base href="/"><title>Teste isolado — Portal da Shirley</title>
 <link rel="stylesheet" href="/assets/styles.css"><link rel="stylesheet" href="/assets/design-system.css">
 <link rel="stylesheet" href="/assets/identity.css"><link rel="stylesheet" href="/assets/shirley-portal.css">
 </head><body><script type="module">
@@ -14,6 +14,9 @@ document.querySelector('#shirley-portal-view').hidden = false;
 document.querySelector('#operation-view').hidden = true;
 window.TrameliOrderMath = orderMath;
 window.shirleySaved = [];
+window.shirleyRecurringSaved = [];
+window.shirleySchedules = [];
+window.confirm = () => true;
 window.TrameliPayments = { api: { profiles: [
   { user_id: 'cliente-teste', name: 'Cliente Teste', address: 'Rua 1, casa 10', phone: '34999999999' },
 ] } };
@@ -25,6 +28,17 @@ window.TrameliLive = {
     { id: '20260924-0000-4000-8000-000000000002', name: 'Pão francês', unit: 'unidade', priceCents: 140, active: true, image: 'assets/products/oficiais/pao-frances.jpeg', featuredPosition: 1 },
   ],
   orders: [],
+  async recurringSchedules() { return window.shirleySchedules; },
+  async saveRecurringOrder(schedule, requestId, scheduleId) {
+    const id = scheduleId || 'recorrencia-teste';
+    const normalize = items => items.map(item => item.weightGrams ? structuredClone(item) : { name: item.name, quantity: item.quantity, priceCents: item.priceCents });
+    window.shirleyRecurringSaved.push(structuredClone({ schedule, requestId, scheduleId }));
+    window.shirleySchedules = [{ id, customer_id: schedule.customerId, starts_on: schedule.startDate,
+      recurrence: schedule.recurrence, active: true, notes: schedule.notes, items: normalize(schedule.items),
+      weekdays: [...schedule.weekdays], items_by_weekday: schedule.itemsByWeekday ? Object.fromEntries(Object.entries(schedule.itemsByWeekday).map(([day, items]) => [day, normalize(items)])) : null }];
+    return id;
+  },
+  async materializeRecurringOrders(date) { window.shirleyMaterializedDate = date; },
   async saveOperatorOrder(order, requestId, customerId) {
     window.shirleySaved.push({ order, requestId, customerId });
     this.orders.push({ ...order, id: 'pedido-teste', publicCode: 'PD-TESTE', customerId });

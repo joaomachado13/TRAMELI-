@@ -1,3 +1,4 @@
+import { recurringScheduleText } from '../src/recurring-days.js';
 import { stages, statusPath, progressOrder } from '../src/operation-flow.js';
 import { compareByStreet } from '../src/address-sort.js';
 import { supplierGroups, supplierTotals, supplierText, supplierDayCost, downloadSupplierPdf, downloadSeparationPdf, itemCheckKey, filterSupplierGroups, isSandraSupplierItem } from '../src/supplier-checklist.js';
@@ -368,7 +369,7 @@ async function showRecurringManager() {
     }).join('') : '<p class="recurring-manager__empty">Nenhuma solicitação pendente dos clientes.</p>';
     const scheduleMarkup = recurringSchedulesCache.length ? recurringSchedulesCache.map(schedule => {
       const customer = profiles.get(schedule.customer_id);
-      const itemNames = (schedule.items || []).map(item => item.weightGrams ? item.name + ' (' + item.weightGrams + ' g)' : item.name).join(' · ');
+      const itemNames = recurringScheduleText(schedule).join('; ');
       const period = schedule.recurrence === 'fixed' ? 'Sem fechamento' : 'Ciclo até ' + new Date(schedule.cycle_ends_on + 'T12:00:00').toLocaleDateString('pt-BR');
       const dayNames = (schedule.weekdays || [1,2,3,4,5,6]).map(day => weekdayNames[Number(day)]).filter(Boolean).join(', ');
       return '<article class="recurring-manager__item"><div><strong>' + escapeHtml(customer?.name || 'Cliente cadastrado') + '</strong><span>' + escapeHtml(names[schedule.recurrence] || schedule.recurrence) + ' · ' + escapeHtml(period) + '</span><small>Dias: ' + escapeHtml(dayNames) + '</small><small>' + escapeHtml(itemNames) + '</small><small>' + (schedule.active ? 'Ativo' : 'Pausado') + '</small></div><div class="recurring-manager__actions"><button type="button" data-recurring-edit="' + escapeHtml(schedule.id) + '" ' + (schedule.active ? '' : 'disabled') + '>Editar</button><button type="button" data-recurring-active="' + escapeHtml(schedule.id) + '" data-active="' + String(!schedule.active) + '">' + (schedule.active ? 'Pausar' : 'Reativar') + '</button><button type="button" data-recurring-delete="' + escapeHtml(schedule.id) + '">Excluir</button></div></article>';
@@ -941,6 +942,11 @@ if (recurringManager) recurringManager.addEventListener('click', async event => 
     const schedule = recurringSchedulesCache.find(item => item.id === editButton.dataset.recurringEdit);
     if (!schedule) return;
     recurringManager.close();
+    if (schedule.items_by_weekday) {
+      location.hash = '#portal-shirley';
+      window.dispatchEvent(new CustomEvent('trameli:shirley-edit-schedule', { detail: schedule }));
+      return;
+    }
     openForm(null, schedule);
     return;
   }
