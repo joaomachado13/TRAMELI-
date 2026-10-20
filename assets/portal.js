@@ -390,11 +390,6 @@ import '../src/featured-products.css';
     const dateLabel = new Date(`${deadline}T12:00:00`).toLocaleDateString('pt-BR', {
       day: 'numeric', month: 'long', timeZone: 'America/Sao_Paulo',
     });
-    const message = hasPending
-      ? reminder.message
-      : days === 0 ? 'O fechamento quinzenal é hoje.'
-        : days === 1 ? 'Próximo fechamento em 1 dia.'
-          : `Próximo fechamento em ${days} dias.`;
     const stateClass = hasPending && reminder.state === 'overdue' ? 'is-overdue'
       : hasPending && reminder.state === 'today' ? 'is-today' : 'is-upcoming';
     const detail = hasPending
