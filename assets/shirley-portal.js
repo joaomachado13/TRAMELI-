@@ -161,7 +161,6 @@
     if(!profile||!date||new Date(date+'T12:00:00').getDay()===0||!items.length||(recurrence!=='once'&& !weekdays.length)){
       setFeedback(feedback,new Date(date+'T12:00:00').getDay()===0?'Não fazemos entregas aos domingos. Escolha outra data.':!profile?'Selecione um cliente cadastrado na lista.':!items.length?'Adicione pelo menos um produto.':'Selecione os dias da recorrência.','error');return;
     }
-    if(recurrence!=='once'&&!live.catalogUpgradeReady){setFeedback(feedback,'A gestão de recorrências exige o banco e as migrações operacionais atualizadas.','error');return;}
     if(recurrence==='once'&&!editingScheduleId){
       const duplicate=(live.orders||[]).find(o=>o.customerId===profile.user_id&&o.date===date&&(o.status||'received')!=='cancelled');
       if(duplicate){setFeedback(feedback,'Este cliente já tem um pedido para essa data. Use Pesquisar pedidos para abrir e alterar o pedido existente.','error');return;}
