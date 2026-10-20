@@ -352,3 +352,24 @@ body.portal-mode #portal-grid.portal-product-grid{
 @media(prefers-reduced-motion:reduce){
   body.portal-mode .portal-categories{scroll-behavior:auto}
 }
+
+
+/* Motion polish for catalog interactions */
+body.portal-mode #portal-grid[data-filter-transitioning="true"]{
+  pointer-events:none;
+  will-change:opacity,transform;
+}
+body.portal-mode .portal-product .portal-stepper,
+body.portal-mode .portal-product .portal-add-slot,
+body.portal-mode #portal-content .featured-product__controls .portal-stepper,
+body.portal-mode #portal-content .featured-product__controls .portal-add-slot{
+  transform-origin:center;
+}
+body.portal-mode .portal-product,
+body.portal-mode .portal-categories button,
+body.portal-mode .portal-personal-filters button{
+  backface-visibility:hidden;
+}
+@media(prefers-reduced-motion:reduce){
+  body.portal-mode #portal-grid[data-filter-transitioning="true"]{will-change:auto}
+}
