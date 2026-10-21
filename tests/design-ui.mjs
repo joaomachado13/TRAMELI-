@@ -106,6 +106,7 @@ try {
   await pause(180);
   assert(await evaluate('document.body.classList.contains("sidebar-collapsed")'), 'Controle não recolheu a sidebar.');
   assert(await evaluate('document.querySelector(".app-shell").getBoundingClientRect().left < 100'), 'Conteúdo não reajustou ao recolher a sidebar.');
+  assert(await evaluate('document.querySelector(".nav__links .nav__item").getBoundingClientRect().top >= document.querySelector(".nav__close").getBoundingClientRect().bottom'), 'Controle de expansão sobrepõe a primeira rota.');
   await evaluate('document.querySelector("#main-navigation-panel").click()');
   await pause(180);
   assert(await evaluate('!document.body.classList.contains("sidebar-collapsed")'), 'Sidebar desktop não expandiu ao clicar na barra lateral.');

@@ -47,6 +47,7 @@ Verificações: `npm run check` e `npm run test:ui` (autenticação, pagamentos,
 - `assets/operacao.js`: kanban sempre expandido e cards compactos.
 - `index.html`: grupos de navegação, cabeçalhos e folha interna.
 - `tests/design-ui.mjs`: nova paleta, recolhimento explícito, filtros e períodos.
+- `tests/operation-ui.mjs`: exercita arraste por toque e rolagem vertical entre colunas no celular.
 - `tests/photos-ui.mjs`: usa o ciclo operacional da tela para manter a verificação de nomes longos independente do horário.
 - `tests/identity-audit.mjs`: permite fonte monoespaçada exclusivamente nos códigos dos pedidos.
 - `tests/portal-routing-fixture.html`: inclui a folha interna para testar o isolamento durante o checkout.

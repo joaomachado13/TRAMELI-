@@ -212,10 +212,14 @@ try {
   assert(await evaluate('!document.querySelector(".kanban-drag-ghost") && !!document.querySelector(`[data-drop-status="confirmed"] .order-card--ready`)'), 'Cancelar toque alterou o pedido ou deixou uma cópia visível.');
   const nextTouch = await evaluate(`(() => { const a=document.querySelector('[data-drag-id]').getBoundingClientRect();return {x:a.x+a.width/2,y:a.y+a.height/2}; })()`);
   await send('Input.dispatchTouchEvent', { type:'touchStart', touchPoints:[{x:nextTouch.x,y:nextTouch.y}] });
-  const boardLeft = await evaluate('document.querySelector(".kanban").getBoundingClientRect().left');
-  await send('Input.dispatchTouchEvent', { type:'touchMove', touchPoints:[{x:boardLeft+8,y:nextTouch.y-35}] });
-  await pause(650);
-  const touchTarget = await evaluate(`(() => { const b=document.querySelector('[data-drop-status="received"]').getBoundingClientRect();return {x:Math.max(50,b.x+Math.min(b.width/2,150)),y:b.y+100}; })()`);
+  // No celular as colunas são verticais; mantenha o toque na borda superior
+  // para exercitar a rolagem automática até a coluna anterior ficar visível.
+  await send('Input.dispatchTouchEvent', { type:'touchMove', touchPoints:[{x:nextTouch.x,y:30}] });
+  for (let attempt=0;attempt<80;attempt++) {
+    if(await evaluate('document.querySelector("[data-drop-status=received]").getBoundingClientRect().bottom > 140')) break;
+    await pause(50);
+  }
+  const touchTarget = await evaluate(`(() => { const b=document.querySelector('[data-drop-status="received"]').getBoundingClientRect();return {x:b.x+b.width/2,y:Math.max(90,Math.min(innerHeight-90,b.bottom-40))}; })()`);
   await send('Input.dispatchTouchEvent', { type:'touchMove', touchPoints:[{x:touchTarget.x,y:touchTarget.y}] });
   await send('Input.dispatchTouchEvent', { type:'touchEnd', touchPoints:[] });
   assert(await evaluate('!!document.querySelector(`[data-drop-status="received"] .order-card`)'), `Arraste por toque não moveu para a coluna selecionada: ${JSON.stringify(await evaluate('({feedback:document.querySelector("#kanban-feedback").textContent,stage:document.querySelector(".order-card").closest("[data-drop-status]").dataset.dropStatus,scroll:document.querySelector(".kanban").scrollLeft})'))}`);

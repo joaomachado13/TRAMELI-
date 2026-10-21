@@ -383,3 +383,8 @@ body.staff-mode #home-view .delivery-list small { font-size:var(--staff-caption)
 body.staff-mode #screen-view :is(.agenda-calendar>button>span,.agenda-selected>.screen-panel__heading>span) { font-size:var(--staff-caption); }
 body.staff-mode #screen-view .motion-toggle { min-height:40px; padding:var(--staff-space-2) var(--staff-space-4); border:1px solid var(--staff-border); border-radius:var(--staff-radius-control); font-size:var(--staff-body); background:var(--staff-surface); color:var(--staff-text); }
 body.staff-mode #screen-view .staff-metric>strong { font-weight:700; font-size:var(--staff-metric); }
+@media(min-width:1024px) {
+  body.staff-mode.sidebar-collapsed #main-navigation-panel { padding-top:calc(var(--staff-space-8) * 2 + var(--staff-space-4)); }
+  body.staff-mode.sidebar-collapsed #main-navigation-panel .nav__item { justify-content:center; padding-inline:0; }
+}
+body.staff-mode #operation-view .kanban { grid-auto-flow:row; grid-auto-columns:auto; overflow-x:visible; }
