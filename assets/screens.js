@@ -136,8 +136,14 @@ function updateOverview() {
   count.textContent = pending;
   count.hidden = pending === 0;
   count.setAttribute('aria-label', pending ? `${pending} ${pending === 1 ? 'pedido aguarda' : 'pedidos aguardam'} conferência` : 'Nenhum pedido aguardando conferência');
-  document.querySelector('.notification-button').setAttribute('aria-label', attentionTotal ? `${attentionTotal} pendências precisam de atenção` : 'Nenhuma pendência');
-  document.querySelector('.notification-dot').hidden = attentionTotal === 0;
+  const notificationButton = document.querySelector('.notification-button');
+  const notificationCount = document.querySelector('.notification-count');
+  notificationButton.setAttribute('aria-label', pending ? `${pending} ${pending === 1 ? 'pedido novo aguarda' : 'pedidos novos aguardam'} conferência` : 'Nenhum pedido novo');
+  notificationButton.title = pending ? 'Abrir pedidos novos' : 'Ver pendências';
+  if (notificationCount) {
+    notificationCount.textContent = pending > 99 ? '99+' : String(pending);
+    notificationCount.hidden = pending === 0;
+  }
   document.querySelector('.attention-strip').hidden = pending === 0 && !todayDeliveries.length && !dueOrders && !paymentIntents && !!balances;
   const rows = document.getElementById('home-recent-orders');
   rows.innerHTML = nextDay.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5).map(order => `<tr><td><span class="home-order-code">#${escapeHtml(orderCode(order))}</span></td><td>${escapeHtml(order.customer)}</td><td>${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR')}</td><td>${orderStateLabel(order)}</td><td>${currency(orderTotal(order))}<small>Inclui ${currency(order.feeCents || 0)} de entrega</small></td></tr>`).join('');
