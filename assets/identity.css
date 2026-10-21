@@ -233,7 +233,7 @@ html, body { background-color: #F7F2EA; }
   --ui-button-height: 44px;
   --ui-button-padding-y: 10px;
   --ui-button-padding-x: 16px;
-  --ui-button-radius: 8px;
+  --ui-button-radius: 999px;
   --ui-button-font-size: .875rem;
   --ui-button-font-weight: 600;
   --ui-button-primary-bg: var(--color-primary);
@@ -312,7 +312,7 @@ body :is(
   .pix-receipt-form > button
 ):hover:not(:disabled) {
   border-color: var(--ui-button-primary-hover) !important;
-  border-radius: 12px !important;
+  border-radius: var(--ui-button-radius) !important;
   color: var(--ui-button-primary-text) !important;
   background: var(--ui-button-primary-hover) !important;
   box-shadow: 0 0 0 4px var(--color-shadow) !important;
@@ -504,4 +504,62 @@ body .live-gate .auth-tabs::before {
 }
 @media (prefers-reduced-motion: reduce) {
   body .live-gate .auth-copy-enter { animation: none !important; }
+}
+
+
+/* Action button geometry standard */
+body :is(
+  .button--primary,
+  .button--quiet,
+  .screen-primary,
+  .portal-primary,
+  .auth-submit,
+  .live-account,
+  .live-logout,
+  .profile-button
+) {
+  border-radius: var(--ui-button-radius) !important;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    box-shadow 180ms ease,
+    transform 120ms ease !important;
+}
+body :is(
+  .button--primary,
+  .button--quiet,
+  .screen-primary,
+  .portal-primary,
+  .auth-submit,
+  .live-account,
+  .live-logout,
+  .profile-button
+):hover:not(:disabled) {
+  border-radius: var(--ui-button-radius) !important;
+}
+body :is(
+  .button--primary,
+  .button--quiet,
+  .screen-primary,
+  .portal-primary,
+  .auth-submit,
+  .live-account,
+  .live-logout,
+  .profile-button
+):active:not(:disabled) {
+  transform: scale(.98);
+}
+body :is(
+  .button--primary,
+  .button--quiet,
+  .screen-primary,
+  .portal-primary,
+  .auth-submit,
+  .live-account,
+  .live-logout,
+  .profile-button
+):focus-visible {
+  outline: 3px solid var(--color-focus-ring) !important;
+  outline-offset: 2px !important;
 }
