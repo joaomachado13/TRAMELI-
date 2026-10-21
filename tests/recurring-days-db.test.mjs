@@ -65,9 +65,58 @@ try {
   const changed={...daily,'2':[{...bread[0],quantity:2}]};
   await save(customers[0],'fixed',changed,ids[0]);
   assert.equal(await materialize(1),0);
-  assert.equal(Number((await db.query('select total_cents from public.trameli_orders where customer_id=$1 and delivery_date=$2',[customers[0],dateAfter(1)])).rows[0].total_cents),2540,'Edição não reescreve ocorrência existente.');
+  assert.equal(Number((await db.query('select total_cents from public.trameli_orders where customer_id=$1 and delivery_date=$2',[customers[0],dateAfter(1)])).rows[0].total_cents),480,'Edição atualiza a próxima terça já gerada e ainda intacta.');
+  const changedAgain={...changed,'2':[{...bread[0],quantity:3}]};
+  await save(customers[0],'fixed',changedAgain,ids[0]);
+  assert.equal(Number((await db.query('select total_cents from public.trameli_orders where customer_id=$1 and delivery_date=$2',[customers[0],dateAfter(1)])).rows[0].total_cents),620,'Outra edição deve atualizar também uma ocorrência sincronizada anteriormente.');
+  await save(customers[0],'fixed',changed,ids[0]);
+  assert.equal(Number((await db.query('select public.trameli_sync_recurring_future($1) as n',[ids[0]])).rows[0].n),0,'Reconciliar novamente deve ser idempotente.');
+
+  // Preserve manual exceptions, receipts (including partial payments), pending
+  // customer payment signals and deliveries that have already been completed.
+  await db.exec('reset role');
+  const protectedOrders=(await db.query('select id,delivery_date from public.trameli_orders where customer_id=$1 and delivery_date between $2 and $3 order by delivery_date',[customers[0],dateAfter(2),dateAfter(5)])).rows;
+  await db.query("update public.trameli_orders set version=version+1,updated_at=updated_at+interval '1 second',edited_at=now() where id=$1",[protectedOrders[0].id]);
+  const payment=(await db.query("insert into public.trameli_payments(request_id,request_payload,kind,amount_cents,method,actor_id) values($1,'{}','receipt',100,'cash',$2) returning id",[randomUUID(),operator])).rows[0].id;
+  await db.query('insert into public.trameli_payment_allocations(payment_id,order_id,amount_cents,actor_id) values($1,$2,100,$3)',[payment,protectedOrders[1].id,operator]);
+  await db.query('insert into public.trameli_payment_intents(request_id,customer_id,order_ids,amount_cents) values($1,$2,$3,1040)',[randomUUID(),customers[0],[protectedOrders[2].id]]);
+  await db.query("update public.trameli_orders set status='delivered',version=version+1 where id=$1",[protectedOrders[3].id]);
+  const legacyOrder=(await db.query('select id from public.trameli_orders where customer_id=$1 and delivery_date=$2',[customers[0],dateAfter(0)])).rows[0];
+  await db.query("update public.trameli_orders set updated_at=updated_at+interval '1 second' where id=$1",[legacyOrder.id]);
+  protectedOrders.push(legacyOrder);
+  const protectedIds=protectedOrders.map(row=>row.id);
+  const protectedBefore=JSON.stringify((await db.query('select * from public.trameli_orders where id=any($1::uuid[]) order by id',[protectedIds])).rows);
+  await asUser(operator);
+  const revised=Object.fromEntries([1,2,3,4,5,6].map(day=>[String(day),[{...bread[0],quantity:7}]]));
+  await save(customers[0],'fixed',revised,ids[0]);
+  assert.equal(JSON.stringify((await db.query('select * from public.trameli_orders where id=any($1::uuid[]) order by id',[protectedIds])).rows),protectedBefore,'A edição não pode alterar pedidos manuais, pagos, com Pix informado ou entregues.');
+  assert.equal(Number((await db.query('select total_cents from public.trameli_orders where customer_id=$1 and delivery_date=$2',[customers[0],dateAfter(1)])).rows[0].total_cents),1180,'Ocorrência futura intacta acompanha a nova cesta.');
+  // The same safe synchronization applies to fortnightly and monthly plans.
+  for(const index of [1,2]){
+    await save(customers[index],index===1?'fortnightly':'monthly',revised,ids[index]);
+    assert.equal(Number((await db.query('select total_cents from public.trameli_orders where customer_id=$1 and delivery_date=$2',[customers[index],dateAfter(1)])).rows[0].total_cents),1180);
+  }
+  await db.exec('reset role');
+  await db.query("update public.trameli_recurring_orders set starts_on=(now() at time zone 'America/Sao_Paulo')::date-1 where id=$1",[ids[2]]);
+  const history=[];
+  for(const shift of [0,1]){
+    const order=(await db.query("insert into public.trameli_orders(customer_id,source,request_id,status,customer_name,address,delivery_date,items,subtotal_cents,fee_cents) values($1,'operator',$2,'confirmed','Cliente teste','Rua teste 10',(now() at time zone 'America/Sao_Paulo')::date-$3::integer,$4::jsonb,840,200) returning id",[customers[2],randomUUID(),shift,JSON.stringify(bread)])).rows[0];
+    await db.query('insert into public.trameli_recurring_occurrences(schedule_id,delivery_date,order_id) select $1,delivery_date,id from public.trameli_orders where id=$2',[ids[2],order.id]);
+    history.push(order.id);
+  }
+  const historyBefore=JSON.stringify((await db.query('select * from public.trameli_orders where id=any($1::uuid[]) order by id',[history])).rows);
+  await asUser(operator);
+  await db.query('select public.trameli_sync_recurring_future($1)',[ids[2]]);
+  assert.equal(JSON.stringify((await db.query('select * from public.trameli_orders where id=any($1::uuid[]) order by id',[history])).rows),historyBefore,'Hoje e o histórico devem permanecer intactos.');
+  await save(customers[0],'fixed',changed,ids[0]);
   await materialize(8);
   assert.equal(Number((await db.query('select total_cents from public.trameli_orders where customer_id=$1 and delivery_date=$2',[customers[0],dateAfter(8)])).rows[0].total_cents),480,'A próxima terça usa o novo pedido.');
+  const saturdayBasket=[{...bread[0],quantity:4},{name:'Biscoitão teste',quantity:1,priceCents:400}];
+  await save(customers[0],'fixed',{...changed,'6':saturdayBasket},ids[0]);
+  await materialize(12);
+  const saturdayOrder=(await db.query('select items,total_cents from public.trameli_orders where customer_id=$1 and delivery_date=$2',[customers[0],dateAfter(12)])).rows[0];
+  assert.deepEqual(saturdayOrder.items,saturdayBasket,'Sábado deve gerar quatro pães e um biscoitão.');
+  assert.equal(Number(saturdayOrder.total_cents),1160,'O total de sábado inclui seus próprios itens e a entrega.');
   await save(customers[0],'fixed',null,ids[0],randomUUID(),[1,3]);
   assert.equal((await db.query('select items_by_weekday from public.trameli_recurring_orders where id=$1',[ids[0]])).rows[0].items_by_weekday,null);
   await materialize(15);
@@ -80,6 +129,8 @@ try {
   await materialize(45);
   assert.equal(Number((await db.query('select total_cents from public.trameli_orders where customer_id=$1 and delivery_date=$2',[customers[0],dateAfter(45)])).rows[0].total_cents),1040,'Programação comum continua funcionando pelo caminho antigo.');
   await asUser(customers[0]);
+  await assert.rejects(db.query('select public.trameli_sync_recurring_future($1)',[ids[0]]),/operator access required/);
+  await assert.rejects(db.query('select private.trameli_sync_recurring_future($1)',[ids[0]]),/permission denied/);
   await assert.rejects(db.query("update public.trameli_recurring_orders set items_by_weekday=null"),/permission denied/);
   await db.exec('set role anon');
   await assert.rejects(save(customers[0],'fixed'),/permission denied/);

@@ -10,7 +10,11 @@ Mensal e quinzenal continuam definindo o fechamento da cobrança. Os produtos po
 
 ## Compatibilidade e ativação
 
-A migration `20261020180634_recurring_items_by_weekday.sql` adiciona `items_by_weekday` opcional às programações existentes e uma RPC exclusiva da operação. Programações antigas mantêm o pedido comum. A geração usa os itens do dia selecionado, continua evitando duplicação por data e não modifica ocorrências já geradas nem pagamentos. A edição afeta as próximas ocorrências ainda não geradas.
+A migration `20261020180634_recurring_items_by_weekday.sql` adiciona `items_by_weekday` opcional às programações existentes e uma RPC exclusiva da operação. Programações antigas mantêm o pedido comum. A geração usa os itens do dia selecionado e evita duplicação por data.
+
+A migration `20261021220949_recurring_future_items_sync.sql` sincroniza também os itens e as observações dos pedidos futuros já gerados que continuam intactos, nos dias ainda selecionados. Mantém IDs e taxas de entrega. Hoje, histórico, alterações manuais, pedidos entregues, pagamentos e avisos de Pix pendentes ficam preservados. Uma versão de sincronização permite editar novamente uma ocorrência atualizada automaticamente, e os eventos e custos seguem os triggers existentes. A RPC `trameli_sync_recurring_future(uuid)`, exclusiva da operação, permite revisar uma programação já salva; repetir a chamada sem novas mudanças não reescreve pedidos.
+
+Pedidos existentes em dias retirados da programação e exceções protegidas exigem conferência operacional. A geração de novas datas continua sendo solicitada pela operação; esta atualização não cria um agendamento automático.
 
 Na Operação diária, editar uma programação com produtos por dia abre o Portal da Shirley. O caminho antigo de gravação rejeita a alteração de uma programação diária para evitar perda silenciosa de suas variações. A conversão explícita para um pedido comum é feita no Portal da Shirley.
 
