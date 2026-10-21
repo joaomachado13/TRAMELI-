@@ -39,6 +39,7 @@ export class LiveData {
     this.orders = [];
     this.products = [];
     this.settings = null;
+    this.commercialTerms = { deliveryFeeCents: 200, productPrices: new Map() };
     this.profile = null;
     this.user = null;
     this.operator = false;
@@ -91,9 +92,31 @@ export class LiveData {
         this.catalogUpgradeReady = !costResult.error;
         if (costResult.data) costs = new Map(costResult.data.map(row => [row.product_id, row]));
       }
-      const nextProducts = productResult.data.map(row => mapProduct(row, costs.get(row.id)));
       const settingsResult = await this.client.from('trameli_settings').select('*').eq('singleton', true).maybeSingle();
       if (settingsResult.error && settingsResult.error.code !== 'PGRST205') throw settingsResult.error;
+      const commercialTerms = {
+        deliveryFeeCents: Number(settingsResult.data?.delivery_fee_cents ?? 200),
+        productPrices: new Map(),
+      };
+      if (!this.operator && this.user?.id) {
+        const [termsResult, priceResult] = await Promise.all([
+          this.client.from('trameli_customer_terms').select('delivery_fee_cents').eq('customer_id', this.user.id).maybeSingle(),
+          this.client.from('trameli_customer_product_prices').select('product_id,price_cents').eq('customer_id', this.user.id),
+        ]);
+        if (termsResult.error && termsResult.error.code !== 'PGRST205') throw termsResult.error;
+        if (priceResult.error && priceResult.error.code !== 'PGRST205') throw priceResult.error;
+        const negotiatedFee = Number(termsResult.data?.delivery_fee_cents);
+        if (Number.isSafeInteger(negotiatedFee) && negotiatedFee >= 0) commercialTerms.deliveryFeeCents = negotiatedFee;
+        for (const row of priceResult.data || []) {
+          const price = Number(row.price_cents);
+          if (row.product_id && Number.isSafeInteger(price) && price >= 0) commercialTerms.productPrices.set(row.product_id, price);
+        }
+      }
+      const nextProducts = productResult.data.map(row => {
+        const product = mapProduct(row, costs.get(row.id));
+        const negotiated = commercialTerms.productPrices.get(row.id);
+        return negotiated == null ? product : { ...product, priceCents: negotiated };
+      });
       const changedOrders = [];
       for (let from = 0; ; from += 500) {
         let query = this.client.from('trameli_orders').select('*')
@@ -133,6 +156,7 @@ export class LiveData {
 
       this.products = nextProducts;
       this.settings = settingsResult.data;
+      this.commercialTerms = commercialTerms;
       this.orders = nextOrders;
       if (changedOrders.length) this.lastOrderSync = changedOrders.at(-1).updatedAt;
       else if (force) this.lastOrderSync = null;
@@ -203,6 +227,28 @@ export class LiveData {
     });
     if (error) throw error;
     await this.load(true);
+  }
+
+  async customerCommercialTerms(customerId) {
+    if (!this.operator) throw new Error('Acesso restrito à operação.');
+    if (!customerId) throw new Error('Selecione um cliente existente.');
+    const [termsResult, priceResult] = await Promise.all([
+      this.client.from('trameli_customer_terms').select('delivery_fee_cents').eq('customer_id', customerId).maybeSingle(),
+      this.client.from('trameli_customer_product_prices').select('product_id,price_cents').eq('customer_id', customerId),
+    ]);
+    if (termsResult.error) throw termsResult.error;
+    if (priceResult.error) throw priceResult.error;
+    const result = {
+      deliveryFeeCents: Number(this.settings?.delivery_fee_cents ?? 200),
+      productPrices: new Map(),
+    };
+    const negotiatedFee = Number(termsResult.data?.delivery_fee_cents);
+    if (Number.isSafeInteger(negotiatedFee) && negotiatedFee >= 0) result.deliveryFeeCents = negotiatedFee;
+    for (const row of priceResult.data || []) {
+      const price = Number(row.price_cents);
+      if (row.product_id && Number.isSafeInteger(price) && price >= 0) result.productPrices.set(row.product_id, price);
+    }
+    return result;
   }
 
   async saveRecurringOrder(schedule, requestId, scheduleId = null) {
