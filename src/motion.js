@@ -10,6 +10,9 @@ let enabled = false;
 let suspendedForPrint = false;
 let smoother = null;
 let refreshFrame = 0;
+let forceRefresh = false;
+let contentWidth = -1;
+let contentHeight = -1;
 let menuOpen = false;
 let dragging = false;
 let scrollTween = null;
@@ -43,12 +46,22 @@ function syncScroll() {
   pauseScroll();
 }
 
-function refresh() {
-  if (!enabled || refreshFrame) return;
+function refresh(force = true) {
+  if (!enabled) return;
+  forceRefresh ||= force === true;
+  if (refreshFrame) return;
   refreshFrame = requestAnimationFrame(() => {
     refreshFrame = 0;
     syncScroll();
-    if (smoother) ScrollTrigger.refresh();
+    const content = document.getElementById('smooth-content');
+    const width = content?.offsetWidth || 0;
+    const height = content?.offsetHeight || 0;
+    // Text updates and hidden screens need no scroll reset when the page fits
+    // the same dimensions. Refreshing also resizes the smoother's wrapper.
+    if (smoother && (forceRefresh || width !== contentWidth || height !== contentHeight)) ScrollTrigger.refresh();
+    contentWidth = width;
+    contentHeight = height;
+    forceRefresh = false;
   });
 }
 
@@ -157,9 +170,12 @@ function init() {
   // Atualizações de pedidos, filtros, imagens e modais mudam a altura da página.
   const content = document.getElementById('smooth-content');
   if (content) {
-    new ResizeObserver(refresh).observe(content);
-    new MutationObserver(refresh).observe(content, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'open'] });
-    document.querySelector('.app-shell') && new ResizeObserver(refresh).observe(document.querySelector('.app-shell'));
+    // ResizeObserver includes image loads and expanded/hidden sections. Watching
+    // every DOM mutation refreshed the entire page even for quantity labels.
+    const observer = new ResizeObserver(() => refresh(false));
+    observer.observe(content);
+    const shell = document.querySelector('.app-shell');
+    if (shell) observer.observe(shell);
   }
   new MutationObserver(pauseScroll).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['open'] });
   document.fonts?.ready.then(refresh);

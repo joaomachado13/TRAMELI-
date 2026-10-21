@@ -11,9 +11,9 @@ const edge = value => ({ top: value, bottom: value, c1: value, c2: value });
 const shape = (left, right) => `M${left.top},-2 C${left.top},-2 ${right.top},-2 ${right.top},-2 C${right.c1},33 ${right.c2},67 ${right.bottom},102 C${right.bottom},102 ${left.bottom},102 ${left.bottom},102 C${left.c2},67 ${left.c1},33 ${left.top},-2 Z`;
 const emptyLeft = shape(edge(-4), edge(-4));
 const covered = shape(edge(-4), edge(104));
-const coverDuration = .6;
-const revealDuration = .6;
-const coveredPause = .06;
+const coverDuration = .3;
+const revealDuration = .3;
+const coveredPause = .02;
 const variations = {
   swipe: [edge(52)],
   curve: [{ top: 45, bottom: 45, c1: 66, c2: 66 }],
