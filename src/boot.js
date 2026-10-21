@@ -44,11 +44,15 @@ if (enabled) {
   const realtimeOrderIds = new Set();
   let orderAudioContext = null;
   const armOrderSound = () => {
-    if (!live.operator || orderAudioContext) return;
+    if (!live.operator) return;
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     if (!AudioContext) return;
-    try { orderAudioContext = new AudioContext(); } catch { /* Visual alert still works. */ }
+    try {
+      if (!orderAudioContext) orderAudioContext = new AudioContext();
+      if (orderAudioContext.state === 'suspended') void orderAudioContext.resume().catch(() => {});
+    } catch { /* Visual alert still works. */ }
   };
+  armOrderSound();
   document.addEventListener('pointerdown', armOrderSound, { once: true, passive: true });
   document.addEventListener('keydown', armOrderSound, { once: true });
 
