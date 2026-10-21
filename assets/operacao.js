@@ -859,7 +859,7 @@ function preparePrint(orderSelection = null, printMode = 'a4') {
     return '<article class="print-label print-label--order">' +
       '<div class="print-label__content">' +
       '<div class="print-label__top"><strong>' + escapeHtml(order.customer) + '</strong><span>' +
-      escapeHtml(order.publicCode || String(position + 1).padStart(2, '0')) + '</span></div>' +
+      escapeHtml(String(position + 1).padStart(2, '0')) + '</span></div>' +
       (order.address ? '<p class="print-label__address">' + escapeHtml(order.address) + '</p>' : '') +
       '<ul>' + items.map(item => '<li><strong>' + escapeHtml(String(item.quantity ?? '')) + '×</strong> ' + escapeHtml(itemLabel(item).replace(/^\\s*\\d+(?:[.,]\\d+)?\\s*[x×]?\\s*/i, '')) + '</li>').join('') + '</ul>' +
       (order.notes ? '<small>Obs.: ' + escapeHtml(order.notes) + '</small>' : '') +
