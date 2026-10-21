@@ -29,7 +29,7 @@ function identitySettings(settings) {
 }
 function readSettings() {
   const remote = live?.settings;
-  if (remote) return identitySettings({ businessName: remote.business_name, contact: remote.contact, primaryColor: remote.primary_color, accentColor: remote.accent_color, surfaceColor: remote.surface_color, rolloverTime: String(remote.rollover_time).slice(0, 5), cutoffTime: String(remote.cutoff_time).slice(0, 5), deliveryFeeCents: Number(remote.delivery_fee_cents) });
+  if (remote) return identitySettings({ businessName: remote.business_name, contact: remote.contact, primaryColor: remote.primary_color, accentColor: remote.accent_color, surfaceColor: remote.surface_color, rolloverTime: String(remote.rollover_time).slice(0, 5), cutoffTime: String(remote.cutoff_time).slice(0, 5), deliveryFeeCents: Number(live?.commercialTerms?.deliveryFeeCents ?? remote.delivery_fee_cents) });
   try { return identitySettings({ ...settingsDefaults, ...JSON.parse(localStorage.getItem('trameli-operation-settings-v1') || '{}') }); } catch { return { ...settingsDefaults }; }
 }
 function applySettings() {
