@@ -128,6 +128,11 @@ try {
   ];
   await mkdir(new URL('../assets/crops/', import.meta.url), { recursive: true });
   for (const [route, selector] of routes) {
+    // O teste visual precisa ser independente do horário real em que o CI roda.
+    // Mantemos a loja aberta durante o cenário de checkout sem alterar a regra de produção.
+    if (route === 'loja') {
+      await evaluate(`window.TrameliSettings = {...(window.TrameliSettings || {}), cutoffTime:'05:59'}`);
+    }
     await evaluate(`location.hash=${JSON.stringify(`#${route}`)}`);
     await waitFor(selector);
     await pause(250);
