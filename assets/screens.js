@@ -415,9 +415,6 @@ function sidebarIsCollapsed() {
 
 function setSidebarCollapsed(collapsed, persist = true) {
   document.body.classList.toggle('sidebar-collapsed', collapsed);
-  const closeButton = document.querySelector('.nav__close');
-  closeButton?.setAttribute('aria-label', collapsed ? 'Expandir menu' : 'Recolher menu');
-  closeButton?.setAttribute('aria-expanded', String(!collapsed));
   menuButtons.forEach(button => {
     if (!button.classList.contains('mobile-menu-button')) return;
     button.setAttribute('aria-label', collapsed ? 'Expandir menu' : 'Recolher menu');
@@ -561,10 +558,6 @@ menuButtons.forEach(button => button.addEventListener('click', () => {
   if (navigationIsPersistent() && button.classList.contains('mobile-menu-button')) setSidebarCollapsed(!sidebarIsCollapsed());
   else setMenu(!document.body.classList.contains('menu-open'));
 }));
-document.querySelector('.nav__close').addEventListener('click', () => {
-  if (navigationIsPersistent()) setSidebarCollapsed(!sidebarIsCollapsed());
-  else setMenu(false);
-});
 menuOverlay.addEventListener('click', () => setMenu(false));
 navigation.forEach(link => link.addEventListener('click', () => setMenu(false)));
 persistentNavigation.addEventListener('change', () => {
@@ -575,6 +568,16 @@ persistentNavigation.addEventListener('change', () => {
 menuPanel.addEventListener('click', event => {
   if (event.target.closest('a, button, input, select, textarea, [role="button"]')) return;
   if (navigationIsPersistent() && sidebarIsCollapsed()) setSidebarCollapsed(false);
+});
+menuPanel.addEventListener('keydown', event => {
+  if (event.target !== menuPanel || !navigationIsPersistent() || !['Enter', ' '].includes(event.key)) return;
+  event.preventDefault();
+  setSidebarCollapsed(false);
+});
+document.addEventListener('click', event => {
+  if (menuPanel.contains(event.target) || event.target.closest('.mobile-menu-button, .portal-menu-button')) return;
+  if (navigationIsPersistent() && !sidebarIsCollapsed()) setSidebarCollapsed(true);
+  else if (!navigationIsPersistent() && document.body.classList.contains('menu-open')) setMenu(false);
 });
 window.addEventListener('hashchange', () => showRoute());
 document.querySelector('.notification-button').addEventListener('click', () => { location.hash = 'pendencias'; });
@@ -772,7 +775,11 @@ document.addEventListener('click', async event => {
   catch (cause) { alert(`Não foi possível limpar a base: ${cause.message}`); }
   finally { button.disabled = false; }
 });
-document.addEventListener('keydown', event => { if (event.key === 'Escape') setMenu(false); });
+document.addEventListener('keydown', event => {
+  if (event.key !== 'Escape') return;
+  if (navigationIsPersistent()) setSidebarCollapsed(true);
+  else setMenu(false);
+});
 showRoute();
 
 document.addEventListener('keydown', event => { if (event.target.matches('tr[data-open-order]') && ['Enter',' '].includes(event.key)) { event.preventDefault(); event.target.click(); } });

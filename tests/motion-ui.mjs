@@ -108,8 +108,8 @@ try {
 
   await send('Emulation.setDeviceMetricsOverride', { width: 1366, height: 900, deviceScaleFactor: 1, mobile: false });
   await evaluate('document.querySelector("#main-navigation-panel").click()');
-  await evaluate('document.querySelector(".nav__close").click()');
-  assert.ok(await evaluate('document.body.classList.contains("sidebar-collapsed")'), 'Collapse button reopened the sidebar');
+  await evaluate('document.querySelector(".app-shell").click()');
+  assert.ok(await evaluate('document.body.classList.contains("sidebar-collapsed")'), 'Outside click did not collapse the sidebar');
   await mkdir(new URL('../assets/crops/', import.meta.url), { recursive: true });
   for (const [route, style] of [['inicio','curve'],['portal-shirley','curve'],['clientes','swipe'],['relatorios','diagonal'],['agenda','wave']]) {
     await evaluate(`document.querySelector('.nav__item[href="#${route}"] .ico').click()`);
@@ -132,6 +132,15 @@ try {
   }
   await evaluate('document.querySelector("#main-navigation-panel").click()');
   assert.ok(await evaluate('!document.body.classList.contains("sidebar-collapsed")'), 'Empty sidebar area did not expand the menu');
+  await evaluate('document.querySelector(".nav__group-label").click()');
+  assert.ok(await evaluate('!document.body.classList.contains("sidebar-collapsed")'), 'Blank sidebar content unexpectedly closed the menu');
+  await evaluate('document.querySelector("#main-navigation-panel").focus()');
+  await send('Input.dispatchKeyEvent', { type:'keyDown', key:'Escape', code:'Escape' });
+  await send('Input.dispatchKeyEvent', { type:'keyUp', key:'Escape', code:'Escape' });
+  assert.ok(await evaluate('document.body.classList.contains("sidebar-collapsed")'), 'Escape did not collapse the sidebar');
+  await send('Input.dispatchKeyEvent', { type:'keyDown', key:'Enter', code:'Enter' });
+  await send('Input.dispatchKeyEvent', { type:'keyUp', key:'Enter', code:'Enter' });
+  assert.ok(await evaluate('!document.body.classList.contains("sidebar-collapsed")'), 'Keyboard did not expand the sidebar');
   await evaluate('location.hash="#clientes"'); await pause(50);
   await evaluate('location.hash="#produtos"'); await pause(30);
   await evaluate('location.hash="#agenda"'); await waitTransition();
