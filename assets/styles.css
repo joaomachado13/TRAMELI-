@@ -2595,3 +2595,153 @@ body.motion-off *, body.motion-off *::before, body.motion-off *::after {
   overflow-wrap: anywhere;
   word-break: normal;
 }
+
+
+/* Pedido novo em tempo real */
+.notification-dot.notification-count {
+  top: -3px;
+  right: -7px;
+  display: grid;
+  min-width: 19px;
+  width: auto;
+  height: 19px;
+  padding: 0 5px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 0.67rem;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 0 0 2px var(--color-surface, #fff);
+}
+
+.notification-dot.notification-count[hidden] {
+  display: none;
+}
+
+.realtime-order-notifications {
+  position: fixed;
+  z-index: 1400;
+  top: 18px;
+  right: 18px;
+  display: grid;
+  width: min(390px, calc(100vw - 28px));
+  gap: 10px;
+  pointer-events: none;
+}
+
+.realtime-order-toast {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 13px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: var(--color-surface);
+  box-shadow: 0 18px 55px rgba(0, 0, 0, .2);
+  pointer-events: auto;
+  animation: realtime-order-toast-in 360ms cubic-bezier(.16,1,.3,1) both;
+}
+
+.realtime-order-toast.is-leaving {
+  animation: realtime-order-toast-out 240ms ease both;
+}
+
+.realtime-order-toast__icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 13px;
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
+  font-size: 1.2rem;
+  font-weight: 900;
+}
+
+.realtime-order-toast__body {
+  min-width: 0;
+}
+
+.realtime-order-toast__body > span {
+  display: block;
+  color: var(--color-primary);
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+
+.realtime-order-toast__body strong {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: .94rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.realtime-order-toast__body small {
+  display: block;
+  margin-top: 3px;
+  color: var(--color-text-muted);
+  font-size: .75rem;
+}
+
+.realtime-order-toast__actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.realtime-order-toast__open,
+.realtime-order-toast__close {
+  border: 0;
+  cursor: pointer;
+}
+
+.realtime-order-toast__open {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: .75rem;
+  font-weight: 700;
+}
+
+.realtime-order-toast__close {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 1rem;
+}
+
+@keyframes realtime-order-toast-in {
+  from { opacity: 0; transform: translate3d(18px, -8px, 0) scale(.97); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes realtime-order-toast-out {
+  to { opacity: 0; transform: translate3d(18px, -6px, 0) scale(.98); }
+}
+
+@media (max-width: 640px) {
+  .realtime-order-notifications {
+    top: 10px;
+    right: 10px;
+    width: calc(100vw - 20px);
+  }
+  .realtime-order-toast {
+    grid-template-columns: 38px minmax(0,1fr);
+  }
+  .realtime-order-toast__actions {
+    grid-column: 2;
+    justify-content: flex-end;
+  }
+}
