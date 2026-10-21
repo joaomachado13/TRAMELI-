@@ -96,12 +96,15 @@ try {
     dispatchEvent(new Event('trameli:orders-changed'));
   })()`);
   await pause(180);
-  assert(await evaluate('getComputedStyle(document.body).backgroundColor === "rgb(247, 242, 234)"'), 'Canvas Master não usa o creme do design system.');
+  assert(await evaluate('getComputedStyle(document.body).backgroundColor === "rgb(250, 243, 234)"'), 'Canvas Master não usa o creme do design system.');
   assert(await evaluate('!document.querySelector("#main-navigation-panel").inert'), 'Sidebar desktop não está acessível.');
   assert(await evaluate('document.querySelector(".app-shell").getBoundingClientRect().left >= 250'), 'Conteúdo não respeita a sidebar desktop.');
   await evaluate('document.querySelector("#home-view").click()');
   await pause(180);
-  assert(await evaluate('document.body.classList.contains("sidebar-collapsed")'), 'Sidebar desktop não recolheu ao clicar no conteúdo.');
+  assert(await evaluate('!document.body.classList.contains("sidebar-collapsed")'), 'Sidebar recolheu durante o uso do conteúdo.');
+  await evaluate('document.querySelector(".nav__close").click()');
+  await pause(180);
+  assert(await evaluate('document.body.classList.contains("sidebar-collapsed")'), 'Controle não recolheu a sidebar.');
   assert(await evaluate('document.querySelector(".app-shell").getBoundingClientRect().left < 100'), 'Conteúdo não reajustou ao recolher a sidebar.');
   await evaluate('document.querySelector("#main-navigation-panel").click()');
   await pause(180);
@@ -140,6 +143,20 @@ try {
     const contrastProblems = await findLightOnLightText();
     assert(!contrastProblems.length, `${route} contém texto claro sobre fundo claro: ${JSON.stringify(contrastProblems)}`);
     await audit(`${route} desktop`);
+    if (route === 'pedidos') {
+      assert(await evaluate('document.querySelector(".record-toolbar--orders").getBoundingClientRect().height <= 72'), 'Filtros de pedidos ultrapassaram uma linha.');
+      await evaluate('document.querySelector("[data-more-filters]").open=true');
+      await evaluate('document.querySelector("[data-order-filter=from]").value="2020-01-01";document.querySelector("[data-order-filter=from]").dispatchEvent(new Event("change",{bubbles:true}))');
+      assert(await evaluate('document.querySelector("[data-more-filters]").open'), 'Mais filtros fechou durante a edição.');
+    }
+    if (route === 'financeiro') {
+      assert(await evaluate('document.querySelector(".finance-custom-dates").hidden'), 'Datas personalizadas apareceram no período rápido.');
+      await evaluate('document.querySelector("[data-finance-custom]").click()'); await pause(180);
+      assert(await evaluate('!document.querySelector(".finance-custom-dates").hidden'), 'Período personalizado não abriu as datas.');
+      await evaluate('document.querySelector("[data-finance-days=\\\"7\\\"]").click()');
+      assert(await evaluate('document.querySelector(".finance-custom-dates").hidden && document.querySelector("[data-finance-days=\\\"7\\\"]").getAttribute("aria-pressed") === "true"'), 'Período de 7 dias não sincronizou o controle.');
+      assert(await evaluate('document.querySelectorAll(".staff-revenue-chart__axis span").length === 5'), 'Gráfico financeiro perdeu a escala de valores.');
+    }
     if (route === 'clientes') {
       await evaluate('document.querySelector("#client-search").focus()');
       for (const character of 'Joao Machado') { await send('Input.insertText', { text: character }); await pause(20); }
@@ -259,15 +276,16 @@ try {
   await send('DOM.enable'); await send('CSS.enable');
   const documentNode = await send('DOM.getDocument');
   const primaryNode = (await send('DOM.querySelector', {nodeId:documentNode.root.nodeId,selector:'#new-order'})).nodeId;
-  for (const [state, expected] of [['hover','rgb(122, 51, 28)'],['active','rgb(102, 43, 23)'],['focus-visible','rgba(143, 61, 34, 0.15)']]) {
+  for (const [state, expected] of [['hover','rgb(115, 48, 26)'],['active','rgb(94, 39, 21)'],['focus-visible','rgb(139, 58, 31)']]) {
     await send('CSS.forcePseudoState', {nodeId:primaryNode,forcedPseudoClasses:[state]});
-    await pause(180);
-    assert(await evaluate(`getComputedStyle(document.querySelector('#new-order')).${state==='focus-visible'?'outlineColor':'backgroundColor'} === '${expected}'`), `Estado ${state} não usa a paleta oficial.`);
+    const property = state === 'focus-visible' ? 'outlineColor' : 'backgroundColor';
+    for (let attempt=0; attempt<30 && !(await evaluate(`getComputedStyle(document.querySelector('#new-order')).${property} === '${expected}'`)); attempt++) await pause(50);
+    assert(await evaluate(`getComputedStyle(document.querySelector('#new-order')).${property} === '${expected}'`), `Estado ${state} não usa a paleta oficial: ${await evaluate(`getComputedStyle(document.querySelector('#new-order')).${property}`)}`);
   }
   await send('CSS.forcePseudoState', {nodeId:primaryNode,forcedPseudoClasses:[]});
   await evaluate('document.querySelector("#new-order").disabled=true');
-  await pause(180);
-  assert(await evaluate('getComputedStyle(document.querySelector("#new-order")).backgroundColor === "rgb(216, 201, 193)"'), 'Estado disabled não usa a paleta oficial.');
+  for(let attempt=0;attempt<30 && !(await evaluate('getComputedStyle(document.querySelector("#new-order")).backgroundColor === "rgb(239, 231, 223)"'));attempt++) await pause(50);
+  assert(await evaluate('getComputedStyle(document.querySelector("#new-order")).backgroundColor === "rgb(239, 231, 223)"'), 'Estado disabled não usa a paleta oficial.');
   await evaluate('document.querySelector("#new-order").disabled=false; document.querySelector("#new-order").click()');
   await waitFor('#shirley-portal-view:not([hidden])');
   assert(await evaluate('!document.querySelector(".app-shell").hidden && !document.body.classList.contains("portal-mode")'), 'Portal da Shirley deve preservar o painel interno.');

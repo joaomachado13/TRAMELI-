@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="assets/design-system.css?v=9">
     <link rel="stylesheet" href="assets/identity.css?v=9">
     <link rel="stylesheet" href="assets/client-panel.css?v=6">
+    <link rel="stylesheet" href="assets/staff-ui.css">
   </head>
   <body class="app-booting">
     <div class="ambient-field" aria-hidden="true"></div>
@@ -30,22 +31,28 @@
           </a>
 
           <nav class="nav__links" id="main-navigation">
-            <a class="lnk nav__item nav__item--operation" href="#operacao"><span class="ico ico--nav ico--orders" aria-hidden="true"></span><span class="nav__label">Operação diária</span></a>
-            <a class="lnk nav__item" href="#portal-shirley"><span class="ico ico--nav ico--cart" aria-hidden="true"></span><span class="nav__label">Portal da Shirley</span></a>
-            <a class="lnk nav__item" href="#inicio"><span class="ico ico--nav ico--home" aria-hidden="true"></span><span class="nav__label">Visão geral</span></a>
-            <a class="lnk nav__item" href="#pendencias"><span class="ico ico--nav ico--notification" aria-hidden="true"></span><span class="nav__label">Pendências</span></a>
-            <a class="lnk nav__item" href="#pedidos"><span class="ico ico--nav ico--orders" aria-hidden="true"></span><span class="nav__label">Pedidos</span><span class="nav__count" id="nav-pending-count" aria-label="0 pedidos precisam de atenção">0</span></a>
-            <a class="lnk nav__item" href="#clientes"><span class="ico ico--nav ico--users" aria-hidden="true"></span><span class="nav__label">Clientes</span></a>
-            <a class="lnk nav__item" href="#produtos"><span class="ico ico--nav ico--box" aria-hidden="true"></span><span class="nav__label">Produtos</span></a>
-            <a class="lnk nav__item" href="#agenda"><span class="ico ico--nav ico--calendar" aria-hidden="true"></span><span class="nav__label">Agenda</span></a>
-            <a class="lnk nav__item" href="#financeiro"><span class="ico ico--nav ico--finance" aria-hidden="true"></span><span class="nav__label">Financeiro</span></a>
-            <a class="lnk nav__item" href="#relatorios"><span class="ico ico--nav ico--report" aria-hidden="true"></span><span class="nav__label">Relatórios</span></a>
-            <a class="lnk nav__item" href="#configuracoes"><span class="ico ico--nav ico--gear" aria-hidden="true"></span><span class="nav__label">Configurações</span></a>
-            <a class="lnk nav__item" href="#loja"><span class="ico ico--nav ico--cart" aria-hidden="true"></span><span class="nav__label">Portal do cliente</span></a>
+            <div class="nav__group" role="group" aria-label="Operação"><p class="nav__group-label">Operação</p>
+              <a class="lnk nav__item nav__item--operation" href="#operacao"><span class="ico ico--nav ico--orders" aria-hidden="true"></span><span class="nav__label">Operação diária</span></a>
+              <a class="lnk nav__item" href="#portal-shirley"><span class="ico ico--nav ico--cart" aria-hidden="true"></span><span class="nav__label">Portal da Shirley</span></a>
+              <a class="lnk nav__item" href="#pendencias"><span class="ico ico--nav ico--notification" aria-hidden="true"></span><span class="nav__label">Pendências</span></a>
+              <a class="lnk nav__item" href="#pedidos"><span class="ico ico--nav ico--orders" aria-hidden="true"></span><span class="nav__label">Pedidos</span><span class="nav__count" id="nav-pending-count" aria-label="0 pedidos precisam de atenção">0</span></a>
+              <a class="lnk nav__item" href="#agenda"><span class="ico ico--nav ico--calendar" aria-hidden="true"></span><span class="nav__label">Agenda</span></a>
+            </div>
+            <div class="nav__group" role="group" aria-label="Cadastros"><p class="nav__group-label">Cadastros</p>
+              <a class="lnk nav__item" href="#clientes"><span class="ico ico--nav ico--users" aria-hidden="true"></span><span class="nav__label">Clientes</span></a>
+              <a class="lnk nav__item" href="#produtos"><span class="ico ico--nav ico--box" aria-hidden="true"></span><span class="nav__label">Produtos</span></a>
+            </div>
+            <div class="nav__group" role="group" aria-label="Gestão"><p class="nav__group-label">Gestão</p>
+              <a class="lnk nav__item" href="#inicio"><span class="ico ico--nav ico--home" aria-hidden="true"></span><span class="nav__label">Visão geral</span></a>
+              <a class="lnk nav__item" href="#financeiro"><span class="ico ico--nav ico--finance" aria-hidden="true"></span><span class="nav__label">Financeiro</span></a>
+              <a class="lnk nav__item" href="#relatorios"><span class="ico ico--nav ico--report" aria-hidden="true"></span><span class="nav__label">Relatórios</span></a>
+              <a class="lnk nav__item" href="#configuracoes"><span class="ico ico--nav ico--gear" aria-hidden="true"></span><span class="nav__label">Configurações</span></a>
+            </div>
           </nav>
         </div>
 
         <div class="nav__footer">
+          <a class="lnk nav__item" href="#loja"><span class="ico ico--nav ico--arrow" aria-hidden="true"></span><span class="nav__label">Portal do cliente</span></a>
           <span class="ico ico--brand" aria-hidden="true"></span>
           <p class="t2">Cada pedido no<br>seu caminho.</p>
         </div>
@@ -79,14 +86,14 @@
 
         <div id="operation-view" class="view">
           <div class="workspace">
-            <section class="intro">
-              <div><p class="eyebrow">OPERAÇÃO DIÁRIA</p><h1>Pedidos do dia,<br><em>sem confusão.</em></h1><p>Acompanhe o que chegou, o que já foi conferido e o que terminou.</p></div>
-              <div class="intro__actions"><button class="button button--primary" id="new-order" type="button">+ Novo pedido</button><button class="button button--quiet" id="manage-recurring-orders" type="button">Pedidos recorrentes</button><button class="button button--quiet" id="print-orders" type="button">Imprimir etiquetas</button></div>
+            <section class="intro staff-page-header">
+              <div><h1>Pedidos do dia</h1></div>
+              <div class="intro__actions"><label class="staff-inline-date" for="delivery-date"><span class="sr-only">Dia da operação</span><input id="delivery-date" type="date"></label><button class="button button--primary" id="new-order" type="button">+ Novo pedido</button><button class="button button--quiet" id="manage-recurring-orders" type="button">Pedidos recorrentes</button><button class="button button--quiet" id="print-orders" type="button">Imprimir etiquetas</button></div>
             </section>
             <p class="prototype-note" role="note"><strong>Modo de demonstração.</strong> Os dados ficam neste navegador. Confira os preços antes de usar com clientes reais.</p>
-            <section class="day-tools" aria-label="Seleção do dia"><div><label for="delivery-date">Dia da operação</label><input id="delivery-date" type="date"></div><div class="day-tools__hint" id="operation-day-hint">Escolha uma data para acompanhar a fila.</div></section>
+            <p class="sr-only" id="operation-day-hint">Escolha uma data para acompanhar a fila.</p>
             <section class="summary" aria-label="Resumo do dia"><div class="summary-card"><span>Pedidos</span><strong id="total-orders">0</strong><small>ativos nesta data</small></div><div class="summary-card summary-card--warm"><span>Novos</span><strong id="pending-orders">0</strong><small>aguardando conferência</small></div><div class="summary-card"><span>Entregues</span><strong id="completed-orders">0</strong><small>finalizados no dia</small></div><div class="summary-card summary-card--total"><span>Total dos pedidos</span><strong id="grand-total">R$ 0,00</strong><small>produtos + entregas</small></div></section>
-            <section class="orders-section" aria-labelledby="orders-title"><div class="section-heading"><div><p class="eyebrow">FLUXO DO DIA</p><h2 id="orders-title">Acompanhe cada pedido</h2><p class="section-description" id="kanban-help">Use apenas as etapas A conferir, Conferido e Entregue. Pedidos em separação ou prontos ficam agrupados em Conferido até serem entregues. Recolha colunas para ganhar espaço e use a ação em lote ao finalizar.</p></div><label class="search-box">Buscar pedido<input id="order-search" type="search" placeholder="Nome, endereço ou produto"></label></div><p class="kanban-feedback" id="kanban-feedback" role="status"></p><div class="orders-list" id="orders-list" aria-live="polite"></div></section>
+            <section class="orders-section" aria-labelledby="orders-title"><div class="section-heading"><div><p class="eyebrow">FLUXO DO DIA</p><h2 id="orders-title">Acompanhe cada pedido</h2><p class="section-description" id="kanban-help">Use apenas as etapas A conferir, Conferido e Entregue. Pedidos em separação ou prontos ficam agrupados em Conferido até serem entregues. Arraste os pedidos ou use Mover para. Use a ação em lote ao finalizar.</p></div><label class="search-box">Buscar pedido<input id="order-search" type="search" placeholder="Nome, endereço ou produto"></label></div><p class="kanban-feedback" id="kanban-feedback" role="status"></p><div class="orders-list" id="orders-list" aria-live="polite"></div></section>
             <section class="supplier-list" aria-labelledby="supplier-list-title"><div class="section-heading"><div><p class="eyebrow">REPASSE DA PADARIA · PREÇO DE CUSTO</p><h2 id="supplier-list-title">Pedidos para a padaria</h2></div><div class="supplier-list__actions"><label class="supplier-period">Padaria<select id="supplier-provider"><option value="divano">Padaria do Divano</option><option value="sandra">Padaria Sandra</option></select></label><label class="supplier-period">Período<select id="supplier-period"><option value="diario">Diário</option><option value="quinzenal">Quinzenal (fechamento)</option><option value="mensal">Mensal</option></select></label><button class="button button--primary" id="download-supplier-pdf" type="button">Baixar PDF</button><button class="button button--quiet" id="copy-supplier-list" type="button">Copiar lista</button></div></div><p class="supplier-list__period" id="supplier-period-label" role="status"></p><p class="supplier-list__help">Escolha a padaria e o período. O repasse mostra somente os produtos e custos do fornecedor selecionado. O quinzenal (dia 1 a 15 e 16 ao fim do mês, iguais aos fechamentos) e o mensal trazem itens, custo por dia e total a pagar. A data selecionada acima define a quinzena ou o mês.</p><section class="supplier-totals" aria-labelledby="supplier-totals-title"><h3 id="supplier-totals-title">Lista consolidada por material</h3><p>Quantidades totais para separar tudo de uma vez.</p><div id="supplier-list-totals"></div><div id="supplier-list-items" hidden></div></section><p class="supplier-list__feedback" id="supplier-list-feedback" role="status"></p></section>
             <section class="supplier-list" aria-labelledby="separation-list-title"><div class="section-heading"><div><p class="eyebrow">OPERAÇÃO · SEPARAÇÃO</p><h2 id="separation-list-title">Lista de separação</h2></div><div class="supplier-list__actions"><button class="button button--primary" id="download-separation-pdf" type="button">Baixar PDF de separação</button></div></div><p class="supplier-list__help">Uma lista única, com todos os produtos, clientes ordenados por endereço/rua e depois pelo nome. PDF operacional sem preços, em formato compacto para economizar páginas.</p><p class="supplier-list__feedback" id="separation-list-feedback" role="status"></p></section>
           </div>
@@ -103,7 +110,7 @@
           <div class="print-document" id="print-document" aria-hidden="true"></div>
         </div>
         <div id="home-view" class="view" hidden>
-          <section class="hero overview-hero"><div><p class="screen-eyebrow">VISÃO GERAL</p><h1 class="h1">O que precisa ser resolvido?</h1><p class="t1" id="operational-message">Carregando o resumo do dia...</p></div><p class="t2 hero__date" id="today-date">22 de setembro</p></section>
+          <section class="hero overview-hero"><div><p class="screen-eyebrow">VISÃO GERAL</p><h1 class="h1">Visão geral</h1><p class="t1" id="operational-message">Carregando o resumo do dia...</p></div><p class="t2 hero__date" id="today-date">22 de setembro</p></section>
           <section class="kpi-grid overview-kpis" aria-label="Resumo do dia"><article class="card kpi-card"><span class="ico ico--kpi ico--cart" aria-hidden="true"></span><div><strong class="h2" id="home-order-count">0</strong><p class="t2">Próximo ciclo</p><small class="kpi-card__context">Nenhum registrado</small></div></article><article class="card2 kpi-card"><span class="ico ico--kpi ico--clock" aria-hidden="true"></span><div><strong class="h2" id="home-pending-count">0</strong><p class="t2">A conferir</p><small class="kpi-card__context">Nenhum pendente</small></div></article><article class="card kpi-card"><span class="ico ico--kpi ico--truck" aria-hidden="true"></span><div><strong class="h2" id="home-delivery-count">0</strong><p class="t2">Entregas hoje</p><small class="kpi-card__context" id="home-delivery-context">Agenda vazia</small></div></article><article class="card3 kpi-card"><span class="ico ico--kpi ico--currency" aria-hidden="true"></span><div><strong class="h2" id="home-order-total">—</strong><p class="t2">Em aberto</p><small class="kpi-card__context">Carregando saldos</small></div></article></section>
           <section class="attention-strip attention-center" aria-labelledby="attention-title"><div class="attention-strip__heading"><span class="attention-strip__symbol" aria-hidden="true">!</span><div><p class="screen-eyebrow">PRIORIDADE</p><h2 id="attention-title">Precisa de atenção</h2></div></div><div id="home-next-actions" aria-live="polite"></div></section>
           <section class="content-grid overview-content"><article class="card4 panel orders-panel"><div class="panel__heading"><h2 class="h3">Pedidos do próximo ciclo</h2><a class="lnk panel__link" href="#pedidos">Ver todos <span class="ico ico--arrow" aria-hidden="true"></span></a></div><div class="orders-table-wrap"><table class="orders-table"><thead><tr class="t3"><th>#</th><th>Cliente</th><th>Entrega</th><th>Status</th><th>Valor</th></tr></thead><tbody class="t1" id="home-recent-orders"></tbody></table></div><p class="data-empty" id="home-orders-empty">Nenhum pedido para o próximo ciclo.</p></article><article class="card5 panel deliveries-panel"><div class="panel__heading"><h2 class="h3">Próximas entregas</h2><a class="lnk panel__link" href="#agenda">Ver agenda <span class="ico ico--arrow" aria-hidden="true"></span></a></div><ol class="delivery-list" id="home-deliveries"></ol><p class="data-empty" id="home-deliveries-empty">Nenhuma entrega agendada.</p></article></section>
