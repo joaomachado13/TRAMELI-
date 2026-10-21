@@ -507,18 +507,18 @@ body.portal-mode .portal-header__actions #portal-cart-link[aria-current="true"] 
 }
 
 
-/* Canonical system button pattern: header defines the family */
+/* Canonical system button pattern: one visual family for portal actions. */
 body.portal-mode{
   --system-button-height:44px;
-  --system-button-radius:12px;
+  --system-button-radius:14px;
   --system-button-padding-x:18px;
   --system-button-border:rgba(143,61,34,.28);
   --system-button-bg:#FFF9F5;
   --system-button-text:#7A331C;
   --system-button-hover-bg:#FBE9DB;
   --system-button-hover-border:#8F3D22;
-  --system-button-active-bg:#8F3D22;
-  --system-button-active-text:#FFF9F5;
+  --system-button-active-bg:#FFF9F5;
+  --system-button-active-text:#7A331C;
 }
 
 /* A geometria nasce no cabeçalho e é reaproveitada nas ações do sistema. */
@@ -578,16 +578,17 @@ body.portal-mode :is(
   outline-offset:2px!important;
 }
 
-/* Estado selecionado muda hierarquia, nunca geometria. */
+/* Estado selecionado continua branco: diferencia só por borda, sem criar outro tipo de botão. */
 body.portal-mode .portal-header__actions > button[aria-current="true"]{
-  border-color:var(--system-button-active-bg)!important;
+  border-color:var(--system-button-hover-border)!important;
   background:var(--system-button-active-bg)!important;
   color:var(--system-button-active-text)!important;
+  box-shadow:0 0 0 1px rgba(143,61,34,.08)!important;
 }
 body.portal-mode .portal-header__actions > button[aria-current="true"]:hover:not(:disabled){
-  border-color:#7A331C!important;
-  background:#7A331C!important;
-  color:var(--system-button-active-text)!important;
+  border-color:var(--system-button-hover-border)!important;
+  background:var(--system-button-hover-bg)!important;
+  color:var(--system-button-text)!important;
 }
 
 /* O contador da sacola é badge; ele não altera o formato do botão pai. */
