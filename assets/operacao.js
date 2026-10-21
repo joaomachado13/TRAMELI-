@@ -412,17 +412,20 @@ function openLabelPrintDialog(printMode = 'a4') {
     dialog.className = 'form-dialog';
     dialog.setAttribute('aria-labelledby', 'label-print-title');
     dialog.innerHTML = `<form method="dialog" class="label-print-dialog__form">
-      <p class="eyebrow">ETIQUETAS</p><h2 id="label-print-title">O que deseja imprimir?</h2>
-      <p class="section-description" id="label-print-summary"></p>
-      <div class="label-print-dialog__mode">
-        <button class="button button--primary" type="button" data-print-mode="a4">A4</button>
-        <button class="button button--quiet" type="button" data-print-mode="mini">Mini impressora</button>
-      </div>
-      <div class="label-print-dialog__actions">
-        <button class="button button--primary" type="button" data-label-print="new">Imprimir pedidos em Novo</button>
-        <button class="button button--quiet" type="button" data-label-print="all">Imprimir todos os pedidos</button>
-        <button class="button button--quiet" type="button" data-label-print="choose">Selecionar pedidos</button>
-      </div>
+      <div class="label-print-dialog__heading"><p class="eyebrow">IMPRESSÃO</p><h2 id="label-print-title">Imprimir pedidos</h2><p class="section-description" id="label-print-summary"></p></div>
+      <section class="label-print-dialog__section"><h3>Onde você vai imprimir?</h3>
+        <div class="label-print-dialog__mode">
+          <button class="label-print-mode is-selected" type="button" data-print-mode="a4"><strong>Folha A4</strong><small>Para imprimir e recortar</small></button>
+          <button class="label-print-mode" type="button" data-print-mode="mini"><strong>Mini impressora</strong><small>Bobina compacta</small></button>
+        </div>
+      </section>
+      <section class="label-print-dialog__section"><h3>Quais pedidos?</h3>
+        <div class="label-print-dialog__actions">
+          <button class="label-print-action label-print-action--primary" type="button" data-label-print="new"><strong>Pedidos em Novo</strong><small>Somente os que aguardam conferência</small></button>
+          <button class="label-print-action" type="button" data-label-print="all"><strong>Todos os pedidos</strong><small>Imprime todos os pedidos ativos do dia</small></button>
+          <button class="label-print-action" type="button" data-label-print="choose"><strong>Selecionar pedidos</strong><small>Escolha manualmente quem imprimir</small></button>
+        </div>
+      </section>
       <fieldset id="label-print-selection" hidden><legend>Selecione as etiquetas</legend><div id="label-print-orders"></div><button class="button button--primary" type="button" data-label-print="selected">Imprimir selecionados</button></fieldset>
       <div class="dialog-actions"><button class="button button--quiet" type="submit">Fechar</button></div>
     </form>`;
@@ -432,7 +435,7 @@ function openLabelPrintDialog(printMode = 'a4') {
       const modeButton = event.target.closest('[data-print-mode]');
       if (modeButton) {
         dialog.dataset.printMode = modeButton.dataset.printMode;
-        dialog.querySelectorAll('[data-print-mode]').forEach(item => item.className = `button ${item === modeButton ? 'button--primary' : 'button--quiet'}`);
+        dialog.querySelectorAll('[data-print-mode]').forEach(item => item.classList.toggle('is-selected', item === modeButton));
         return;
       }
       const button = event.target.closest('[data-label-print]');
@@ -452,8 +455,10 @@ function openLabelPrintDialog(printMode = 'a4') {
       }
       if (!chosen.length) { alert(button.dataset.labelPrint === 'new' ? 'Não há pedidos na etapa Novo para imprimir nesta data.' : 'Selecione pelo menos um pedido.'); return; }
       pendingPrintOrderIds = chosen.map(order => order.id);
+      const mode = dialog.dataset.printMode || 'a4';
+      if (!preparePrint(chosen, mode)) return;
       dialog.close();
-      if (preparePrint(chosen, dialog.dataset.printMode || 'a4')) window.print();
+      requestAnimationFrame(() => requestAnimationFrame(() => window.print()));
     });
   }
   const newCount = dayOrders.filter(order => orderStatus(order) === 'received').length;
@@ -461,7 +466,7 @@ function openLabelPrintDialog(printMode = 'a4') {
   dialog.querySelector('#label-print-summary').textContent = `${dayOrders.length} pedidos ativos nesta data; ${newCount} em Novo; ${unprinted} ainda não registrados em uma impressão.`;
   dialog.querySelector('#label-print-selection').hidden = true;
   dialog.dataset.printMode = printMode;
-  dialog.querySelectorAll('[data-print-mode]').forEach(item => item.className = `button ${item.dataset.printMode === printMode ? 'button--primary' : 'button--quiet'}`);
+  dialog.querySelectorAll('[data-print-mode]').forEach(item => item.classList.toggle('is-selected', item.dataset.printMode === printMode));
   dialog.showModal();
 }
 
