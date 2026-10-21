@@ -431,35 +431,43 @@ function openLabelPrintDialog(printMode = 'a4') {
     </form>`;
     document.body.append(dialog);
     dialog.addEventListener('click', event => {
-      if (event.target === dialog) { dialog.close(); return; }
-      const modeButton = event.target.closest('[data-print-mode]');
-      if (modeButton) {
+      if (event.target === dialog) dialog.close();
+    });
+
+    dialog.querySelectorAll('[data-print-mode]').forEach(modeButton => {
+      modeButton.addEventListener('click', () => {
         dialog.dataset.printMode = modeButton.dataset.printMode;
         dialog.querySelectorAll('[data-print-mode]').forEach(item => item.classList.toggle('is-selected', item === modeButton));
-        return;
-      }
-      const button = event.target.closest('[data-label-print]');
-      if (!button) return;
+      });
+    });
+
+    const runPrintAction = action => {
       const available = selectedOrders();
-      const printed = printedIdsForDate();
       let chosen = [];
-      if (button.dataset.labelPrint === 'new') chosen = available.filter(order => orderStatus(order) === 'received').sort(compareByStreet);
-      else if (button.dataset.labelPrint === 'all') chosen = available.slice().sort(compareByStreet);
-      else if (button.dataset.labelPrint === 'choose') {
+      if (action === 'new') chosen = available.filter(order => orderStatus(order) === 'received').sort(compareByStreet);
+      else if (action === 'all') chosen = available.slice().sort(compareByStreet);
+      else if (action === 'choose') {
         dialog.querySelector('#label-print-selection').hidden = false;
         dialog.querySelector('#label-print-orders').innerHTML = available.map(order => `<label class="label-print-dialog__order"><input type="checkbox" value="${escapeHtml(order.id)}" checked><span>${escapeHtml(order.customer)}</span><small>${escapeHtml(order.publicCode || '')} · ${money(orderTotal(order))}</small></label>`).join('');
         return;
-      } else if (button.dataset.labelPrint === 'selected') {
+      } else if (action === 'selected') {
         const ids = new Set([...dialog.querySelectorAll('#label-print-orders input:checked')].map(input => input.value));
         chosen = available.filter(order => ids.has(order.id)).sort(compareByStreet);
       }
-      if (!chosen.length) { alert(button.dataset.labelPrint === 'new' ? 'Não há pedidos na etapa Novo para imprimir nesta data.' : 'Selecione pelo menos um pedido.'); return; }
+      if (!chosen.length) {
+        alert(action === 'new' ? 'Não há pedidos na etapa Novo para imprimir nesta data.' : 'Selecione pelo menos um pedido.');
+        return;
+      }
       pendingPrintOrderIds = chosen.map(order => order.id);
       const mode = dialog.dataset.printMode || 'a4';
       if (!preparePrint(chosen, mode)) return;
       dialog.close();
-      requestAnimationFrame(() => requestAnimationFrame(() => window.print()));
-    });
+      setTimeout(() => window.print(), 80);
+    };
+
+    dialog.querySelectorAll('[data-label-print]').forEach(actionButton => {
+      actionButton.addEventListener('click', () => runPrintAction(actionButton.dataset.labelPrint));
+    });;
   }
   const newCount = dayOrders.filter(order => orderStatus(order) === 'received').length;
   const unprinted = dayOrders.filter(order => !printedIdsForDate().has(order.id)).length;
