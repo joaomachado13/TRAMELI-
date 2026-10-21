@@ -1254,4 +1254,11 @@ async function openOrderById(id) {
 }
 window.addEventListener('trameli:new-order', event => openNewOrder(event.detail || {}));
 window.TrameliOperation = { preparePrint, openOrder: openOrderById, openNew: openNewOrder };
+try {
+  const pendingOrderId = sessionStorage.getItem('trameli-pending-open-order');
+  if (pendingOrderId) {
+    sessionStorage.removeItem('trameli-pending-open-order');
+    void openOrderById(pendingOrderId);
+  }
+} catch { /* Direct navigation still works without sessionStorage. */ }
 })();
