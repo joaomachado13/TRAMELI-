@@ -505,3 +505,122 @@ body.portal-mode .portal-header__actions #portal-cart-link[aria-current="true"] 
     min-height:164px;
   }
 }
+
+
+/* Canonical system button pattern: header defines the family */
+body.portal-mode{
+  --system-button-height:44px;
+  --system-button-radius:12px;
+  --system-button-padding-x:18px;
+  --system-button-border:rgba(143,61,34,.28);
+  --system-button-bg:#FFF9F5;
+  --system-button-text:#7A331C;
+  --system-button-hover-bg:#FBE9DB;
+  --system-button-hover-border:#8F3D22;
+  --system-button-active-bg:#8F3D22;
+  --system-button-active-text:#FFF9F5;
+}
+
+/* A geometria nasce no cabeçalho e é reaproveitada nas ações do sistema. */
+body.portal-mode :is(
+  .portal-header__actions > button,
+  .portal-header__actions > .live-account,
+  .portal-welcome__action
+){
+  box-sizing:border-box!important;
+  min-height:var(--system-button-height)!important;
+  height:var(--system-button-height)!important;
+  padding:0 var(--system-button-padding-x)!important;
+  border:1px solid var(--system-button-border)!important;
+  border-radius:var(--system-button-radius)!important;
+  background:var(--system-button-bg)!important;
+  color:var(--system-button-text)!important;
+  font-family:var(--font-interface)!important;
+  font-size:.875rem!important;
+  font-weight:700!important;
+  line-height:1!important;
+  box-shadow:none!important;
+  text-decoration:none!important;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    box-shadow 180ms ease,
+    transform 120ms ease!important;
+}
+
+body.portal-mode :is(
+  .portal-header__actions > button,
+  .portal-header__actions > .live-account,
+  .portal-welcome__action
+):hover:not(:disabled){
+  border-color:var(--system-button-hover-border)!important;
+  border-radius:var(--system-button-radius)!important;
+  background:var(--system-button-hover-bg)!important;
+  color:var(--system-button-text)!important;
+  box-shadow:0 3px 10px rgba(50,23,14,.08)!important;
+}
+
+body.portal-mode :is(
+  .portal-header__actions > button,
+  .portal-header__actions > .live-account,
+  .portal-welcome__action
+):active:not(:disabled){
+  transform:scale(.98);
+}
+
+body.portal-mode :is(
+  .portal-header__actions > button,
+  .portal-header__actions > .live-account,
+  .portal-welcome__action
+):focus-visible{
+  outline:3px solid var(--color-focus-ring)!important;
+  outline-offset:2px!important;
+}
+
+/* Estado selecionado muda hierarquia, nunca geometria. */
+body.portal-mode .portal-header__actions > button[aria-current="true"]{
+  border-color:var(--system-button-active-bg)!important;
+  background:var(--system-button-active-bg)!important;
+  color:var(--system-button-active-text)!important;
+}
+body.portal-mode .portal-header__actions > button[aria-current="true"]:hover:not(:disabled){
+  border-color:#7A331C!important;
+  background:#7A331C!important;
+  color:var(--system-button-active-text)!important;
+}
+
+/* O contador da sacola é badge; ele não altera o formato do botão pai. */
+body.portal-mode .portal-header__actions #portal-cart-count{
+  min-width:22px;
+  height:22px;
+  margin-left:6px;
+  padding:0 6px;
+  border-radius:999px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  background:#FBE3D0!important;
+  color:#7A331C!important;
+  font-size:.72rem;
+  font-weight:800;
+}
+body.portal-mode .portal-header__actions #portal-cart-link[aria-current="true"] #portal-cart-count{
+  background:#FFF9F5!important;
+  color:#7A331C!important;
+}
+
+/* Dentro do hero, "Escolher produtos" herda o padrão do cabeçalho; só o contexto muda a posição. */
+body.portal-mode .portal-welcome__action{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  margin-top:14px!important;
+}
+
+@media(max-width:640px){
+  body.portal-mode{
+    --system-button-height:42px;
+    --system-button-padding-x:14px;
+  }
+}
