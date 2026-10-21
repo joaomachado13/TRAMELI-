@@ -28,7 +28,7 @@ body:has(#loja:target){
 #portal-floating-host button:focus-visible{outline:3px solid rgba(143,61,34,.28);outline-offset:2px}
 .portal-header{max-width:1280px;padding:20px 32px;background:var(--portal-bg)}
 .portal-header__actions button{min-height:42px}
-.portal-welcome{max-width:1220px;margin:32px auto 0;padding:36px 40px;border:1px solid rgba(255,255,255,.12);border-radius:20px;background:#8F3D22;color:#FFF9F5;box-shadow:0 12px 30px rgba(50,23,14,.12)}
+.portal-welcome{max-width:1220px;margin:20px auto 0;padding:36px 40px;border:1px solid rgba(255,255,255,.12);border-radius:20px;background:#8F3D22;color:#FFF9F5;box-shadow:0 12px 30px rgba(50,23,14,.12)}
 .portal-welcome__layout{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(280px,.45fr);gap:32px;align-items:stretch}
 .portal-welcome__copy{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;min-height:190px}
 .portal-welcome h1{margin:8px 0 10px;color:#FFF9F5;font-size:clamp(2.9rem,5vw,4.5rem)}
@@ -106,7 +106,7 @@ body:has(#loja:target){
   .portal-header{padding:14px 16px}
   .portal-brand{font-size:1.85rem}
   .portal-header__actions button{padding:8px 10px;font-size:12px}
-  .portal-welcome{margin:12px 12px 0;padding:20px;border-radius:var(--portal-radius-3)}
+  .portal-welcome{margin:8px 12px 0;padding:20px;border-radius:var(--portal-radius-3)}
   .portal-welcome h1{font-size:2.65rem}
   .portal-welcome__layout{gap:18px}
   .portal-welcome__copy>p{font-size:14px}
