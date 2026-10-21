@@ -1096,13 +1096,6 @@ body.portal-mode,
   border-radius: var(--tm-radius-sm);
 }
 
-.portal-header__actions button:last-child,
-.portal-header__actions #portal-cart-link {
-  border-color: var(--color-primary-hover);
-  color: var(--color-text-secondary);
-  background: var(--color-primary-hover);
-}
-
 .portal-prototype {
   color: var(--color-text-muted);
   background: var(--color-surface-alternate);
