@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><base href="/"><title>Teste isolado — checkout do cliente</title>
+<link rel="stylesheet" href="/assets/styles.css"><link rel="stylesheet" href="/assets/portal.css"><link rel="stylesheet" href="/assets/design-system.css"><link rel="stylesheet" href="/assets/identity.css">
+</head><body><script type="module">
+import * as orderMath from '/src/order-math.js';
+import * as financeMath from '/src/finance-math.js';
+import { LiveData } from '/src/live-data.js';
+import { initShopping } from '/src/shopping.js';
+// The real router, portal and customer-order adapter use synthetic RPC/cache data.
+// This page never creates a Supabase client or contacts a backend.
+const markup = new DOMParser().parseFromString(await (await fetch('/index.html')).text(), 'text/html');
+markup.querySelectorAll('script').forEach(script => script.remove());
+document.body.innerHTML = markup.body.innerHTML;
+localStorage.clear(); sessionStorage.clear();
+const role = new URLSearchParams(location.search).get('role') || 'customer';
+window.portalFixture = { mode: 'success', calls: 0, records: [], frameLeaks: [], routes: [] };
+const fixture = window.portalFixture;
+const live = Object.assign(Object.create(LiveData.prototype), {
+  role, operator: role !== 'customer', user: { id: 'cliente-fixture', user_metadata: {} },
+  profile: { name: 'Cliente Teste', phone: '34999999999', address: 'Rua de Teste, 10' },
+  products: [{ id: 'pao-fixture', name: 'Pão de teste', category: 'Pães', unit: 'unidade', priceCents: 140, active: true }],
+  orders: [], settings: { business_name: 'Pão Doce', cutoff_time: '05:59', rollover_time: '13:30', delivery_fee_cents: 200 },
+  commercialTerms: { deliveryFeeCents: 200 },
+  async load() {
+    await new Promise(resolve => setTimeout(resolve, 40));
+    this.orders = structuredClone(fixture.records);
+    dispatchEvent(new Event('trameli:orders-changed'));
+  },
+  client: { async rpc(name, params) {
+    if (name !== 'trameli_customer_order') throw new Error('Unexpected RPC: ' + name);
+    fixture.calls++;
+    await new Promise(resolve => setTimeout(resolve, 180));
+    if (fixture.mode === 'network-error') return { data: null, error: { message: 'Falha de conexão de teste.' } };
+    if (fixture.mode === 'server-duplicate' || fixture.records.some(order => order.date === params.p_delivery_date && order.id !== params.p_order_id && order.status !== 'cancelled')) {
+      return { data: null, error: { code: '23505', message: 'Você já tem um pedido para essa data. Altere o pedido existente.' } };
+    }
+    const id = params.p_order_id || crypto.randomUUID();
+    const order = { id, version: (params.p_expected_version || 0) + 1, publicCode: 'PD-TESTE',
+      customerId: live.user.id, customer: params.p_name, phone: params.p_phone, address: params.p_address,
+      date: params.p_delivery_date, createdAt: new Date().toISOString(), status: 'received', source: 'portal',
+      feeCents: 200, paymentMethod: params.p_payment_method,
+      items: params.p_lines.map(line => ({ productId: line.product_id, name: 'Pão de teste', quantity: line.quantity, priceCents: 140 })) };
+    fixture.records = [...fixture.records.filter(order => order.id !== id), order];
+    return { data: id, error: null };
+  } },
+});
+window.TrameliLive = live;
+window.TrameliOrderMath = orderMath;
+window.TrameliFinanceMath = financeMath;
+initShopping(null);
+location.hash = '#loja';
+await import('/src/motion.js');
+await import('/assets/catalogo.js');
+await import('/assets/screens.js');
+await import('/assets/portal.js');
+document.body.classList.remove('app-booting');
+// Record mutations as well as frames: even a short-lived exposed shell is a failure.
+const inspect = () => {
+  if (!document.querySelector('.app-shell').hidden || document.querySelector('#portal-view').hidden || !document.body.classList.contains('portal-mode')) {
+    fixture.frameLeaks.push({ hash: location.hash, shellHidden: document.querySelector('.app-shell').hidden });
+  }
+};
+new MutationObserver(inspect).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['hidden', 'class'] });
+window.addEventListener('hashchange', () => fixture.routes.push(location.hash));
+const inspectFrame = () => { inspect(); requestAnimationFrame(inspectFrame); };
+requestAnimationFrame(inspectFrame);
+fixture.ready = true;
+</script></body></html>
