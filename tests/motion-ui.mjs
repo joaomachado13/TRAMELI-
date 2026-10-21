@@ -61,6 +61,33 @@ try {
   assert.equal(await evaluate('window.TrameliMotion.active()'), true, 'Desktop smoothing did not start');
   assert.equal(await evaluate('getComputedStyle(document.querySelector("#smooth-wrapper")).position'), 'fixed');
   await pause(700);
+  // Updating a quantity without resizing the page must not reset ScrollSmoother
+  // on every frame. Count browser layouts, including each real text update.
+  await send('Performance.enable');
+  await evaluate(`{
+    const probe = document.createElement('div');
+    probe.id = 'motion-size-probe';
+    probe.style.cssText = 'height:32px;width:80px;overflow:hidden';
+    probe.textContent = '0';
+    document.querySelector('#smooth-content').append(probe);
+  }`);
+  await pause(250);
+  const layoutCount = async () => (await send('Performance.getMetrics')).metrics.find(metric => metric.name === 'LayoutCount').value;
+  const layoutsBefore = await layoutCount();
+  for (let i = 1; i <= 20; i++) {
+    await evaluate(`document.querySelector('#motion-size-probe').textContent = '${i}'`);
+    await pause(25);
+  }
+  await pause(150);
+  const textLayouts = (await layoutCount()) - layoutsBefore;
+  assert.ok(textLayouts < 32, `Same-size text changes caused extra full-page layouts: ${textLayouts}`);
+  const previousHeight = await evaluate('document.body.scrollHeight');
+  await evaluate("document.querySelector('#motion-size-probe').style.height = '1232px'");
+  await pause(250);
+  assert.ok(await evaluate(`document.body.scrollHeight >= ${previousHeight + 1198}`), 'Expanding content did not update the scroll limit');
+  await evaluate("document.querySelector('#motion-size-probe').remove()");
+  await pause(250);
+  assert.ok(await evaluate(`Math.abs(document.body.scrollHeight - ${previousHeight - 32}) < 3`), 'Removing content left an outdated scroll limit');
   await send('Input.dispatchMouseEvent', { type:'mouseWheel', x:900, y:700, deltaX:0, deltaY:600 });
   await pause(120);
   const midScroll = await evaluate('({native:scrollY,visual:window.TrameliMotion.scrollTop()})');
