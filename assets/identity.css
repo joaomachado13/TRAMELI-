@@ -572,7 +572,7 @@ body :is(
   --portal-action-font-size: .875rem;
 }
 
-body #portal-view :is(.portal-header__actions button, .portal-welcome__action, .portal-hero a){
+body #portal-view :is(.portal-header__actions button, .portal-welcome__action, .portal-hero a, .portal-quick-actions article button, .portal-quick-actions article a, .portal-primary){
   box-sizing:border-box !important;
   display:inline-flex !important;
   align-items:center !important;
@@ -606,14 +606,14 @@ body #portal-view .portal-header__actions button:not(:disabled):active{
   background:var(--color-hero-button-active) !important;
   border-color:var(--color-primary-active) !important;
 }
-body #portal-view :is(.portal-header__actions button, .portal-welcome__action, .portal-hero a):focus-visible{
+body #portal-view :is(.portal-header__actions button, .portal-welcome__action, .portal-hero a, .portal-quick-actions article button, .portal-quick-actions article a, .portal-primary):focus-visible{
   outline:2px solid var(--color-primary) !important;
   outline-offset:3px !important;
 }
 body #portal-view :is(.portal-welcome__action, .portal-hero a):focus-visible{outline-color:var(--color-on-primary) !important}
 body #portal-view .portal-header__actions #portal-cart-count{margin-left:0 !important;flex-shrink:0 !important}
 @media(prefers-reduced-motion:reduce){
-  body #portal-view :is(.portal-header__actions button, .portal-welcome__action, .portal-hero a){transition:none !important}
+  body #portal-view :is(.portal-header__actions button, .portal-welcome__action, .portal-hero a, .portal-quick-actions article button, .portal-quick-actions article a, .portal-primary){transition:none !important}
 }
 
 body #portal-view .portal-header__actions button:disabled { color:var(--color-on-disabled) !important; background:var(--color-disabled) !important; border-color:var(--color-disabled) !important; cursor:not-allowed; }
