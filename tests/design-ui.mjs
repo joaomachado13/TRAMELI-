@@ -101,15 +101,20 @@ try {
   assert(await evaluate('document.querySelector(".app-shell").getBoundingClientRect().left >= 250'), 'Conteúdo não respeita a sidebar desktop.');
   await evaluate('document.querySelector("#home-view").click()');
   await pause(180);
-  assert(await evaluate('!document.body.classList.contains("sidebar-collapsed")'), 'Sidebar recolheu durante o uso do conteúdo.');
-  await evaluate('document.querySelector(".nav__close").click()');
-  await pause(180);
-  assert(await evaluate('document.body.classList.contains("sidebar-collapsed")'), 'Controle não recolheu a sidebar.');
+  assert(await evaluate('document.body.classList.contains("sidebar-collapsed")'), 'Clique fora não recolheu a sidebar.');
   assert(await evaluate('document.querySelector(".app-shell").getBoundingClientRect().left < 100'), 'Conteúdo não reajustou ao recolher a sidebar.');
-  assert(await evaluate('document.querySelector(".nav__links .nav__item").getBoundingClientRect().top >= document.querySelector(".nav__close").getBoundingClientRect().bottom'), 'Controle de expansão sobrepõe a primeira rota.');
+  assert(await evaluate('!document.querySelector(".nav__close")'), 'Botão antigo permaneceu sobre a marca.');
   await evaluate('document.querySelector("#main-navigation-panel").click()');
   await pause(180);
   assert(await evaluate('!document.body.classList.contains("sidebar-collapsed")'), 'Sidebar desktop não expandiu ao clicar na barra lateral.');
+  assert(await evaluate(`(() => {
+    const label = document.querySelector('.brand__name');
+    const previous = label.textContent;
+    label.textContent = 'Pão Doce Delivery';
+    const fits = label.scrollWidth <= label.clientWidth + 1 && label.getBoundingClientRect().right <= document.querySelector('.nav').getBoundingClientRect().right;
+    label.textContent = previous;
+    return fits;
+  })()`), 'Nome completo da marca transbordou a sidebar.');
   assert(await evaluate('getComputedStyle(document.querySelector(".mobile-menu-button")).display === "none"'), 'Controle desktop da sidebar continuou visível.');
   assert(await evaluate('document.querySelector("#nav-pending-count").textContent') === '1', 'Badge de Pedidos misturou outras pendências com pedidos aguardando conferência.');
   assert(await evaluate('[...document.querySelectorAll("dialog:not([open])")].every(dialog => getComputedStyle(dialog).display === "none")'), 'Um diálogo fechado permaneceu visível no fim da página.');
