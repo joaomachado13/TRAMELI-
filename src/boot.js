@@ -26,8 +26,7 @@ if (enabled) {
   window.TrameliLive = live;
   await requireAccess(live);
   document.querySelector('.prototype-note')?.remove();
-  const notice = document.querySelector('.portal-prototype');
-  if (notice) notice.textContent = 'Pedidos vinculados à sua conta. Pagamentos conferidos manualmente pela operação.';
+  document.querySelector('.portal-prototype')?.remove();
   if (!live.operator) location.hash = '#loja';
   document.body.classList.toggle('live-customer', !live.operator);
   initAccount(live);
