@@ -673,6 +673,14 @@ import '../src/featured-products.css';
     } finally { submitting=false; }
   }
 
+  function syncPortalNavigationState() {
+    document.querySelectorAll('[data-portal-nav]').forEach(button => {
+      button.setAttribute('aria-current', String(button.dataset.portalNav === view));
+    });
+    document.getElementById('portal-orders-link')?.setAttribute('aria-current', String(view === 'orders'));
+    document.getElementById('portal-cart-link')?.setAttribute('aria-current', String(view === 'cart' || view === 'checkout'));
+  }
+
   function render(preserveScroll = false) {
     if (location.hash !== '#loja') return;
 
@@ -693,7 +701,7 @@ import '../src/featured-products.css';
       portalVisible = true;
       updateCounters();
       renderFloating();
-      document.querySelectorAll('[data-portal-nav]').forEach(button => button.setAttribute('aria-current', String(button.dataset.portalNav === view)));
+      syncPortalNavigationState();
       window.scrollTo(0, 0);
       showDedicatedSuccessScreen();
       return;
@@ -722,7 +730,7 @@ import '../src/featured-products.css';
     portalVisible = true;
     updateCounters();
     renderFloating();
-    document.querySelectorAll('[data-portal-nav]').forEach(button => button.setAttribute('aria-current', String(button.dataset.portalNav === view)));
+    syncPortalNavigationState();
     if (preserveScroll) { motion()?.scrollTo(scroll, false); restoreFocus(focus); }
     else motion()?.scrollTo(0, false);
     if (changedView && !preserveScroll) motion()?.enter(host); else motion()?.refresh();
