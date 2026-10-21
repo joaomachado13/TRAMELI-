@@ -83,7 +83,7 @@ try {
     await evaluate('document.querySelector(".featured-products").scrollIntoView({ behavior: "instant", block: "start" })');
     const highlightsShot = await send('Page.captureScreenshot', { format: 'png' });
     await writeFile(new URL(`../assets/crops/highlights-${width}.png`, import.meta.url), Buffer.from(highlightsShot.data, 'base64'));
-    await evaluate('document.querySelector(".portal-grid").scrollIntoView({ behavior: "instant", block: "start" })');
+    await evaluate('document.querySelector("#portal-grid").scrollIntoView({ behavior: "instant", block: "start" })');
     const shot = await send('Page.captureScreenshot', { format: 'png' });
     await writeFile(new URL(`../assets/crops/photos-${width}.png`, import.meta.url), Buffer.from(shot.data, 'base64'));
   }
@@ -152,7 +152,10 @@ try {
   assert.equal(await evaluate('localStorage.getItem("trameli-operation-draft-v2")===testOldOrders'),true);
   assert.ok(await evaluate('document.documentElement.scrollWidth <= innerWidth'));
   await evaluate(`document.querySelector('[data-view="catalog"]').click(); document.querySelector('[data-personal-filter="frequent"]').click()`);
+  await pause(520);
   assert.equal(await evaluate('document.querySelectorAll(".portal-product").length'),2);
+  await evaluate(`document.querySelector('[data-personal-filter="all"]').click()`);
+  await pause(520);
   // Exercise asynchronous favorite persistence without any external account.
   await evaluate(`(async()=>{
     const {initShopping}=TrameliTestModules;
@@ -163,16 +166,19 @@ try {
     };
     initShopping({client,user:{id:'fixture-user'}});
     await TrameliShopping.refresh();
-    document.querySelector('[data-favorite]').click();
   })()`);
+  await pause(520);
+  await evaluate(`document.querySelector('[data-favorite]').click()`);
   await pause(80);
   assert.equal(await evaluate('testFavoriteWrites'),1);
   await evaluate(`document.querySelector('[data-personal-filter="favorites"]').click()`);
+  await pause(520);
   assert.equal(await evaluate('document.querySelectorAll(".portal-product").length'),1);
   await evaluate('TrameliShopping.refresh()');
+  await pause(520);
   assert.equal(await evaluate('document.querySelectorAll(".portal-product").length'),1);
   await evaluate(`document.querySelector('[data-favorite]').click()`);
-  await pause(80);
+  await pause(520);
   assert.equal(await evaluate('document.querySelectorAll(".portal-product").length'),0);
   console.log('Recompra/frequentes/favoritos: fluxo real DOM, novo carrinho, peso 200g e persistência por conta OK.');
   // Operation uses the same real DOM and scripts, with synthetic local data only.

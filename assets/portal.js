@@ -224,7 +224,7 @@ import '../src/featured-products.css';
     }
 
     const cartHtml = cartVisible
-      ? `<div class="portal-week__footer portal-catalog__footer"><span><strong>${count()} ${count() === 1 ? 'item' : 'itens'} na sacola</strong><small>${money(subtotal())} em produtos</small></span><div><button class="portal-primary" type="button" data-view="cart">Continuar para a sacola →</button></div></div>`
+      ? `<div class="portal-week__footer portal-catalog__footer"><span><strong>${count()} ${count() === 1 ? 'item' : 'itens'} na sacola</strong><small>${money(subtotal())} em produtos</small></span><div><button class="portal-primary" type="button" data-view="cart">Ver sacola →</button></div></div>`
       : '';
 
     const nextMode = weekHtml ? 'week' : cartHtml ? 'cart' : 'none';
@@ -332,17 +332,24 @@ import '../src/featured-products.css';
     element.focus({ preventScroll: true });
     if (typeof saved.start === 'number' && element.setSelectionRange) element.setSelectionRange(saved.start, saved.end);
   }
-  const photo = product => product.image ? `<img src="${escapeHtml(product.image)}" style="${photoStyle(product.image)}" alt="${escapeHtml(product.name)}" loading="lazy">` : '<span class="portal-photo-empty" aria-label="Foto em breve">Foto em breve</span>';
+  const productInitial = product => String(product?.name || 'P').trim().charAt(0).toLocaleUpperCase('pt-BR') || 'P';
+  const photo = product => product.image
+    ? `<img src="${escapeHtml(product.image)}" style="${photoStyle(product.image)}" alt="${escapeHtml(product.name)}" loading="lazy">`
+    : `<span class="portal-photo-empty" aria-label="Foto em breve"><span class="portal-photo-empty__mark" aria-hidden="true">${escapeHtml(productInitial(product))}</span><span>Foto em breve</span></span>`;
   function stepper(product) {
     const quantity = cart[product.id] || 0;
-    return `<div class="portal-stepper" aria-label="${weighted(product) ? 'Peso' : 'Quantidade'} de ${escapeHtml(product.name)}"><button type="button" class="button button--icon-round" data-qty="-1" data-id="${escapeHtml(product.id)}" aria-label="Diminuir ${escapeHtml(product.name)} em ${weighted(product) ? '50 gramas' : 'uma unidade'}" ${quantity ? '' : 'disabled'}>−</button><span>${weighted(product) ? `${quantity * 50} g` : quantity}</span><button type="button" class="button button--icon-round" data-qty="1" data-id="${escapeHtml(product.id)}" aria-label="Adicionar ${escapeHtml(product.name)} em ${weighted(product) ? '50 gramas' : 'uma unidade'}" ${quantity >= 99 ? 'disabled' : ''}>+</button></div>`;
+    const quantityLabel = weighted(product) ? 'Peso' : 'Quantidade';
+    if (!quantity) {
+      return `<div class="portal-add-slot" data-has-items="false" aria-label="${quantityLabel} de ${escapeHtml(product.name)}"><button type="button" class="portal-add-button" data-qty="1" data-id="${escapeHtml(product.id)}" aria-label="Adicionar ${escapeHtml(product.name)} em ${weighted(product) ? '50 gramas' : 'uma unidade'}">Adicionar</button></div>`;
+    }
+    return `<div class="portal-stepper" data-has-items="true" aria-label="${quantityLabel} de ${escapeHtml(product.name)}"><button type="button" class="button button--icon-round" data-qty="-1" data-id="${escapeHtml(product.id)}" aria-label="Diminuir ${escapeHtml(product.name)} em ${weighted(product) ? '50 gramas' : 'uma unidade'}">−</button><span>${weighted(product) ? `${quantity * 50} g` : quantity}</span><button type="button" class="button button--icon-round" data-qty="1" data-id="${escapeHtml(product.id)}" aria-label="Adicionar ${escapeHtml(product.name)} em ${weighted(product) ? '50 gramas' : 'uma unidade'}" ${quantity >= 99 ? 'disabled' : ''}>+</button></div>`;
   }
   const shopping = () => window.TrameliShopping;
   const reviewNotice = () => reorderNotices.length ? `<aside class="portal-review-notice" role="status"><strong>Confira sua nova sacola</strong><ul>${reorderNotices.map(note => `<li>${escapeHtml(note)}</li>`).join('')}</ul></aside>` : '';
   function favoriteButton(product) {
     if (!shopping()?.ready) return '';
     const selected = shopping().favorites.has(product.id);
-    return `<button class="portal-favorite" type="button" data-favorite="${escapeHtml(product.id)}" aria-pressed="${selected}" aria-label="${selected ? 'Remover dos' : 'Adicionar aos'} favoritos: ${escapeHtml(product.name)}" ${shopping().pending.has(product.id) ? 'disabled' : ''}>${selected ? '♥ Favorito' : '♡ Favoritar'}</button>`;
+    return `<button class="portal-favorite" type="button" data-favorite="${escapeHtml(product.id)}" aria-pressed="${selected}" aria-label="${selected ? 'Remover dos' : 'Adicionar aos'} favoritos: ${escapeHtml(product.name)}" ${shopping().pending.has(product.id) ? 'disabled' : ''}><span aria-hidden="true">${selected ? '♥' : '♡'}</span></button>`;
   }
   function filteredProducts() {
     const frequent = new Set(shopping()?.frequentProductIds(readOrders().filter(owns), products()) || []);
@@ -350,12 +357,18 @@ import '../src/featured-products.css';
       && (category === 'Todos' || (product.category || 'Outros') === category)
       && (!query || product.name.toLocaleLowerCase('pt-BR').includes(query.toLocaleLowerCase('pt-BR'))));
   }
+  function personalFilterNote() {
+    return shopping()?.message || (personalFilter === 'frequent'
+      ? 'Produtos presentes em pelo menos dois dos seus pedidos não cancelados.'
+      : personalFilter === 'favorites' ? 'Seus favoritos disponíveis no catálogo atual.' : '');
+  }
   function personalFilters() {
     if (!shopping()) return '';
-    return `<div class="portal-personal-filters" aria-label="Seleção pessoal">${[['all','Todos os produtos'],['favorites','Meus favoritos'],['frequent','Comprados com frequência']].map(([id,label]) => `<button type="button" data-personal-filter="${id}" aria-pressed="${personalFilter === id}" ${id === 'favorites' && !shopping().ready ? 'disabled' : ''}>${label}</button>`).join('')}</div><p class="portal-filter-note">${escapeHtml(shopping().message || (personalFilter === 'frequent' ? 'Produtos presentes em pelo menos dois dos seus pedidos não cancelados.' : personalFilter === 'favorites' ? 'Seus favoritos disponíveis no catálogo atual.' : ''))}</p>`;
+    return `<div class="portal-personal-filters" aria-label="Seleção pessoal">${[['all','Todos os produtos'],['favorites','Meus favoritos'],['frequent','Comprados com frequência']].map(([id,label]) => `<button type="button" data-personal-filter="${id}" aria-pressed="${personalFilter === id}" ${id === 'favorites' && !shopping().ready ? 'disabled' : ''}>${label}</button>`).join('')}</div><p class="portal-filter-note">${escapeHtml(personalFilterNote())}</p>`;
   }
   function card(product) {
-    return `<article class="portal-product"><div class="portal-product__photo">${photo(product)}</div><div class="portal-product__body"><span class="portal-product__category">${escapeHtml(product.category || 'Padaria')}</span>${favoriteButton(product)}<h3>${escapeHtml(product.name)}</h3><p>${money(product.priceCents)} <small>/ ${escapeHtml(product.unit)}</small>${weighted(product) ? `<small class="portal-weight-hint">50 g = ${money(linePrice(product, 1))}</small>` : ''}</p>${stepper(product)}</div></article>`;
+    const inCart = (cart[product.id] || 0) > 0;
+    return `<article class="portal-product${inCart ? ' is-in-cart' : ''}"><div class="portal-product__photo">${photo(product)}${favoriteButton(product)}</div><div class="portal-product__body"><h3>${escapeHtml(product.name)}</h3><p class="portal-product__price">${money(product.priceCents)}</p><div class="portal-product__meta"><span>${escapeHtml(product.unit)}</span></div>${weighted(product) ? `<small class="portal-weight-hint">50 g = ${money(linePrice(product, 1))}</small>` : ''}${stepper(product)}</div></article>`;
   }
   const greeting = () => {
     const hour = saoPauloClock().hour;
@@ -377,11 +390,6 @@ import '../src/featured-products.css';
     const dateLabel = new Date(`${deadline}T12:00:00`).toLocaleDateString('pt-BR', {
       day: 'numeric', month: 'long', timeZone: 'America/Sao_Paulo',
     });
-    const message = hasPending
-      ? reminder.message
-      : days === 0 ? 'O fechamento quinzenal é hoje.'
-        : days === 1 ? 'Próximo fechamento em 1 dia.'
-          : `Próximo fechamento em ${days} dias.`;
     const stateClass = hasPending && reminder.state === 'overdue' ? 'is-overdue'
       : hasPending && reminder.state === 'today' ? 'is-today' : 'is-upcoming';
     const detail = hasPending
@@ -389,13 +397,110 @@ import '../src/featured-products.css';
       : reminder?.state === 'clear'
         ? `Sem pagamentos pendentes · próximo fechamento ${dateLabel}`
         : `Vencimentos dia 15 ou no último dia do mês · ${dateLabel}`;
-    return `<aside class="portal-billing-countdown ${stateClass}" role="status"><span>FECHAMENTO QUINZENAL</span><strong>${escapeHtml(message)}</strong><small>${escapeHtml(detail)}</small></aside>`;
+    const countdownLabel = hasPending && reminder?.state === 'overdue'
+      ? 'Vencido'
+      : days === 0 ? 'Hoje' : days === 1 ? '1 dia' : `${days} dias`;
+    return `<aside class="portal-billing-countdown ${stateClass}" role="status"><span>PRÓXIMO FECHAMENTO</span><strong class="portal-billing-countdown__value">${escapeHtml(countdownLabel)}</strong><small>${escapeHtml(detail)}</small></aside>`;
   };
   const orderValue = order => order.items.reduce((sum, item) => sum + item.quantity * item.priceCents, order.feeCents || 0);
   function lastOrderCard() {
     const order = readOrders().filter(owns).sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
     if (!order) return `<article class="portal-first-order"><span>SEU PRIMEIRO PEDIDO</span><strong>Escolha seus produtos</strong><p>Sua sacola fica disponível enquanto você navega.</p><a href="#portal-products">Começar agora ↓</a></article>`;
     return `<article class="portal-last-order"><div><span>SEU ÚLTIMO PEDIDO</span><h2>${order.items.slice(0, 3).map(item => escapeHtml(item.name)).join(' · ')}${order.items.length > 3 ? ` +${order.items.length - 3}` : ''}</h2><p>${formatDate(order.date)} · ${money(orderValue(order))}</p></div><button type="button" data-reorder="${escapeHtml(order.id)}">Pedir novamente</button></article>`;
+  }
+  function catalogMarkup(items) {
+    if (!items.length) return '<p class="portal-empty">Não encontramos produtos nessa busca.</p>';
+    return items.map(card).join('');
+  }
+
+  let catalogTransitionSerial = 0;
+  let catalogSearchTimer = 0;
+  const reducedCatalogMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches
+    || localStorage.getItem('trameli-reduced-motion') === 'true';
+
+  function syncCatalogFilterChrome() {
+    host.querySelectorAll('[data-category]').forEach(button => {
+      button.setAttribute('aria-pressed', String(button.dataset.category === category));
+    });
+    host.querySelectorAll('[data-personal-filter]').forEach(button => {
+      button.setAttribute('aria-pressed', String(button.dataset.personalFilter === personalFilter));
+      if (button.dataset.personalFilter === 'favorites') button.disabled = !shopping()?.ready;
+    });
+    const note = host.querySelector('.portal-filter-note');
+    if (note) note.textContent = personalFilterNote();
+    const highlights = host.querySelector('.featured-products');
+    if (highlights) highlights.hidden = Boolean(query.trim()) || category !== 'Todos' || personalFilter !== 'all';
+  }
+
+  function centerActiveCategory() {
+    const rail = host.querySelector('.portal-categories');
+    const active = rail?.querySelector('[aria-pressed="true"]');
+    if (!rail || !active) return;
+    const left = active.offsetLeft - (rail.clientWidth - active.clientWidth) / 2;
+    rail.scrollTo({ left: Math.max(0, left), behavior: reducedCatalogMotion() ? 'auto' : 'smooth' });
+  }
+
+  async function refreshCatalogResults({ scrollToGrid = false, centerCategory = false, animate = true } = {}) {
+    const grid = host.querySelector('#portal-grid');
+    if (!grid) { render(true); return; }
+    const serial = ++catalogTransitionSerial;
+    syncCatalogFilterChrome();
+    if (centerCategory) centerActiveCategory();
+    const visible = filteredProducts();
+    const commit = () => {
+      if (serial !== catalogTransitionSerial) return false;
+      grid.innerHTML = catalogMarkup(visible);
+      return true;
+    };
+    const finish = () => {
+      if (serial !== catalogTransitionSerial) return;
+      grid.removeAttribute('data-filter-transitioning');
+      grid.style.removeProperty('min-height');
+      grid.style.removeProperty('overflow');
+      motion()?.refresh();
+    };
+    if (!animate || reducedCatalogMotion()) {
+      commit();
+      if (scrollToGrid) motion()?.scrollTo('#portal-grid', true, innerWidth <= 640 ? 155 : 170);
+      finish();
+      return;
+    }
+
+    grid.getAnimations().forEach(animation => animation.cancel());
+    grid.dataset.filterTransitioning = 'true';
+    const previousHeight = grid.getBoundingClientRect().height;
+    if (previousHeight > 0) grid.style.minHeight = `${Math.min(previousHeight, Math.max(360, innerHeight * 0.72))}px`;
+    grid.style.overflow = 'clip';
+
+    const out = grid.animate([
+      { opacity: 1, transform: 'translateY(0)' },
+      { opacity: 0.22, transform: 'translateY(7px)' },
+    ], { duration: 135, easing: 'cubic-bezier(.4,0,1,1)', fill: 'forwards' });
+    try { await out.finished; } catch { /* A newer filter can cancel this animation. */ }
+    if (serial !== catalogTransitionSerial) return;
+
+    grid.getAnimations().forEach(animation => animation.cancel());
+    if (!commit()) return;
+    if (scrollToGrid) motion()?.scrollTo('#portal-grid', true, innerWidth <= 640 ? 155 : 170);
+
+    const incoming = grid.animate([
+      { opacity: 0.35, transform: 'translateY(10px)' },
+      { opacity: 1, transform: 'translateY(0)' },
+    ], { duration: 310, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'both' });
+
+    [...grid.querySelectorAll('.portal-product')].slice(0, 12).forEach((card, index) => {
+      card.animate([
+        { opacity: 0.25, transform: 'translateY(8px) scale(.995)' },
+        { opacity: 1, transform: 'translateY(0) scale(1)' },
+      ], {
+        duration: 300,
+        delay: Math.min(index * 18, 126),
+        easing: 'cubic-bezier(.16,1,.3,1)',
+        fill: 'both',
+      });
+    });
+    try { await incoming.finished; } catch { /* A newer filter can cancel this animation. */ }
+    finish();
   }
   function catalog() {
     const all = products();
@@ -412,7 +517,7 @@ import '../src/featured-products.css';
       const whatsapp = phone ? `<a class="portal-store-closed__action" href="https://wa.me/${phone}?text=${encodeURIComponent('Olá, Shirley! Vi que a loja está fechada e gostaria de tirar uma dúvida.')}" target="_blank" rel="noopener noreferrer">${whatsappIcon}<span>Falar com Shirley no WhatsApp</span></a>` : '';
       return `<aside class="portal-store-closed" role="status" aria-live="polite"><span class="portal-store-closed__label">AVISO DE FUNCIONAMENTO</span><h2>${greeting()}! A loja está fechada para novos pedidos.</h2><p>Você pode consultar o catálogo à vontade, mas não será possível finalizar pedidos agora. Voltamos a aceitar pedidos às 6h, no horário de Brasília. Se precisar de ajuda, fale com a Shirley pelo WhatsApp.</p>${whatsapp}</aside>`;
     })() : '';
-    return `<section class="portal-welcome"><div class="portal-welcome__heading"><div><span class="portal-eyebrow">${greeting().toLocaleUpperCase('pt-BR')}${firstName() ? `, ${escapeHtml(firstName()).toLocaleUpperCase('pt-BR')}` : ''}</span><h1>${greeting()}${firstName() ? `, ${escapeHtml(firstName())}` : ''}.</h1></div>${paymentCountdown()}</div><p>Seu pedido em três passos simples.</p><ol><li><strong>1</strong> Escolha os produtos</li><li><strong>2</strong> Revise a sacola</li><li><strong>3</strong> Confirme entrega e pagamento</li></ol><a class="portal-welcome__action" href="#portal-products">Escolher produtos ↓</a>${closedNotice}</section>${highlights}<section class="portal-quick-actions">${lastOrderCard()}<article><span>PLANEJE COM CALMA</span><strong>Pedidos da semana</strong><p>Organize cada dia sem confirmar nada automaticamente.</p><button type="button" data-view="week">Montar minha semana</button></article></section><section id="portal-products" class="portal-section">${notice}<div class="portal-section__head"><div><span class="portal-eyebrow">FEITO PARA O SEU DIA</span><h2>Produtos da padaria</h2></div><span>${all.length} opções</span></div><label class="portal-search">Buscar produto<input id="portal-search" type="search" value="${escapeHtml(query)}" placeholder="Pão, bolo, suco..."></label><div class="portal-categories" aria-label="Categorias">${categories.map(item => `<button type="button" data-category="${escapeHtml(item)}" aria-pressed="${String(item === category)}">${escapeHtml(item)}</button>`).join('')}</div>${personalFilters()}<div class="portal-grid" id="portal-grid">${visible.length ? visible.map(card).join('') : '<p class="portal-empty">Não encontramos produtos nessa busca.</p>'}</div></section>`;
+    return `<section class="portal-welcome"><div class="portal-welcome__layout"><div class="portal-welcome__copy"><h1>${greeting()}${firstName() ? `, ${escapeHtml(firstName())}` : ''}.</h1><a class="portal-welcome__action" href="#portal-products">Escolher produtos ↓</a></div>${paymentCountdown()}</div><ol class="portal-welcome__steps"><li><strong>1</strong><span>Escolha os produtos</span></li><li><strong>2</strong><span>Revise a sacola</span></li><li><strong>3</strong><span>Confirme entrega e pagamento</span></li></ol>${closedNotice}</section>${highlights}<section class="portal-quick-actions">${lastOrderCard()}<article><span>PLANEJE COM CALMA</span><strong>Pedidos da semana</strong><p>Organize cada dia sem confirmar nada automaticamente.</p><button type="button" data-view="week">Montar minha semana</button></article></section><section id="portal-products" class="portal-section">${notice}<div class="portal-section__head"><div><span class="portal-eyebrow">FEITO PARA O SEU DIA</span><h2>Produtos da padaria</h2></div><span>${all.length} opções</span></div><div class="portal-filterbar"><label class="portal-search">Buscar produto<input id="portal-search" type="search" value="${escapeHtml(query)}" placeholder="Pão, bolo, suco..."></label>${personalFilters()}<div class="portal-categories" aria-label="Categorias">${categories.map(item => `<button type="button" data-category="${escapeHtml(item)}" aria-pressed="${String(item === category)}">${escapeHtml(item)}</button>`).join('')}</div></div><div class="portal-product-grid" id="portal-grid">${catalogMarkup(visible)}</div></section>`;
   }
   function cartView() {
     const lines = cartLines();
@@ -629,17 +734,18 @@ import '../src/featured-products.css';
     if (next) cart[id] = next; else delete cart[id];
     persistCart();
     if (view === 'catalog') {
-      const current = [...host.querySelectorAll('.portal-stepper')].filter(element => element.querySelector('[data-id]')?.dataset.id === id);
+      const current = [...host.querySelectorAll('.portal-stepper, .portal-add-slot')].filter(element => element.querySelector('[data-id]')?.dataset.id === id);
       if (current.length) {
-        const clicked = source?.closest('.portal-stepper');
+        const clicked = source?.closest('.portal-stepper, .portal-add-slot');
         let updated;
         for (const element of current) {
           const container = document.createElement('div'); container.innerHTML = stepper(product);
-          const nextStepper = container.firstElementChild;
-          element.replaceWith(nextStepper);
-          if (element === clicked) updated = nextStepper;
+          const nextControl = container.firstElementChild;
+          element.replaceWith(nextControl);
+          nextControl.closest('.portal-product')?.classList.toggle('is-in-cart', next > 0);
+          if (element === clicked) updated = nextControl;
         }
-        updated?.querySelector(`[data-qty="${delta}"]`)?.focus({ preventScroll: true });
+        (updated?.querySelector(`[data-qty="${delta}"]`) || updated?.querySelector("[data-qty]"))?.focus({ preventScroll: true });
         updateCounters();
         renderFloating();
         motion()?.pulse(updated);
@@ -770,7 +876,11 @@ import '../src/featured-products.css';
     }
     if (event.target.closest('[data-week-all]')) { error=''; view='weekCheckout'; render(); return; }
     const filter = event.target.closest('[data-personal-filter]');
-    if (filter) { personalFilter = filter.dataset.personalFilter; render(true); return; }
+    if (filter) {
+      personalFilter = filter.dataset.personalFilter;
+      refreshCatalogResults({ animate: true });
+      return;
+    }
     const reorder = event.target.closest('[data-reorder]');
     if (reorder) {
       if (reordering || submitting) return;
@@ -802,7 +912,11 @@ import '../src/featured-products.css';
     const quantity = event.target.closest('[data-qty]');
     if (quantity) { changeQuantity(quantity.dataset.id, Number(quantity.dataset.qty), quantity); return; }
     const categoryButton = event.target.closest('[data-category]');
-    if (categoryButton) { category = categoryButton.dataset.category; render(true); return; }
+    if (categoryButton) {
+      category = categoryButton.dataset.category;
+      refreshCatalogResults({ scrollToGrid: true, centerCategory: true, animate: true });
+      return;
+    }
     const viewButton = event.target.closest('[data-view]');
     if (viewButton) { view = viewButton.dataset.view; error = ''; render(); return; }
     const editButton = event.target.closest('[data-edit-order]');
@@ -842,12 +956,9 @@ import '../src/featured-products.css';
   host.addEventListener('input', event => {
     if (event.target.id !== 'portal-search') return;
     query = event.target.value;
-    const highlights = host.querySelector('.featured-products');
-    if (highlights) highlights.hidden = Boolean(query.trim()) || category !== 'Todos' || personalFilter !== 'all';
-    const visible = filteredProducts();
-    motion()?.reset(host);
-    document.getElementById('portal-grid').innerHTML = visible.length ? visible.map(card).join('') : '<p class="portal-empty">Não encontramos produtos nessa busca.</p>';
-    motion()?.refresh();
+    syncCatalogFilterChrome();
+    clearTimeout(catalogSearchTimer);
+    catalogSearchTimer = setTimeout(() => refreshCatalogResults({ animate: true }), 110);
   });
   floatingHost?.addEventListener('click', event => {
     if (event.target.closest('[data-view="cart"]')) {
@@ -923,7 +1034,9 @@ import '../src/featured-products.css';
     } else if (!isPortal) { portalVisible = false; renderFloating(); }
   }
   window.addEventListener('trameli:portal-open', syncPortalFrame);
-  window.addEventListener('trameli:shopping-changed', () => { if (view === 'catalog') render(true); });
+  window.addEventListener('trameli:shopping-changed', () => {
+    if (view === 'catalog') refreshCatalogResults({ animate: true });
+  });
   window.addEventListener('trameli:payments-changed', () => { if (view === 'catalog' && location.hash === '#loja') render(true); });
   window.addEventListener('trameli:catalog-changed', () => render(true));
   if (live) window.addEventListener('trameli:orders-changed', () => { if (view === 'orders' || (view === 'catalog' && personalFilter === 'frequent')) render(true); });

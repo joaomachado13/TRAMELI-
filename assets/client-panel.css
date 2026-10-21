@@ -1,0 +1,375 @@
+/* Client panel UI refresh — hierarchy, catalog, cards and sticky controls */
+body.portal-mode,
+body:has(#loja:target){
+  --portal-bg:#F7F2EA;
+  --portal-surface:#FFFBF6;
+  --portal-surface-soft:#FCF4EA;
+  --portal-accent:#8F3D22;
+  --portal-accent-hover:#7A331C;
+  --portal-ink:#32170E;
+  --portal-text-secondary:#62504A;
+  --portal-border:#DDD0C5;
+  --portal-radius-1:8px;
+  --portal-radius-2:12px;
+  --portal-radius-3:16px;
+  --portal-shadow-card:0 6px 18px rgba(50,23,14,.08);
+  --portal-shadow-fixed:0 14px 34px rgba(50,23,14,.15);
+  --portal-space-1:4px;
+  --portal-space-2:8px;
+  --portal-space-3:12px;
+  --portal-space-4:16px;
+  --portal-space-5:24px;
+  --portal-space-6:32px;
+  --portal-space-7:48px;
+}
+.portal{background:var(--portal-bg);color:var(--portal-ink);font-size:15px}
+.portal :is(button,a,input,textarea,select):focus-visible,
+.portal-bottom-nav button:focus-visible,
+#portal-floating-host button:focus-visible{outline:3px solid rgba(143,61,34,.28);outline-offset:2px}
+.portal-header{max-width:1280px;padding:20px 32px;background:var(--portal-bg)}
+.portal-header__actions button{min-height:42px}
+.portal-welcome{max-width:1220px;margin:20px auto 0;padding:36px 40px;border:1px solid rgba(255,255,255,.12);border-radius:20px;background:#8F3D22;color:#FFF9F5;box-shadow:0 12px 30px rgba(50,23,14,.12)}
+.portal-welcome__layout{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(280px,.45fr);gap:32px;align-items:stretch}
+.portal-welcome__copy{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;min-height:190px}
+.portal-welcome h1{margin:8px 0 10px;color:#FFF9F5;font-size:clamp(2.9rem,5vw,4.5rem)}
+.portal-welcome__copy>p{max-width:560px;margin:0;color:rgba(255,249,245,.86);font-size:15px;line-height:1.6}
+.portal-welcome__action{display:inline-flex;margin-top:22px;min-height:44px;align-items:center;padding:0 18px;border:1px solid rgba(255,255,255,.32);border-radius:12px;background:#FFF9F5;color:#7A331C;font-weight:800}
+.portal-welcome__action:hover{background:#FBE9DB}
+.portal-billing-countdown{display:flex;min-height:190px;flex-direction:column;justify-content:center;margin:0;padding:26px;border:1px solid rgba(255,255,255,.2);border-radius:16px;background:rgba(80,29,14,.34);color:#FFF9F5;box-shadow:none}
+.portal-billing-countdown>span{color:#FFF9F5;font-size:12px;font-weight:800;letter-spacing:.12em}
+.portal-billing-countdown__value{display:block;margin:9px 0 8px;color:#FFF9F5;font:500 clamp(2.5rem,5vw,4rem)/.95 var(--font-display,serif);letter-spacing:-.035em}
+.portal-billing-countdown small{display:block;color:#FFF9F5;font-size:12px;line-height:1.45}
+.portal-billing-countdown__message{margin-bottom:6px;font-weight:700}
+.portal-welcome__steps{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px!important;margin:26px 0 0!important;padding:22px 0 0!important;border-top:1px solid rgba(255,255,255,.18);list-style:none}
+.portal-welcome__steps li{display:flex;align-items:center;gap:10px;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;color:rgba(255,249,245,.9)!important;font-size:13px!important}
+.portal-welcome__steps li strong{display:grid;place-items:center;width:32px!important;height:32px!important;flex:0 0 32px;border-radius:50%;background:#FFF9F5!important;color:#8F3D22!important;font-size:13px}
+.portal-quick-actions{max-width:1220px;margin-top:18px;gap:14px}
+.portal-section{max-width:1220px;padding:44px 24px 72px}
+.portal-section__head h2{font-size:clamp(2rem,4vw,2.8rem)}
+.portal-filterbar{position:sticky;top:8px;z-index:7;margin:24px 0 0;padding:14px;border:1px solid var(--portal-border);border-radius:16px;background:rgba(255,251,246,.98);box-shadow:0 10px 24px rgba(50,23,14,.08);backdrop-filter:blur(10px)}
+.portal-search{margin:0 0 14px;color:var(--portal-text-secondary);font-size:12px}
+.portal-search input{width:100%;max-width:none;height:46px;margin-top:6px;border-color:var(--portal-border);border-radius:var(--portal-radius-2);background:var(--portal-surface);color:var(--portal-ink);font-size:14px}
+.portal-personal-filters{display:flex;flex-wrap:nowrap;gap:22px;margin:0 0 10px;border-bottom:1px solid var(--portal-border);overflow-x:auto;scrollbar-width:none}
+.portal-personal-filters::-webkit-scrollbar{display:none}
+.portal-personal-filters button{flex:0 0 auto;padding:10px 2px 9px;border:0;border-bottom:3px solid transparent;border-radius:0;background:transparent;color:var(--portal-text-secondary);font-size:13px;font-weight:650}
+.portal-personal-filters button[aria-pressed="true"]{border-bottom-color:var(--portal-accent);background:transparent;color:var(--portal-accent);font-weight:800}
+.portal-filter-note{margin:0 0 10px;color:var(--portal-text-secondary);font-size:12px}
+.portal-categories{display:flex;flex-wrap:nowrap;gap:8px;margin:0;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.portal-categories::-webkit-scrollbar{display:none}
+.portal-categories button{flex:0 0 auto;min-height:40px;padding:0 14px;border:1px solid var(--portal-border);border-radius:999px;background:var(--portal-surface);color:var(--portal-text-secondary);font-size:13px;font-weight:650}
+.portal-categories button[aria-pressed="true"]{border-color:var(--portal-accent);background:var(--portal-accent);color:#FFF9F5;font-weight:800}
+.portal-catalog-groups{display:grid;grid-template-columns:1fr!important;gap:56px;margin-top:38px}
+.portal-category-group{min-width:0}
+.portal-category-group__heading{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--portal-border)}
+.portal-category-group__heading h3{margin:0;color:var(--portal-ink);font:500 clamp(1.75rem,3vw,2.25rem)/1 var(--font-display,serif)}
+.portal-category-group__heading span{color:var(--portal-text-secondary);font-size:12px;font-weight:650}
+.portal-product-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.portal-product{position:relative;display:flex;min-width:0;flex-direction:column;overflow:hidden;border:1px solid var(--portal-border);border-radius:var(--portal-radius-3);background:var(--portal-surface);box-shadow:var(--portal-shadow-card);transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+.portal-product:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(50,23,14,.11)}
+.portal-product.is-in-cart,
+.portal-product:has(.portal-stepper[data-has-items="true"]){border-color:var(--portal-accent);box-shadow:0 0 0 1px rgba(143,61,34,.12),var(--portal-shadow-card)}
+.portal-product__photo{position:relative;height:auto;aspect-ratio:3/2;overflow:hidden;background:#F2E5D8}
+.portal-product__photo img{width:100%;height:100%;object-fit:cover;filter:saturate(1.03) contrast(1.02)}
+.portal-favorite{position:absolute;top:10px;right:10px;z-index:2;display:grid;width:40px;height:40px;place-items:center;margin:0;padding:0;border:1px solid rgba(255,255,255,.82);border-radius:50%;background:rgba(255,251,246,.94);color:var(--portal-accent);box-shadow:0 3px 10px rgba(50,23,14,.12);font-size:20px;line-height:1}
+.portal-favorite[aria-pressed="true"]{background:var(--portal-accent);color:#FFF9F5}
+.portal-product__body{display:flex;flex:1;flex-direction:column;padding:13px}
+.portal-product h3{min-height:2.7em;margin:0 0 7px;color:var(--portal-ink);font-size:15px;font-weight:700;line-height:1.35}
+.portal-product__price{margin:0!important;color:var(--portal-accent)!important;font-size:17px!important;font-weight:800!important;line-height:1.2}
+.portal-product__meta{display:flex;flex-wrap:wrap;align-items:center;gap:5px 7px;margin:5px 0 11px;color:var(--portal-text-secondary);font-size:12px}
+.portal-product__category{display:inline-flex;margin:0;padding:3px 7px;border-radius:999px;background:#FBE3D0;color:#7A331C;font-size:12px;font-weight:700}
+.portal-product .portal-weight-hint{margin:-8px 0 12px;color:var(--portal-text-secondary);font-size:12px}
+.portal-stepper{display:flex;min-height:44px;align-items:center;justify-content:space-between;gap:8px;margin-top:auto;padding:3px;border:1px solid var(--portal-border);border-radius:var(--portal-radius-2);background:var(--portal-surface-soft)}
+.portal-stepper>span{min-width:40px;text-align:center;color:var(--portal-ink);font-size:14px;font-weight:800}
+.portal-stepper>button.button--icon-round{width:40px;min-width:40px;height:40px;min-height:40px;border-radius:var(--portal-radius-1);background:var(--portal-surface);color:var(--portal-accent)}
+.portal-add-slot{display:block;width:100%;margin-top:auto}
+.portal-add-button{display:flex;width:100%;min-height:42px;align-items:center;justify-content:center;border:1px solid var(--portal-accent);border-radius:10px;background:var(--portal-accent);color:#FFF9F5;font-size:13px;font-weight:800;line-height:1.2;white-space:nowrap}
+.portal-add-button:hover{background:var(--portal-accent-hover)}
+.portal-photo-empty{display:flex;width:100%;height:100%;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:linear-gradient(145deg,#F4E5D7,#FBF3E9);color:var(--portal-text-secondary);font-size:12px;font-weight:650;letter-spacing:0;text-transform:none}
+.portal-photo-empty__mark{display:grid;width:46px;height:46px;place-items:center;border:1px solid #D7B8A4;border-radius:50%;background:#FFFBF6;color:var(--portal-accent);font:600 1.5rem var(--font-display,serif)}
+#portal-floating-host .portal-catalog__footer{padding:12px 14px calc(12px + env(safe-area-inset-bottom));border:1px solid var(--portal-border);border-radius:var(--portal-radius-3);background:var(--portal-surface);box-shadow:var(--portal-shadow-fixed)}
+#portal-floating-host .portal-catalog__footer>span strong{font-size:14px}
+#portal-floating-host .portal-catalog__footer>span small{color:var(--portal-text-secondary);font-size:12px}
+#portal-floating-host .portal-catalog__footer .portal-primary{min-height:44px;border-radius:var(--portal-radius-2);background:var(--portal-accent)}
+@media(max-width:1100px){.portal-product-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:850px){
+  .portal-header{padding:18px 20px}
+  .portal-welcome{margin:20px 16px 0;padding:24px}
+  .portal-welcome__layout{grid-template-columns:1fr}
+  .portal-welcome__copy{min-height:auto}
+  .portal-billing-countdown{min-height:180px}
+  .portal-quick-actions{margin-right:16px;margin-left:16px}
+  .portal-section{padding-right:16px;padding-left:16px}
+  .portal-product-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+}
+@media(max-width:640px){
+  .portal{padding-bottom:112px}
+  .portal-header{padding:14px 16px}
+  .portal-brand{font-size:1.85rem}
+  .portal-header__actions button{padding:8px 10px;font-size:12px}
+  .portal-welcome{margin:8px 12px 0;padding:20px;border-radius:var(--portal-radius-3)}
+  .portal-welcome h1{font-size:2.65rem}
+  .portal-welcome__layout{gap:18px}
+  .portal-welcome__copy>p{font-size:14px}
+  .portal-billing-countdown{min-height:auto;padding:20px}
+  .portal-billing-countdown__value{font-size:2.75rem}
+  .portal-welcome__steps{grid-template-columns:1fr!important;gap:12px!important;margin-top:20px!important;padding-top:18px!important}
+  .portal-welcome__steps li{font-size:12px!important}
+  .portal-quick-actions{margin-top:16px}
+  .portal-section{padding-top:38px;padding-bottom:48px}
+  .portal-filterbar{margin-right:-16px;margin-left:-16px;padding:12px 16px;background:var(--portal-bg)}
+  .portal-personal-filters{gap:18px}
+  .portal-product-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .portal-product{display:flex;grid-template-columns:none}
+  .portal-product__body{padding:11px}
+  .portal-product h3{font-size:14px}
+  .portal-product__price{font-size:16px!important}
+  .portal-product__meta{margin-bottom:10px;font-size:12px}
+  .portal-favorite{top:8px;right:8px;width:38px;height:38px}
+  .portal-stepper{min-height:42px}
+  .portal-stepper>button.button--icon-round{width:40px;min-width:40px;height:40px;min-height:40px}
+  .portal-add-button{min-height:42px}
+  #portal-floating-host .portal-catalog__footer{gap:10px;padding:10px}
+  #portal-floating-host .portal-catalog__footer>div{flex:0 0 auto}
+  #portal-floating-host .portal-catalog__footer .portal-primary{padding:0 14px;font-size:12px}
+}
+@media(prefers-reduced-motion:reduce){
+  .portal-product{transition:none}
+  .portal-product:hover{transform:none}
+  .portal-welcome__action,.portal-add-button{transition:none}
+}
+
+/* Overrides carregados depois do design system e da identidade global.
+   Escopo exclusivo do portal do cliente. */
+body.portal-mode .portal-welcome{
+  background:#8F3D22 !important;
+  color:#FFF9F5 !important;
+}
+body.portal-mode .portal-welcome :is(h1,p,.portal-eyebrow){
+  color:#FFF9F5 !important;
+}
+body.portal-mode .portal-welcome .portal-eyebrow{color:#F7D8C2 !important}
+body.portal-mode .portal-welcome__steps li,
+body.portal-mode .portal-welcome__steps li:hover{
+  color:rgba(255,249,245,.9) !important;
+  background:transparent !important;
+  border-color:transparent !important;
+}
+body.portal-mode .portal-welcome__steps li strong{
+  color:#8F3D22 !important;
+  background:#FFF9F5 !important;
+}
+body.portal-mode .portal-welcome__action,
+body.portal-mode .portal-welcome__action:hover,
+body.portal-mode .portal-welcome__action:active{
+  color:#7A331C !important;
+  background:#FFF9F5 !important;
+  border-color:rgba(255,255,255,.32) !important;
+}
+body.portal-mode .portal-personal-filters button[aria-pressed="true"]{
+  color:var(--portal-accent) !important;
+  background:transparent !important;
+  border-color:transparent !important;
+  border-bottom-color:var(--portal-accent) !important;
+}
+body.portal-mode .portal-categories button[aria-pressed="true"]{
+  color:#FFF9F5 !important;
+  background:var(--portal-accent) !important;
+  border-color:var(--portal-accent) !important;
+}
+body.portal-mode .portal-favorite[aria-pressed="true"]{
+  color:#FFF9F5 !important;
+  background:var(--portal-accent) !important;
+  border-color:var(--portal-accent) !important;
+}
+body.portal-mode .portal-stepper:not(.portal-stepper--empty)>button{
+  width:40px !important;
+  min-width:40px !important;
+  height:40px !important;
+  min-height:40px !important;
+  padding:0 !important;
+  border-radius:8px !important;
+}
+
+/* Segunda passada visual: mais legibilidade e menos sensação de grade esmagada. */
+body.portal-mode .portal-quick-actions article{min-height:112px;padding:20px 22px}
+body.portal-mode .portal-quick-actions article>strong,
+body.portal-mode .portal-quick-actions h2{font-size:1.05rem}
+body.portal-mode .portal-section__head{align-items:flex-end}
+body.portal-mode .portal-section__head>span{font-size:12px;color:var(--portal-text-secondary)}
+body.portal-mode .portal-category-group__heading h3{font-size:clamp(1.65rem,2.5vw,2rem)}
+body.portal-mode .portal-product{box-shadow:0 5px 16px rgba(50,23,14,.07)}
+body.portal-mode .portal-product:hover{box-shadow:0 10px 24px rgba(50,23,14,.11)}
+body.portal-mode .portal-favorite{width:36px;height:36px;font-size:18px}
+@media(min-width:1450px){
+  body.portal-mode .portal-header,
+  body.portal-mode .portal-welcome,
+  body.portal-mode .portal-quick-actions,
+  body.portal-mode .portal-section,
+  body.portal-mode #portal-content>.featured-products{max-width:1280px}
+}
+@media(max-width:1000px){
+  body.portal-mode .portal-product-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:700px){
+  body.portal-mode .portal-welcome{padding:24px}
+  body.portal-mode .portal-welcome__layout{grid-template-columns:1fr}
+  body.portal-mode .portal-welcome__copy{min-height:auto}
+  body.portal-mode .portal-billing-countdown{min-height:auto}
+  body.portal-mode .portal-welcome__steps{grid-template-columns:1fr!important}
+  body.portal-mode .portal-quick-actions{grid-template-columns:1fr}
+  body.portal-mode .portal-filterbar{top:4px;margin-right:-4px;margin-left:-4px;padding:12px}
+  body.portal-mode .portal-product-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  body.portal-mode .portal-product__body{padding:12px}
+  body.portal-mode .portal-product h3{font-size:14px}
+}
+
+/* Adicionar fica fora do stepper para não herdar o botão circular global. */
+body.portal-mode .portal-add-slot{display:block;width:100%;margin-top:auto}
+body.portal-mode .portal-add-slot .portal-add-button{
+  display:flex!important;
+  width:100%!important;
+  min-width:0!important;
+  height:42px!important;
+  min-height:42px!important;
+  align-items:center!important;
+  justify-content:center!important;
+  padding:0 12px!important;
+  border:1px solid var(--portal-accent)!important;
+  border-radius:10px!important;
+  color:#FFF9F5!important;
+  background:var(--portal-accent)!important;
+  font-size:13px!important;
+  font-weight:800!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+  text-indent:0!important;
+  overflow:hidden!important;
+  box-shadow:none!important;
+}
+body.portal-mode .portal-add-slot .portal-add-button:hover:not(:disabled){
+  color:#FFF9F5!important;
+  background:var(--portal-accent-hover)!important;
+  border-color:var(--portal-accent-hover)!important;
+}
+body.portal-mode .portal-add-slot .portal-add-button::before,
+body.portal-mode .portal-add-slot .portal-add-button::after{content:none!important;display:none!important}
+@media(max-width:700px){
+  body.portal-mode .portal-product__photo{aspect-ratio:4/3}
+  body.portal-mode .portal-product__body{padding:11px}
+  body.portal-mode .portal-add-slot .portal-add-button{height:42px!important;min-height:42px!important}
+}
+
+
+/* Preview refinement: full header + category rail */
+body.portal-mode .portal-header{
+  box-sizing:border-box;
+  width:100%;
+  max-width:none!important;
+  margin:0!important;
+  padding-left:max(24px,calc((100vw - 1220px)/2 + 24px))!important;
+  padding-right:max(24px,calc((100vw - 1220px)/2 + 24px))!important;
+  background:var(--portal-surface)!important;
+  border-bottom:1px solid var(--portal-border)!important;
+}
+
+body.portal-mode .portal-categories{
+  display:flex;
+  flex-wrap:nowrap;
+  gap:0;
+  margin:14px 0 0;
+  padding:5px;
+  overflow-x:auto;
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:999px;
+  background:#6F2E1B;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
+  scrollbar-width:none;
+  scroll-behavior:smooth;
+}
+body.portal-mode .portal-categories::-webkit-scrollbar{display:none}
+body.portal-mode .portal-categories button{
+  position:relative;
+  flex:1 1 0;
+  min-width:0;
+  min-height:40px;
+  padding:0 13px;
+  border:1px solid transparent!important;
+  border-radius:999px!important;
+  background:transparent!important;
+  color:#F7D8C8!important;
+  box-shadow:none!important;
+  font-size:13px;
+  font-weight:700;
+  white-space:nowrap;
+  transition:color .18s ease,background-color .22s ease,border-color .22s ease,box-shadow .22s ease!important;
+}
+body.portal-mode .portal-categories button:hover:not(:disabled){
+  border-color:transparent!important;
+  background:rgba(255,249,245,.08)!important;
+  color:#FFF9F5!important;
+}
+body.portal-mode .portal-categories button[aria-pressed="true"]{
+  border-color:rgba(122,51,28,.28)!important;
+  background:#FCE6D7!important;
+  color:#7A331C!important;
+  box-shadow:0 1px 2px rgba(45,17,9,.12),inset 0 0 0 1px rgba(255,255,255,.42)!important;
+  font-weight:800!important;
+}
+body.portal-mode #portal-grid.portal-product-grid{
+  margin-top:32px!important;
+  scroll-margin-top:170px;
+}
+
+@media(max-width:850px){
+  body.portal-mode .portal-header{
+    padding-left:20px!important;
+    padding-right:20px!important;
+  }
+}
+@media(max-width:640px){
+  body.portal-mode .portal-header{
+    padding-left:16px!important;
+    padding-right:16px!important;
+  }
+  body.portal-mode .portal-categories{
+    gap:0;
+    margin-top:12px;
+    margin-right:-4px;
+    margin-left:-4px;
+    padding:5px;
+    border-radius:999px;
+  }
+  body.portal-mode .portal-categories button{
+    flex:0 0 auto;
+    min-width:max-content;
+    padding:0 14px;
+  }
+  body.portal-mode #portal-grid.portal-product-grid{
+    margin-top:28px!important;
+    scroll-margin-top:155px;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  body.portal-mode .portal-categories{scroll-behavior:auto}
+}
+
+
+/* Motion polish for catalog interactions */
+body.portal-mode #portal-grid[data-filter-transitioning="true"]{
+  pointer-events:none;
+  will-change:opacity,transform;
+}
+body.portal-mode .portal-product .portal-stepper,
+body.portal-mode .portal-product .portal-add-slot,
+body.portal-mode #portal-content .featured-product__controls .portal-stepper,
+body.portal-mode #portal-content .featured-product__controls .portal-add-slot{
+  transform-origin:center;
+}
+body.portal-mode .portal-product,
+body.portal-mode .portal-categories button,
+body.portal-mode .portal-personal-filters button{
+  backface-visibility:hidden;
+}
+@media(prefers-reduced-motion:reduce){
+  body.portal-mode #portal-grid[data-filter-transitioning="true"]{will-change:auto}
+}

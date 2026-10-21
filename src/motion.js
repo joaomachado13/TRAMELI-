@@ -12,6 +12,7 @@ let smoother = null;
 let refreshFrame = 0;
 let menuOpen = false;
 let dragging = false;
+let scrollTween = null;
 const desktopQuery = matchMedia('(min-width: 1100px) and (hover: hover) and (pointer: fine)');
 const smoothing = 0.45;
 const shouldMove = () => !reducedQuery.matches && !userReduced && !suspendedForPrint;
@@ -71,8 +72,8 @@ function enter(root, { swipe } = {}) {
   if (!enabled || !root || !shouldMove()) return;
   if (swipe) pageTransitions.reveal(swipe);
   // Animate one layer, not every card: rows and scroll position stay still.
-  entrance = gsap.fromTo(root, { opacity: 0.82 }, {
-    opacity: 1, duration: 0.18, ease: 'power1.out', overwrite: true,
+  entrance = gsap.fromTo(root, { opacity: 0.68 }, {
+    opacity: 1, duration: 0.30, ease: 'power2.out', overwrite: true,
     onComplete: () => { gsap.set(root, { clearProps: 'opacity' }); entrance = null; },
   });
 }
@@ -88,7 +89,24 @@ function scrollTo(target, smooth = true, offset = 0) {
     return;
   }
   const y = typeof target === 'number' ? target : element ? element.getBoundingClientRect().top + window.scrollY - offset : 0;
-  window.scrollTo({ top: Math.max(0, y), behavior: smooth && shouldMove() ? 'smooth' : 'instant' });
+  const nextY = Math.max(0, y);
+  scrollTween?.kill();
+  scrollTween = null;
+  if (!smooth || !shouldMove()) {
+    window.scrollTo({ top: nextY, behavior: 'instant' });
+    return;
+  }
+  const state = { y: window.scrollY };
+  const distance = Math.abs(nextY - state.y);
+  if (distance < 2) return;
+  scrollTween = gsap.to(state, {
+    y: nextY,
+    duration: Math.min(0.72, Math.max(0.34, distance / 1450)),
+    ease: 'power2.inOut',
+    overwrite: true,
+    onUpdate: () => window.scrollTo(0, state.y),
+    onComplete: () => { scrollTween = null; },
+  });
 }
 
 function pulse(element) {
@@ -124,6 +142,10 @@ function init() {
   window.addEventListener('afterprint', () => { suspendedForPrint = false; refresh(); });
   window.addEventListener('resize', refresh);
   window.addEventListener('hashchange', refresh);
+  const cancelNativeScrollTween = () => { scrollTween?.kill(); scrollTween = null; };
+  window.addEventListener('wheel', cancelNativeScrollTween, { passive: true });
+  window.addEventListener('touchstart', cancelNativeScrollTween, { passive: true });
+  window.addEventListener('pointerdown', cancelNativeScrollTween, { passive: true });
   document.addEventListener('close', pauseScroll, true);
   document.addEventListener('dragstart', event => {
     if (!event.target.closest('.order-card')) return;

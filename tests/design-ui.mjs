@@ -232,7 +232,7 @@ try {
       await evaluate('document.querySelector("[data-qty=\\\"1\\\"]").click()');
       await waitFor('.portal-catalog__footer');
       assert(await evaluate('matchMedia("(prefers-reduced-motion: reduce)").matches || document.querySelector("#portal-floating-host").classList.contains("is-cart-entering")'), 'Catálogo normal não recebeu a nova animação de entrada.');
-      assert((await evaluate('document.querySelector(".portal-catalog__footer").textContent')).includes('Continuar para a sacola'), 'Catálogo normal perdeu a ação de continuar para a sacola.');
+      assert((await evaluate('document.querySelector(".portal-catalog__footer").textContent')).includes('Ver sacola'), 'Catálogo normal perdeu a ação de continuar para a sacola.');
       assert((await evaluate('document.querySelector(".portal-catalog__footer small").textContent')).length > 6, 'Catálogo normal perdeu o subtotal em dinheiro.');
       await evaluate('document.querySelector("[data-qty=\\\"1\\\"]").click();document.querySelector("[data-qty=\\\"1\\\"]").click()');
       assert((await evaluate('document.querySelector(".portal-catalog__footer strong").textContent')).startsWith('1 item'), 'Barra do catálogo atualizou durante a primeira cortina.');
@@ -288,6 +288,70 @@ try {
     const image = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
     await writeFile(new URL(`../assets/crops/identity-${route}-390.png`, import.meta.url), Buffer.from(image.data, 'base64'));
   }
+  for (const [width, expectedColumns] of [[375,2],[768,3],[1280,4]]) {
+    await send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width < 700 });
+    await evaluate('location.hash="#loja"');
+    await waitFor('.portal-welcome');
+    await pause(180);
+    assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'), `loja criou rolagem horizontal em ${width}px.`);
+    assert(await evaluate('getComputedStyle(document.querySelector(".portal-filterbar")).position === "sticky"'), `filtros da loja não ficaram sticky em ${width}px.`);
+    const headerGeometry = await evaluate(`(() => { const r=document.querySelector(".portal-header").getBoundingClientRect(); return {left:r.left,width:r.width,viewport:document.documentElement.clientWidth}; })()`);
+    assert(Math.abs(headerGeometry.left) <= 1 && headerGeometry.width >= headerGeometry.viewport - 2, `cabeçalho não ocupou toda a largura útil em ${width}px: ${JSON.stringify(headerGeometry)}`);
+    const categoryVisual = await evaluate(`(() => {
+      const rail=document.querySelector(".portal-categories");
+      const active=rail?.querySelector('[aria-pressed="true"]');
+      const grid=document.querySelector("#portal-grid");
+      if(!rail||!active||!grid) return null;
+      const railStyle=getComputedStyle(rail), activeStyle=getComputedStyle(active);
+      const inactive=[...rail.querySelectorAll('button')].find(button => button !== active);
+      const inactiveStyle=inactive ? getComputedStyle(inactive) : null;
+      return {
+        radius:parseFloat(railStyle.borderRadius)||0,
+        railBg:railStyle.backgroundColor,
+        activeBg:activeStyle.backgroundColor,
+        inactiveBg:inactiveStyle?.backgroundColor || '',
+        inactiveBorder:inactiveStyle?.borderTopColor || '',
+        gap:grid.getBoundingClientRect().top-rail.getBoundingClientRect().bottom
+      };
+    })()`);
+    assert(categoryVisual?.radius >= 20 && categoryVisual.railBg !== 'rgba(0, 0, 0, 0)', `seletor de categorias não virou um trilho único arredondado em ${width}px: ${JSON.stringify(categoryVisual)}`);
+    assert(categoryVisual.activeBg !== categoryVisual.railBg && categoryVisual.activeBg !== 'rgba(0, 0, 0, 0)', `categoria ativa não ficou como cápsula clara em ${width}px: ${JSON.stringify(categoryVisual)}`);
+    assert(categoryVisual.inactiveBg === 'rgba(0, 0, 0, 0)', `categorias inativas voltaram a parecer chips separados em ${width}px: ${JSON.stringify(categoryVisual)}`);
+    assert(categoryVisual.gap >= 24, `faltou respiro entre categorias e produtos em ${width}px: ${JSON.stringify(categoryVisual)}`);
+    const columns = await evaluate('getComputedStyle(document.querySelector(".portal-product-grid")).gridTemplateColumns.split(" ").filter(Boolean).length');
+    assert(columns === expectedColumns, `grade da loja em ${width}px deveria ter ${expectedColumns} colunas e tem ${columns}.`);
+    const addButton = await evaluate(`(() => {
+      const button = document.querySelector(".portal-product .portal-add-button");
+      if (!button) return null;
+      const rect = button.getBoundingClientRect();
+      const parent = button.parentElement.getBoundingClientRect();
+      const style = getComputedStyle(button);
+      return { text: button.textContent.trim(), width: rect.width, parentWidth: parent.width, height: rect.height, radius: parseFloat(style.borderRadius) || 0 };
+    })()`);
+    assert(addButton?.text === 'Adicionar', `botão Adicionar perdeu o texto em ${width}px.`);
+    assert(addButton.width >= addButton.parentWidth * .9 && addButton.width > 70, `botão Adicionar voltou a ficar estreito/bolinha em ${width}px: ${JSON.stringify(addButton)}`);
+    assert(addButton.height >= 40 && addButton.radius < addButton.height / 2, `botão Adicionar voltou a ficar circular em ${width}px: ${JSON.stringify(addButton)}`);
+    assert((await evaluate('document.querySelectorAll(".portal-category-group").length')) === 0, `catálogo voltou a ser separado visualmente por categoria em ${width}px.`);
+    assert((await evaluate('document.querySelectorAll(".portal-product__category").length')) === 0, `badge de categoria voltou para dentro dos cards em ${width}px.`);
+  }
+  await evaluate(`(() => {
+    window.scrollTo(0, 0);
+    window.__portalWelcomeBeforeFilter=document.querySelector(".portal-welcome");
+    window.__portalGridBeforeFilter=document.querySelector("#portal-grid");
+    const button=[...document.querySelectorAll("[data-category]")].find(item => item.dataset.category !== "Todos");
+    if (!button) throw new Error("Categoria de teste ausente");
+    button.click();
+  })()`);
+  await pause(650);
+  const categoryNavigation = await evaluate(`(() => {
+    const active=document.querySelector('.portal-categories [aria-pressed="true"]');
+    const grid=document.querySelector("#portal-grid");
+    return { selected:active?.dataset.category||"", scrollY, gridTop:grid?.getBoundingClientRect().top ?? -1 };
+  })()`);
+  assert(categoryNavigation.selected && categoryNavigation.selected !== 'Todos', `clique em categoria não ativou o filtro: ${JSON.stringify(categoryNavigation)}`);
+  assert(categoryNavigation.scrollY > 100 && categoryNavigation.gridTop >= 100 && categoryNavigation.gridTop <= 280, `categoria não levou o cliente até os produtos filtrados: ${JSON.stringify(categoryNavigation)}`);
+  assert(await evaluate('window.__portalWelcomeBeforeFilter===document.querySelector(".portal-welcome")'), 'filtro de categoria reconstruiu o hero do portal');
+  assert(await evaluate('window.__portalGridBeforeFilter===document.querySelector("#portal-grid")'), 'filtro de categoria substituiu o contêiner inteiro da grade');
   assert(!identityIssues.length, `Identidade: ${JSON.stringify(identityIssues)}`);
   process.stdout.write('Identidade: Manrope, contraste, dez rotas Master/Portal, modal e responsividade 390/1440px OK.\n');
 } finally {

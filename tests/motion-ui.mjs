@@ -135,8 +135,11 @@ try {
   await pause(750);
   assert.equal(await evaluate('location.hash'), '#loja', 'Catalog CTA left the portal');
   assert.ok(await evaluate('scrollY > 200'), 'Catalog CTA did not scroll to products');
-  await evaluate('document.querySelector(".portal-product .portal-stepper button:last-child").click()');
+  await evaluate('window.__portalWelcomeBeforeAdd=document.querySelector(".portal-welcome");window.__portalGridBeforeAdd=document.querySelector("#portal-grid")');
+  await evaluate('document.querySelector(".portal-product .portal-add-button").click()');
   assert.equal(await evaluate('document.querySelector("#portal-cart-count").textContent'), '1');
+  assert.equal(await evaluate('window.__portalWelcomeBeforeAdd===document.querySelector(".portal-welcome")'), true, 'First add rebuilt the whole client portal');
+  assert.equal(await evaluate('window.__portalGridBeforeAdd===document.querySelector("#portal-grid")'), true, 'First add replaced the whole catalog grid');
   for (let i = 0; i < 20 && !await evaluate('!!document.querySelector("#portal-floating-host .portal-catalog__footer")'); i++) await pause(50);
   assert.equal(await evaluate('getComputedStyle(document.querySelector("#portal-floating-host .portal-catalog__footer")).position'), 'fixed');
   assert.equal(await evaluate('document.querySelector("#smooth-content").contains(document.querySelector("#portal-floating-host"))'), false);
