@@ -37,6 +37,7 @@ export default defineConfig(({ command, mode }) => {
       paymentsFixture: resolve('tests/payments-fixture.html'),
       photosFixture: resolve('tests/photos-fixture.html'),
       shirleyFixture: resolve('tests/shirley-fixture.html'),
+      portalRoutingFixture: resolve('tests/portal-routing-fixture.html'),
     });
   }
   return {

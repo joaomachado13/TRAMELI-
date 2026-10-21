@@ -519,6 +519,12 @@ function animateRouteIn(route) {
 }
 
 function showRoute(force = false) {
+  // Normalize a rota antes de qualquer listener do portal sincronizar o frame.
+  // Renderizar a loja mantendo um hash interno fazia o próximo listener expor
+  // a sidebar e ocultar o portal, deixando o cliente em uma tela vazia.
+  if (live && !live.operator && location.hash !== '#loja') {
+    history.replaceState(history.state, '', `${location.pathname}${location.search}#loja`);
+  }
   const requested = decodeURIComponent(location.hash.slice(1)) || 'loja';
   const route = live && !live.operator ? 'loja' : routes.has(requested) ? requested : 'loja';
   if (route === activeRoute && !force) { ++routeRevision; motion.cancelTransition(); setMenu(false); return; }
@@ -581,9 +587,12 @@ menuPanel.addEventListener('click', event => {
 window.addEventListener('hashchange', () => showRoute());
 document.querySelector('.notification-button').addEventListener('click', () => { location.hash = 'pendencias'; });
 document.addEventListener('click', async event => {
+  // Ações delegadas da operação não recebem cliques da loja, nem de clientes.
+  if ((live && !live.operator) || event.target.closest('#portal-view, #portal-floating-host, #portal-success-screen')) return;
   const openOrder = event.target.closest('[data-open-order]');
   if (openOrder) { window.TrameliOperation?.openOrder(openOrder.dataset.openOrder); return; }
-  if (event.target.closest('[data-new-order]')) { location.hash = '#portal-shirley'; return; }
+  const newOrder = event.target.closest('[data-new-order]');
+  if (newOrder && appShell.contains(newOrder)) { location.hash = '#portal-shirley'; return; }
   const agendaMode = event.target.closest('[data-agenda-mode]');
   if (agendaMode) { agendaState.mode = agendaMode.dataset.agendaMode; showRoute(true); return; }
   const agendaDay = event.target.closest('[data-agenda-day]');

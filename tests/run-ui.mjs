@@ -14,7 +14,7 @@ const previewPort = String(address.port);
 await new Promise((resolveClose, rejectClose) => server.close(error => error ? rejectClose(error) : resolveClose()));
 const origin = `http://127.0.0.1:${previewPort}/`;
 const vite = resolve(root, 'node_modules/vite/bin/vite.js');
-const allTests = ['landing-ui.mjs', 'auth-ui.mjs', 'payments-ui.mjs', 'photos-ui.mjs', 'motion-ui.mjs', 'operation-ui.mjs', 'design-ui.mjs'];
+const allTests = ['landing-ui.mjs', 'portal-routing-ui.mjs', 'auth-ui.mjs', 'payments-ui.mjs', 'photos-ui.mjs', 'motion-ui.mjs', 'operation-ui.mjs', 'design-ui.mjs'];
 const tests = process.env.TRAMELI_UI_TEST ? [process.env.TRAMELI_UI_TEST] : allTests;
 const build = spawn(process.execPath, [vite, 'build', '--configLoader', 'runner', '--mode', 'test'], {
   cwd: root,
