@@ -423,3 +423,52 @@ dialog{width:min(670px,calc(100vw - 24px));max-height:min(90vh,900px);padding:0;
 .portal-history .order-edited-badge{margin:0 0 8px}
 .portal-history article.has-order-edited{border-inline-start:4px solid #b45309}
 
+
+
+/* Unified operation action buttons */
+#operation-view .button{
+  box-sizing:border-box;
+  min-height:var(--ui-button-height)!important;
+  padding:var(--ui-button-padding-y) var(--ui-button-padding-x)!important;
+  border-radius:var(--ui-button-radius)!important;
+  font-family:var(--font-interface)!important;
+  font-size:var(--ui-button-font-size)!important;
+  font-weight:var(--ui-button-font-weight)!important;
+  line-height:1.25!important;
+  box-shadow:none;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    box-shadow 180ms ease,
+    transform 120ms ease!important;
+}
+#operation-view .button--primary{
+  border-color:var(--ui-button-primary-bg)!important;
+  background:var(--ui-button-primary-bg)!important;
+  color:var(--ui-button-primary-text)!important;
+}
+#operation-view .button--primary:hover:not(:disabled){
+  border-color:var(--ui-button-primary-hover)!important;
+  border-radius:var(--ui-button-radius)!important;
+  background:var(--ui-button-primary-hover)!important;
+  color:var(--ui-button-primary-text)!important;
+  box-shadow:0 3px 10px var(--color-shadow)!important;
+}
+#operation-view .button--quiet{
+  border-color:var(--ui-button-secondary-border)!important;
+  background:var(--ui-button-secondary-bg)!important;
+  color:var(--ui-button-secondary-text)!important;
+}
+#operation-view .button--quiet:hover:not(:disabled){
+  border-color:var(--ui-button-secondary-hover-border)!important;
+  border-radius:var(--ui-button-radius)!important;
+  background:var(--ui-button-secondary-hover)!important;
+  color:var(--color-primary-active)!important;
+  box-shadow:0 3px 10px var(--color-shadow)!important;
+}
+#operation-view .button:active:not(:disabled){transform:scale(.98)!important}
+#operation-view .button:focus-visible{
+  outline:3px solid var(--color-focus-ring)!important;
+  outline-offset:2px!important;
+}
