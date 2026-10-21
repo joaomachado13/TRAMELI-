@@ -197,8 +197,8 @@ try {
   assert.match(await evaluate('document.getElementById("form-total").textContent'), /3,40/);
   assert.equal(await evaluate('document.getElementById("form-delivery-summary").hidden'), false);
   await evaluate(`document.getElementById('close-dialog').click();
-    const d = new Date();
-    const date = [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('-');
+    // A visão geral usa o ciclo operacional, que vira às 13:30 em São Paulo.
+    const date = document.querySelector('#delivery-date').value;
     localStorage.setItem('trameli-operation-draft-v2', JSON.stringify([{id:'test-order',customer:'Cliente de teste com nome muito extenso para conferir o alinhamento',address:'Teste',date,createdAt:new Date().toISOString(),feeCents:200,status:'received',items:[{name:'Pão francês',quantity:1,priceCents:140}]}]));
     dispatchEvent(new Event('trameli:orders-changed')); location.hash = '#inicio';`);
   await pause(150);
@@ -214,7 +214,8 @@ try {
   assert.doesNotMatch(await evaluate('document.getElementById("home-next-actions").textContent'), /As análises vão aparecer/);
   await evaluate(`window.TrameliPayments={api:{ready:true,error:'',balances:[{due_cents:340}],allocations:[],payments:[]}};dispatchEvent(new Event('trameli:payments-changed'));`);
   assert.match(await evaluate('document.getElementById("home-order-total").textContent'), /3,40/);
-  assert.match(await evaluate('document.getElementById("home-next-actions").textContent'), /1 pedido em aberto/);
+  assert.match(await evaluate('document.getElementById("home-next-actions").textContent'), /Pedidos em aberto/);
+  assert.equal(await evaluate('document.querySelector("#home-next-actions a[href$=financeiro] .staff-badge").textContent'), '1');
   assert.match(await evaluate('document.querySelector("#home-order-count").parentElement.textContent'), /1 pedido registrado/);
   assert.match(await evaluate('document.querySelector("#home-recent-orders td:last-child").textContent'), /3,40.*Inclui.*2,00/);
   await evaluate('document.querySelector(".orders-table").scrollIntoView({behavior:"instant",block:"center"})');

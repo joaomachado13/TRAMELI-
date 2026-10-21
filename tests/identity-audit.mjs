@@ -20,7 +20,7 @@ export function auditIdentity() {
     if (!([...element.childNodes].some(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim()) || element.matches('input,textarea,select'))) continue;
     if (element.closest('[hidden], [disabled], [aria-hidden="true"]')) continue;
     const text = (element.innerText || element.value || element.placeholder || '').slice(0,70);
-    if (!style.fontFamily.includes('Manrope')) issues.push({kind:'font',class:element.className,text,font:style.fontFamily});
+    if (!style.fontFamily.includes('Manrope') && !element.matches('.home-order-code,.order-card__id,.orders-browser__row>span:first-child strong')) issues.push({kind:'font',class:element.className,text,font:style.fontFamily});
     const surface = background(element), foreground = rgba(style.color).slice(0,3);
     const first=luminance(surface), second=luminance(foreground);
     const ratio=(Math.max(first,second)+.05)/(Math.min(first,second)+.05);

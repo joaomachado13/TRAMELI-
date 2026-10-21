@@ -1,3 +1,4 @@
+import { feedback, statusBadge, listRow } from '../src/staff-components.js';
 (() => {
   const live = window.TrameliLive;
   const storageKey = 'trameli-clients-v1';
@@ -259,7 +260,7 @@
     return `<div data-client-root>
       <div class="record-toolbar client-toolbar">
         <label class="record-search">Buscar cliente<input id="client-search" type="search" value="${escapeHtml(query)}" placeholder="Nome, telefone ou endereço"></label>
-        ${live ? '' : '<button class="screen-primary" type="button" data-client-action="new">+ Novo cliente</button>'}
+
       </div>
       <div class="client-filters" role="group" aria-label="Filtrar clientes por pagamento">
         ${filters.map(([key, label]) => `<button type="button" data-client-filter="${key}" class="${paymentFilter === key ? 'is-active' : ''}"><span>${label}</span><strong>${counts[key]}</strong></button>`).join('')}
@@ -267,13 +268,9 @@
       <div class="record-list record-list--clients">
         ${visible.length ? visible.map(client => {
           const payment = paymentData(client);
-          return `<button class="record-row client-row client-row--simple" type="button" data-client-action="view" data-key="${escapeHtml(client.key)}">
-            <span class="record-avatar" aria-hidden="true">${escapeHtml(client.name.slice(0, 1).toUpperCase())}</span>
-            <span class="record-main"><strong>${escapeHtml(client.name)}</strong><small>${escapeHtml(formatPhone(client.phone) || 'Telefone não informado')}</small><small class="record-address">${escapeHtml(client.address || 'Endereço não informado')}</small><small class="client-billing-frequency">${escapeHtml(({ semanal:'Semanal', quinzenal:'Quinzenal', mensal:'Mensal' })[payment.profile?.billing_frequency] || 'Frequência não definida')}</small></span>
-            <span class="client-payment-badge ${statusClass(payment.status)}">${statusLabel(payment.status)}</span>
-            <span class="record-chevron" aria-hidden="true">→</span>
-          </button>`;
-        }).join('') : '<div class="friendly-empty"><strong>Nenhum cliente encontrado.</strong><span>Ajuste a busca ou os filtros.</span></div>'}
+          const frequency = ({ semanal:'Semanal', quinzenal:'Quinzenal', mensal:'Mensal' })[payment.profile?.billing_frequency];
+          return listRow({ title: client.name, subtitle: [formatPhone(client.phone) || 'Telefone não informado', client.address || 'Endereço não informado', frequency].filter(Boolean).join(' · '), avatar: client.name.slice(0,1).toUpperCase(), badge: statusBadge(statusLabel(payment.status), ({review:'warning',partial:'info',open:'danger',paid:'success',none:'neutral'})[payment.status], `client-payment-badge ${statusClass(payment.status)}`), attributes: `data-client-action="view" data-key="${escapeHtml(client.key)}"`, className: 'client-row client-row--simple' });
+        }).join('') : feedback({ title: 'Nenhum cliente encontrado.', description: 'Ajuste a busca ou os filtros.' })}
       </div>
     </div>`;
   }
@@ -353,7 +350,7 @@
     detailDrawer.innerHTML = `<div class="entity-detail client-profile">
       <header class="entity-detail__header client-profile__header">
         <div><p class="screen-eyebrow">CLIENTE</p><h2>${escapeHtml(client.name)}</h2><p>${escapeHtml(formatPhone(client.phone) || 'Telefone não informado')}</p></div>
-        <div class="client-profile__header-actions"><span class="client-payment-badge ${statusClass(payment.status)}">${statusLabel(payment.status)}</span><button type="button" data-client-action="close" aria-label="Fechar">×</button></div>
+        <div class="client-profile__header-actions">${statusBadge(statusLabel(payment.status), ({review:'warning',partial:'info',open:'danger',paid:'success',none:'neutral'})[payment.status], `client-payment-badge ${statusClass(payment.status)}`)}<button type="button" data-client-action="close" aria-label="Fechar">×</button></div>
       </header>
       <div class="entity-detail__body">
         <section class="entity-summary client-summary">

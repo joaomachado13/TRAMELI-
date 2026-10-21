@@ -12,3 +12,5 @@ supabase/.temp/
 private/
 tmp/pdfs/
 .codex-vite.*.log
+
+tmp/shirley-foundations/
