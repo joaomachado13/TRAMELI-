@@ -424,3 +424,84 @@ body.portal-mode .portal-header__actions > button:focus-visible{
   outline:3px solid var(--color-focus-ring)!important;
   outline-offset:2px!important;
 }
+
+
+/* Portal system buttons + compact hero composition */
+body.portal-mode{
+  --ui-button-radius:12px;
+}
+
+body.portal-mode .portal-header__actions > button,
+body.portal-mode .portal-header__actions > .live-account{
+  box-sizing:border-box;
+  min-height:44px!important;
+  padding:0 18px!important;
+  border:1px solid rgba(143,61,34,.28)!important;
+  border-radius:12px!important;
+  background:#FFF9F5!important;
+  color:#7A331C!important;
+  font-size:.875rem!important;
+  font-weight:700!important;
+  line-height:1!important;
+  box-shadow:none!important;
+}
+body.portal-mode .portal-header__actions > :is(#portal-cart-link,.live-account){
+  border-color:rgba(143,61,34,.28)!important;
+  background:#FFF9F5!important;
+  color:#7A331C!important;
+}
+body.portal-mode .portal-header__actions > button:hover:not(:disabled),
+body.portal-mode .portal-header__actions > .live-account:hover:not(:disabled){
+  border-color:#8F3D22!important;
+  border-radius:12px!important;
+  background:#FBE9DB!important;
+  color:#7A331C!important;
+  box-shadow:0 3px 10px rgba(50,23,14,.08)!important;
+}
+body.portal-mode .portal-header__actions > button[aria-current="true"]{
+  border-color:#8F3D22!important;
+  background:#8F3D22!important;
+  color:#FFF9F5!important;
+}
+body.portal-mode .portal-header__actions > button[aria-current="true"]:hover:not(:disabled){
+  border-color:#7A331C!important;
+  background:#7A331C!important;
+  color:#FFF9F5!important;
+}
+body.portal-mode .portal-header__actions #portal-cart-count{
+  min-width:22px;
+  height:22px;
+  margin-left:6px;
+  border-radius:999px;
+  background:#FBE3D0!important;
+  color:#7A331C!important;
+  font-size:.72rem;
+  font-weight:800;
+}
+body.portal-mode .portal-header__actions #portal-cart-link[aria-current="true"] #portal-cart-count{
+  background:#FFF9F5!important;
+  color:#7A331C!important;
+}
+
+@media(min-width:851px){
+  body.portal-mode .portal-welcome{
+    padding:24px 40px 32px!important;
+  }
+  body.portal-mode .portal-welcome__layout{
+    align-items:start;
+  }
+  body.portal-mode .portal-welcome__copy{
+    min-height:164px;
+    justify-content:flex-start;
+    padding-top:0;
+  }
+  body.portal-mode .portal-welcome h1{
+    margin:0 0 10px;
+  }
+  body.portal-mode .portal-welcome__action{
+    margin-top:14px;
+  }
+  body.portal-mode .portal-billing-countdown{
+    min-height:164px;
+  }
+}
