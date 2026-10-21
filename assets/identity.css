@@ -568,7 +568,7 @@ body :is(
 #portal-view {
   --portal-action-height: 44px;
   --portal-action-padding: 10px 16px;
-  --portal-action-radius: 12px;
+  --portal-action-radius: 999px;
   --portal-action-font-size: .875rem;
 }
 
