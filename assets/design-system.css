@@ -1336,7 +1336,7 @@ body .payment-dialog button {
 
 body .live-logout,
 body .live-account {
-  border-radius: var(--tm-radius-sm);
+  border-radius: var(--ui-button-radius);
 }
 
 /* Sidebar permanente somente onde há espaço real. */
