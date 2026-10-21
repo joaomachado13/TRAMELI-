@@ -1214,11 +1214,51 @@ function openNewOrder(prefill = {}) {
   window.addEventListener('trameli:route-rendered', onRoute);
   location.hash = '#operacao';
 }
-function openOrderById(id) {
+async function openOrderById(id) {
+  if (!id) return false;
   orders = readOrders();
-  const order = orders.find(item => item.id === id);
-  if (order) openOrderDetail(order);
+  let order = orders.find(item => item.id === id);
+  if (!order && live) {
+    try {
+      await live.load(true);
+      orders = readOrders();
+      order = orders.find(item => item.id === id);
+    } catch { /* The next realtime/fallback refresh can recover it. */ }
+  }
+  if (!order) return false;
+
+  const reveal = () => {
+    orders = readOrders();
+    const current = orders.find(item => item.id === id) || order;
+    if (dateInput && current.date) dateInput.value = current.date;
+    if (searchInput) searchInput.value = '';
+    render();
+    openOrderDetail(current);
+    requestAnimationFrame(() => {
+      list.querySelector(`[data-card-id="${CSS.escape(id)}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    });
+  };
+
+  if (location.hash === '#operacao' && !document.getElementById('operation-view').hidden) {
+    reveal();
+    return true;
+  }
+  const onRoute = event => {
+    if (event.detail?.route !== 'operacao') return;
+    window.removeEventListener('trameli:route-rendered', onRoute);
+    reveal();
+  };
+  window.addEventListener('trameli:route-rendered', onRoute);
+  location.hash = '#operacao';
+  return true;
 }
 window.addEventListener('trameli:new-order', event => openNewOrder(event.detail || {}));
 window.TrameliOperation = { preparePrint, openOrder: openOrderById, openNew: openNewOrder };
+try {
+  const pendingOrderId = sessionStorage.getItem('trameli-pending-open-order');
+  if (pendingOrderId) {
+    sessionStorage.removeItem('trameli-pending-open-order');
+    void openOrderById(pendingOrderId);
+  }
+} catch { /* Direct navigation still works without sessionStorage. */ }
 })();

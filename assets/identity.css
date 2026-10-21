@@ -48,6 +48,11 @@ body .nav2 :is(.profile-button, .notification-button, .mobile-menu-button, .live
 body .nav2 :is(button, a):focus-visible { outline-color: var(--color-on-primary) !important; }
 body .nav2 .search { color: var(--color-text-primary); }
 body .nav2 .notification-dot { background: var(--color-on-primary); box-shadow: 0 0 0 2px var(--color-primary); }
+body .nav2 .notification-dot.notification-count {
+  background: #612A18;
+  color: #fff;
+  box-shadow: 0 0 0 2px var(--color-primary);
+}
 
 /* SVGs da interface herdam a cor do componente. */
 .ico--brand { --tm-icon-image: url("brand-mark.svg"); }
