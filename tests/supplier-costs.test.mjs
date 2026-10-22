@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { PDFDocument } from 'pdf-lib';
-import { supplierGroups, supplierTotals, supplierText } from '../src/supplier-checklist.js';
-import { costMapFromRows, supplierPeriodReport, supplierPeriodText } from '../src/supplier-costs.js';
+import { supplierGroups, supplierTotals, supplierText, supplierCustomerText } from '../src/supplier-checklist.js';
+import { costMapFromRows, supplierPeriodReport, supplierPeriodText, supplierPeriodCustomerText } from '../src/supplier-costs.js';
 import { createSupplierPdf } from '../src/supplier-pdf.js';
 import { createSupplierPeriodPdf } from '../src/supplier-period-pdf.js';
 import { closingPeriod } from '../src/billing-cycle.js';
@@ -31,6 +31,13 @@ assert.equal(totals.find(item => item.name === 'Mussarela').costCents, 1260);
 const text = supplierText(groups, '2026-10-15');
 assert(text.includes('TOTAL (preço de custo): R$ 26,10'.replace(/ /g, ' ')) || /TOTAL \(preço de custo\): R\$\s26,10/.test(text));
 assert(!/140|2100/.test(text.replace(/\d{4}-\d{2}-\d{2}/, '')), 'Preço de venda nunca entra no repasse.');
+const customerText = supplierCustomerText(groups, '2026-10-15', 'Pão Doce');
+assert(customerText.includes('ITENS POR CLIENTE (preço de custo)'));
+assert(customerText.includes('Ana'));
+assert(customerText.includes('Pão francês') && customerText.includes('Mussarela'));
+assert(/TOTAL A PAGAR À PADARIA: R\$\s*26,10/.test(customerText));
+assert(!/123456|234567/.test(customerText), 'A cópia por cliente usa custo, nunca preço de venda.');
+
 
 // Same product with/without its ID must consolidate; preserve all historical costs.
 const splitOrders = [
@@ -73,12 +80,19 @@ assert.equal(report.orderCount, 3);
 assert.equal(report.totalCents, 900 + 1260 + 450);
 assert.equal(report.missingLines, 1, 'Custo ausente nunca vira zero.');
 assert.equal(report.estimatedLines, 1);
+assert.equal(report.customerOrders.length, 3, 'O período deve preservar os pedidos para detalhamento por cliente.');
+assert(report.customerOrders.every(order => order.lines.length >= 1));
 assert.deepEqual(report.days.map(day => day.date), ['2026-10-14', '2026-10-15']);
 const second = supplierPeriodReport(orders, costMap, ...Object.values(closingPeriod('2026-10-20', 'quinzenal')).slice(1));
 assert.equal(second.totalCents, 360);
 const month = supplierPeriodReport(orders, costMap, ...Object.values(closingPeriod('2026-10-20', 'mensal')).slice(1));
 assert.equal(month.totalCents, 900 + 1260 + 450 + 360);
 assert(supplierPeriodText(report, 'Quinzenal').includes('sem custo'));
+const periodCustomerText = supplierPeriodCustomerText(report, 'Quinzenal');
+assert(periodCustomerText.includes('ITENS POR CLIENTE (preço de custo)'));
+assert(periodCustomerText.includes('Ana') && periodCustomerText.includes('15/10/2026 · 10× Pão francês'));
+assert(periodCustomerText.includes('TOTAL A PAGAR À PADARIA'));
+
 
 const regular = await readFile(new URL('../assets/manrope-400.ttf', import.meta.url));
 const bold = await readFile(new URL('../assets/manrope-600.ttf', import.meta.url));
