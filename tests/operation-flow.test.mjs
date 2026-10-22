@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
-import { stages, statusPath, progressOrder } from '../src/operation-flow.js';
+import { stages, statusPath, progressOrder, canEditOrder } from '../src/operation-flow.js';
 
 assert.equal(stages.length, 5);
+assert.equal(canEditOrder('delivered', { operator: true }), true);
+assert.equal(canEditOrder('delivered', { master: true }), true);
+assert.equal(canEditOrder('delivered'), false);
+assert.equal(canEditOrder('cancelled', { operator: true, master: true }), false);
+assert.equal(canEditOrder('confirmed', { operator: true }), false);
+assert.equal(canEditOrder('received', { operator: true }), true);
 assert.deepEqual(statusPath('received', 'ready', false), ['confirmed', 'packing', 'ready']);
 assert.deepEqual(statusPath('ready', 'received', true), ['packing', 'confirmed', 'received']);
 assert.deepEqual(statusPath('ready', 'packing', false), []);

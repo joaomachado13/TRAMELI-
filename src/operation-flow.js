@@ -6,6 +6,10 @@ export const stages = [
   { key: 'delivered', title: 'Entregue', note: 'Entrega concluída' },
 ];
 
+export function canEditOrder(status, { operator = false, master = false } = {}) {
+  return status !== 'cancelled' && (master || (operator && ['received', 'delivered'].includes(status)));
+}
+
 // Use the existing versioned status API, including its audit trail and permissions.
 export function statusPath(from, to, master = false) {
   const start = stages.findIndex(stage => stage.key === from);

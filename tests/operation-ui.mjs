@@ -255,6 +255,22 @@ try {
   await evaluate('document.querySelector(".supplier-list").scrollIntoView({block:"start"})');
   await pause(150);
   await writeFile(new URL('../assets/crops/operation-supplier-by-client.png', import.meta.url), Buffer.from((await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false})).data,'base64'));
+  const deliveredId = await evaluate('document.querySelector("[data-drop-status=delivered] .order-card").dataset.id');
+  await evaluate('document.querySelector("[data-drop-status=delivered] .order-card").click()');
+  assert(await evaluate('!!document.querySelector("#order-detail-drawer [data-action=edit]")'), 'Pedido entregue deve permitir edição direta.');
+  await evaluate('document.querySelector("#order-detail-drawer [data-action=edit]").click()');
+  await evaluate(`(() => {
+    document.querySelector('#add-item').click();
+    const rows=[...document.querySelectorAll('.item-name')];
+    const name=rows.at(-1);
+    name.value='Item incluído após entrega';
+    const form=document.querySelector('#order-form');
+    const quantity=[...form.querySelectorAll('.item-quantity')].at(-1);quantity.value='1';
+    const price=[...form.querySelectorAll('.item-price')].at(-1);price.value='2,00';
+    form.requestSubmit();
+  })()`);
+  assert(await evaluate(`JSON.parse(localStorage.getItem('trameli-operation-draft-v2')).find(o=>o.id===${JSON.stringify(deliveredId)}).status==='delivered'`), 'Corrigir itens não deve reabrir a entrega.');
+  assert(await evaluate(`JSON.parse(localStorage.getItem('trameli-operation-draft-v2')).find(o=>o.id===${JSON.stringify(deliveredId)}).items.some(i=>i.name==='Item incluído após entrega')`), 'Item adicionado ao pedido entregue não foi salvo.');
   process.stdout.write('Operação diária: Kanban, detalhe lateral, conferência, edição, impressão, persistência e layouts 390/1350px OK.\n');
 } finally {
   socket?.close();
