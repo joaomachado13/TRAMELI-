@@ -2,9 +2,9 @@ import { formatCustomerName, normalizeSearch } from '../src/customer-display.js'
 import { recurringScheduleText } from '../src/recurring-days.js';
 import { stages, statusPath, progressOrder, canEditOrder } from '../src/operation-flow.js';
 import { compareByStreet } from '../src/address-sort.js';
-import { supplierGroups, supplierTotals, supplierText, supplierDayCost, downloadSupplierPdf, downloadSeparationPdf, itemCheckKey, filterSupplierGroups, isSandraSupplierItem, bakeryLabelOrders } from '../src/supplier-checklist.js';
+import { supplierGroups, supplierTotals, supplierText, supplierCustomerText, supplierDayCost, downloadSupplierPdf, downloadSeparationPdf, itemCheckKey, filterSupplierGroups, isSandraSupplierItem, bakeryLabelOrders } from '../src/supplier-checklist.js';
 import { closingPeriod } from '../src/billing-cycle.js';
-import { costMapFromRows, supplierPeriodReport, supplierPeriodText, periodLabel, formatMoney as formatCost } from '../src/supplier-costs.js';
+import { costMapFromRows, supplierPeriodReport, supplierPeriodText, supplierPeriodCustomerText, periodLabel, formatMoney as formatCost } from '../src/supplier-costs.js';
 import { downloadSupplierPeriodPdf } from '../src/supplier-period-pdf.js';
 
 (() => {
@@ -43,6 +43,7 @@ const list = document.getElementById('orders-list');
 const supplierList = document.getElementById('supplier-list-items');
 const supplierTotalsHost = document.getElementById('supplier-list-totals');
 const supplierCopy = document.getElementById('copy-supplier-list');
+const supplierCustomerCopy = document.getElementById('copy-supplier-clients');
 const supplierPdf = document.getElementById('download-supplier-pdf');
 const supplierFeedback = document.getElementById('supplier-list-feedback');
 const supplierProvider = document.getElementById('supplier-provider');
@@ -510,6 +511,11 @@ function renderSupplierList() {
   const hasExport = selectedPeriod().kind === 'diario' ? groups.length > 0 : periodOrders(selectedPeriod()).length > 0;
   if (separationPdf) separationPdf.disabled = !separationGroups().length;
   supplierCopy.disabled = !hasExport;
+  if (supplierCustomerCopy) {
+    const sandraSelected = (supplierProvider?.value || 'divano') === 'sandra';
+    supplierCustomerCopy.hidden = !sandraSelected;
+    supplierCustomerCopy.disabled = !hasExport;
+  }
   // Mantenha o botão de PDF clicável nos períodos agregados para que a própria ação informe se faltam pedidos ou custos, em vez de parecer que não responde.
   if (supplierPdf && !supplierPdf.dataset.busy) supplierPdf.disabled = selectedPeriod().kind === 'diario' && !hasExport;
   refreshPeriodLabel();
@@ -970,9 +976,11 @@ supplierCopy.addEventListener('click', async () => {
   let content;
   try {
     if (selectedPeriod().kind === 'diario') {
+      const exportDate = dateInput.value;
+      if (costsAvailable()) await loadCostsFor(orders.filter(order => order.date === exportDate && orderStatus(order) !== 'cancelled'));
       const groups = repasseGroups();
       if (!groups.length) throw new Error('Não há itens dessa padaria nesta data.');
-      content = supplierText(groups, dateInput.value);
+      content = supplierText(groups, exportDate);
     } else {
       const { period, report } = await buildPeriodReport();
       content = supplierPeriodText(report, periodKinds[period.kind], businessLabel());
@@ -980,7 +988,30 @@ supplierCopy.addEventListener('click', async () => {
   } catch (cause) { supplierFeedback.textContent = cause.message; return; }
   try {
     await navigator.clipboard.writeText(content);
-    supplierFeedback.textContent = 'Lista copiada. Confira as quantidades e os custos antes de enviar.';
+    supplierFeedback.textContent = 'Resumo copiado. Confira as quantidades e os custos antes de enviar.';
+  } catch {
+    supplierFeedback.textContent = 'Não foi possível copiar automaticamente neste navegador.';
+  }
+});
+
+supplierCustomerCopy?.addEventListener('click', async () => {
+  let content;
+  try {
+    if ((supplierProvider?.value || 'divano') !== 'sandra') throw new Error('A lista por cliente está disponível para a Padaria Sandra.');
+    if (selectedPeriod().kind === 'diario') {
+      const exportDate = dateInput.value;
+      if (costsAvailable()) await loadCostsFor(orders.filter(order => order.date === exportDate && orderStatus(order) !== 'cancelled'));
+      const groups = repasseGroups();
+      if (!groups.length) throw new Error('Não há itens da Sandra nesta data.');
+      content = supplierCustomerText(groups, exportDate, businessLabel());
+    } else {
+      const { period, report } = await buildPeriodReport();
+      content = supplierPeriodCustomerText(report, periodKinds[period.kind], businessLabel());
+    }
+  } catch (cause) { supplierFeedback.textContent = cause.message; return; }
+  try {
+    await navigator.clipboard.writeText(content);
+    supplierFeedback.textContent = 'Lista da Sandra por cliente copiada com os valores de custo.';
   } catch {
     supplierFeedback.textContent = 'Não foi possível copiar automaticamente neste navegador.';
   }
@@ -1035,18 +1066,26 @@ supplierPdf?.addEventListener('click', async () => {
   supplierFeedback.textContent = 'Gerando PDF…';
   try {
     if (selectedPeriod().kind === 'diario') {
-      const groups = repasseGroups();
-      if (!groups.length) throw new Error('Não há itens dessa padaria nesta data.');
       const exportDate = dateInput.value;
       if (costsAvailable()) await loadCostsFor(orders.filter(order => order.date === exportDate && orderStatus(order) !== 'cancelled'));
-      await downloadSupplierPdf(checklistGroups(), exportDate, businessLabel());
+      const groups = repasseGroups();
+      if (!groups.length) throw new Error('Não há itens dessa padaria nesta data.');
+      const isSandra = (supplierProvider?.value || 'divano') === 'sandra';
+      await downloadSupplierPdf(groups, exportDate, businessLabel(), {
+        includeCustomers: isSandra,
+        supplierName: isSandra ? 'Padaria Sandra' : 'Padaria do Divano',
+      });
       supplierFeedback.textContent = costsAvailable()
-        ? 'PDF de repasse baixado com a lista consolidada por material e os valores de custo.'
+        ? `PDF de repasse baixado com a lista consolidada por material, valores de custo${isSandra ? ' e detalhamento por cliente da Sandra' : ''}.`
         : 'PDF de repasse baixado com a lista consolidada por material. Os custos só aparecem com o banco conectado.';
     } else {
       const { period, report } = await buildPeriodReport();
-      await downloadSupplierPeriodPdf(report, periodKinds[period.kind], businessLabel());
-      supplierFeedback.textContent = `PDF ${periodKinds[period.kind].toLowerCase()} baixado (${periodLabel(period.from, period.to)}) com itens, custo por dia e total.${report.missingLines ? ` Atenção: ${report.missingLines} item(ns) sem custo cadastrado.` : ''}`;
+      const isSandra = (supplierProvider?.value || 'divano') === 'sandra';
+      await downloadSupplierPeriodPdf(report, periodKinds[period.kind], businessLabel(), {
+        includeCustomers: isSandra,
+        supplierName: isSandra ? 'Padaria Sandra' : 'Padaria do Divano',
+      });
+      supplierFeedback.textContent = `PDF ${periodKinds[period.kind].toLowerCase()} baixado (${periodLabel(period.from, period.to)}) com itens, custo por dia e total${isSandra ? ', além do detalhamento por cliente da Sandra' : ''}.${report.missingLines ? ` Atenção: ${report.missingLines} item(ns) sem custo cadastrado.` : ''}`;
     }
   } catch (error) { supplierFeedback.textContent = `Não foi possível gerar o PDF: ${error.message}`; }
   finally { delete supplierPdf.dataset.busy; renderSupplierList(); }
