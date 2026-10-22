@@ -33,6 +33,7 @@ export function supplierPeriodReport(orders, costMap, from, to, catalogProducts 
   const identify = supplierProductIdentity(inRange.flatMap(order => order.items || []), catalogProducts);
   const products = new Map();
   const days = new Map();
+  const customerOrders = [];
   let totalCents = 0; let missingLines = 0; let estimatedLines = 0; let matchedOrderCount = 0;
   for (const order of inRange) {
     const matchingItems = (order.items || []).map((item, index) => ({ item, index })).filter(({ item }) => !itemFilter || itemFilter(item));
@@ -41,6 +42,17 @@ export function supplierPeriodReport(orders, costMap, from, to, catalogProducts 
     const day = days.get(order.date) || { date: order.date, orders: 0, costCents: 0 };
     day.orders += 1;
     days.set(order.date, day);
+    const detail = {
+      id: order.id,
+      publicCode: order.publicCode || '',
+      customer: order.customer || 'Cliente sem nome',
+      address: order.address || '',
+      date: order.date,
+      lines: [],
+      costCents: 0,
+      missing: 0,
+      estimatedCount: 0,
+    };
     matchingItems.forEach(({ item, index }) => {
       const cost = lineCost(costMap, order.id, index);
       const { weighted, key, productId } = identify(item);
@@ -50,7 +62,18 @@ export function supplierPeriodReport(orders, costMap, from, to, catalogProducts 
       };
       current.quantity += Number(item.quantity) || 0;
       current.grams += Number(item.weightGrams) || 0;
+      detail.lines.push({
+        label: itemLabel(item),
+        name: item.name,
+        quantity: Number(item.quantity) || 0,
+        weightGrams: Number(item.weightGrams) || 0,
+        costKnown: cost.known,
+        costCents: cost.totalCents,
+        unitCents: cost.unitCents,
+        estimated: cost.estimated,
+      });
       if (cost.known) {
+        detail.costCents += cost.totalCents;
         current.costCents += cost.totalCents;
         day.costCents += cost.totalCents;
         totalCents += cost.totalCents;
@@ -61,15 +84,18 @@ export function supplierPeriodReport(orders, costMap, from, to, catalogProducts 
             : cost.unitCents;
         }
       } else {
+        detail.missing += 1;
         current.missing += 1;
         missingLines += 1;
       }
       if (cost.estimated) {
+        detail.estimatedCount += 1;
         estimatedLines += 1;
         current.estimatedCount += 1;
       }
       products.set(key, current);
     });
+    customerOrders.push(detail);
   }
   const list = [...products.values()].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map(product => ({
     ...product,
@@ -81,12 +107,43 @@ export function supplierPeriodReport(orders, costMap, from, to, catalogProducts 
   return {
     from, to, orderCount: matchedOrderCount, products: list,
     days: [...days.values()].sort((a, b) => a.date.localeCompare(b.date)),
+    customerOrders: customerOrders.sort((a, b) => {
+      const byCustomer = String(a.customer).localeCompare(String(b.customer), 'pt-BR', { sensitivity: 'base' });
+      return byCustomer || a.date.localeCompare(b.date) || String(a.publicCode).localeCompare(String(b.publicCode), 'pt-BR', { numeric: true });
+    }),
     totalCents, missingLines, estimatedLines,
   };
 }
 
 const dateBr = date => date.split('-').reverse().join('/');
 export const periodLabel = (from, to) => from === to ? dateBr(from) : dateBr(from) + ' a ' + dateBr(to);
+
+export function supplierPeriodCustomerText(report, kindLabel, businessName = 'Pão Doce') {
+  const lines = [businessName + ' - Repasse da padaria (' + kindLabel + ')', 'Período: ' + periodLabel(report.from, report.to) + ' · ' + report.orderCount + ' pedidos', '', 'ITENS POR CLIENTE (preço de custo)'];
+  const customers = new Map();
+  for (const order of report.customerOrders || []) {
+    const key = JSON.stringify([order.customer || '', order.address || '']);
+    if (!customers.has(key)) customers.set(key, { customer: order.customer || 'Cliente sem nome', address: order.address || '', orders: [], costCents: 0, missing: 0 });
+    const current = customers.get(key);
+    current.orders.push(order);
+    current.costCents += Number(order.costCents || 0);
+    current.missing += Number(order.missing || 0);
+  }
+  for (const customer of [...customers.values()].sort((a, b) => a.customer.localeCompare(b.customer, 'pt-BR', { sensitivity: 'base' }))) {
+    lines.push('', customer.customer);
+    for (const order of customer.orders) {
+      for (const line of order.lines) {
+        const value = line.costKnown ? formatMoney(line.costCents) + (line.estimated ? '*' : '') : 'custo não informado';
+        lines.push(dateBr(order.date) + ' · ' + line.label + ' — ' + value);
+      }
+    }
+    lines.push('Subtotal: ' + formatMoney(customer.costCents) + (customer.missing ? ' — ' + customer.missing + ' item(ns) sem custo' : ''));
+  }
+  lines.push('', 'TOTAL A PAGAR À PADARIA: ' + formatMoney(report.totalCents));
+  if (report.missingLines) lines.push('Atenção: ' + report.missingLines + ' item(ns) sem custo cadastrado; o total está incompleto.');
+  if (report.estimatedLines) lines.push('* ' + report.estimatedLines + ' item(ns) com custo estimado, ainda não confirmado.');
+  return lines.join('\n');
+}
 
 export function supplierPeriodText(report, kindLabel, businessName = 'Pão Doce') {
   const lines = [businessName + ' - Repasse da padaria (' + kindLabel + ')', 'Período: ' + periodLabel(report.from, report.to) + ' · ' + report.orderCount + ' pedidos', '', 'ITENS (preço de custo)'];
