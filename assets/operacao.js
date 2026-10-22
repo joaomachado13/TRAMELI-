@@ -2,7 +2,7 @@ import { formatCustomerName, normalizeSearch } from '../src/customer-display.js'
 import { recurringScheduleText } from '../src/recurring-days.js';
 import { stages, statusPath, progressOrder, canEditOrder } from '../src/operation-flow.js';
 import { compareByStreet } from '../src/address-sort.js';
-import { supplierGroups, supplierTotals, supplierText, supplierDayCost, downloadSupplierPdf, downloadSeparationPdf, itemCheckKey, filterSupplierGroups, isSandraSupplierItem } from '../src/supplier-checklist.js';
+import { supplierGroups, supplierTotals, supplierText, supplierDayCost, downloadSupplierPdf, downloadSeparationPdf, itemCheckKey, filterSupplierGroups, isSandraSupplierItem, bakeryLabelOrders } from '../src/supplier-checklist.js';
 import { closingPeriod } from '../src/billing-cycle.js';
 import { costMapFromRows, supplierPeriodReport, supplierPeriodText, periodLabel, formatMoney as formatCost } from '../src/supplier-costs.js';
 import { downloadSupplierPeriodPdf } from '../src/supplier-period-pdf.js';
@@ -404,8 +404,8 @@ function rememberPrintedOrders() {
 window.addEventListener('beforeprint', rememberPrintedOrders);
 
 function openLabelPrintDialog(printMode = 'a4') {
-  const dayOrders = selectedOrders();
-  if (!dayOrders.length) { alert('Não há pedidos para imprimir na data selecionada.'); return; }
+  const dayOrders = bakeryLabelOrders(selectedOrders());
+  if (!dayOrders.length) { alert('Não há itens da Padaria do Divano para imprimir na data selecionada.'); return; }
   let dialog = document.getElementById('label-print-dialog');
   if (!dialog) {
     dialog = document.createElement('dialog');
@@ -443,7 +443,7 @@ function openLabelPrintDialog(printMode = 'a4') {
     });
 
     const runPrintAction = action => {
-      const available = selectedOrders();
+      const available = bakeryLabelOrders(selectedOrders());
       let chosen = [];
       if (action === 'new') chosen = available.filter(order => orderStatus(order) === 'received').sort(compareByStreet);
       else if (action === 'all') chosen = available.slice().sort(compareByStreet);
@@ -480,6 +480,7 @@ function openLabelPrintDialog(printMode = 'a4') {
 }
 
 function checklistGroups() { return supplierGroups(orders, dateInput.value, supplierChecks, costsAvailable() ? (supplierCostMap || new Map()) : null); }
+function separationGroups() { return filterSupplierGroups(checklistGroups(), 'divano'); }
 function repasseGroups() { return filterSupplierGroups(checklistGroups(), supplierProvider?.value || 'divano'); }
 function periodOrders(period) { return orders.filter(order => order.date >= period.from && order.date <= period.to && orderStatus(order) !== 'cancelled'); }
 function refreshPeriodLabel() {
@@ -507,7 +508,7 @@ function renderSupplierList() {
     input.indeterminate = !order.checked && order.lines.some(line => line.checked);
   });
   const hasExport = selectedPeriod().kind === 'diario' ? groups.length > 0 : periodOrders(selectedPeriod()).length > 0;
-  if (separationPdf) separationPdf.disabled = !allGroups.some(group => group.orders.some(order => order.lines.length));
+  if (separationPdf) separationPdf.disabled = !separationGroups().length;
   supplierCopy.disabled = !hasExport;
   // Mantenha o botão de PDF clicável nos períodos agregados para que a própria ação informe se faltam pedidos ou custos, em vez de parecer que não responde.
   if (supplierPdf && !supplierPdf.dataset.busy) supplierPdf.disabled = selectedPeriod().kind === 'diario' && !hasExport;
@@ -821,9 +822,13 @@ async function handleOrderAction(button) {
 }
 
 function preparePrint(orderSelection = null, printMode = 'a4') {
-  const dayOrders = (orderSelection || selectedOrders()).slice().sort(compareByStreet);
-  if (!dayOrders.length) { alert('Não há pedidos para imprimir na data selecionada.'); return false; }
+  const dayOrders = bakeryLabelOrders(orderSelection || selectedOrders()).sort(compareByStreet);
   const printHost = document.getElementById('print-document');
+  if (!dayOrders.length) {
+    printHost.replaceChildren();
+    alert('Não há itens da Padaria do Divano para imprimir na data selecionada.');
+    return false;
+  }
 
   try {
     const saved = JSON.parse(localStorage.getItem(printSettingsKey) || '{}');
@@ -1009,9 +1014,9 @@ async function generateSeparationPdf() {
   separationPdf.dataset.busy = 'true'; separationPdf.disabled = true;
   if (separationFeedback) separationFeedback.textContent = 'Gerando PDF de separação…';
   try {
-    const groups = checklistGroups();
-    if (!groups.length) throw new Error('Não há itens dessa padaria para separar na data selecionada.');
-    await downloadSeparationPdf(groups, dateInput.value, businessLabel(), 'Lista única');
+    const groups = separationGroups();
+    if (!groups.length) throw new Error('Não há itens da Padaria do Divano para separar na data selecionada.');
+    await downloadSeparationPdf(groups, dateInput.value, businessLabel(), 'Padaria do Divano');
     if (separationFeedback) separationFeedback.textContent = 'PDF de separação baixado. Clientes ordenados por endereço/rua e depois por nome; sem valores financeiros.';
   } catch (error) {
     if (separationFeedback) separationFeedback.textContent = `Não foi possível gerar a lista: ${error.message}`;

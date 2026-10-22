@@ -271,6 +271,41 @@ try {
   })()`);
   assert(await evaluate(`JSON.parse(localStorage.getItem('trameli-operation-draft-v2')).find(o=>o.id===${JSON.stringify(deliveredId)}).status==='delivered'`), 'Corrigir itens não deve reabrir a entrega.');
   assert(await evaluate(`JSON.parse(localStorage.getItem('trameli-operation-draft-v2')).find(o=>o.id===${JSON.stringify(deliveredId)}).items.some(i=>i.name==='Item incluído após entrega')`), 'Item adicionado ao pedido entregue não foi salvo.');
+  const paperworkDate = await evaluate('document.querySelector("#delivery-date").value');
+  const paperworkOriginal = await evaluate(`(() => {
+    const base=JSON.parse(localStorage.getItem('trameli-operation-draft-v2'))[0];
+    const mixed={...base,id:'paper-mixed',date:${JSON.stringify(paperworkDate)},status:'received',items:[
+      {name:'Pão francês',quantity:6,priceCents:140},{name:'Broa',quantity:1,priceCents:400},
+      {name:'Biscoito de nata',quantity:2,priceCents:400}]};
+    const only={...mixed,id:'paper-sandra',items:[{name:'Biscoito da vovó',quantity:1,priceCents:400}]};
+    const raw=JSON.stringify([mixed,only]);localStorage.setItem('trameli-operation-draft-v2',raw);
+    dispatchEvent(new Event('trameli:orders-changed'));return raw;
+  })()`);
+  const fullDayTotal = await evaluate('document.querySelector("#grand-total").textContent');
+  for (const mode of ['a4','mini']) {
+    await evaluate(`window.TrameliOperation.preparePrint(null,${JSON.stringify(mode)})`);
+    assert(await evaluate('document.querySelectorAll(".print-label").length===1 && document.querySelectorAll(".print-label li").length===1 && document.querySelector(".print-label li").textContent.includes("Pão francês")'), 'Etiquetas devem conter só itens do Divano, sem cartão vazio para pedidos só da Sandra.');
+    assert(await evaluate('!document.querySelector("#print-document").textContent.includes("Broa") && !document.querySelector("#print-document").textContent.includes("Biscoito")'), 'Produtos da Sandra vazaram para a etiqueta.');
+  }
+  assert(await evaluate('document.querySelector("#grand-total").textContent')===fullDayTotal, 'Imprimir alterou o total cobrado dos clientes.');
+  assert(await evaluate('localStorage.getItem("trameli-operation-draft-v2")')===paperworkOriginal, 'A impressão modificou os pedidos salvos.');
+  await evaluate('document.querySelector(".order-card[data-id=paper-mixed]").click()');
+  assert(await evaluate('document.querySelector("#order-detail-content").textContent.includes("Broa") && document.querySelector("#order-detail-content").textContent.includes("Biscoito de nata")'), 'Os itens da Sandra precisam continuar nos detalhes do pedido.');
+  await evaluate('document.querySelector("#order-detail-drawer [data-action=close-detail]").click()');
+  await rm(join(downloadPath, `separacao-padaria-do-divano-${paperworkDate}.pdf`), { force:true });
+  await evaluate('document.querySelector("#download-separation-pdf").click()');
+  let separationDownload;
+  for(let attempt=0;attempt<100;attempt++){
+    try{separationDownload=await readFile(join(downloadPath, `separacao-padaria-do-divano-${paperworkDate}.pdf`));break;}catch{await pause(100);}
+  }
+  assert(Boolean(separationDownload), 'A lista de separação do Divano não foi baixada.');
+  assert((await PDFDocument.load(separationDownload)).getTitle().includes('Padaria do Divano'), 'Lista de separação perdeu a identificação do Divano.');
+  await evaluate(`(() => {
+    const orders=JSON.parse(localStorage.getItem('trameli-operation-draft-v2'));
+    localStorage.setItem('trameli-operation-draft-v2',JSON.stringify([orders.find(o=>o.id==='paper-sandra')]));
+    dispatchEvent(new Event('trameli:orders-changed'));
+  })()`);
+  assert(await evaluate('document.querySelector("#download-separation-pdf").disabled'), 'Pedido só da Sandra não deve gerar lista vazia para o Divano.');
   process.stdout.write('Operação diária: Kanban, detalhe lateral, conferência, edição, impressão, persistência e layouts 390/1350px OK.\n');
 } finally {
   socket?.close();

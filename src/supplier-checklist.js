@@ -7,6 +7,14 @@ const normalize = value => String(value || '').trim().toLocaleLowerCase('pt-BR')
 
 export const SANDRA_ITEMS = Object.freeze(['broa', 'biscoito provolone', 'bolacha de nata', 'biscoito de nata', 'biscoito de queijo', 'biscoito da vovó']);
 export const isSandraSupplierItem = name => SANDRA_ITEMS.includes(normalize(name));
+// Only project items for the bakery labels; never modify the customer's order.
+export function bakeryLabelOrders(orders) {
+  return orders.map(order => ({
+    ...order,
+    items: (order.items || []).filter(item => !isSandraSupplierItem(item.name)),
+  })).filter(order => order.items.length);
+}
+
 export function filterSupplierGroups(groups, supplier = 'divano') {
   return groups.map(group => ({
     ...group,

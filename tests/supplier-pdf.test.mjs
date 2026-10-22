@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { PDFDocument } from 'pdf-lib';
-import { supplierGroups, supplierTotals, supplierText, itemCheckKey, filterSupplierGroups, compareSupplierGroups } from '../src/supplier-checklist.js';
+import { supplierGroups, supplierTotals, supplierText, itemCheckKey, filterSupplierGroups, compareSupplierGroups, bakeryLabelOrders, SANDRA_ITEMS } from '../src/supplier-checklist.js';
 import { createSupplierPdf, createSeparationPdf } from '../src/supplier-pdf.js';
 
 const date = '2026-10-07';
@@ -42,6 +42,23 @@ const supplierFixture = [{ customer: 'Cliente', address: 'Rua A', orders: [{ id:
 ] }] }];
 assert.deepEqual(filterSupplierGroups(supplierFixture, 'sandra').flatMap(g => g.orders.flatMap(o => o.lines.map(l => l.name))), ['Broa', 'Biscoito de nata']);
 assert.deepEqual(filterSupplierGroups(supplierFixture, 'divano').flatMap(g => g.orders.flatMap(o => o.lines.map(l => l.name))), ['Pão francês']);
+// The bakery paperwork is a projection; customer orders and financial repasses remain complete.
+const mixedOrder = { ...first, id: 'mixed', items: [
+  { name: 'Pão francês', quantity: 4, priceCents: 140 },
+  ...SANDRA_ITEMS.map(name => ({ name, quantity: 2, priceCents: 400 })),
+] };
+const sandraOnly = { ...first, id: 'sandra-only', customerId: 'sandra-only-client', items: [{ name: 'BISCOITO DE NATA', quantity: 1, priceCents: 400 }] };
+const paperworkOrders = [mixedOrder, sandraOnly];
+const originalOrders = JSON.stringify(paperworkOrders);
+const labelOrders = bakeryLabelOrders(paperworkOrders);
+assert.equal(labelOrders.length, 1, 'Pedidos só da Sandra não devem gerar etiquetas vazias.');
+assert.deepEqual(labelOrders[0].items.map(item => item.name), ['Pão francês']);
+const fullGroups = supplierGroups(paperworkOrders, date);
+const divanoGroups = filterSupplierGroups(fullGroups, 'divano');
+assert.deepEqual(divanoGroups.flatMap(g => g.orders.flatMap(o => o.lines.map(l => l.name))), ['Pão francês']);
+assert.equal(filterSupplierGroups(fullGroups, 'sandra').flatMap(g => g.orders.flatMap(o => o.lines)).length, SANDRA_ITEMS.length + 1, 'O repasse financeiro da Sandra deve continuar completo.');
+assert.equal(JSON.stringify(paperworkOrders), originalOrders, 'Filtrar as impressões não pode modificar os pedidos originais.');
+assert.equal(filterSupplierGroups(supplierGroups([sandraOnly], date), 'divano').length, 0);
 const changed = { ...first, items: [{ ...first.items[0], quantity: 6 }, first.items[1]] };
 assert(!supplierGroups([changed], date, checks)[0].orders[0].checked, 'Mudanças nos itens devem invalidar a conferência anterior.');
 assert.equal(itemCheckKey(first, 0), itemCheckKey({ ...first, items: first.items.map(item => ({ ...item, priceCents: 999 })) }, 0));
@@ -54,7 +71,7 @@ assert.equal(loaded.getForm().getFields().length, 2, 'Repasse contém somente ca
 assert(loaded.getPageCount() >= 1);
 await assert.rejects(createSupplierPdf([], date, { regular, bold }), /Não há pedidos/);
 
-const separationBytes = await createSeparationPdf(groups, date, { regular, bold, businessName: 'Pão Doce', supplierName: 'Padaria do Divano' });
+const separationBytes = await createSeparationPdf(divanoGroups, date, { regular, bold, businessName: 'Pão Doce', supplierName: 'Padaria do Divano' });
 const separationPdf = await PDFDocument.load(separationBytes);
 assert(separationPdf.getPageCount() >= 1);
 assert.equal(separationPdf.getForm().getFields().length, 0, 'Lista operacional não deve conter campos financeiros/interativos.');
