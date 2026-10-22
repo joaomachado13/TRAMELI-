@@ -1,3 +1,4 @@
+import { formatCustomerName, normalizeSearch } from '../src/customer-display.js';
 import { featuredProductsMarkup } from '../src/featured-products.js';
 import '../src/featured-products.css';
 import { weekdayNames, recurringItemsText, recurringScheduleText } from '../src/recurring-days.js';
@@ -106,9 +107,9 @@ import { weekdayNames, recurringItemsText, recurringScheduleText } from '../src/
     if(tab==='new') renderProducts();
   }
   function renderCustomers(query=customerSearch.value){
-    const q=query.trim().toLocaleLowerCase('pt-BR');
-    const matches=profiles.filter(p=>p.name && (!q || [p.name,p.address,p.phone].some(v=>String(v||'').toLocaleLowerCase('pt-BR').includes(q)))).slice(0,8);
-    customerResults.innerHTML=matches.length?matches.map(p=>'<button type="button" data-customer-id="'+esc(p.user_id)+'"><strong>'+esc(p.name)+'</strong><small>'+esc(p.address||'Endereço não informado')+(p.phone?' · '+esc(p.phone):'')+'</small></button>').join(''):'<p class="shirley-portal__empty">Nenhum cliente encontrado. Confira o nome ou cadastre o cliente primeiro.</p>';
+    const q=normalizeSearch(query);
+    const matches=profiles.filter(p=>p.name && (!q || [p.name,p.address,p.phone].some(v=>normalizeSearch(v).includes(q)))).slice(0,8);
+    customerResults.innerHTML=matches.length?matches.map(p=>'<button type="button" data-customer-id="'+esc(p.user_id)+'"><strong>'+esc(formatCustomerName(p.name))+'</strong><small>'+esc(p.address||'Endereço não informado')+(p.phone?' · '+esc(p.phone):'')+'</small></button>').join(''):'<p class="shirley-portal__empty">Nenhum cliente encontrado. Confira o nome ou cadastre o cliente primeiro.</p>';
     customerResults.hidden=false;
   }
   async function loadCustomerCommercialTerms(id){
@@ -129,8 +130,8 @@ import { weekdayNames, recurringItemsText, recurringScheduleText } from '../src/
   }
   function chooseCustomer(id){
     const p=profiles.find(x=>x.user_id===id); if(!p)return;
-    selectedCustomerId=id; customerId.value=id; customerSearch.value=p.name;
-    $('#shirley-selected-customer').textContent=[p.name,p.address,p.phone].filter(Boolean).join(' · ');
+    selectedCustomerId=id; customerId.value=id; customerSearch.value=formatCustomerName(p.name);
+    $('#shirley-selected-customer').textContent=[formatCustomerName(p.name),p.address,p.phone].filter(Boolean).join(' · ');
     customerResults.hidden=true;
     void loadCustomerCommercialTerms(id);
   }
@@ -170,13 +171,13 @@ import { weekdayNames, recurringItemsText, recurringScheduleText } from '../src/
   }
   function renderOrders(){
     if(!live?.operator){$('#shirley-orders-list').innerHTML='<p class="shirley-portal__empty">A consulta exige uma conta operacional.</p>';return;}
-    const date=ordersDate.value; const q=ordersSearch.value.trim().toLocaleLowerCase('pt-BR');
-    const list=(live.orders||[]).filter(o=>o.date===date && (o.status||'received')!=='cancelled' && (!q||[o.customer,o.address,...(o.items||[]).map(i=>i.name),o.publicCode].some(v=>String(v||'').toLocaleLowerCase('pt-BR').includes(q)))).sort((a,b)=>String(a.customer).localeCompare(String(b.customer),'pt-BR'));
+    const date=ordersDate.value; const q=normalizeSearch(ordersSearch.value);
+    const list=(live.orders||[]).filter(o=>o.date===date && (o.status||'received')!=='cancelled' && (!q||[o.customer,o.address,...(o.items||[]).map(i=>i.name),o.publicCode].some(v=>normalizeSearch(v).includes(q)))).sort((a,b)=>String(a.customer).localeCompare(String(b.customer),'pt-BR'));
     $('#shirley-orders-list').innerHTML=list.length?list.map(o=>{
       const status=({received:'A conferir',confirmed:'Conferido',packing:'Em separação',ready:'Pronto',delivered:'Entregue',cancelled:'Cancelado'})[o.status||'received']||'A conferir';
       const items=(o.items||[]).map(i=>(i.weightGrams?i.weightGrams+' g de ':i.quantity+'× ')+i.name).join(' · ');
       const total=window.TrameliOrderMath.totalCents(o);
-      return '<article class="shirley-portal__record"><div class="shirley-portal__record-main"><strong>'+esc(o.customer)+' · '+esc(o.publicCode||'Pedido')+'</strong><small>'+esc(o.address||'')+' · '+esc(status)+' · '+money(total)+'</small><p>'+esc(items)+'</p></div><div class="shirley-portal__record-actions"><button type="button" class="shirley-portal__secondary" data-edit-order="'+esc(o.id)+'">Editar pedido</button></div></article>';
+      return '<article class="shirley-portal__record"><div class="shirley-portal__record-main"><strong>'+esc(formatCustomerName(o.customer))+' · '+esc(o.publicCode||'Pedido')+'</strong><small>'+esc(o.address||'')+' · '+esc(status)+' · '+money(total)+'</small><p>'+esc(items)+'</p></div><div class="shirley-portal__record-actions"><button type="button" class="shirley-portal__secondary" data-edit-order="'+esc(o.id)+'">Editar pedido</button></div></article>';
     }).join(''):'<p class="shirley-portal__empty">Nenhum pedido encontrado para essa data e pesquisa.</p>';
   }
   async function loadSchedules(){
@@ -190,7 +191,7 @@ import { weekdayNames, recurringItemsText, recurringScheduleText } from '../src/
         const p=profiles.find(x=>x.user_id===s.customer_id);
         const days=(s.weekdays||[1,2,3,4,5,6]).map(d=>weekdayNames[Number(d)]).filter(Boolean).join(', ');
         const items=recurringScheduleText(s).map(text => `<p>${esc(text)}</p>`).join('');
-        return '<article class="shirley-portal__record"><div class="shirley-portal__record-main"><strong>'+esc(p?.name||'Cliente')+'</strong><small>'+esc(names[s.recurrence]||s.recurrence)+' · '+esc(s.active?'Ativo':'Pausado')+'</small><small>Dias: '+esc(days)+'</small>'+items+'</div><div class="shirley-portal__record-actions"><button type="button" class="shirley-portal__secondary" data-edit-schedule="'+esc(s.id)+'" '+(!s.active?'disabled':'')+'>Editar programação</button><button type="button" class="shirley-portal__secondary" data-toggle-schedule="'+esc(s.id)+'" data-active="'+String(!s.active)+'">'+(s.active?'Pausar':'Reativar')+'</button><button type="button" class="shirley-portal__secondary" data-delete-schedule="'+esc(s.id)+'">Excluir</button></div></article>';
+        return '<article class="shirley-portal__record"><div class="shirley-portal__record-main"><strong>'+esc(formatCustomerName(p?.name||'Cliente'))+'</strong><small>'+esc(names[s.recurrence]||s.recurrence)+' · '+esc(s.active?'Ativo':'Pausado')+'</small><small>Dias: '+esc(days)+'</small>'+items+'</div><div class="shirley-portal__record-actions"><button type="button" class="shirley-portal__secondary" data-edit-schedule="'+esc(s.id)+'" '+(!s.active?'disabled':'')+'>Editar programação</button><button type="button" class="shirley-portal__secondary" data-toggle-schedule="'+esc(s.id)+'" data-active="'+String(!s.active)+'">'+(s.active?'Pausar':'Reativar')+'</button><button type="button" class="shirley-portal__secondary" data-delete-schedule="'+esc(s.id)+'">Excluir</button></div></article>';
       }).join(''):'<p class="shirley-portal__empty">Nenhuma programação recorrente cadastrada.</p>';
       recurrenceFeedback.textContent='';
     }catch(error){setFeedback(recurrenceFeedback,'Não foi possível carregar as recorrências: '+error.message,'error');}
@@ -199,8 +200,8 @@ import { weekdayNames, recurringItemsText, recurringScheduleText } from '../src/
     profiles=window.TrameliPayments?.api?.profiles||profiles; products=live.products||[];
     editingScheduleId=schedule.id; selectedCustomerId=schedule.customer_id; customerId.value=schedule.customer_id;
     resetCommercialTerms(); void loadCustomerCommercialTerms(schedule.customer_id);
-    const p=profiles.find(x=>x.user_id===schedule.customer_id); customerSearch.value=p?.name||'';
-    $('#shirley-selected-customer').textContent=[p?.name,p?.address,p?.phone].filter(Boolean).join(' · ');
+    const p=profiles.find(x=>x.user_id===schedule.customer_id); customerSearch.value=formatCustomerName(p?.name);
+    $('#shirley-selected-customer').textContent=[formatCustomerName(p?.name),p?.address,p?.phone].filter(Boolean).join(' · ');
     dateInput.value=schedule.starts_on||schedule.start_date||today(); recurrenceInput.value=schedule.recurrence;
     form.querySelector('.shirley-portal__step').textContent='EDITAR RECORRÊNCIA';
     $('#shirley-form-title').textContent='Editar programação';

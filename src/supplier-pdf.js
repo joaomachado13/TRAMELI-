@@ -1,3 +1,4 @@
+import { formatCustomerName } from './customer-display.js';
 import { PDFDocument, PDFName, PDFHexString, rgb } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import { supplierTotals, supplierDayCost, compareSupplierGroups } from './supplier-checklist.js';
@@ -66,7 +67,7 @@ export async function createSupplierPdf(groups, date, { businessName = 'Pão Doc
   }
 
   function clientHeader(group, continued = false) {
-    const names = wrap(`${group.customer}${continued ? ' (continuação)' : ''}`, 13, WIDTH - 2 * MARGIN - 20, strong);
+    const names = wrap(`${formatCustomerName(group.customer)}${continued ? ' (continuação)' : ''}`, 13, WIDTH - 2 * MARGIN - 20, strong);
     const addresses = wrap(group.address, 9, WIDTH - 2 * MARGIN - 20);
     const height = names.length * 17 + addresses.length * 13 + 22;
     if (y - height - 58 < BOTTOM) newPage();
@@ -171,7 +172,7 @@ export async function createSeparationPdf(groups, date, { businessName = 'Pão D
   const sorted = [...groups].sort(compareSupplierGroups);
   newPage();
   for (const group of sorted) {
-    const heading = wrap(group.customer, 11, WIDTH - 2*MARGIN - 20, strong);
+    const heading = wrap(formatCustomerName(group.customer), 11, WIDTH - 2*MARGIN - 20, strong);
     const address = wrap(group.address || 'Endereço não informado', 9, WIDTH - 2*MARGIN - 20);
     const needed = 12 + heading.length*13 + address.length*10 + group.orders.reduce((n,o)=>n+o.lines.reduce((m,l)=>m+Math.max(1,wrap(l.label,9.5,WIDTH-2*MARGIN-36).length)*12+2,0)+7,0);
     if (y - Math.min(needed, HEIGHT) < BOTTOM) newPage();

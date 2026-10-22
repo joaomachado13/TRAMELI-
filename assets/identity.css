@@ -58,6 +58,7 @@ body .nav2 .notification-dot.notification-count {
 .ico--brand { --tm-icon-image: url("brand-mark.svg"); }
 .ico--home { --tm-icon-image: url("icon-home.svg"); }
 .ico--orders { --tm-icon-image: url("icon-orders.svg"); }
+.ico--daily { --tm-icon-image: url("icon-daily.svg"); }
 .ico--users { --tm-icon-image: url("icon-users.svg"); }
 .ico--box { --tm-icon-image: url("icon-box.svg"); }
 .ico--calendar { --tm-icon-image: url("icon-calendar.svg"); }

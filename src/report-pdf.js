@@ -1,3 +1,4 @@
+import { formatCustomerName } from './customer-display.js';
 import { PDFDocument, rgb } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 
@@ -109,7 +110,7 @@ export async function createBillingReportPdf({ title = 'Cobrança detalhada', pe
   for (const customer of customers) {
     ensureSpace(82);
     page.drawRectangle({ x: MARGIN, y: y - 34, width: WIDTH - 2 * MARGIN, height: 38, color: pale });
-    const customerNameLines = wrap(strong, customer.name || 'Cliente', 10, WIDTH - 2 * MARGIN - 110).slice(0, 2);
+    const customerNameLines = wrap(strong, formatCustomerName(customer.name || 'Cliente'), 10, WIDTH - 2 * MARGIN - 110).slice(0, 2);
     customerNameLines.forEach((line, index) => page.drawText(line, { x: MARGIN + 10, y: y - 14 - index * 12, size: 10, font: strong, color: ink }));
     page.drawText(`${(customer.orders || []).length} ${(customer.orders || []).length === 1 ? 'pedido' : 'pedidos'}`, { x: WIDTH - MARGIN - 84, y: y - 14, size: 8, font, color: muted });
     y -= 45;

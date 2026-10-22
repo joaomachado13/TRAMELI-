@@ -1,3 +1,4 @@
+import { formatCustomerName } from './customer-display.js';
 import { enabled, LiveData } from './live-data.js';
 import { requireAccess } from './auth-ui.js';
 import { initAccount } from './account.js';
@@ -121,7 +122,7 @@ if (enabled) {
     const eyebrow = document.createElement('span');
     eyebrow.textContent = 'NOVO PEDIDO';
     const customer = document.createElement('strong');
-    customer.textContent = row.customer_name || 'Cliente';
+    customer.textContent = formatCustomerName(row.customer_name || 'Cliente');
     const details = document.createElement('small');
     const code = row.public_code ? `#${row.public_code} · ` : '';
     details.textContent = `${code}${formatDeliveryDate(row.delivery_date)}`;
@@ -152,7 +153,7 @@ if (enabled) {
     if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
       try {
         const browserNotification = new Notification('Novo pedido recebido', {
-          body: `${row.customer_name || 'Cliente'} · ${formatDeliveryDate(row.delivery_date)}`,
+          body: `${formatCustomerName(row.customer_name || 'Cliente')} · ${formatDeliveryDate(row.delivery_date)}`,
           tag: `trameli-order-${id}`,
         });
         browserNotification.onclick = () => { browserNotification.close(); void openRealtimeOrder(id); };

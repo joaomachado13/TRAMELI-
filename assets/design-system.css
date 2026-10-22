@@ -1521,17 +1521,23 @@ body .live-account {
 /* Acabamento final: densidade, scroll e navegação controlável. */
 :root {
   --tm-sidebar-collapsed: 76px;
-  scrollbar-color: var(--color-text-primary) transparent;
-  scrollbar-width: thin;
+  --scrollbar-thumb: #DDD0C5;
+  --scrollbar-thumb-hover: #C4AE9C;
 }
 
 html { min-height: 100%; overflow-x: hidden; }
 body { min-height: 100dvh; overflow-x: hidden; }
-* { scrollbar-color: var(--color-text-primary) transparent; scrollbar-width: thin; }
-*::-webkit-scrollbar { width: 7px; height: 7px; }
+* { scrollbar-color: var(--scrollbar-thumb) transparent; scrollbar-width: thin; }
+/* Browsers with WebKit scrollbars need the standard properties reset so the
+   explicit 8px width, rounded thumb and thumb-only hover can take effect. */
+@supports selector(::-webkit-scrollbar) {
+  * { scrollbar-color:auto; scrollbar-width:auto; }
+}
+*::-webkit-scrollbar { width: 8px; height: 8px; }
 *::-webkit-scrollbar-track { background: transparent; }
-*::-webkit-scrollbar-thumb { border-radius: 999px; background: var(--color-surface-alternate); }
-*:hover::-webkit-scrollbar-thumb { background: var(--color-primary-subtle); }
+*::-webkit-scrollbar-thumb { border-radius: 999px; background: var(--scrollbar-thumb); }
+*::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+*::-webkit-scrollbar-corner { background:transparent; }
 
 .app-shell,
 .section { min-height: 100dvh; }

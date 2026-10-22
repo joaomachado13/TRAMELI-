@@ -1,3 +1,4 @@
+import { formatCustomerName, normalizeSearch } from '../src/customer-display.js';
 import { recurringScheduleText } from '../src/recurring-days.js';
 import { stages, statusPath, progressOrder } from '../src/operation-flow.js';
 import { compareByStreet } from '../src/address-sort.js';
@@ -233,7 +234,7 @@ function fillCustomerOptions(selectedId = '', selectedName = '') {
   const profiles = customerProfiles();
   const select = form.elements.customerId;
   select.innerHTML = '<option value="">Selecione um cliente…</option>' + profiles.map(profile =>
-    '<option value="' + escapeHtml(profile.user_id) + '">' + escapeHtml(profile.name) + '</option>'
+    '<option value="' + escapeHtml(profile.user_id) + '">' + escapeHtml(formatCustomerName(profile.name)) + '</option>'
   ).join('');
   let target = profiles.find(profile => profile.user_id === selectedId);
   if (!target && selectedName) target = profiles.find(profile => profile.name.trim().toLocaleLowerCase('pt-BR') === selectedName.trim().toLocaleLowerCase('pt-BR'));
@@ -364,14 +365,14 @@ async function showRecurringManager() {
       const order = orders.find(item => item.id === request.order_id);
       const dayNames = (request.weekdays || []).map(day => weekdayNames[Number(day)]).filter(Boolean).join(', ');
       const itemNames = (order?.items || []).map(item => item.weightGrams ? item.name + ' (' + item.weightGrams + ' g)' : item.name).join(' · ');
-      return '<article class="recurring-manager__item"><div><strong>' + escapeHtml(customer?.name || order?.customer || 'Cliente cadastrado') + '</strong><span>Solicitou: ' + escapeHtml(dayNames) + '</span><small>Pedido de origem: ' + escapeHtml(itemNames || 'itens não disponíveis') + '</small></div><div class="recurring-manager__actions"><button type="button" data-recurring-review="' + escapeHtml(request.id) + '" data-approve="true">Aprovar</button><button type="button" data-recurring-review="' + escapeHtml(request.id) + '" data-approve="false">Recusar</button></div></article>';
+      return '<article class="recurring-manager__item"><div><strong>' + escapeHtml(formatCustomerName(customer?.name || order?.customer) || 'Cliente cadastrado') + '</strong><span>Solicitou: ' + escapeHtml(dayNames) + '</span><small>Pedido de origem: ' + escapeHtml(itemNames || 'itens não disponíveis') + '</small></div><div class="recurring-manager__actions"><button type="button" data-recurring-review="' + escapeHtml(request.id) + '" data-approve="true">Aprovar</button><button type="button" data-recurring-review="' + escapeHtml(request.id) + '" data-approve="false">Recusar</button></div></article>';
     }).join('') : '<p class="recurring-manager__empty">Nenhuma solicitação pendente dos clientes.</p>';
     const scheduleMarkup = recurringSchedulesCache.length ? recurringSchedulesCache.map(schedule => {
       const customer = profiles.get(schedule.customer_id);
       const itemNames = recurringScheduleText(schedule).join('; ');
       const period = schedule.recurrence === 'fixed' ? 'Sem fechamento' : 'Ciclo até ' + new Date(schedule.cycle_ends_on + 'T12:00:00').toLocaleDateString('pt-BR');
       const dayNames = (schedule.weekdays || [1,2,3,4,5,6]).map(day => weekdayNames[Number(day)]).filter(Boolean).join(', ');
-      return '<article class="recurring-manager__item"><div><strong>' + escapeHtml(customer?.name || 'Cliente cadastrado') + '</strong><span>' + escapeHtml(names[schedule.recurrence] || schedule.recurrence) + ' · ' + escapeHtml(period) + '</span><small>Dias: ' + escapeHtml(dayNames) + '</small><small>' + escapeHtml(itemNames) + '</small><small>' + (schedule.active ? 'Ativo' : 'Pausado') + '</small></div><div class="recurring-manager__actions"><button type="button" data-recurring-edit="' + escapeHtml(schedule.id) + '" ' + (schedule.active ? '' : 'disabled') + '>Editar</button><button type="button" data-recurring-active="' + escapeHtml(schedule.id) + '" data-active="' + String(!schedule.active) + '">' + (schedule.active ? 'Pausar' : 'Reativar') + '</button><button type="button" data-recurring-delete="' + escapeHtml(schedule.id) + '">Excluir</button></div></article>';
+      return '<article class="recurring-manager__item"><div><strong>' + escapeHtml(formatCustomerName(customer?.name) || 'Cliente cadastrado') + '</strong><span>' + escapeHtml(names[schedule.recurrence] || schedule.recurrence) + ' · ' + escapeHtml(period) + '</span><small>Dias: ' + escapeHtml(dayNames) + '</small><small>' + escapeHtml(itemNames) + '</small><small>' + (schedule.active ? 'Ativo' : 'Pausado') + '</small></div><div class="recurring-manager__actions"><button type="button" data-recurring-edit="' + escapeHtml(schedule.id) + '" ' + (schedule.active ? '' : 'disabled') + '>Editar</button><button type="button" data-recurring-active="' + escapeHtml(schedule.id) + '" data-active="' + String(!schedule.active) + '">' + (schedule.active ? 'Pausar' : 'Reativar') + '</button><button type="button" data-recurring-delete="' + escapeHtml(schedule.id) + '">Excluir</button></div></article>';
     }).join('') : '<p class="recurring-manager__empty">Ainda não há pedidos recorrentes cadastrados.</p>';
     host.innerHTML = requestMarkup + '<h3 class="recurring-manager__section-title">Programações recorrentes</h3>' + scheduleMarkup;
     feedback.textContent = '';
@@ -448,7 +449,7 @@ function openLabelPrintDialog(printMode = 'a4') {
       else if (action === 'all') chosen = available.slice().sort(compareByStreet);
       else if (action === 'choose') {
         dialog.querySelector('#label-print-selection').hidden = false;
-        dialog.querySelector('#label-print-orders').innerHTML = available.map(order => `<label class="label-print-dialog__order"><input type="checkbox" value="${escapeHtml(order.id)}" checked><span>${escapeHtml(order.customer)}</span><small>${escapeHtml(order.publicCode || '')} · ${money(orderTotal(order))}</small></label>`).join('');
+        dialog.querySelector('#label-print-orders').innerHTML = available.map(order => `<label class="label-print-dialog__order"><input type="checkbox" value="${escapeHtml(order.id)}" checked><span>${escapeHtml(formatCustomerName(order.customer))}</span><small>${escapeHtml(order.publicCode || '')} · ${money(orderTotal(order))}</small></label>`).join('');
         return;
       } else if (action === 'selected') {
         const ids = new Set([...dialog.querySelectorAll('#label-print-orders input:checked')].map(input => input.value));
@@ -521,8 +522,8 @@ function render() {
   const dayOrders = selectedOrders();
   const displayOrders = dayOrders.slice();
   const filtered = displayOrders.filter(order => {
-    const query = searchInput.value.trim().toLocaleLowerCase('pt-BR');
-    return !query || [order.customer, order.address, ...order.items.map(item => item.name)].some(value => value.toLocaleLowerCase('pt-BR').includes(query));
+    const query = normalizeSearch(searchInput.value);
+    return !query || [order.customer, order.address, ...order.items.map(item => item.name)].some(value => normalizeSearch(value).includes(query));
   });
   const summary = window.TrameliOrderMath.summarizeDay(orders, dateInput.value);
   document.getElementById('total-orders').textContent = summary.count;
@@ -548,7 +549,7 @@ function render() {
     const busy = movingOrders.has(order.id);
     const destinations = stages.filter(stage => statusPath(state, stage.key, !live || live.role === 'master').length);
     const movable = destinations.length > 0 && !busy;
-    return `<article class="kanban-card${busy ? ' is-moving' : ''}" data-card-id="${escapeHtml(order.id)}" aria-busy="${busy}"><button class="order-card order-card--${state}" type="button" data-action="open" data-id="${escapeHtml(order.id)}" draggable="${movable}" aria-label="Abrir pedido de ${escapeHtml(order.customer)}"><strong class="order-card__customer">${escapeHtml(order.customer)}</strong><span class="order-card__origin"><span class="order-card__id">#${escapeHtml(orderCode(order))}</span> · ${escapeHtml(orderOriginLabel(order))}</span>${order.editedAt ? '<span class="order-edited-badge" role="status">EDITADO</span>' : ''}<span class="order-card__meta">${itemCount} ${itemCount === 1 ? 'item' : 'itens'} · ${money(orderTotal(order))}</span><span class="order-card__delivery">Entrega ${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</span>${order.notes ? '<span class="order-card__alert">Tem observação</span>' : ''}</button>${destinations.length ? `<div class="kanban-card__move"><button type="button" class="kanban-drag-handle" data-drag-id="${escapeHtml(order.id)}" aria-label="Arrastar pedido de ${escapeHtml(order.customer)}" aria-describedby="kanban-help" ${busy ? 'disabled' : ''}><span aria-hidden="true">⠿</span></button><label><span class="sr-only">Mover pedido de ${escapeHtml(order.customer)} para</span><select data-move-id="${escapeHtml(order.id)}" ${busy ? 'disabled' : ''}><option value="">${busy ? 'Movendo…' : 'Mover para…'}</option>${destinations.map(stage => `<option value="${stage.key}">${stage.title}</option>`).join('')}</select></label></div>` : ''}</article>`;
+    return `<article class="kanban-card${busy ? ' is-moving' : ''}" data-card-id="${escapeHtml(order.id)}" aria-busy="${busy}"><button class="order-card order-card--${state}" type="button" data-action="open" data-id="${escapeHtml(order.id)}" draggable="${movable}" aria-label="Abrir pedido de ${escapeHtml(formatCustomerName(order.customer))}"><strong class="order-card__customer">${escapeHtml(formatCustomerName(order.customer))}</strong><span class="order-card__origin"><span class="order-card__id">#${escapeHtml(orderCode(order))}</span> · ${escapeHtml(orderOriginLabel(order))}</span>${order.editedAt ? '<span class="order-edited-badge" role="status">EDITADO</span>' : ''}<span class="order-card__meta">${itemCount} ${itemCount === 1 ? 'item' : 'itens'} · ${money(orderTotal(order))}</span><span class="order-card__delivery">Entrega ${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</span>${order.notes ? '<span class="order-card__alert">Tem observação</span>' : ''}</button>${destinations.length ? `<div class="kanban-card__move"><button type="button" class="kanban-drag-handle" data-drag-id="${escapeHtml(order.id)}" aria-label="Arrastar pedido de ${escapeHtml(formatCustomerName(order.customer))}" aria-describedby="kanban-help" ${busy ? 'disabled' : ''}><span aria-hidden="true">⠿</span></button><label><span class="sr-only">Mover pedido de ${escapeHtml(formatCustomerName(order.customer))} para</span><select data-move-id="${escapeHtml(order.id)}" ${busy ? 'disabled' : ''}><option value="">${busy ? 'Movendo…' : 'Mover para…'}</option>${destinations.map(stage => `<option value="${stage.key}">${stage.title}</option>`).join('')}</select></label></div>` : ''}</article>`;
   };
   const columns = stages.filter(column => ['received', 'confirmed', 'delivered'].includes(column.key));
   const activeOrders = displayOrders.filter(order => orderStatus(order) !== 'cancelled');
@@ -575,7 +576,7 @@ function detailActions(order) {
 function renderOrderDetail(order) {
   const state = orderStatus(order);
   const itemRows = order.items.map(item => `<li><span><strong>${escapeHtml(itemLabel(item))}</strong><small>${money(item.priceCents)}${item.weightGrams ? '' : ' cada'}</small></span><strong>${money(itemTotal(item))}</strong></li>`).join('');
-  detailContent.innerHTML = `<div class="order-detail"><header class="order-detail__header"><div><p class="eyebrow">PEDIDO #${escapeHtml(orderCode(order))}</p><h2 id="order-detail-title">${escapeHtml(order.customer)}</h2><span class="status status--${state}">${escapeHtml(statusLabels[state])}</span><small class="order-detail__origin">${escapeHtml(orderOriginLabel(order))}</small></div><button class="order-detail__close" type="button" data-action="close-detail" aria-label="Fechar detalhes">×</button></header><div class="order-detail__body"><section class="order-detail__section"><h3>Entrega</h3><p><strong>${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</strong></p><p>${escapeHtml(order.address)}</p>${order.phone ? `<p><a href="tel:${escapeHtml(order.phone)}">${escapeHtml(order.phone)}</a></p>` : '<p class="order-detail__muted">Telefone não informado</p>'}</section><section class="order-detail__section"><div class="order-detail__section-heading"><h3>Itens</h3><span>${order.items.length} ${order.items.length === 1 ? 'linha' : 'linhas'}</span></div><ul class="order-detail__items">${itemRows}</ul><div class="order-detail__totals"><p><span>Produtos</span><strong>${money(orderSubtotal(order))}</strong></p><p><span>Entrega</span><strong>${money(order.feeCents)}</strong></p><p><span>Total</span><strong>${money(orderTotal(order))}</strong></p></div></section><div class="order-detail__grid"><section class="order-detail__section"><h3>Pagamento</h3><p>${escapeHtml(paymentLabels[order.paymentMethod || 'unspecified'] || order.paymentMethod)}</p><small>A forma escolhida não confirma recebimento.</small></section><section class="order-detail__section"><h3>Observação</h3><p>${order.notes ? escapeHtml(order.notes) : '<span class="order-detail__muted">Nenhuma observação.</span>'}</p></section></div></div>${detailActions(order)}</div>`;
+  detailContent.innerHTML = `<div class="order-detail"><header class="order-detail__header"><div><p class="eyebrow">PEDIDO #${escapeHtml(orderCode(order))}</p><h2 id="order-detail-title">${escapeHtml(formatCustomerName(order.customer))}</h2><span class="status status--${state}">${escapeHtml(statusLabels[state])}</span><small class="order-detail__origin">${escapeHtml(orderOriginLabel(order))}</small></div><button class="order-detail__close" type="button" data-action="close-detail" aria-label="Fechar detalhes">×</button></header><div class="order-detail__body"><section class="order-detail__section"><h3>Entrega</h3><p><strong>${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</strong></p><p>${escapeHtml(order.address)}</p>${order.phone ? `<p><a href="tel:${escapeHtml(order.phone)}">${escapeHtml(order.phone)}</a></p>` : '<p class="order-detail__muted">Telefone não informado</p>'}</section><section class="order-detail__section"><div class="order-detail__section-heading"><h3>Itens</h3><span>${order.items.length} ${order.items.length === 1 ? 'linha' : 'linhas'}</span></div><ul class="order-detail__items">${itemRows}</ul><div class="order-detail__totals"><p><span>Produtos</span><strong>${money(orderSubtotal(order))}</strong></p><p><span>Entrega</span><strong>${money(order.feeCents)}</strong></p><p><span>Total</span><strong>${money(orderTotal(order))}</strong></p></div></section><div class="order-detail__grid"><section class="order-detail__section"><h3>Pagamento</h3><p>${escapeHtml(paymentLabels[order.paymentMethod || 'unspecified'] || order.paymentMethod)}</p><small>A forma escolhida não confirma recebimento.</small></section><section class="order-detail__section"><h3>Observação</h3><p>${order.notes ? escapeHtml(order.notes) : '<span class="order-detail__muted">Nenhuma observação.</span>'}</p></section></div></div>${detailActions(order)}</div>`;
 }
 
 function openOrderDetail(order) {
@@ -593,7 +594,7 @@ async function moveOrder(id, target) {
     return;
   }
   movingOrders.add(id);
-  kanbanFeedback.textContent = `Movendo pedido de ${order.customer}…`;
+  kanbanFeedback.textContent = `Movendo pedido de ${formatCustomerName(order.customer)}…`;
   render();
   try {
     if (live) {
@@ -607,7 +608,7 @@ async function moveOrder(id, target) {
       orders = orders.map(item => item.id === id ? { ...item, status: target, checked: target !== 'received', editedAt: target === 'confirmed' ? null : item.editedAt } : item);
       if (!saveOrders()) { orders = previous; throw new Error('Não foi possível salvar a movimentação neste navegador.'); }
     }
-    kanbanFeedback.textContent = `Pedido de ${order.customer} movido para ${statusLabels[target]}.`;
+    kanbanFeedback.textContent = `Pedido de ${formatCustomerName(order.customer)} movido para ${statusLabels[target]}.`;
   } catch (cause) {
     if (live) {
       try { await live.load(true); } catch { /* Preserve the last confirmed state. */ }
@@ -752,7 +753,7 @@ async function openHistory(order) {
   if (!live || !historyDialog) return;
   try {
     const events = await live.orderEvents(order.id);
-    historyDialog.innerHTML = `<div class="history-dialog__content"><button type="button" class="history-dialog__close" aria-label="Fechar">×</button><h2>Histórico do pedido</h2><p>${escapeHtml(order.customer)} · #${escapeHtml(orderCode(order))}</p><ol>${events.map(entry => {
+    historyDialog.innerHTML = `<div class="history-dialog__content"><button type="button" class="history-dialog__close" aria-label="Fechar">×</button><h2>Histórico do pedido</h2><p>${escapeHtml(formatCustomerName(order.customer))} · #${escapeHtml(orderCode(order))}</p><ol>${events.map(entry => {
       const before = entry.before_state;
       const after = entry.after_state;
       const change = !before ? 'Pedido criado' : before.status !== after.status ? `Estado: ${statusLabels[before.status] || before.status} → ${statusLabels[after.status] || after.status}` : 'Dados ou valores ajustados';
@@ -768,7 +769,7 @@ function askPaymentMode(order) {
   return new Promise(resolve => {
     const dialogEl = document.createElement('dialog');
     dialogEl.className = 'payment-mode-dialog';
-    dialogEl.innerHTML = `<form method="dialog"><h3>Este pedido tem pagamento vinculado</h3><p>Pedido de <strong>${escapeHtml(order.customer)}</strong>. O que fazer com o pagamento?</p><div class="payment-mode-dialog__actions"><button class="button button--primary" value="keep">Excluir o pedido e manter o pagamento</button><button class="button button--quiet order-detail__danger" value="delete">Excluir o pedido e o pagamento</button><button class="button button--quiet" value="">Voltar</button></div><small>Manter: o dinheiro continua registrado como recebimento sem pedido e pode ser vinculado a outro. Excluir os dois: o recebimento deixa de existir no sistema. Fechamentos diários já salvos não mudam.</small></form>`;
+    dialogEl.innerHTML = `<form method="dialog"><h3>Este pedido tem pagamento vinculado</h3><p>Pedido de <strong>${escapeHtml(formatCustomerName(order.customer))}</strong>. O que fazer com o pagamento?</p><div class="payment-mode-dialog__actions"><button class="button button--primary" value="keep">Excluir o pedido e manter o pagamento</button><button class="button button--quiet order-detail__danger" value="delete">Excluir o pedido e o pagamento</button><button class="button button--quiet" value="">Voltar</button></div><small>Manter: o dinheiro continua registrado como recebimento sem pedido e pode ser vinculado a outro. Excluir os dois: o recebimento deixa de existir no sistema. Fechamentos diários já salvos não mudam.</small></form>`;
     document.body.append(dialogEl);
     dialogEl.addEventListener('close', () => { const value = dialogEl.returnValue; dialogEl.remove(); resolve(value === 'keep' || value === 'delete' ? value : null); });
     dialogEl.showModal();
@@ -790,7 +791,7 @@ async function handleOrderAction(button) {
     return;
   }
   if (button.dataset.action === 'destroy') {
-    if (live?.role !== 'master' || !confirm(`Excluir definitivamente o pedido de ${order.customer}? Esta ação não pode ser desfeita.`)) return;
+    if (live?.role !== 'master' || !confirm(`Excluir definitivamente o pedido de ${formatCustomerName(order.customer)}? Esta ação não pode ser desfeita.`)) return;
     try {
       await window.TrameliAccount?.ensureMasterAal2?.();
       try { await live.deleteOrder(order.id, 'none'); }
@@ -804,7 +805,7 @@ async function handleOrderAction(button) {
     } catch (cause) { alert(`O pedido não foi excluído: ${cause.message}`); }
     return;
   }
-  if (button.dataset.action === 'delete' && !confirm(`Cancelar o pedido de ${order.customer}? O registro ficará no histórico.`)) return;
+  if (button.dataset.action === 'delete' && !confirm(`Cancelar o pedido de ${formatCustomerName(order.customer)}? O registro ficará no histórico.`)) return;
   const previous = orders;
   const state = button.dataset.action === 'delete' ? 'cancelled' : button.dataset.action === 'back' ? previousStatus[orderStatus(order)] : nextStatus[orderStatus(order)];
   if (!state || ['cancelled', 'delivered'].includes(orderStatus(order))) return;
@@ -840,7 +841,7 @@ function preparePrint(orderSelection = null, printMode = 'a4') {
     const items = Array.isArray(order.items) ? order.items : [];
     return '<article class="print-label print-label--order">' +
       '<div class="print-label__content">' +
-      '<div class="print-label__top"><strong>' + escapeHtml(order.customer) + '</strong><span>' +
+      '<div class="print-label__top"><strong>' + escapeHtml(formatCustomerName(order.customer)) + '</strong><span>' +
       escapeHtml(String(position + 1).padStart(2, '0')) + '</span></div>' +
       (order.address ? '<p class="print-label__address">' + escapeHtml(order.address) + '</p>' : '') +
       '<ul>' + items.map(item => '<li><strong>' + escapeHtml(String(item.quantity ?? '')) + '×</strong> ' + escapeHtml(itemLabel(item).replace(/^\\s*\\d+(?:[.,]\\d+)?\\s*[x×]?\\s*/i, '')) + '</li>').join('') + '</ul>' +

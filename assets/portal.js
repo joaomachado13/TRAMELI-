@@ -1,3 +1,4 @@
+import { formatCustomerName } from '../src/customer-display.js';
 import { isDeliveryDate, nextAvailableDeliveryDate, rollingDeliveryWeek } from '../src/delivery-days.js';
 import { billingReminder, daysUntil, nextBillingDeadline } from '../src/billing-cycle.js';
 import { featuredProductsMarkup } from '../src/featured-products.js';
@@ -375,7 +376,7 @@ import '../src/featured-products.css';
     const hour = saoPauloClock().hour;
     return hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
   };
-  const firstName = () => String(profile.name || '').trim().split(/\s+/)[0] || '';
+  const firstName = () => formatCustomerName(profile.name).split(/\s+/)[0] || '';
   const paymentCountdown = () => {
     if (!live) return '';
     const api = window.TrameliPayments?.api;

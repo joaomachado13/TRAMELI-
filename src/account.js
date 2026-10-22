@@ -1,3 +1,4 @@
+import { formatCustomerName } from './customer-display.js';
 import { authError, displayName, escapeHtml, roleLabel } from './auth-utils.js';
 
 const MASTER_MFA_REQUIRED = false; // Estrutura mantida pronta para reativação futura.
@@ -10,11 +11,11 @@ export function initAccount(live) {
   const syncIdentity = () => {
     if (!button) return;
     button.querySelector('.av').textContent = name.split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase();
-    button.querySelector('.av + span').innerHTML = `${escapeHtml(name)}<small class="account-role">${roleLabel(live.role)}</small>`;
+    button.querySelector('.av + span').innerHTML = `${escapeHtml(formatCustomerName(name))}<small class="account-role">${roleLabel(live.role)}</small>`;
   };
   syncIdentity();
   const passwordForm = () => `<form data-account-password><label>Nova senha<input name="password" type="password" autocomplete="new-password" minlength="8" required></label><label>Confirme a senha<input name="confirmation" type="password" autocomplete="new-password" minlength="8" required></label><p class="account-message" role="status"></p><button type="submit">Salvar senha</button></form>`;
-  const identity = () => `<p><strong>${escapeHtml(name)}</strong><br>${escapeHtml(live.user.email || live.user.phone || '')} · ${roleLabel(live.role)}</p>`;
+  const identity = () => `<p><strong>${escapeHtml(formatCustomerName(name))}</strong><br>${escapeHtml(live.user.email || live.user.phone || '')} · ${roleLabel(live.role)}</p>`;
   const accountSection = () => `<div class="account-panel">${identity()}<form data-account-profile><label>Nome<input name="name" value="${escapeHtml(live.profile?.name || live.user.user_metadata?.full_name || live.user.user_metadata?.name || '')}" maxlength="90" required></label><label>Telefone<input name="phone" type="tel" value="${escapeHtml(live.profile?.phone || live.user.user_metadata?.phone || live.user.phone || '')}" maxlength="25"></label><label>Endereço e referência<input name="address" value="${escapeHtml(live.profile?.address || live.user.user_metadata?.address || '')}" maxlength="180" required></label><p class="account-message" role="status"></p><button type="submit">Salvar meus dados</button></form><details><summary>Alterar senha</summary>${passwordForm()}</details></div>`;
   const hasRecentTotp = status => Boolean(status?.currentAuthenticationMethods?.some(method =>
     method.method === 'totp' && Number(method.timestamp) * 1000 >= Date.now() - 30 * 60 * 1000
@@ -74,7 +75,7 @@ export function initAccount(live) {
   if (live.operator) document.querySelector('.account-actions')?.append(logout);
   const accountButton = document.createElement('button');
   accountButton.type = 'button'; accountButton.className = 'live-account'; accountButton.textContent = 'Minha conta';
-  accountButton.title = name;
+  accountButton.title = formatCustomerName(name);
   const dialog = document.createElement('dialog'); dialog.className = 'account-dialog account-panel';
   dialog.setAttribute('aria-label', 'Minha conta');
   document.body.append(dialog);
@@ -107,7 +108,7 @@ export function initAccount(live) {
         await live.saveProfile(profile);
         Object.assign(live.user.user_metadata, { name: profile.name, full_name: profile.name, phone: profile.phone, address: profile.address });
         if (live.profile) Object.assign(live.profile, profile);
-        name = profile.name; syncIdentity(); accountButton.title = profile.name;
+        name = profile.name; syncIdentity(); accountButton.title = formatCustomerName(profile.name);
         message.textContent = 'Seus dados foram atualizados.';
       } else {
         await ensureMasterAal2();
