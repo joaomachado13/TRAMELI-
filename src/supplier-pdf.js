@@ -9,7 +9,7 @@ const HEIGHT = 841.89;
 const MARGIN = 42;
 const BOTTOM = 55;
 
-export async function createSupplierPdf(groups, date, { businessName = 'Pão Doce', regular, bold }) {
+export async function createSupplierPdf(groups, date, { businessName = 'Pão Doce', regular, bold, includeCustomers = false, supplierName = 'Padaria' }) {
   if (!groups.length) throw new Error('Não há pedidos para exportar nesta data.');
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
@@ -21,7 +21,7 @@ export async function createSupplierPdf(groups, date, { businessName = 'Pão Doc
   const pale = rgb(244 / 255, 222 / 255, 213 / 255);
   const primary = rgb(122 / 255, 59 / 255, 40 / 255);
   const dateLabel = new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR');
-  pdf.setTitle(`Repasse da padaria - ${dateLabel}`);
+  pdf.setTitle(`Repasse da padaria - ${supplierName} - ${dateLabel}`);
   pdf.setAuthor(businessName);
   pdf.setSubject('Lista consolidada por material, com valores de custo quando disponíveis');
   let page;
@@ -126,7 +126,61 @@ export async function createSupplierPdf(groups, date, { businessName = 'Pão Doc
     y -= 40;
     if (day.missing) { page.drawText(`Atenção: ${day.missing} item(ns) sem custo cadastrado; total incompleto.`, { x: MARGIN, y, size: 9, font, color: muted }); y -= 14; }
   }
-  // Repasse financeiro: somente o consolidado por material.
+  if (includeCustomers) {
+    if (y - 90 < BOTTOM) newPage();
+    page.drawRectangle({ x: MARGIN, y: y - 32, width: WIDTH - 2 * MARGIN, height: 32, color: pale });
+    page.drawText('2. Itens por cliente', { x: MARGIN + 10, y: y - 21, size: 13, font: strong, color: ink });
+    y -= 53;
+
+    const customers = [...groups].sort((a, b) =>
+      String(a.customer || '').localeCompare(String(b.customer || ''), 'pt-BR', { sensitivity: 'base' })
+    );
+    for (const group of customers) {
+      if (y - 95 < BOTTOM) newPage();
+      clientHeader(group);
+      for (const order of group.orders) {
+        for (const line of order.lines) {
+          const labelLines = wrap(line.label, 10, WIDTH - 2 * MARGIN - (costed ? 155 : 28));
+          const needed = labelLines.length * 14 + 12;
+          if (y - needed < BOTTOM) {
+            newPage();
+            clientHeader(group, true);
+          }
+          if (costed) {
+            const value = line.costKnown
+              ? formatMoney(line.costCents) + (line.costEstimated ? '*' : '')
+              : 'custo não informado';
+            drawCost(value, y, 9.8);
+          }
+          for (const text of labelLines) {
+            page.drawText(text, { x: MARGIN + 10, y, size: 10, font, color: ink });
+            y -= 14;
+          }
+          y -= 4;
+        }
+      }
+      if (costed) {
+        const customerDay = supplierDayCost([group]);
+        if (y - 22 < BOTTOM) {
+          newPage();
+          clientHeader(group, true);
+        }
+        const subtotal = formatMoney(customerDay.totalCents);
+        page.drawText('Subtotal do cliente', { x: MARGIN + 10, y, size: 9.5, font: strong, color: muted });
+        drawCost(subtotal, y, 10, strong);
+        y -= 21;
+        if (customerDay.missing) {
+          page.drawText(`${customerDay.missing} item(ns) sem custo cadastrado; subtotal incompleto.`,
+            { x: MARGIN + 10, y, size: 8.3, font, color: muted });
+          y -= 15;
+        }
+      }
+      y -= 7;
+    }
+  }
+
+  // O repasse financeiro mantém o consolidado por material e, quando solicitado,
+  // acrescenta a conferência por cliente sem alterar a lista operacional de separação.
   const pages = pdf.getPages();
   pages.forEach((sheet, index) => {
     sheet.drawText('Conferência da cópia em PDF - alterações não sincronizam com o site.',
