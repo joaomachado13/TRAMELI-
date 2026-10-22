@@ -47,7 +47,8 @@ try {
   assert.match(await evaluate('document.body.textContent'),/Em aberto/);
   await evaluate(`window.TrameliPayments.openForCustomer({ customerId: paymentFixture.state.balances[0].customer_id, customerName: paymentFixture.state.balances[0].customer_name })`);
   for(let i=0;i<40&&!await evaluate('document.querySelector(".payment-dialog").open');i++)await pause(100);
-  assert.match(await evaluate('document.querySelector(".payment-dialog").textContent'),/Cliente de teste/);
+  assert.match(await evaluate('document.querySelector(".payment-dialog").textContent'),/Cliente de Teste/);
+  assert.equal(await evaluate('paymentFixture.state.balances[0].customer_name'),'Cliente de teste','Formatting must preserve the original payment/customer data');
   assert.match(await evaluate('document.querySelector(".payment-dialog").textContent'),/Total selecionado/);
   assert.deepEqual(await evaluate(`(${auditIdentity.toString()})()`), [], 'Modal pagamento: fonte e contraste');
   await evaluate(`const f=document.querySelector('[data-payment-form]');f.querySelector('[data-allocation]').checked=true;f.dispatchEvent(new Event('change',{bubbles:true}));f.requestSubmit();f.requestSubmit();`);

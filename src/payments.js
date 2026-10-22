@@ -1,3 +1,4 @@
+import { formatCustomerName } from './customer-display.js';
 import { PaymentsApi } from './payments-api.js';
 import { escapeHtml as esc } from './auth-utils.js';
 import { billingReminder } from './billing-cycle.js';
@@ -37,7 +38,7 @@ export function initPayments(live) {
   const warning = () => !api ? 'Pagamentos reais exigem conexão com o Supabase. Este modo local não registra recebimentos.'
     : api.error || (api.ready === null ? 'Carregando pagamentos…' : api.ready === false ? 'Ative a migração 007 para começar a registrar pagamentos.' : '');
   const groups = () => [...new Map((api?.balances || []).map(row=>[groupKey(row),row])).entries()];
-  const groupLabel = row => `${row.customer_name}${row.customer_id ? ` · conta ${short(row.customer_id)}` : ` · pedido manual #${orderCode(row.order_id)} (sem conta vinculada)`}`;
+  const groupLabel = row => `${formatCustomerName(row.customer_name)}${row.customer_id ? ` · conta ${short(row.customer_id)}` : ` · pedido manual #${orderCode(row.order_id)} (sem conta vinculada)`}`;
   const options = () => groups().map(([key,row])=>`<option value="${esc(key)}" ${key===selectedGroup?'selected':''}>${esc(groupLabel(row))}</option>`).join('');
   const methodOptions = Object.entries(methods).map(([key,name])=>`<option value="${key}">${name}</option>`).join('');
   const accountSummary = rows => {
@@ -132,7 +133,7 @@ export function initPayments(live) {
       const isRefund=p.kind==='refund';
       const isUnidentified=!isRefund&&!allocations.length;
       const status=isRefund?'Devolução registrada':isUnidentified?'Pagamento não identificado':reversed.has(p.id)?'Estornado':'Recebimento confirmado';
-      return `<li class="payment-ledger-entry"><div class="payment-ledger-entry__top"><strong>${timestamp(p.recorded_at)}</strong><strong>${isRefund?'−':''}${money(p.amount_cents)}</strong></div><div class="payment-ledger-entry__details"><span>${esc(names.join(', ')||'Cliente não identificado')}</span><small>${methods[p.method]||p.method} · ${codes.length?codes.map(code=>`#${esc(code)}`).join(' · '):'Sem pedido vinculado'} · Conferido por ${esc(actor)}</small><span class="payment-ledger-entry__status ${isUnidentified?'is-unidentified':''}">${status}</span></div><div class="payment-history-actions">${proofPath(p.reference)?`<button type="button" data-operator-proof="${esc(proofPath(p.reference))}">Comprovante</button>`:''}${isUnidentified?`<button type="button" data-pay-identify="${p.id}">Vincular a pedido</button>`:''}${!isRefund&&!reversed.has(p.id)?`<button type="button" data-pay-refund="${p.id}">Devolução</button>`:''}</div></li>`;
+      return `<li class="payment-ledger-entry"><div class="payment-ledger-entry__top"><strong>${timestamp(p.recorded_at)}</strong><strong>${isRefund?'−':''}${money(p.amount_cents)}</strong></div><div class="payment-ledger-entry__details"><span>${esc(names.map(formatCustomerName).join(', ')||'Cliente não identificado')}</span><small>${methods[p.method]||p.method} · ${codes.length?codes.map(code=>`#${esc(code)}`).join(' · '):'Sem pedido vinculado'} · Conferido por ${esc(actor)}</small><span class="payment-ledger-entry__status ${isUnidentified?'is-unidentified':''}">${status}</span></div><div class="payment-history-actions">${proofPath(p.reference)?`<button type="button" data-operator-proof="${esc(proofPath(p.reference))}">Comprovante</button>`:''}${isUnidentified?`<button type="button" data-pay-identify="${p.id}">Vincular a pedido</button>`:''}${!isRefund&&!reversed.has(p.id)?`<button type="button" data-pay-refund="${p.id}">Devolução</button>`:''}</div></li>`;
     }).join('');
     return `<div class="payment-client-first payment-client-first--simple"><div><span class="screen-eyebrow">PAGAMENTOS</span><h3>${intents.length ? `${intents.length} ${intents.length===1?'pagamento informado':'pagamentos informados'}` : 'Nenhum pagamento aguardando conferência'}</h3><p>A conferência é feita no perfil do cliente. ${unidentified ? `${unidentified} lançamento(s) ainda sem pedido vinculado.` : ''}</p></div><button class="screen-primary" type="button" data-payment-go-clients>Ver clientes</button></div>
     <section class="payment-ledger-history"><div class="payment-ledger-history__heading"><div><h3>Histórico de pagamentos</h3><p>Confirmações e devoluções registradas no sistema, com data, valor, pedido e responsável.</p></div><button type="button" data-pay-refresh>Atualizar</button></div><ul class="payment-log">${history||'<li><span>Nenhum pagamento registrado ainda.</span></li>'}</ul></section>`;
@@ -198,7 +199,7 @@ export function initPayments(live) {
     const intro=intent
       ? `O cliente informou <strong>${informed}</strong>. Confira no banco e confirme os pedidos pagos.`
       : 'Selecione os pedidos que foram pagos e dê baixa.';
-    open(`<div class="payment-dialog__heading payment-dialog__heading--clean"><div><span class="screen-eyebrow">CONFERIR PAGAMENTO</span><h2>${esc(rows[0].customer_name)}</h2><p>${intro}</p></div></div>
+    open(`<div class="payment-dialog__heading payment-dialog__heading--clean"><div><span class="screen-eyebrow">CONFERIR PAGAMENTO</span><h2>${esc(formatCustomerName(rows[0].customer_name))}</h2><p>${intro}</p></div></div>
       <form class="payment-review-form" data-payment-form="${existing?'identify':'receipt'}" data-payment-id="${existing?.id||''}" data-intent-id="${intent?.id||''}">
         ${reviewOrders(rows)}
         <div class="payment-review-footer">

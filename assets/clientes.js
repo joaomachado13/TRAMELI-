@@ -1,3 +1,4 @@
+import { formatCustomerName, normalizeSearch } from '../src/customer-display.js';
 import { feedback, statusBadge, listRow } from '../src/staff-components.js';
 (() => {
   const live = window.TrameliLive;
@@ -61,7 +62,7 @@ import { feedback, statusBadge, listRow } from '../src/staff-components.js';
 
   function updateDatalist() {
     const names = new Set([...clients.map(client => client.name), ...lastOrders.map(order => order.customer)]);
-    datalist.innerHTML = [...names].sort((a, b) => a.localeCompare(b, 'pt-BR')).map(name => `<option value="${escapeHtml(name)}"></option>`).join('');
+    datalist.innerHTML = [...names].sort((a, b) => a.localeCompare(b, 'pt-BR')).map(name => `<option value="${escapeHtml(name)}" label="${escapeHtml(formatCustomerName(name))}"></option>`).join('');
   }
 
   function buildCards(orders) {
@@ -245,9 +246,9 @@ import { feedback, statusBadge, listRow } from '../src/staff-components.js';
     lastOrders = orders.slice();
     updateDatalist();
     lastCards = buildCards(lastOrders);
-    const normalized = normalize(query);
+    const normalized = normalizeSearch(query);
     const visible = lastCards.filter(client => {
-      const found = !normalized || [client.name, client.phone, client.address].some(value => normalize(value).includes(normalized));
+      const found = !normalized || [client.name, client.phone, client.address].some(value => normalizeSearch(value).includes(normalized));
       return found && matchesFilter(client);
     });
     const counts = countFilters(lastCards);
@@ -269,7 +270,7 @@ import { feedback, statusBadge, listRow } from '../src/staff-components.js';
         ${visible.length ? visible.map(client => {
           const payment = paymentData(client);
           const frequency = ({ semanal:'Semanal', quinzenal:'Quinzenal', mensal:'Mensal' })[payment.profile?.billing_frequency];
-          return listRow({ title: client.name, subtitle: [formatPhone(client.phone) || 'Telefone não informado', client.address || 'Endereço não informado', frequency].filter(Boolean).join(' · '), avatar: client.name.slice(0,1).toUpperCase(), badge: statusBadge(statusLabel(payment.status), ({review:'warning',partial:'info',open:'danger',paid:'success',none:'neutral'})[payment.status], `client-payment-badge ${statusClass(payment.status)}`), attributes: `data-client-action="view" data-key="${escapeHtml(client.key)}"`, className: 'client-row client-row--simple' });
+          return listRow({ title: formatCustomerName(client.name), subtitle: [formatPhone(client.phone) || 'Telefone não informado', client.address || 'Endereço não informado', frequency].filter(Boolean).join(' · '), avatar: client.name.slice(0,1).toUpperCase(), badge: statusBadge(statusLabel(payment.status), ({review:'warning',partial:'info',open:'danger',paid:'success',none:'neutral'})[payment.status], `client-payment-badge ${statusClass(payment.status)}`), attributes: `data-client-action="view" data-key="${escapeHtml(client.key)}"`, className: 'client-row client-row--simple' });
         }).join('') : feedback({ title: 'Nenhum cliente encontrado.', description: 'Ajuste a busca ou os filtros.' })}
       </div>
     </div>`;
@@ -349,7 +350,7 @@ import { feedback, statusBadge, listRow } from '../src/staff-components.js';
     const payment = paymentData(client);
     detailDrawer.innerHTML = `<div class="entity-detail client-profile">
       <header class="entity-detail__header client-profile__header">
-        <div><p class="screen-eyebrow">CLIENTE</p><h2>${escapeHtml(client.name)}</h2><p>${escapeHtml(formatPhone(client.phone) || 'Telefone não informado')}</p></div>
+        <div><p class="screen-eyebrow">CLIENTE</p><h2>${escapeHtml(formatCustomerName(client.name))}</h2><p>${escapeHtml(formatPhone(client.phone) || 'Telefone não informado')}</p></div>
         <div class="client-profile__header-actions">${statusBadge(statusLabel(payment.status), ({review:'warning',partial:'info',open:'danger',paid:'success',none:'neutral'})[payment.status], `client-payment-badge ${statusClass(payment.status)}`)}<button type="button" data-client-action="close" aria-label="Fechar">×</button></div>
       </header>
       <div class="entity-detail__body">

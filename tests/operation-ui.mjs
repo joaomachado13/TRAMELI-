@@ -157,7 +157,8 @@ try {
     };
   })()`);
   assert(longOrderCheck.labels === 1 && longOrderCheck.items === 18, `Pedido longo deve continuar em um único cartão com todos os itens: ${JSON.stringify(longOrderCheck)}`);
-  assert(longOrderCheck.customer === 'Cliente teste etiquetas' && longOrderCheck.address === 'Rua de Teste, 123 - Centro' && longOrderCheck.note === 'Obs.: Entregar na portaria' && !longOrderCheck.hasTotal, `Etiqueta longa perdeu metadados ou voltou a mostrar total: ${JSON.stringify(longOrderCheck)}`);
+  assert(longOrderCheck.customer === 'Cliente Teste Etiquetas' && longOrderCheck.address === 'Rua de Teste, 123 - Centro' && longOrderCheck.note === 'Obs.: Entregar na portaria' && !longOrderCheck.hasTotal, `Etiqueta longa perdeu metadados ou voltou a mostrar total: ${JSON.stringify(longOrderCheck)}`);
+  assert(await evaluate("JSON.parse(localStorage.getItem('trameli-operation-draft-v2'))[0].customer === 'Cliente teste etiquetas'"), 'A etiqueta formatada alterou o nome original do pedido.');
   const longPdfResult = await send('Page.printToPDF', { printBackground: true, preferCSSPageSize: true, displayHeaderFooter: false });
   const longPdf = await PDFDocument.load(Buffer.from(longPdfResult.data, 'base64'));
   assert(longPdf.getPageCount() >= 1, 'A impressão do pedido longo não gerou PDF.');

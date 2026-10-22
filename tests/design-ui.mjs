@@ -80,6 +80,8 @@ try {
     }).slice(0, 20);
   })()`);
 
+  // As fixtures devem usar o mesmo dia operacional da aplicação, inclusive perto da meia-noite UTC.
+  await send('Emulation.setTimezoneOverride', { timezoneId: 'America/Sao_Paulo' });
   await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
   await waitFor('#home-view:not([hidden])');
   await evaluate(`(() => {

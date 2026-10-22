@@ -49,13 +49,11 @@ body:has(#loja:target){
 .portal-filterbar{position:sticky;top:8px;z-index:7;margin:24px 0 0;padding:14px;border:1px solid var(--portal-border);border-radius:16px;background:rgba(255,251,246,.98);box-shadow:0 10px 24px rgba(50,23,14,.08);backdrop-filter:blur(10px)}
 .portal-search{margin:0 0 14px;color:var(--portal-text-secondary);font-size:12px}
 .portal-search input{width:100%;max-width:none;height:46px;margin-top:6px;border-color:var(--portal-border);border-radius:var(--portal-radius-2);background:var(--portal-surface);color:var(--portal-ink);font-size:14px}
-.portal-personal-filters{display:flex;flex-wrap:nowrap;gap:22px;margin:0 0 10px;border-bottom:1px solid var(--portal-border);overflow-x:auto;scrollbar-width:none}
-.portal-personal-filters::-webkit-scrollbar{display:none}
+.portal-personal-filters{display:flex;flex-wrap:nowrap;gap:22px;margin:0 0 10px;border-bottom:1px solid var(--portal-border);overflow-x:auto}
 .portal-personal-filters button{flex:0 0 auto;padding:10px 2px 9px;border:0;border-bottom:3px solid transparent;border-radius:0;background:transparent;color:var(--portal-text-secondary);font-size:13px;font-weight:650}
 .portal-personal-filters button[aria-pressed="true"]{border-bottom-color:var(--portal-accent);background:transparent;color:var(--portal-accent);font-weight:800}
 .portal-filter-note{margin:0 0 10px;color:var(--portal-text-secondary);font-size:12px}
-.portal-categories{display:flex;flex-wrap:nowrap;gap:8px;margin:0;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
-.portal-categories::-webkit-scrollbar{display:none}
+.portal-categories{display:flex;flex-wrap:nowrap;gap:8px;margin:0;overflow-x:auto;padding-bottom:2px}
 .portal-categories button{flex:0 0 auto;min-height:40px;padding:0 14px;border:1px solid var(--portal-border);border-radius:999px;background:var(--portal-surface);color:var(--portal-text-secondary);font-size:13px;font-weight:650}
 .portal-categories button[aria-pressed="true"]{border-color:var(--portal-accent);background:var(--portal-accent);color:#FFF9F5;font-weight:800}
 .portal-catalog-groups{display:grid;grid-template-columns:1fr!important;gap:56px;margin-top:38px}
@@ -283,10 +281,8 @@ body.portal-mode .portal-categories{
   border-radius:999px;
   background:#6F2E1B;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
-  scrollbar-width:none;
   scroll-behavior:smooth;
 }
-body.portal-mode .portal-categories::-webkit-scrollbar{display:none}
 body.portal-mode .portal-categories button{
   position:relative;
   flex:1 1 0;

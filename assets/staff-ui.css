@@ -5,11 +5,12 @@
 body.staff-mode:not(.portal-mode) { background:var(--staff-canvas); color:var(--staff-text); font-size:var(--staff-body); }
 body.staff-mode .app-shell { background:var(--staff-canvas); }
 body.staff-mode .section { padding:0 var(--staff-space-8) var(--staff-space-8); }
-body.staff-mode :is(#screen-view,#home-view,#operation-view) { max-width:var(--staff-content-max); margin-inline:auto; padding:var(--staff-space-8) 0; }
+body.staff-mode :is(#screen-view,#home-view,#operation-view,#shirley-portal-view) { box-sizing:border-box; width:100%; min-width:0; max-width:var(--staff-content-max); margin-inline:auto; padding:var(--staff-space-8) 0; }
 body.staff-mode #operation-view .workspace { max-width:none; margin:0; padding:0; }
 
 /* Shell e navegação compartilhados. */
 body.staff-mode .nav2 { min-height:var(--staff-header-height); height:var(--staff-header-height); margin:0 calc(-1 * var(--staff-space-8)); padding:var(--staff-space-2) var(--staff-space-8); gap:var(--staff-space-4); background:var(--staff-surface); color:var(--staff-text); border-bottom:1px solid var(--staff-border); box-shadow:none; }
+body.staff-mode .nav2 { padding-inline:max(var(--staff-space-8),calc((100% - var(--staff-content-max)) / 2 + var(--staff-space-8))); }
 body.staff-mode .global-search { width:min(480px,48vw); }
 body.staff-mode .nav2 .search { min-height:var(--staff-control-height); height:var(--staff-control-height); border:1px solid var(--staff-border); border-radius:var(--staff-radius-control); background:var(--staff-surface); }
 body.staff-mode .nav2 .search .in { color:var(--staff-text); font-size:var(--staff-body); }
@@ -152,7 +153,7 @@ body.staff-mode .staff-skeleton--short { width:min(200px,70%); }
 @media(max-width:760px) {
   body.staff-mode .section { padding-inline:var(--staff-space-4); }
   body.staff-mode .nav2 { margin-inline:calc(-1 * var(--staff-space-4)); padding-inline:var(--staff-space-4); }
-  body.staff-mode :is(#screen-view,#home-view,#operation-view) { margin-inline:0; padding-top:var(--staff-space-6); }
+  body.staff-mode :is(#screen-view,#home-view,#operation-view,#shirley-portal-view) { margin-inline:auto; padding-top:var(--staff-space-6); }
   body.staff-mode .global-search { flex:1; min-width:0; width:auto; }
   body.staff-mode .nav2 .account-actions { gap:0; }
   body.staff-mode .nav2 .profile-button>span:not(.av) { display:none; }
@@ -207,10 +208,11 @@ body.staff-mode #operation-view .order-card__id { font-family:ui-monospace,SFMon
 body.staff-mode #operation-view .order-card__meta { font-size:var(--staff-body); color:var(--staff-text-secondary); }
 body.staff-mode #operation-view :is(.order-card__delivery,.order-card__alert,.order-edited-badge) { width:max-content; margin:0; padding:var(--staff-space-1) var(--staff-space-2); border-radius:var(--staff-radius-pill); background:var(--staff-neutral-soft); color:var(--staff-text-secondary); font-size:var(--staff-caption); }
 body.staff-mode #operation-view :is(.order-card__alert,.order-edited-badge) { color:var(--staff-warning-text); background:var(--staff-warning-soft); }
-body.staff-mode #operation-view .kanban-card__move { display:flex; gap:var(--staff-space-2); align-items:center; padding:0 var(--staff-space-3) var(--staff-space-3); border:0; background:transparent; }
-body.staff-mode #operation-view .kanban-card__move label { flex:1; }
+body.staff-mode #operation-view .kanban-card__move { display:block; position:static; padding:0 var(--staff-space-4) var(--staff-space-4); border:0; background:transparent; }
+body.staff-mode #operation-view .kanban-card__move label { display:block; width:100%; min-width:0; margin:0; }
 body.staff-mode #operation-view .kanban-card__move select { width:100%; }
-body.staff-mode #operation-view .kanban-drag-handle { width:40px; min-height:40px; border:0; border-radius:var(--staff-radius-control); color:var(--staff-text-secondary); background:var(--staff-neutral-soft); opacity:0; }
+body.staff-mode #operation-view .kanban-drag-handle { position:absolute; top:var(--staff-space-4); right:var(--staff-space-4); width:40px; min-height:40px; border:0; border-radius:var(--staff-radius-control); color:var(--staff-text-secondary); background:var(--staff-neutral-soft); opacity:0; }
+body.staff-mode #operation-view .kanban-card:has(.kanban-drag-handle) :is(.order-card__customer,.order-card__origin) { padding-right:48px; }
 body.staff-mode #operation-view .kanban-card:is(:hover,:focus-within) .kanban-drag-handle { opacity:1; }
 body.staff-mode .kanban-empty { padding:var(--staff-space-4); color:var(--staff-text-secondary); font-size:var(--staff-body); }
 
@@ -337,8 +339,6 @@ body.staff-mode #operation-view .summary-card { flex-direction:row; min-height:0
 body.staff-mode #operation-view .summary-card>span { color:var(--staff-text-secondary); }
 body.staff-mode #operation-view .order-card { grid-template-columns:minmax(0,1fr); grid-auto-flow:row; }
 body.staff-mode #operation-view .order-card>* { min-width:0; margin:0; }
-body.staff-mode #operation-view .kanban-card__move { position:static; padding:0 var(--staff-space-3) var(--staff-space-3); }
-body.staff-mode #operation-view .kanban-card__move label { display:block; }
 body.staff-mode #operation-view .kanban-drag-handle { height:40px; min-width:40px; }
 body.staff-mode #operation-view .kanban-toolbar>span { color:var(--staff-text-secondary); }
 body.staff-mode #screen-view .catalog-filters>label:first-child { grid-column:auto; }

@@ -207,10 +207,10 @@ try {
   assert.equal(await evaluate(`(() => { const cell = document.querySelector('#home-recent-orders td:nth-child(2)'); return getComputedStyle(cell).whiteSpace === 'normal' && cell.scrollWidth <= cell.clientWidth; })()`), true);
   await evaluate('location.hash="#clientes"');
   await pause(100);
-  assert.match(await evaluate('document.querySelector(".client-row").textContent'), /Cliente de teste com nome muito extenso/);
+  assert.match(await evaluate('document.querySelector(".client-row").textContent'), /Cliente de Teste Com Nome Muito Extenso/);
   await evaluate('location.hash="#inicio"');
   await pause(100);
-  assert.match(await evaluate('document.getElementById("home-deliveries").textContent'), /Cliente de teste/);
+  assert.match(await evaluate('document.getElementById("home-deliveries").textContent'), /Cliente de Teste/);
   assert.doesNotMatch(await evaluate('document.getElementById("home-next-actions").textContent'), /As análises vão aparecer/);
   await evaluate(`window.TrameliPayments={api:{ready:true,error:'',balances:[{due_cents:340}],allocations:[],payments:[]}};dispatchEvent(new Event('trameli:payments-changed'));`);
   assert.match(await evaluate('document.getElementById("home-order-total").textContent'), /3,40/);
