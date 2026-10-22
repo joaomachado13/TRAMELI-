@@ -17,7 +17,7 @@ const PDF_FOOTNOTE_MARGIN = PDF_GAP * 7 / 6;
 const MARGIN = 28;
 const BOTTOM = 48;
 
-export async function createSupplierPeriodPdf(report, kindLabel, { businessName = 'Pão Doce', regular, bold }) {
+export async function createSupplierPeriodPdf(report, kindLabel, { businessName = 'Pão Doce', regular, bold, includeCustomers = false, supplierName = 'Padaria' }) {
   if (!report.orderCount) throw new Error('Não há pedidos neste período.');
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
@@ -29,7 +29,7 @@ export async function createSupplierPeriodPdf(report, kindLabel, { businessName 
   const primary = rgb(122 / 255, 59 / 255, 40 / 255);
   const rule = rgb(224 / 255, 216 / 255, 209 / 255);
   const label = periodLabel(report.from, report.to);
-  pdf.setTitle('Repasse da padaria - ' + kindLabel + ' - ' + label);
+  pdf.setTitle('Repasse da padaria - ' + supplierName + ' - ' + kindLabel + ' - ' + label);
   pdf.setAuthor(businessName);
   pdf.setSubject('Itens e custo total do período para a padaria');
   let page;
@@ -174,9 +174,75 @@ export async function createSupplierPeriodPdf(report, kindLabel, { businessName 
   const products = [...report.products].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
   for (const product of products) productRow(product);
 
-  // O bloco final é reservado durante a listagem para que custo por dia, total e nota
-  // permaneçam juntos; os itens podem continuar na página seguinte quando necessário.
-  section('2. Custo por dia');
+  if (includeCustomers && report.customerOrders?.length) {
+    newPage();
+    section('2. Itens por cliente');
+    const customers = new Map();
+    for (const order of report.customerOrders) {
+      const key = JSON.stringify([order.customer || '', order.address || '']);
+      if (!customers.has(key)) customers.set(key, { customer: order.customer || 'Cliente sem nome', address: order.address || '', orders: [], costCents: 0, missing: 0 });
+      const current = customers.get(key);
+      current.orders.push(order);
+      current.costCents += Number(order.costCents || 0);
+      current.missing += Number(order.missing || 0);
+    }
+    const orderedCustomers = [...customers.values()].sort((a, b) =>
+      a.customer.localeCompare(b.customer, 'pt-BR', { sensitivity: 'base' })
+    );
+    for (const customer of orderedCustomers) {
+      if (y < 115) {
+        newPage();
+        section('2. Itens por cliente · continuação');
+      }
+      const customerNameLines = wrapLine(customer.customer, strong, 11, WIDTH - 2 * MARGIN - 12);
+      for (const line of customerNameLines) {
+        page.drawText(line, { x: MARGIN + 6, y: y - 8, size: 11, font: strong, color: ink });
+        y -= 13;
+      }
+      if (customer.address) {
+        const addressLines = wrapLine(customer.address, font, 8, WIDTH - 2 * MARGIN - 12);
+        for (const line of addressLines) {
+          page.drawText(line, { x: MARGIN + 6, y: y - 5, size: 8, font, color: muted });
+          y -= 10;
+        }
+      }
+      y -= PDF_HALF_GAP;
+      for (const order of customer.orders) {
+        const date = order.date.split('-').reverse().join('/');
+        for (const detail of order.lines) {
+          if (y < 82) {
+            newPage();
+            section('2. Itens por cliente · continuação');
+            page.drawText(customer.customer + ' (continuação)', { x: MARGIN + 6, y: y - 8, size: 10.5, font: strong, color: ink });
+            y -= 22;
+          }
+          const value = detail.costKnown
+            ? formatMoney(detail.costCents) + (detail.estimated ? '*' : '')
+            : 'custo não informado';
+          row(date + ' · ' + detail.label, value, { leftSize: 8.8, valueSize: 9.3 });
+        }
+      }
+      if (y < 72) {
+        newPage();
+        section('2. Itens por cliente · continuação');
+      }
+      row('Subtotal de ' + customer.customer,
+        formatMoney(customer.costCents) + (customer.missing ? ' *' : ''),
+        { leftSize: 9.2, valueSize: 10, bolder: true });
+      if (customer.missing) {
+        const warning = customer.missing + ' item(ns) sem custo cadastrado; subtotal incompleto.';
+        for (const line of wrapLine(warning, font, 7.8, WIDTH - 2 * MARGIN - 12)) {
+          page.drawText(line, { x: MARGIN + 6, y, size: 7.8, font, color: muted });
+          y -= 9;
+        }
+      }
+      y -= PDF_GAP;
+    }
+  }
+
+  // O custo por dia e o total ficam em um bloco próprio após o detalhamento por cliente.
+  if (includeCustomers) newPage();
+  section(includeCustomers ? '3. Custo por dia' : '2. Custo por dia');
   for (const day of report.days) {
     const date = day.date.split('-').reverse().join('/');
     row(date + ' · ' + day.orders + ' ' + (day.orders === 1 ? 'pedido' : 'pedidos'), formatMoney(day.costCents), { leftSize: 9, valueSize: 9.5 });
@@ -207,7 +273,7 @@ export async function createSupplierPeriodPdf(report, kindLabel, { businessName 
   return pdf.save();
 }
 
-export async function downloadSupplierPeriodPdf(report, kindLabel, businessName) {
+export async function downloadSupplierPeriodPdf(report, kindLabel, businessName, options = {}) {
   const [{ default: regularFontUrl }, { default: boldFontUrl }] = await Promise.all([
     import('../assets/manrope-400.ttf?url'),
     import('../assets/manrope-600.ttf?url'),
@@ -217,7 +283,7 @@ export async function downloadSupplierPeriodPdf(report, kindLabel, businessName)
     return response.arrayBuffer();
   });
   const [regular, bold] = await Promise.all([load(regularFontUrl), load(boldFontUrl)]);
-  const bytes = await createSupplierPeriodPdf(report, kindLabel, { businessName, regular, bold });
+  const bytes = await createSupplierPeriodPdf(report, kindLabel, { businessName, regular, bold, ...options });
   const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
   const link = document.createElement('a');
   link.href = url;
