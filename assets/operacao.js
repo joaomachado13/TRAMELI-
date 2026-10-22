@@ -1,6 +1,6 @@
 import { formatCustomerName, normalizeSearch } from '../src/customer-display.js';
 import { recurringScheduleText } from '../src/recurring-days.js';
-import { stages, statusPath, progressOrder } from '../src/operation-flow.js';
+import { stages, statusPath, progressOrder, canEditOrder } from '../src/operation-flow.js';
 import { compareByStreet } from '../src/address-sort.js';
 import { supplierGroups, supplierTotals, supplierText, supplierDayCost, downloadSupplierPdf, downloadSeparationPdf, itemCheckKey, filterSupplierGroups, isSandraSupplierItem } from '../src/supplier-checklist.js';
 import { closingPeriod } from '../src/billing-cycle.js';
@@ -570,7 +570,7 @@ function detailActions(order) {
   const state = orderStatus(order);
   const master = !live || live.role === 'master';
   const canCorrect = state === 'received' || master;
-  return `<div class="order-detail__actions">${nextStatus[state] ? `<button class="button button--primary" type="button" data-action="toggle" data-id="${escapeHtml(order.id)}">Avançar para ${escapeHtml(statusLabels[nextStatus[state]].toLowerCase())} →</button>` : ''}${previousStatus[state] && master ? `<button class="button button--quiet" type="button" data-action="back" data-id="${escapeHtml(order.id)}">Voltar para ${escapeHtml(statusLabels[previousStatus[state]].toLowerCase())}</button>` : ''}${!['delivered', 'cancelled'].includes(state) && canCorrect ? `<button class="button button--quiet" type="button" data-action="edit" data-id="${escapeHtml(order.id)}">Editar pedido</button>` : ''}${live?.operator && order.customerId && state !== 'cancelled' ? `<button class="button button--quiet" type="button" data-action="make-recurring" data-id="${escapeHtml(order.id)}">Tornar recorrente</button>` : ''}${live ? `<button class="button button--quiet" type="button" data-action="history" data-id="${escapeHtml(order.id)}">Ver histórico</button>` : ''}${!['delivered', 'cancelled'].includes(state) && canCorrect ? `<button class="order-detail__danger" type="button" data-action="delete" data-id="${escapeHtml(order.id)}">Cancelar pedido</button>` : ''}${live?.role === 'master' ? `<button class="order-detail__danger" type="button" data-action="destroy" data-id="${escapeHtml(order.id)}">Excluir definitivamente</button>` : ''}</div>`;
+  return `<div class="order-detail__actions">${nextStatus[state] ? `<button class="button button--primary" type="button" data-action="toggle" data-id="${escapeHtml(order.id)}">Avançar para ${escapeHtml(statusLabels[nextStatus[state]].toLowerCase())} →</button>` : ''}${previousStatus[state] && master ? `<button class="button button--quiet" type="button" data-action="back" data-id="${escapeHtml(order.id)}">Voltar para ${escapeHtml(statusLabels[previousStatus[state]].toLowerCase())}</button>` : ''}${canEditOrder(state, { operator: Boolean(live?.operator), master }) ? `<button class="button button--quiet" type="button" data-action="edit" data-id="${escapeHtml(order.id)}">Editar pedido</button>` : ''}${live?.operator && order.customerId && state !== 'cancelled' ? `<button class="button button--quiet" type="button" data-action="make-recurring" data-id="${escapeHtml(order.id)}">Tornar recorrente</button>` : ''}${live ? `<button class="button button--quiet" type="button" data-action="history" data-id="${escapeHtml(order.id)}">Ver histórico</button>` : ''}${!['delivered', 'cancelled'].includes(state) && canCorrect ? `<button class="order-detail__danger" type="button" data-action="delete" data-id="${escapeHtml(order.id)}">Cancelar pedido</button>` : ''}${live?.role === 'master' ? `<button class="order-detail__danger" type="button" data-action="destroy" data-id="${escapeHtml(order.id)}">Excluir definitivamente</button>` : ''}</div>`;
 }
 
 function renderOrderDetail(order) {
@@ -1090,8 +1090,8 @@ form.addEventListener('submit', async event => {
     publicCode: previous?.publicCode || (live ? '' : localOrderCode(createdAt)),
     version: previous?.version || null,
     createdAt,
-    checked: false,
-    status: 'received',
+    checked: Boolean(previous && orderStatus(previous) === 'delivered'),
+    status: previous && orderStatus(previous) === 'delivered' ? 'delivered' : 'received',
     editedAt: previous ? new Date().toISOString() : null,
     customerId, customer, address, phone,
     date: form.elements.date.value, feeCents, items, notes: form.elements.notes.value.trim(),
