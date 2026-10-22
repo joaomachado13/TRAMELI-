@@ -102,6 +102,30 @@ export function supplierText(groups, date) {
   return `Repasse da padaria - ${date}\n\nLISTA CONSOLIDADA POR MATERIAL\n${totals.map(totalLine).join('\n')}${day.withCosts ? `\n\nTOTAL (preço de custo): ${formatMoney(day.totalCents)}${day.missing ? ` — ${day.missing} item(ns) sem custo, total incompleto` : ''}` : ''}`;
 }
 
+export function supplierCustomerText(groups, date, businessName = 'Pão Doce') {
+  const ordered = [...groups].sort((a, b) => String(a.customer || '').localeCompare(String(b.customer || ''), 'pt-BR', { sensitivity: 'base' }));
+  const lines = [`${businessName} - Repasse da padaria`, `Data: ${date}`, '', 'ITENS POR CLIENTE (preço de custo)'];
+  for (const group of ordered) {
+    const customerLines = group.orders.flatMap(order => order.lines);
+    const withCosts = customerLines.some(line => 'costKnown' in line);
+    const subtotalCents = customerLines.reduce((sum, line) => sum + (line.costCents || 0), 0);
+    const missing = customerLines.filter(line => 'costKnown' in line && !line.costKnown).length;
+    lines.push('', String(group.customer || 'Cliente sem nome'));
+    for (const order of group.orders) {
+      for (const line of order.lines) {
+        const value = 'costKnown' in line
+          ? (line.costKnown ? formatMoney(line.costCents) + (line.costEstimated ? '*' : '') : 'custo não informado')
+          : 'custo não carregado';
+        lines.push(`• ${line.label} — ${value}`);
+      }
+    }
+    if (withCosts) lines.push(`Subtotal: ${formatMoney(subtotalCents)}${missing ? ` — ${missing} item(ns) sem custo` : ''}`);
+  }
+  const day = supplierDayCost(groups);
+  if (day.withCosts) lines.push('', `TOTAL A PAGAR À PADARIA: ${formatMoney(day.totalCents)}${day.missing ? ` — ${day.missing} item(ns) sem custo, total incompleto` : ''}`);
+  return lines.join('\n');
+}
+
 export async function downloadSeparationPdf(groups, date, businessName, supplierName) {
   const { createSeparationPdf } = await import('./supplier-pdf.js');
   const [regular, bold] = await Promise.all([
@@ -125,7 +149,7 @@ export async function downloadSeparationPdf(groups, date, businessName, supplier
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
-export async function downloadSupplierPdf(groups, date, businessName) {
+export async function downloadSupplierPdf(groups, date, businessName, options = {}) {
   const { createSupplierPdf } = await import('./supplier-pdf.js');
   const [regular, bold] = await Promise.all([
     fetch(new URL('../assets/manrope-400.ttf', import.meta.url)).then(response => {
@@ -137,7 +161,7 @@ export async function downloadSupplierPdf(groups, date, businessName) {
       return response.arrayBuffer();
     }),
   ]);
-  const bytes = await createSupplierPdf(groups, date, { businessName, regular, bold });
+  const bytes = await createSupplierPdf(groups, date, { businessName, regular, bold, ...options });
   const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
   const link = document.createElement('a');
   link.href = url;
