@@ -147,7 +147,11 @@ export function initPayments(live) {
     document.querySelectorAll('[data-day-close],[data-day-preview]').forEach(button=>button.disabled=!!warning());
     updateCustomerSelection();
   }
-  async function refresh() { if(api) await api.load(); refreshContent(); }
+  async function refresh() {
+    if(api) await api.load();
+    if(live && !live.operator) await live.refreshPurchaseStatus?.();
+    refreshContent();
+  }
   async function openReceipt(receiptId) {
     if(!api || !live?.operator){notify('Comprovante disponível somente para a operação.');return;}
     const receipt=api.receipts.find(item=>item.id===receiptId);
