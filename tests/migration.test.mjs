@@ -15,6 +15,11 @@ assert.match(customerRecurringEditMigration, /v_order\.customer_id is distinct f
 assert.match(customerRecurringEditMigration, /status = 'received'.*edited_at = now\(\), edited_by = v_user/s, 'Edição do cliente deve voltar para A conferir e registrar quem editou.');
 assert.match(customerRecurringEditMigration, /edited_by = case when p_status = 'confirmed' then null else edited_by end/, 'Ao reconferir, o alerta de edição deve ser limpo.');
 
+const customerRecurringCancelMigration = await readFile(new URL('../supabase/migrations/20261023115000_customer_cancel_operator_orders.sql', import.meta.url), 'utf8');
+assert.doesNotMatch(customerRecurringCancelMigration, /source\s*=\s*'portal'/, 'Cancelamento do cliente não deve depender da origem do pedido.');
+assert.match(customerRecurringCancelMigration, /status in \('received','confirmed','packing','ready'\)/, 'Ocorrência recorrente confirmada deve poder ser cancelada pelo cliente antes do corte.');
+assert.match(customerRecurringCancelMigration, /customer_id = auth\.uid\(\)/, 'Cancelamento deve continuar protegido pela titularidade do pedido.');
+
 const db = new PGlite({ extensions: { pgcrypto } });
 try {
   await db.exec(`
