@@ -48,7 +48,7 @@ begin
     return;
   end if;
 
-  if v_profile.billing_frequency not in ('quinzenal', 'mensal') then
+  if coalesce(v_profile.billing_frequency, '') not in ('quinzenal', 'mensal') then
     return query select false, 'clear'::text, ''::text, v_profile.billing_frequency, null::date, null::date, 0::bigint;
     return;
   end if;
