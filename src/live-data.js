@@ -180,6 +180,19 @@ export class LiveData {
     finally { this.loadingPromise = null; }
   }
 
+  async refreshPurchaseStatus() {
+    if (this.operator || !this.user?.id) {
+      this.purchaseStatus = { blocked: false, kind: 'clear', reason: '', dueCents: 0 };
+      return this.purchaseStatus;
+    }
+    const { data, error } = await this.client.rpc('trameli_customer_purchase_status');
+    if (error?.code === 'PGRST202') return this.purchaseStatus;
+    if (error) throw error;
+    this.purchaseStatus = data || { blocked: false, kind: 'clear', reason: '', dueCents: 0 };
+    window.dispatchEvent(new Event('trameli:purchase-status-changed'));
+    return this.purchaseStatus;
+  }
+
   async setProductFeatured(productId, position) {
     if (!this.operator) throw new Error('Apenas a operação pode escolher os destaques.');
     const { error } = await this.client.rpc('trameli_set_product_featured', {
@@ -499,6 +512,14 @@ export class LiveData {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'trameli_settings' }, changed)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'trameli_payment_intents' }, payload => {
         window.dispatchEvent(new CustomEvent('trameli:remote-change', { detail: payload }));
+        window.dispatchEvent(new Event('trameli:payments-refresh'));
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'trameli_payments' }, payload => {
+        changed(payload);
+        window.dispatchEvent(new Event('trameli:payments-refresh'));
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'trameli_payment_allocations' }, payload => {
+        changed(payload);
         window.dispatchEvent(new Event('trameli:payments-refresh'));
       }).subscribe();
   }
