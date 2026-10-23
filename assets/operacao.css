@@ -261,18 +261,18 @@ dialog{width:min(670px,calc(100vw - 24px));max-height:min(90vh,900px);padding:0;
   body:has(#operation-view:not([hidden])) #operation-view{display:block!important;width:210mm!important;max-width:none!important;margin:0!important;padding:0!important}
   body:has(#operation-view:not([hidden])) .print-document{display:block!important;width:210mm!important;max-width:none!important;margin:0!important;padding:0!important;overflow:visible!important}
   .print-sheet{display:block;box-sizing:border-box;width:210mm;min-height:297mm;margin:0;padding:5mm;overflow:visible}
-  .print-sheet--orders{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-flow:row;align-items:start;align-content:start;gap:1.8mm}
-  .print-label{display:block;box-sizing:border-box;position:relative;margin:0;padding:0;overflow:visible;border:.35mm solid #c8c8c8;border-radius:1.2mm;background:#fff;color:#111;font:9pt "TrameliLabelDM",sans-serif;break-inside:avoid;page-break-inside:avoid}
-  .print-label__content{display:flex;flex-direction:column;box-sizing:border-box;margin:0;padding:2.1mm;overflow:visible;transform:translate(var(--print-offset-x,0mm),var(--print-offset-y,0mm))}
-  .print-label__top{display:block;position:relative;padding:0 0 1mm;border-bottom:.25mm solid #d3d3d3;font-size:11.4pt;line-height:1.1}
+  .print-sheet--orders{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-flow:row;align-items:start;align-content:start;gap:2.2mm}
+  .print-label{display:block;box-sizing:border-box;position:relative;min-height:36mm;margin:0;padding:0;overflow:visible;border:.35mm solid #c8c8c8;border-radius:1.6mm;background:#fff;color:#111;font:10pt "TrameliLabelDM",sans-serif;break-inside:avoid;page-break-inside:avoid}
+  .print-label__content{display:flex;flex-direction:column;box-sizing:border-box;margin:0;padding:2.6mm;overflow:visible;transform:translate(var(--print-offset-x,0mm),var(--print-offset-y,0mm))}
+  .print-label__top{display:block;position:relative;padding:0 0 1.1mm;border-bottom:.25mm solid #d3d3d3;font-size:12.6pt;line-height:1.12}
   .print-label__top strong{display:block;min-width:0;padding-right:0;font-weight:700;overflow-wrap:normal;word-break:normal;hyphens:none}
-  .print-label__top span{display:block;margin-top:.6mm;font-size:7.2pt;font-weight:700;white-space:nowrap;color:#555}
-  .print-label p{margin:1mm 0 0;overflow-wrap:anywhere;font-size:8.8pt;line-height:1.2}
-  .print-label ul{display:grid;gap:.55mm;margin:1.15mm 0 0;padding:0;list-style:none}
-  .print-label li{margin:0;overflow-wrap:anywhere;font-size:9.2pt;line-height:1.18}
-  .print-label li strong{display:inline-block;min-width:5.5mm;font-size:10.2pt}
-  .print-label small{display:block;margin-top:1mm;font-size:8.2pt;line-height:1.2;overflow-wrap:anywhere}
-  .print-label footer{flex-shrink:0;margin-top:1.2mm;padding-top:.8mm;border-top:.2mm solid #e0e0e0;text-align:right;font-weight:700;font-size:8.8pt;line-height:1.2}
+  .print-label__top span{display:block;margin-top:.7mm;font-size:8.2pt;font-weight:700;white-space:nowrap;color:#444}
+  .print-label p{margin:1.2mm 0 0;overflow-wrap:anywhere;font-size:9.8pt;line-height:1.22}
+  .print-label ul{display:grid;gap:.7mm;margin:1.4mm 0 0;padding:0;list-style:none}
+  .print-label li{margin:0;overflow-wrap:anywhere;font-size:10.2pt;line-height:1.2}
+  .print-label li strong{display:inline-block;min-width:6mm;font-size:11.2pt}
+  .print-label small{display:block;margin-top:1.2mm;font-size:9.2pt;line-height:1.22;overflow-wrap:anywhere}
+  .print-label footer{flex-shrink:0;margin-top:1.2mm;padding-top:.8mm;border-top:.2mm solid #e0e0e0;text-align:right;font-weight:700;font-size:9.4pt;line-height:1.2}
   /* Mini impressora: modo independente do layout A4. */
   .print-sheet--mini{display:block!important;width:57mm!important;min-width:57mm!important;max-width:57mm!important;min-height:0!important;margin:0!important;padding:2mm!important;overflow:visible!important}
   .print-sheet--mini .print-label{display:block!important;width:53mm!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;break-after:page;page-break-after:always}
