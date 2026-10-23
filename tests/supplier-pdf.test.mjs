@@ -42,6 +42,35 @@ const supplierFixture = [{ customer: 'Cliente', address: 'Rua A', orders: [{ id:
 ] }] }];
 assert.deepEqual(filterSupplierGroups(supplierFixture, 'sandra').flatMap(g => g.orders.flatMap(o => o.lines.map(l => l.name))), ['Broa', 'Biscoito de nata']);
 assert.deepEqual(filterSupplierGroups(supplierFixture, 'divano').flatMap(g => g.orders.flatMap(o => o.lines.map(l => l.name))), ['Pão francês']);
+
+const bakeryCatalog = [
+  { id: 'broa-doce-id', name: 'Broa Doce', bakerySupplier: 'sandra' },
+  { id: 'carolina-id', name: 'Carolina doce de leite', bakerySupplier: 'sandra' },
+  { id: 'custom-sandra-id', name: 'Produto futuro da Sandra', bakerySupplier: 'sandra' },
+  { id: 'broa-override-id', name: 'Broa', bakerySupplier: 'divano' },
+];
+const assignmentFixture = [{ customer: 'Cliente', address: 'Rua B', orders: [{ id: 'assignment-test', lines: [
+  { productId: 'broa-doce-id', name: 'Broa', label: '2× Broa' },
+  { productId: 'carolina-id', name: 'Carolina doce de leite', label: '4× Carolina doce de leite' },
+  { productId: 'custom-sandra-id', name: 'Produto futuro da Sandra', label: '1× Produto futuro da Sandra' },
+  { productId: 'broa-override-id', name: 'Broa', label: '1× Broa' },
+] }] }];
+assert.deepEqual(
+  filterSupplierGroups(assignmentFixture, 'sandra', bakeryCatalog).flatMap(g => g.orders.flatMap(o => o.lines.map(l => l.productId))),
+  ['broa-doce-id', 'carolina-id', 'custom-sandra-id'],
+  'A padaria cadastrada no produto deve prevalecer sobre o nome histórico.'
+);
+assert.deepEqual(
+  filterSupplierGroups(assignmentFixture, 'divano', bakeryCatalog).flatMap(g => g.orders.flatMap(o => o.lines.map(l => l.productId))),
+  ['broa-override-id'],
+  'Trocar um produto para Divano deve reclassificar inclusive linhas com nome antes associado à Sandra.'
+);
+const assignmentLabels = bakeryLabelOrders([{ ...first, id: 'assignment-label', items: [
+  { productId: 'broa-doce-id', name: 'Broa', quantity: 2, priceCents: 200 },
+  { name: 'Pão francês', quantity: 4, priceCents: 140 },
+] }], bakeryCatalog);
+assert.deepEqual(assignmentLabels[0].items.map(item => item.name), ['Pão francês']);
+
 // The bakery paperwork is a projection; customer orders and financial repasses remain complete.
 const mixedOrder = { ...first, id: 'mixed', items: [
   { name: 'Pão francês', quantity: 4, priceCents: 140 },

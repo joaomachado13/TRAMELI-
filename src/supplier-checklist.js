@@ -5,22 +5,47 @@ import { supplierProductIdentity } from './supplier-product-identity.js';
 
 const normalize = value => String(value || '').trim().toLocaleLowerCase('pt-BR');
 
-export const SANDRA_ITEMS = Object.freeze(['broa', 'biscoito provolone', 'bolacha de nata', 'biscoito de nata', 'biscoito de queijo', 'biscoito da vovó']);
-export const isSandraSupplierItem = name => SANDRA_ITEMS.includes(normalize(name));
+// Compatibilidade para pedidos antigos que não possuem productId.
+// A fonte principal da padaria responsável é trameli_products.bakery_supplier.
+export const SANDRA_ITEMS = Object.freeze([
+  'broa',
+  'broa doce',
+  'broa salgada',
+  'carolina doce de leite',
+  'biscoito provolone',
+  'bolacha de nata',
+  'biscoito de nata',
+  'biscoito de queijo',
+  'biscoito da vovó',
+]);
+
+export function bakerySupplierForItem(item, products = []) {
+  const line = typeof item === 'string' ? { name: item } : (item || {});
+  const byId = line.productId
+    ? products.find(product => product.id === line.productId)
+    : null;
+  const byName = byId || products.find(product => normalize(product.name) === normalize(line.name));
+  if (byName?.bakerySupplier === 'sandra' || byName?.bakerySupplier === 'divano') return byName.bakerySupplier;
+  if (line.bakerySupplier === 'sandra' || line.bakerySupplier === 'divano') return line.bakerySupplier;
+  return SANDRA_ITEMS.includes(normalize(line.name)) ? 'sandra' : 'divano';
+}
+
+export const isSandraSupplierItem = (item, products = []) => bakerySupplierForItem(item, products) === 'sandra';
+
 // Only project items for the bakery labels; never modify the customer's order.
-export function bakeryLabelOrders(orders) {
+export function bakeryLabelOrders(orders, products = []) {
   return orders.map(order => ({
     ...order,
-    items: (order.items || []).filter(item => !isSandraSupplierItem(item.name)),
+    items: (order.items || []).filter(item => !isSandraSupplierItem(item, products)),
   })).filter(order => order.items.length);
 }
 
-export function filterSupplierGroups(groups, supplier = 'divano') {
+export function filterSupplierGroups(groups, supplier = 'divano', products = []) {
   return groups.map(group => ({
     ...group,
     orders: group.orders.map(order => ({
       ...order,
-      lines: order.lines.filter(line => supplier === 'sandra' ? isSandraSupplierItem(line.name) : !isSandraSupplierItem(line.name)),
+      lines: order.lines.filter(line => bakerySupplierForItem(line, products) === supplier),
     })).filter(order => order.lines.length),
   })).filter(group => group.orders.length);
 }

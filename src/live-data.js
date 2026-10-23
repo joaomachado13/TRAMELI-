@@ -21,6 +21,7 @@ const mapProduct = (row, cost) => ({
   image: resolveProductPhoto(row.id, row.image_url), priceCents: row.price_cents, active: row.active,
   sourceRow: row.source_row, reviewReason: row.review_reason,
   costCents: cost?.unit_cost_cents ?? null, supplierName: cost?.supplier_name || '',
+  bakerySupplier: row.bakery_supplier || 'divano',
   costEstimated: Boolean(cost?.estimated),
   unavailableFrom: row.unavailable_from || null, unavailableUntil: row.unavailable_until || null,
   substituteProductId: row.substitute_product_id || null,
@@ -132,7 +133,7 @@ export class LiveData {
       const productSignature = value => JSON.stringify((value || []).map(item => ({
         id:item.id,name:item.name,category:item.category,unit:item.unit,image:item.image,
         priceCents:item.priceCents,active:item.active,costCents:item.costCents,
-        supplierName:item.supplierName,costEstimated:item.costEstimated,
+        supplierName:item.supplierName,bakerySupplier:item.bakerySupplier,costEstimated:item.costEstimated,
         unavailableFrom:item.unavailableFrom,unavailableUntil:item.unavailableUntil,
         substituteProductId:item.substituteProductId,
         featuredPosition:item.featuredPosition,
@@ -191,7 +192,8 @@ export class LiveData {
       p_price_cents: product.priceCents, p_active: product.active,
     };
     const operationalArgs = { ...args, p_cost_cents: product.costCents ?? null,
-      p_supplier_name: product.supplierName || '', p_unavailable_from: product.unavailableFrom || null,
+      p_supplier_name: product.supplierName || '', p_bakery_supplier: product.bakerySupplier || 'divano',
+      p_unavailable_from: product.unavailableFrom || null,
       p_unavailable_until: product.unavailableUntil || null,
       p_substitute_product_id: product.substituteProductId || null };
     let result = await this.client.rpc('trameli_save_product_operational', operationalArgs);
