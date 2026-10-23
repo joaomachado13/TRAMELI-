@@ -66,7 +66,7 @@ begin
   open_orders as (
     select
       o.delivery_date,
-      greatest(o.total_cents - coalesce(ps.paid_cents, 0), 0)::bigint as due_cents,
+      greatest(o.total_cents - coalesce(ps.paid_cents, 0), 0)::bigint as order_due_cents,
       case
         when v_profile.billing_frequency = 'mensal'
           then (date_trunc('month', o.delivery_date)::date + interval '1 month - 1 day')::date
@@ -82,9 +82,9 @@ begin
   overdue_periods as (
     select
       period_closing_date,
-      sum(due_cents)::bigint as period_due_cents
+      sum(order_due_cents)::bigint as period_due_cents
     from open_orders
-    where due_cents > 0
+    where order_due_cents > 0
     group by period_closing_date
     having p_reference_date > period_closing_date + 3
   )
