@@ -100,14 +100,13 @@ export function initPayments(live) {
     if(!rows.length) return upcomingMarkup || '<div class="payment-customer-empty"><strong>Nenhum pagamento pendente.</strong><p>Quando você tiver pedidos vinculados à sua conta, o resumo aparecerá aqui.</p></div>';
     const t=totals(rows), openRows=rows.filter(row=>Number(row.due_cents)>0);
     const pixReady=window.TrameliPix && openRows.length>0;
-    const reminder=billingReminder(rows,today());
+    const billingFrequency=['mensal','quinzenal'].includes(live.profile?.billing_frequency) ? live.profile.billing_frequency : 'quinzenal';
+    const reminder=billingReminder(rows,today(),billingFrequency);
     const reminderDate=reminder.deadline?dateLabel(reminder.deadline):'';
+    const closingDate=reminder.closingDate?dateLabel(reminder.closingDate):'';
     const reminderClass=reminder.state==='overdue'?'is-overdue':reminder.state==='today'?'is-today':'is-upcoming';
-    const reminderMessage=reminder.state==='clear'?''
-      : reminder.days!==null && reminder.days>7
-        ? `Próximo fechamento em ${reminderDate}.`
-        : reminder.message;
-    const reminderMarkup=reminder.state==='clear'?'':`<aside class="payment-deadline ${reminderClass}" role="status"><div><span>FECHAMENTO QUINZENAL</span><strong>${esc(reminderMessage)}</strong><small>${money(reminder.dueCents)} previstos para este fechamento · vencimento ${reminderDate}</small></div>${reminder.days!==null&&reminder.days<=7?'<span class="payment-deadline__pulse" aria-hidden="true">!</span>':''}</aside>`;
+    const frequencyLabel=billingFrequency==='mensal'?'FECHAMENTO MENSAL':'FECHAMENTO QUINZENAL';
+    const reminderMarkup=reminder.state==='clear'?'':`<aside class="payment-deadline ${reminderClass}" role="status"><div><span>${frequencyLabel}</span><strong>${esc(reminder.message)}</strong><small>${money(reminder.dueCents)} neste fechamento · fecha ${closingDate} · pagar até ${reminderDate}</small></div>${reminder.days!==null&&reminder.days<=7?'<span class="payment-deadline__pulse" aria-hidden="true">!</span>':''}</aside>`;
     return `${reminderMarkup}<div class="payment-customer-hero ${t.due_cents>0?'has-due':'is-clear'}">
       <div class="payment-customer-hero__balance"><span>${t.due_cents>0?'Saldo em aberto':'Tudo certo por aqui'}</span><strong>${t.due_cents>0?money(t.due_cents):'R$ 0,00'}</strong><p>${t.due_cents>0?`Você tem ${openRows.length} ${openRows.length===1?'pedido aguardando pagamento':'pedidos aguardando pagamento'}.`:'Todos os pagamentos destes pedidos já foram confirmados.'}</p></div>
       <div class="payment-customer-hero__details"><div><span>Total em pedidos</span><strong>${money(t.total_cents)}</strong></div><div><span>Já confirmado</span><strong>${money(t.paid_cents)}</strong></div>${t.refund_due_cents>0?`<div class="is-refund"><span>A devolver</span><strong>${money(t.refund_due_cents)}</strong></div>`:''}</div>
@@ -148,7 +147,11 @@ export function initPayments(live) {
     document.querySelectorAll('[data-day-close],[data-day-preview]').forEach(button=>button.disabled=!!warning());
     updateCustomerSelection();
   }
-  async function refresh() { if(api) await api.load(); refreshContent(); }
+  async function refresh() {
+    if(api) await api.load();
+    if(live && !live.operator) await live.refreshPurchaseStatus?.();
+    refreshContent();
+  }
   async function openReceipt(receiptId) {
     if(!api || !live?.operator){notify('Comprovante disponível somente para a operação.');return;}
     const receipt=api.receipts.find(item=>item.id===receiptId);

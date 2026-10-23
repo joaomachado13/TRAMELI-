@@ -41,6 +41,7 @@ export class LiveData {
     this.products = [];
     this.settings = null;
     this.commercialTerms = { deliveryFeeCents: 200, productPrices: new Map() };
+    this.purchaseStatus = { blocked: false, kind: 'clear', reason: '', dueCents: 0 };
     this.profile = null;
     this.user = null;
     this.operator = false;
@@ -130,6 +131,12 @@ export class LiveData {
       }
       const profileResult = await this.client.from('trameli_profiles').select('*').eq('user_id', this.user.id).maybeSingle();
       if (profileResult.error) throw profileResult.error;
+      let purchaseStatus = { blocked: false, kind: 'clear', reason: '', dueCents: 0 };
+      if (!this.operator) {
+        const statusResult = await this.client.rpc('trameli_customer_purchase_status');
+        if (statusResult.error && statusResult.error.code !== 'PGRST202') throw statusResult.error;
+        if (statusResult.data) purchaseStatus = statusResult.data;
+      }
       const productSignature = value => JSON.stringify((value || []).map(item => ({
         id:item.id,name:item.name,category:item.category,unit:item.unit,image:item.image,
         priceCents:item.priceCents,active:item.active,costCents:item.costCents,
@@ -158,6 +165,7 @@ export class LiveData {
       this.products = nextProducts;
       this.settings = settingsResult.data;
       this.commercialTerms = commercialTerms;
+      this.purchaseStatus = purchaseStatus;
       this.orders = nextOrders;
       if (changedOrders.length) this.lastOrderSync = changedOrders.at(-1).updatedAt;
       else if (force) this.lastOrderSync = null;
@@ -170,6 +178,19 @@ export class LiveData {
     })();
     try { await this.loadingPromise; }
     finally { this.loadingPromise = null; }
+  }
+
+  async refreshPurchaseStatus() {
+    if (this.operator || !this.user?.id) {
+      this.purchaseStatus = { blocked: false, kind: 'clear', reason: '', dueCents: 0 };
+      return this.purchaseStatus;
+    }
+    const { data, error } = await this.client.rpc('trameli_customer_purchase_status');
+    if (error?.code === 'PGRST202') return this.purchaseStatus;
+    if (error) throw error;
+    this.purchaseStatus = data || { blocked: false, kind: 'clear', reason: '', dueCents: 0 };
+    window.dispatchEvent(new Event('trameli:purchase-status-changed'));
+    return this.purchaseStatus;
   }
 
   async setProductFeatured(productId, position) {
@@ -491,6 +512,14 @@ export class LiveData {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'trameli_settings' }, changed)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'trameli_payment_intents' }, payload => {
         window.dispatchEvent(new CustomEvent('trameli:remote-change', { detail: payload }));
+        window.dispatchEvent(new Event('trameli:payments-refresh'));
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'trameli_payments' }, payload => {
+        changed(payload);
+        window.dispatchEvent(new Event('trameli:payments-refresh'));
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'trameli_payment_allocations' }, payload => {
+        changed(payload);
         window.dispatchEvent(new Event('trameli:payments-refresh'));
       }).subscribe();
   }

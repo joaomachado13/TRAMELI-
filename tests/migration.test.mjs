@@ -20,6 +20,14 @@ assert.doesNotMatch(customerRecurringCancelMigration, /source\s*=\s*'portal'/, '
 assert.match(customerRecurringCancelMigration, /status in \('received','confirmed','packing','ready'\)/, 'Ocorrência recorrente confirmada deve poder ser cancelada pelo cliente antes do corte.');
 assert.match(customerRecurringCancelMigration, /customer_id = auth\.uid\(\)/, 'Cancelamento deve continuar protegido pela titularidade do pedido.');
 
+const paymentGraceMigration = await readFile(new URL('../supabase/migrations/20261023144500_payment_grace_auto_block.sql', import.meta.url), 'utf8');
+assert.match(paymentGraceMigration, /billing_frequency, ''\) not in \('quinzenal', 'mensal'\)/, 'Bloqueio automático deve valer somente para cobrança quinzenal ou mensal.');
+assert.match(paymentGraceMigration, /p_reference_date > period_closing_date \+ 3/, 'Cliente deve ter três dias completos de carência após o fechamento.');
+assert.match(paymentGraceMigration, /v_purchase\.block_kind = 'overdue'/, 'Checkout deve diferenciar atraso financeiro de bloqueio manual.');
+assert.match(paymentGraceMigration, /trameli_customer_purchase_status\(\s*v_schedule\.customer_id/s, 'Recorrência automática deve respeitar o bloqueio financeiro.');
+assert.match(paymentGraceMigration, /if coalesce\(v_purchase\.blocked, false\) then\s+continue;/s, 'Recorrência bloqueada não deve gerar nova ocorrência.');
+
+
 const db = new PGlite({ extensions: { pgcrypto } });
 try {
   await db.exec(`
