@@ -16,9 +16,13 @@ assert.match(migration, /edited_at = case when p_status = 'confirmed' then null 
 assert.match(migration, /and delivery_date = p_delivery_date and status <> 'cancelled'[\s\S]*?continue;/);
 assert.match(liveData, /editedAt: row\.edited_at \|\| null/);
 assert.match(portal, /Abra Meus pedidos e escolha Alterar/);
-assert.match(portal, /order\.editedAt \? '<span class="order-edited-badge"/);
+assert.match(portal, /const editedBadge = order\.editedAt/);
+assert.match(portal, /EDITADO POR VOCÊ/);
+assert.match(portal, /EDITADO PELA OPERAÇÃO/);
 assert.match(operation, /Este cliente já tem um pedido para essa data/);
-assert.match(operation, /order\.editedAt \? '<span class="order-edited-badge"/);
+assert.match(operation, /function orderEditedLabel\(order\)/);
+assert.match(operation, /EDITADO PELO CLIENTE/);
+assert.match(operation, /EDITADO PELA OPERAÇÃO/);
 assert.match(operationCss, /\.order-edited-badge[^{]*\{[^}]*background:#fef3c7[^}]*color:#78350f/s);
 assert.match(portalCss, /\.order-edited-badge[^{]*\{[^}]*background:#fef3c7[^}]*color:#78350f/s);
 
