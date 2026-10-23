@@ -24,7 +24,7 @@ const paymentGraceMigration = await readFile(new URL('../supabase/migrations/202
 assert.match(paymentGraceMigration, /billing_frequency, ''\) not in \('quinzenal', 'mensal'\)/, 'Bloqueio automático deve valer somente para cobrança quinzenal ou mensal.');
 assert.match(paymentGraceMigration, /p_reference_date > period_closing_date \+ 3/, 'Cliente deve ter três dias completos de carência após o fechamento.');
 assert.match(paymentGraceMigration, /v_purchase\.block_kind = 'overdue'/, 'Checkout deve diferenciar atraso financeiro de bloqueio manual.');
-assert.match(paymentGraceMigration, /trameli_customer_purchase_status\(v_schedule\.customer_id/, 'Recorrência automática deve respeitar o bloqueio financeiro.');
+assert.match(paymentGraceMigration, /trameli_customer_purchase_status\(\s*v_schedule\.customer_id/s, 'Recorrência automática deve respeitar o bloqueio financeiro.');
 assert.match(paymentGraceMigration, /if coalesce\(v_purchase\.blocked, false\) then\s+continue;/s, 'Recorrência bloqueada não deve gerar nova ocorrência.');
 
 
