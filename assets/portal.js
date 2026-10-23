@@ -2,6 +2,7 @@ import { formatCustomerName } from '../src/customer-display.js';
 import { isDeliveryDate, nextAvailableDeliveryDate, rollingDeliveryWeek } from '../src/delivery-days.js';
 import { billingReminder, daysUntil, nextBillingDeadline } from '../src/billing-cycle.js';
 import { featuredProductsMarkup } from '../src/featured-products.js';
+import { productMatchesCatalogSearch } from '../src/catalog-search.js';
 import '../src/featured-products.css';
 
 (() => {
@@ -357,7 +358,7 @@ import '../src/featured-products.css';
     const frequent = new Set(shopping()?.frequentProductIds(readOrders().filter(owns), products()) || []);
     return products().filter(product => (personalFilter === 'all' || (personalFilter === 'favorites' ? shopping()?.favorites.has(product.id) : frequent.has(product.id)))
       && (category === 'Todos' || (product.category || 'Outros') === category)
-      && (!query || product.name.toLocaleLowerCase('pt-BR').includes(query.toLocaleLowerCase('pt-BR'))));
+      && productMatchesCatalogSearch(product, query));
   }
   function personalFilterNote() {
     return shopping()?.message || (personalFilter === 'frequent'
