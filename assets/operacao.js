@@ -405,7 +405,7 @@ function rememberPrintedOrders() {
 window.addEventListener('beforeprint', rememberPrintedOrders);
 
 function openLabelPrintDialog(printMode = 'a4') {
-  const dayOrders = bakeryLabelOrders(selectedOrders());
+  const dayOrders = bakeryLabelOrders(selectedOrders(), live?.products || window.TrameliCatalog?.list() || []);
   if (!dayOrders.length) { alert('Não há itens da Padaria do Divano para imprimir na data selecionada.'); return; }
   let dialog = document.getElementById('label-print-dialog');
   if (!dialog) {
@@ -444,7 +444,7 @@ function openLabelPrintDialog(printMode = 'a4') {
     });
 
     const runPrintAction = action => {
-      const available = bakeryLabelOrders(selectedOrders());
+      const available = bakeryLabelOrders(selectedOrders(), live?.products || window.TrameliCatalog?.list() || []);
       let chosen = [];
       if (action === 'new') chosen = available.filter(order => orderStatus(order) === 'received').sort(compareByStreet);
       else if (action === 'all') chosen = available.slice().sort(compareByStreet);
@@ -481,8 +481,8 @@ function openLabelPrintDialog(printMode = 'a4') {
 }
 
 function checklistGroups() { return supplierGroups(orders, dateInput.value, supplierChecks, costsAvailable() ? (supplierCostMap || new Map()) : null); }
-function separationGroups() { return filterSupplierGroups(checklistGroups(), 'divano'); }
-function repasseGroups() { return filterSupplierGroups(checklistGroups(), supplierProvider?.value || 'divano'); }
+function separationGroups() { return filterSupplierGroups(checklistGroups(), 'divano', live?.products || window.TrameliCatalog?.list() || []); }
+function repasseGroups() { return filterSupplierGroups(checklistGroups(), supplierProvider?.value || 'divano', live?.products || window.TrameliCatalog?.list() || []); }
 function periodOrders(period) { return orders.filter(order => order.date >= period.from && order.date <= period.to && orderStatus(order) !== 'cancelled'); }
 function refreshPeriodLabel() {
   if (!supplierPeriodLabel) return;
@@ -498,7 +498,7 @@ function renderSupplierList() {
     try { localStorage.setItem(checklistKey, JSON.stringify([...supplierChecks])); } catch { /* Optional checklist persistence. */ }
   }
   const allGroups = checklistGroups();
-  const groups = filterSupplierGroups(allGroups, supplierProvider?.value || 'divano');
+  const groups = filterSupplierGroups(allGroups, supplierProvider?.value || 'divano', live?.products || window.TrameliCatalog?.list() || []);
   const totals = supplierTotals(groups);
   if (supplierTotalsHost) supplierTotalsHost.innerHTML = totals.length
     ? `<ul>${totals.map(product => `<li><strong>${product.grams ? `${product.grams} g` : `${product.quantity}×`}</strong><span>${escapeHtml(product.name)}</span>${product.hasCost ? `<em class="supplier-cost">${product.costMissing ? 'custo não informado' : escapeHtml(formatCost(product.costCents))}</em>` : ''}</li>`).join('')}</ul>${(() => { const day = supplierDayCost(groups); return day.withCosts ? `<p class="supplier-cost-total"><strong>Total a pagar à padaria (custo): ${escapeHtml(formatCost(day.totalCents))}</strong>${day.missing ? ` · ${day.missing} item(ns) sem custo, total incompleto` : ''}</p>` : ''; })()}`
@@ -828,7 +828,7 @@ async function handleOrderAction(button) {
 }
 
 function preparePrint(orderSelection = null, printMode = 'a4') {
-  const dayOrders = bakeryLabelOrders(orderSelection || selectedOrders()).sort(compareByStreet);
+  const dayOrders = bakeryLabelOrders(orderSelection || selectedOrders(), live?.products || window.TrameliCatalog?.list() || []).sort(compareByStreet);
   const printHost = document.getElementById('print-document');
   if (!dayOrders.length) {
     printHost.replaceChildren();
@@ -967,7 +967,7 @@ async function buildPeriodReport() {
   const inPeriod = periodOrders(period);
   if (!inPeriod.length) throw new Error('Não há pedidos neste período.');
   await loadCostsFor(inPeriod);
-  const report = supplierPeriodReport(orders, supplierCostMap || new Map(), period.from, period.to, live?.products || [], item => (supplierProvider?.value || 'divano') === 'sandra' ? isSandraSupplierItem(item.name) : !isSandraSupplierItem(item.name));
+  const report = supplierPeriodReport(orders, supplierCostMap || new Map(), period.from, period.to, live?.products || [], item => (supplierProvider?.value || 'divano') === 'sandra' ? isSandraSupplierItem(item, live?.products || window.TrameliCatalog?.list() || []) : !isSandraSupplierItem(item, live?.products || window.TrameliCatalog?.list() || []));
   if (!report.orderCount) throw new Error('Não há itens dessa padaria neste período.');
   return { period, report };
 }
