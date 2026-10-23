@@ -793,7 +793,7 @@ import '../src/featured-products.css';
       date: deliveryDate, feeCents: deliveryFeeCents(),
       items: lines.map(orderItem),
       notes: form.elements.notes.value.trim(), paymentMethod: form.elements.paymentMethod.value,
-      source: 'portal', customerToken: token,
+      source: previous?.source || 'portal', customerToken: token,
     };
     if (live) {
       submitting = true;
