@@ -252,7 +252,7 @@ export class LiveData {
     await this.load(true);
     const savedId = data || order.id;
     if (savedId && customerId) {
-      void window.TrameliNotifications?.queueOrderEvent(savedId, order.id ? 'order_edited' : 'operator_order_created');
+      await window.TrameliNotifications?.queueOrderEvent(savedId, order.id ? 'order_edited' : 'operator_order_created');
     }
   }
 
@@ -365,7 +365,7 @@ export class LiveData {
     if (error) throw error;
     await this.load(true);
     const event = ({ confirmed:'status_confirmed', ready:'status_ready', delivered:'status_delivered', cancelled:'status_cancelled' })[status];
-    if (event) void window.TrameliNotifications?.queueOrderEvent(order.id, event);
+    if (event) await window.TrameliNotifications?.queueOrderEvent(order.id, event);
   }
 
   async saveCustomerOrder(order, lines, requestId) {
@@ -379,7 +379,7 @@ export class LiveData {
     });
     if (error) throw error;
     if (!data) throw new Error('O servidor não confirmou o registro do pedido. Nenhuma confirmação foi exibida.');
-    void window.TrameliNotifications?.queueOrderEvent(data, order.id ? 'order_edited' : 'new_order');
+    await window.TrameliNotifications?.queueOrderEvent(data, order.id ? 'order_edited' : 'new_order');
 
     // A confirmação da RPC significa que o pedido já foi gravado. Uma falha
     // na atualização do cache não deve transformar a gravação em erro no checkout.
@@ -408,7 +408,7 @@ export class LiveData {
     });
     if (error) throw error;
     await this.load(true);
-    void window.TrameliNotifications?.queueOrderEvent(order.id, 'order_cancelled');
+    await window.TrameliNotifications?.queueOrderEvent(order.id, 'order_cancelled');
   }
 
   async orderEvents(orderId) {
