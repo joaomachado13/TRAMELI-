@@ -8,7 +8,7 @@ import { initShopping } from './shopping.js';
 import * as orderMath from './order-math.js';
 import * as financeMath from './finance-math.js';
 import { init as initMotion } from './motion.js';
-import { initPwaPilot } from './pwa.js';
+import { initPwa, connectPwa } from './pwa.js';
 import clientCatalog from '../data/client-products.json';
 import { withOfficialProductPhoto } from './product-photos.js';
 import './live.css';
@@ -17,14 +17,19 @@ window.TrameliFinanceMath = financeMath;
 window.TrameliSourceCatalog = clientCatalog.products.map(withOfficialProductPhoto);
 window.TrameliProductPhoto = withOfficialProductPhoto;
 
-// Piloto PWA só é ativado pelo endereço privado ?pwa-pilot=1.
-// Não altera o fluxo normal de clientes ou da operação.
-initPwaPilot();
+// PWA de produção: instalação, atualização e camada de conectividade.
+// Dados operacionais continuam sempre vindos da rede/Supabase.
+initPwa();
 
 // A raiz pública sempre começa no portal do cliente, antes de carregar qualquer tela.
 // Preserve hashes de callback do Supabase e rotas internas explícitas.
 if (!location.hash) {
   history.replaceState(history.state, '', `${location.pathname}${location.search}#loja`);
+}
+const deepLinkOrder = new URLSearchParams(location.search).get('open-order');
+if (deepLinkOrder) {
+  try { sessionStorage.setItem('trameli-pending-open-order', deepLinkOrder); } catch { /* Direct hash navigation still works. */ }
+  if (location.hash !== '#operacao') location.hash = '#operacao';
 }
 
 if (enabled) {
@@ -36,6 +41,7 @@ if (enabled) {
   if (!live.operator) location.hash = '#loja';
   document.body.classList.toggle('live-customer', !live.operator);
   initAccount(live);
+  void connectPwa(live).catch(error => console.warn('PWA conectado sem push.', error?.message || error));
   live.startRealtime();
   const updateNotice = document.createElement('p');
   updateNotice.className = 'payment-notice'; updateNotice.setAttribute('role', 'status'); updateNotice.hidden = true;
