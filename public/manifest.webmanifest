@@ -3,8 +3,8 @@
   "short_name": "Pão Doce",
   "description": "Portal de pedidos do Pão Doce Delivery.",
   "lang": "pt-BR",
-  "id": "/pao-doce-pwa-pilot",
-  "start_url": "/?pwa-pilot=1#loja",
+  "id": "/pao-doce",
+  "start_url": "/#loja",
   "scope": "/",
   "display": "standalone",
   "background_color": "#F7F2EA",
@@ -16,6 +16,44 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Fazer pedido",
+      "short_name": "Pedir",
+      "url": "/?portal=catalog#loja",
+      "icons": [
+        {
+          "src": "/pwa-icon.png",
+          "sizes": "512x512",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Meus pedidos",
+      "short_name": "Pedidos",
+      "url": "/?portal=orders#loja",
+      "icons": [
+        {
+          "src": "/pwa-icon.png",
+          "sizes": "512x512",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Operação diária",
+      "short_name": "Operação",
+      "url": "/#operacao",
+      "icons": [
+        {
+          "src": "/pwa-icon.png",
+          "sizes": "512x512",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 }

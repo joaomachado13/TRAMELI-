@@ -51,7 +51,6 @@ function isIOS() {
 }
 
 async function getRegistration() {
-  if (!pilotEnabled) return null;
   if (!('serviceWorker' in navigator) || !window.isSecureContext) return null;
   if (!registrationPromise) {
     registrationPromise = navigator.serviceWorker
@@ -219,23 +218,48 @@ export async function showPwaNotification({ title, body, tag, url = '/#loja' } =
 export function initPwaPilot() {
   if (!pilotEnabled) return;
 
-  ensureHeadMetadata();
+  if (document.body) createPilotPanel();
+  else window.addEventListener('DOMContentLoaded', createPilotPanel, { once: true });
+}
 
+
+export async function getPwaRegistration() {
+  ensureHeadMetadata();
+  return getRegistration();
+}
+
+export function isPwaStandalone() {
+  return isStandalone();
+}
+
+export async function promptPwaInstall() {
+  if (isStandalone()) return { available: true, accepted: true, installed: true };
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    const choice = await deferredInstallPrompt.userChoice.catch(() => null);
+    const accepted = choice?.outcome === 'accepted';
+    if (accepted) deferredInstallPrompt = null;
+    return { available: true, accepted };
+  }
+  return { available: false, accepted: false };
+}
+
+export function initPwaFoundation() {
+  ensureHeadMetadata();
   window.addEventListener('beforeinstallprompt', event => {
     event.preventDefault();
     deferredInstallPrompt = event;
+    window.dispatchEvent(new Event('trameli:pwa-installable'));
     document.querySelector('[data-pwa-refresh]')?.click();
   });
 
   window.addEventListener('appinstalled', () => {
     deferredInstallPrompt = null;
+    window.dispatchEvent(new Event('trameli:pwa-installed'));
     document.querySelector('[data-pwa-refresh]')?.click();
   });
 
   void getRegistration().catch(error => {
-    console.warn('Piloto PWA indisponível neste navegador.', error?.name || error);
+    console.warn('PWA indisponível neste navegador.', error?.name || error);
   });
-
-  if (document.body) createPilotPanel();
-  else window.addEventListener('DOMContentLoaded', createPilotPanel, { once: true });
 }

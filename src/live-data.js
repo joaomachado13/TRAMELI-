@@ -232,6 +232,22 @@ export class LiveData {
       || { ...product, id: savedId };
   }
 
+  async queueOrderEvent(orderId, event) {
+    if (!orderId || !event) return null;
+    try {
+      const { data, error } = await this.client.rpc('trameli_queue_order_event', {
+        p_order_id: orderId,
+        p_event: event,
+      });
+      if (error) throw error;
+      return data || null;
+    } catch (error) {
+      // Notificação é complementar: nunca transformar um pedido já salvo em erro.
+      console.warn('Pedido salvo, mas o aviso não entrou na fila.', error?.code || error?.message || error);
+      return null;
+    }
+  }
+
   async confirmProductCost(productId) {
     if (!this.operator) throw new Error('Acesso restrito à operação.');
     const { error } = await this.client.rpc('trameli_confirm_product_cost', { p_product_id: productId });
@@ -241,7 +257,8 @@ export class LiveData {
   }
 
   async saveOperatorOrder(order, requestId, customerId) {
-    const { error } = await this.client.rpc('trameli_operator_order_for_customer', {
+    const wasExisting = Boolean(order.id);
+    const { data, error } = await this.client.rpc('trameli_operator_order_for_customer', {
       p_order_id: order.id || null, p_expected_version: order.version || null,
       p_request_id: requestId,
       p_delivery_date: order.date, p_name: order.customer, p_phone: order.phone,
@@ -249,6 +266,7 @@ export class LiveData {
       p_fee_cents: order.feeCents, p_items: order.items, p_customer_id: customerId,
     });
     if (error) throw error;
+    await this.queueOrderEvent(data || order.id, wasExisting ? 'order_edited' : 'operator_order_created');
     await this.load(true);
   }
 
@@ -359,6 +377,8 @@ export class LiveData {
       p_order_id: order.id, p_expected_version: order.version, p_status: status,
     });
     if (error) throw error;
+    const event = ({ confirmed: 'status_confirmed', ready: 'status_ready', delivered: 'status_delivered', cancelled: 'status_cancelled' })[status];
+    if (event) await this.queueOrderEvent(order.id, event);
     await this.load(true);
   }
 
@@ -373,6 +393,7 @@ export class LiveData {
     });
     if (error) throw error;
     if (!data) throw new Error('O servidor não confirmou o registro do pedido. Nenhuma confirmação foi exibida.');
+    await this.queueOrderEvent(data, order.id ? 'order_edited' : 'new_order');
 
     // A confirmação da RPC significa que o pedido já foi gravado. Uma falha
     // na atualização do cache não deve transformar a gravação em erro no checkout.
@@ -400,6 +421,7 @@ export class LiveData {
       p_order_id: order.id, p_expected_version: order.version,
     });
     if (error) throw error;
+    await this.queueOrderEvent(order.id, 'order_cancelled');
     await this.load(true);
   }
 

@@ -8,7 +8,8 @@ import { initShopping } from './shopping.js';
 import * as orderMath from './order-math.js';
 import * as financeMath from './finance-math.js';
 import { init as initMotion } from './motion.js';
-import { initPwaPilot } from './pwa.js';
+import { initPwaFoundation, initPwaPilot } from './pwa.js';
+import { initNotifications } from './notifications.js';
 import clientCatalog from '../data/client-products.json';
 import { withOfficialProductPhoto } from './product-photos.js';
 import './live.css';
@@ -19,6 +20,7 @@ window.TrameliProductPhoto = withOfficialProductPhoto;
 
 // Piloto PWA só é ativado pelo endereço privado ?pwa-pilot=1.
 // Não altera o fluxo normal de clientes ou da operação.
+initPwaFoundation();
 initPwaPilot();
 
 // A raiz pública sempre começa no portal do cliente, antes de carregar qualquer tela.
@@ -37,6 +39,7 @@ if (enabled) {
   document.body.classList.toggle('live-customer', !live.operator);
   initAccount(live);
   live.startRealtime();
+  await initNotifications(live);
   const updateNotice = document.createElement('p');
   updateNotice.className = 'payment-notice'; updateNotice.setAttribute('role', 'status'); updateNotice.hidden = true;
   document.body.append(updateNotice);
@@ -206,6 +209,26 @@ initShopping(window.TrameliLive);
 await import('../assets/catalogo.js');
 await import('../assets/clientes.js');
 await import('../assets/operacao.js');
+const deepLinkOrderId = new URLSearchParams(location.search).get('open-order');
+if (deepLinkOrderId && window.TrameliLive?.operator) {
+  try {
+    location.hash = '#operacao';
+    await window.TrameliLive.load(true);
+    await window.TrameliOperation?.openOrder?.(deepLinkOrderId);
+  } catch (error) {
+    console.warn('Não foi possível abrir o pedido da notificação.', error?.code || error?.message || error);
+  } finally {
+    const deepLinkParams = new URLSearchParams(location.search);
+    deepLinkParams.delete('open-order');
+    const deepLinkQuery = deepLinkParams.toString();
+    history.replaceState(
+      history.state,
+      '',
+      `${location.pathname}${deepLinkQuery ? '?' + deepLinkQuery : ''}${location.hash}`
+    );
+  }
+}
+// trameli-deep-link-order
 await import('../assets/screens.js');
 await import('../assets/portal.js');
 await import('../assets/shirley-portal.js');

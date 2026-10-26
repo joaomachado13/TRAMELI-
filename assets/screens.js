@@ -9,7 +9,7 @@ const portalView = document.getElementById('portal-view');
 const shirleyPortalView = document.getElementById('shirley-portal-view');
 const appShell = document.querySelector('.app-shell');
 const navigation = [...document.querySelectorAll('.nav__item')];
-const routes = new Set(['operacao', 'portal-shirley', 'inicio', 'pendencias', 'pedidos', 'clientes', 'produtos', 'agenda', 'financeiro', 'relatorios', 'configuracoes', 'loja']);
+const routes = new Set(['operacao', 'portal-shirley', 'inicio', 'pendencias', 'notificacoes', 'pedidos', 'clientes', 'produtos', 'agenda', 'financeiro', 'relatorios', 'configuracoes', 'loja']);
 const systemReducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 let userReducedMotion = false;
 try { userReducedMotion = localStorage.getItem('trameli-reduced-motion') === 'true'; } catch { /* Storage may be unavailable on file URLs. */ }
@@ -223,6 +223,8 @@ function productIntelligence() {
 }
 
 const pages = {
+  notificacoes: () => window.TrameliNotifications?.renderOperator?.()
+    || '<div class="friendly-empty"><strong>Carregando notificações…</strong><span>A central ficará disponível em instantes.</span></div>',
   pendencias: () => {
     const received=activeOrders().filter(order=>orderState(order)==='received');
     const api=window.TrameliPayments?.api;
@@ -527,7 +529,7 @@ function showRoute(force = false) {
   const finish = () => { if (revision !== routeRevision) return; renderRoute(route, force && previous === route); if (previous !== null && !force && route !== 'loja') animateRouteIn(route); else motion.refresh(); };
   if (previous !== null && previous !== 'loja' && route !== 'loja' && !force && !motionDisabled()) {
     const outgoing = previous === 'inicio' ? homeView : previous === 'operacao' ? operationView : previous === 'portal-shirley' ? shirleyPortalView : screenView;
-    const style = ({ inicio: 'curve', operacao: 'swipe', pedidos: 'swipe', clientes: 'swipe', produtos: 'diagonal', agenda: 'wave', financeiro: 'curve', relatorios: 'diagonal', configuracoes: 'wave', pendencias: 'curve' })[route] || 'curve';
+    const style = ({ inicio: 'curve', operacao: 'swipe', pedidos: 'swipe', clientes: 'swipe', produtos: 'diagonal', agenda: 'wave', financeiro: 'curve', relatorios: 'diagonal', configuracoes: 'wave', pendencias: 'curve', notificacoes: 'curve' })[route] || 'curve';
     motion.leave(outgoing, finish, { style });
   } else { motion.cancelTransition(); finish(); }
 }
@@ -581,7 +583,7 @@ document.addEventListener('click', event => {
   else if (!navigationIsPersistent() && document.body.classList.contains('menu-open')) setMenu(false);
 });
 window.addEventListener('hashchange', () => showRoute());
-document.querySelector('.notification-button').addEventListener('click', () => { location.hash = 'pendencias'; });
+document.querySelector('.notification-button').addEventListener('click', () => { location.hash = 'notificacoes'; });
 document.addEventListener('click', async event => {
   // Ações delegadas da operação não recebem cliques da loja, nem de clientes.
   if ((live && !live.operator) || event.target.closest('#portal-view, #portal-floating-host, #portal-success-screen')) return;
