@@ -3,7 +3,7 @@
   "short_name": "Pão Doce",
   "description": "Portal de pedidos do Pão Doce Delivery.",
   "lang": "pt-BR",
-  "id": "/pao-doce",
+  "id": "/pao-doce-pwa-pilot",
   "start_url": "/#loja",
   "scope": "/",
   "display": "standalone",
