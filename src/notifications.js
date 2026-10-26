@@ -207,7 +207,7 @@ class TrameliNotifications {
     try {
       const result = await promptPwaInstall();
       if (!result?.available && /iphone|ipad|ipod/i.test(navigator.userAgent)) {
-        this.setPwaFeedback(button, 'No iPhone: abra no Safari, toque em Compartilhar → Adicionar à Tela de Início e depois abra pelo novo ícone.', 'info');
+        this.setPwaFeedback(button, 'No iPhone: Safari → Compartilhar → Adicionar à Tela de Início → ative Abrir como App/Web App → Adicionar → abra pelo novo ícone.', 'info');
       } else if (result?.accepted) {
         this.setPwaFeedback(button, 'Pão Doce instalado neste aparelho.', 'success');
       } else if (!result?.available) {
@@ -410,7 +410,7 @@ class TrameliNotifications {
       </div>
       <div class="pwa-settings__howto">
         <p><strong>Android:</strong> toque em “Instalar aplicativo”. Depois abra pelo ícone do Pão Doce.</p>
-        <p><strong>iPhone:</strong> abra este site no <strong>Safari</strong> → toque em <strong>Compartilhar</strong> → <strong>Adicionar à Tela de Início</strong> → abra pelo ícone criado → toque em <strong>Ativar notificações</strong>.</p>
+        <p><strong>iPhone:</strong> abra este site no <strong>Safari</strong> → toque em <strong>Compartilhar</strong> → <strong>Adicionar à Tela de Início</strong> → ative <strong>Abrir como App/Web App</strong> → <strong>Adicionar</strong> → abra pelo ícone criado → toque em <strong>Ativar notificações</strong>.</p>
       </div>
       <p class="pwa-settings__feedback" data-pwa-feedback role="status"></p>
     </section>`;
