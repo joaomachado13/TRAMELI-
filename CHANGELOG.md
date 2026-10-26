@@ -1,5 +1,16 @@
 # Histórico de versões
 
+## 0.5.0 — PWA e notificações
+
+- Pão Doce instalável como PWA em Android e iPhone.
+- Web Push real por aparelho, com caixa de avisos e badge quando suportado.
+- Central de Notificações para a operação, com envio manual e histórico.
+- Avisos automáticos de pedidos, lembretes de pagamento e lembrete de pedido habitual.
+- Deep links para abrir pedido, catálogo e pagamentos diretamente pela notificação.
+- Service worker em modo network-only para não servir pedidos ou pagamentos desatualizados.
+- Atalhos do aplicativo para Fazer pedido, Meus pedidos e Operação diária.
+
+
 ## 0.4.0 — Pão Doce
 
 - Marca Pão Doce (nome, logo, cores ajustadas) no lugar de Trameli.
