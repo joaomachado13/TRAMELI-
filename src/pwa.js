@@ -10,6 +10,8 @@ let live=null;
 let inbox=[];
 let unread=0;
 let operatorHistory=[];
+let operatorRecipients=[];
+let profileNames=new Map();
 let customers=[];
 let adminLoading=false;
 let pushEnabled=false;
@@ -189,12 +191,28 @@ async function loadOperator(){
       live.client.from('trameli_profiles').select('user_id,name').order('name'),
     ]);
     if(historyResult.error)throw historyResult.error;if(profilesResult.error)throw profilesResult.error;
-    operatorHistory=historyResult.data||[];customers=(profilesResult.data||[]).filter(row=>row.user_id!==live.user.id);
+    operatorHistory=historyResult.data||[];
+    const profileRows=profilesResult.data||[];
+    profileNames=new Map(profileRows.map(row=>[row.user_id,row.name||'Cliente']));
+    customers=profileRows.filter(row=>row.user_id!==live.user.id);
+    const notificationIds=operatorHistory.map(row=>row.id);
+    if(notificationIds.length){
+      const recipientsResult=await live.client.from('trameli_notification_recipients')
+        .select('notification_id,user_id,delivery_status,delivered_at,error_code')
+        .in('notification_id',notificationIds);
+      if(recipientsResult.error)throw recipientsResult.error;
+      operatorRecipients=recipientsResult.data||[];
+    }else operatorRecipients=[];
   }finally{adminLoading=false;}
 }
 function operatorMarkup(){
   const options=customers.map(c=>`<option value="${esc(c.user_id)}">${esc(c.name)}</option>`).join('');
-  const rows=operatorHistory.map(n=>`<div class="notifications-history__row"><div><strong>${esc(n.title)}</strong><small>${new Date(n.created_at).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}</small></div><span class="notifications-status">${esc(statusLabel(n.status))}</span><span>${Number(n.sent_count||0)}/${Number(n.target_count||0)}</span><span>${esc(n.audience)}</span></div>`).join('');
+  const recipientLabel=status=>({queued:'Na fila',sent:'Entregue ao aparelho',failed:'Falhou',no_subscription:'Sem push ativo'})[status]||status;
+  const rows=operatorHistory.map(n=>{
+    const recipients=operatorRecipients.filter(row=>row.notification_id===n.id);
+    const recipientRows=recipients.map(row=>`<div class="notifications-history__recipient"><strong>${esc(profileNames.get(row.user_id)||'Equipe / conta')}</strong><span>${esc(recipientLabel(row.delivery_status))}</span>${row.delivered_at?`<time>${new Date(row.delivered_at).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}</time>`:''}</div>`).join('');
+    return `<details class="notifications-history__entry"><summary class="notifications-history__row"><div><strong>${esc(n.title)}</strong><small>${new Date(n.created_at).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})} · ${esc(n.body)}</small></div><span class="notifications-status">${esc(statusLabel(n.status))}</span><span>${Number(n.sent_count||0)}/${Number(n.target_count||0)}</span><span>${esc(n.audience)}</span></summary><div class="notifications-history__recipients">${recipientRows||'<p>Nenhum destinatário registrado.</p>'}</div></details>`;
+  }).join('');
   return `<div class="notifications-admin__grid"><section class="notifications-admin__card"><span class="screen-eyebrow">ENVIO MANUAL</span><h2>Nova notificação</h2><form class="notifications-admin__form" data-notification-form><label>Título<input name="title" maxlength="80" placeholder="Ex.: Pedidos de amanhã" required></label><label>Mensagem<textarea name="body" maxlength="360" rows="4" placeholder="Escreva o aviso para os clientes…" required></textarea></label><label>Destinatários<select name="audience" data-notification-audience><option value="all">Todos os clientes</option><option value="selected">Clientes selecionados</option><option value="order_tomorrow">Quem tem pedido amanhã</option><option value="payment_pending">Com pagamento pendente</option><option value="operators">Equipe / aparelhos da operação</option></select></label><label data-selected-customers hidden>Clientes<select name="customers" multiple size="8">${options}</select><small>Segure Ctrl/Cmd para selecionar mais de um.</small></label><label>Abrir ao tocar<select name="url"><option value="/#loja">Início do Pão Doce</option><option value="/?portal=orders#loja">Meus pedidos / pagamentos</option><option value="/?portal=catalog#loja">Catálogo</option></select></label><button class="screen-primary" type="submit">Enviar notificação</button><p class="notifications-admin__feedback" data-notification-admin-feedback></p></form></section><section class="notifications-admin__card notifications-admin__device"><span class="screen-eyebrow">ESTE APARELHO</span><h2>Push da operação</h2><p>${esc(pushStatusText())}</p><div><button class="pwa-action pwa-action--primary" type="button" data-notification-enable-admin>Ativar neste aparelho</button> <button class="pwa-action" type="button" data-pwa-test-real>Testar local</button></div><small data-device-feedback></small></section></div><section class="notifications-admin__card"><span class="screen-eyebrow">HISTÓRICO</span><h2>Últimos envios</h2><div class="notifications-history">${rows||'<p>Nenhum envio registrado ainda.</p>'}</div></section>`;
 }
 async function hydrateOperator(){
