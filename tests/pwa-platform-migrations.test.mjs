@@ -46,5 +46,7 @@ assert.match(automation, /Vai querer pão amanhã/i, 'Lembrete habitual precisa 
 assert.doesNotMatch(automation, /exists \(\s*select 1 from public\.trameli_push_subscriptions/i, 'Inbox não deve depender de PushSubscription.');
 assert.doesNotMatch(liveData, /delivered:\s*'status_delivered'/i, 'Frontend não deve solicitar push ao marcar Entregue.');
 assert.match(liveData, /recurring_order_created/i, 'Frontend deve tentar entregar imediatamente avisos recorrentes.');
+const notificationsClient = await read('src/notifications.js');
+assert.match(notificationsClient, /function notificationPermission\(\)/, 'Painéis de PWA precisam conseguir ler a permissão de notificações sem quebrar.');
 
 console.log('Migrations PWA/Supabase: extensões, Vault, cron, push, automações, RLS e privilégios verificados.');

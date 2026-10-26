@@ -29,6 +29,10 @@ function pushCapability() {
   return { supported: true, reason: '' };
 }
 
+function notificationPermission() {
+  return 'Notification' in window ? Notification.permission : 'unsupported';
+}
+
 class TrameliNotifications {
   constructor(live) {
     this.live = live;
