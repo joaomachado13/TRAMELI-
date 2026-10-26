@@ -12,7 +12,7 @@ try {
     create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
     grant usage on schema auth to authenticated; grant execute on function auth.uid() to authenticated;`);
   const dir = new URL('../supabase/migrations/', import.meta.url);
-  for (const file of (await readdir(dir)).filter(f => /^202609\d{2}00[1-7]_.*\.sql$/.test(f)).sort()) await db.exec(await readFile(new URL(file, dir), 'utf8'));
+  for (const file of (await readdir(dir)).filter(f => /^202609\d{2}000[1-7]_.*\.sql$/.test(f)).sort()) await db.exec(await readFile(new URL(file, dir), 'utf8'));
   await db.exec(await readFile(new URL('20261001130152_approved_business_rules.sql', dir), 'utf8'));
   await db.query('insert into auth.users(id) values($1),($2),($3)', [op,a,b]);
   await db.query("insert into public.trameli_operators(user_id,role) values($1,'master')", [op]);
