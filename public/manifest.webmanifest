@@ -1,21 +1,19 @@
 {
-  "name": "Pão Doce Delivery",
-  "short_name": "Pão Doce",
-  "description": "Portal de pedidos do Pão Doce Delivery.",
-  "lang": "pt-BR",
-  "id": "/pao-doce-pwa-pilot",
-  "start_url": "/?pwa-pilot=1#loja",
-  "scope": "/",
-  "display": "standalone",
-  "background_color": "#F7F2EA",
-  "theme_color": "#8F3D22",
-  "orientation": "portrait-primary",
-  "icons": [
-    {
-      "src": "/pwa-icon.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
+  "name":"Pão Doce Delivery",
+  "short_name":"Pão Doce",
+  "description":"Pedidos, pagamentos e avisos do Pão Doce Delivery.",
+  "lang":"pt-BR",
+  "id":"/pao-doce",
+  "start_url":"/#loja",
+  "scope":"/",
+  "display":"standalone",
+  "background_color":"#F7F2EA",
+  "theme_color":"#8F3D22",
+  "orientation":"portrait-primary",
+  "icons":[{"src":"/pwa-icon.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}],
+  "shortcuts":[
+    {"name":"Fazer pedido","short_name":"Pedir","url":"/?portal=catalog#loja","icons":[{"src":"/pwa-icon.png","sizes":"512x512","type":"image/png"}]},
+    {"name":"Meus pedidos","short_name":"Pedidos","url":"/?portal=orders#loja","icons":[{"src":"/pwa-icon.png","sizes":"512x512","type":"image/png"}]},
+    {"name":"Avisos","short_name":"Avisos","url":"/?portal=notifications#loja","icons":[{"src":"/pwa-icon.png","sizes":"512x512","type":"image/png"}]}
   ]
 }
