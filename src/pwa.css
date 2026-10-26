@@ -33,3 +33,11 @@
 .notifications-admin__device{display:grid;gap:10px}.notifications-admin__device p{font-size:.8rem;line-height:1.5}
 @media(max-width:900px){.notifications-admin__grid{grid-template-columns:1fr}}
 @media(max-width:620px){.pwa-update-toast{align-items:stretch;flex-direction:column}.notifications-history__row{grid-template-columns:1fr auto}.notifications-history__row>*:nth-child(n+3){display:none}}
+
+.notifications-history__entry{border-top:1px solid var(--color-border)}
+.notifications-history__entry>.notifications-history__row{border-top:0;cursor:pointer;list-style:none}
+.notifications-history__entry>.notifications-history__row::-webkit-details-marker{display:none}
+.notifications-history__recipients{display:grid;gap:6px;padding:0 0 12px 14px;border-left:2px solid var(--color-primary-subtle)}
+.notifications-history__recipient{display:grid;grid-template-columns:minmax(140px,1fr) auto auto;gap:10px;align-items:center;padding:7px 10px;font-size:.72rem}
+.notifications-history__recipient span,.notifications-history__recipient time{color:var(--color-text-muted)}
+@media(max-width:620px){.notifications-history__recipient{grid-template-columns:1fr auto}.notifications-history__recipient time{grid-column:1/-1}}
