@@ -1,241 +1,246 @@
-const PILOT_QUERY = 'pwa-pilot';
-const PILOT_VALUE = '1';
-const MANIFEST_HREF = '/manifest.webmanifest';
-const SERVICE_WORKER_URL = '/pwa-sw.js';
-const ICON_URL = '/pwa-icon.png';
 
-const qs = new URLSearchParams(window.location.search);
-const pilotEnabled = qs.get(PILOT_QUERY) === PILOT_VALUE;
+import './pwa.css';
 
-let deferredInstallPrompt = null;
-let registrationPromise = null;
+const MANIFEST_HREF='/manifest.webmanifest';
+const SERVICE_WORKER_URL='/pwa-sw.js';
+const ICON_URL='/pwa-icon.png';
+let deferredInstallPrompt=null;
+let registrationPromise=null;
+let live=null;
+let inbox=[];
+let unread=0;
+let operatorHistory=[];
+let customers=[];
+let adminLoading=false;
 
-function ensureHeadMetadata() {
-  if (!document.querySelector('link[rel="manifest"]')) {
-    const manifest = document.createElement('link');
-    manifest.rel = 'manifest';
-    manifest.href = MANIFEST_HREF;
-    document.head.append(manifest);
+const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const isStandalone=()=>window.matchMedia?.('(display-mode: standalone)').matches===true||window.navigator.standalone===true;
+const isIOS=()=>/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const permission=()=>('Notification'in window?Notification.permission:'unsupported');
+const platform=()=>isIOS()?'ios':/android/i.test(navigator.userAgent)?'android':/mobile/i.test(navigator.userAgent)?'web':'desktop';
+
+function ensureHead(){
+  if(!document.querySelector('link[rel="manifest"]')){const el=document.createElement('link');el.rel='manifest';el.href=MANIFEST_HREF;document.head.append(el);}
+  for(const [name,content] of [['theme-color','#8F3D22'],['apple-mobile-web-app-capable','yes'],['apple-mobile-web-app-status-bar-style','default'],['apple-mobile-web-app-title','Pão Doce']]){
+    if(document.querySelector(`meta[name="${name}"]`))continue;const el=document.createElement('meta');el.name=name;el.content=content;document.head.append(el);
   }
-
-  const metas = [
-    ['theme-color', '#8F3D22'],
-    ['apple-mobile-web-app-capable', 'yes'],
-    ['apple-mobile-web-app-status-bar-style', 'default'],
-    ['apple-mobile-web-app-title', 'Pão Doce'],
-  ];
-  for (const [name, content] of metas) {
-    if (document.querySelector(`meta[name="${name}"]`)) continue;
-    const meta = document.createElement('meta');
-    meta.name = name;
-    meta.content = content;
-    document.head.append(meta);
-  }
-
-  if (!document.querySelector('link[rel="apple-touch-icon"]')) {
-    const icon = document.createElement('link');
-    icon.rel = 'apple-touch-icon';
-    icon.href = ICON_URL;
-    document.head.append(icon);
-  }
+  if(!document.querySelector('link[rel="apple-touch-icon"]')){const el=document.createElement('link');el.rel='apple-touch-icon';el.href=ICON_URL;document.head.append(el);}
 }
 
-function isStandalone() {
-  return window.matchMedia?.('(display-mode: standalone)').matches === true
-    || window.navigator.standalone === true;
-}
-
-function isIOS() {
-  return /iphone|ipad|ipod/i.test(navigator.userAgent)
-    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-}
-
-async function getRegistration() {
-  if (!pilotEnabled) return null;
-  if (!('serviceWorker' in navigator) || !window.isSecureContext) return null;
-  if (!registrationPromise) {
-    registrationPromise = navigator.serviceWorker
-      .register(SERVICE_WORKER_URL, { scope: '/' })
-      .then(() => navigator.serviceWorker.ready);
+async function registration(){
+  if(!('serviceWorker'in navigator)||!window.isSecureContext)return null;
+  if(!registrationPromise){
+    registrationPromise=navigator.serviceWorker.register(SERVICE_WORKER_URL,{scope:'/'}).then(async reg=>{
+      if(reg.waiting)showUpdate(reg);
+      reg.addEventListener('updatefound',()=>{
+        const worker=reg.installing;
+        worker?.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)showUpdate(reg);});
+      });
+      return navigator.serviceWorker.ready;
+    });
   }
   return registrationPromise;
 }
 
-function notificationPermission() {
-  return 'Notification' in window ? Notification.permission : 'unsupported';
-}
-
-function addPilotStyles() {
-  if (document.getElementById('pwa-pilot-styles')) return;
-  const style = document.createElement('style');
-  style.id = 'pwa-pilot-styles';
-  style.textContent = `
-    .pwa-pilot {
-      position: fixed; left: 12px; bottom: 12px; z-index: 2147483000;
-      font: 600 13px/1.35 Manrope, system-ui, sans-serif; color: #32170E;
-    }
-    .pwa-pilot details {
-      width: min(330px, calc(100vw - 24px)); border: 1px solid #C9B6A8;
-      border-radius: 16px; background: #FFFBF6; box-shadow: 0 16px 44px rgba(50,23,14,.18);
-      overflow: hidden;
-    }
-    .pwa-pilot summary {
-      cursor: pointer; list-style: none; padding: 10px 14px; color: #FFF9F5; background: #8F3D22;
-      letter-spacing: .02em; user-select: none;
-    }
-    .pwa-pilot summary::-webkit-details-marker { display: none; }
-    .pwa-pilot__body { padding: 13px; display: grid; gap: 10px; }
-    .pwa-pilot__status { margin: 0; color: #62504A; font-weight: 500; }
-    .pwa-pilot__actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .pwa-pilot button {
-      min-height: 40px; border: 1px solid #C9A491; border-radius: 11px;
-      padding: 8px 10px; background: #FFFBF6; color: #7A331C; font: inherit; cursor: pointer;
-    }
-    .pwa-pilot button[data-primary="true"] { background: #8F3D22; color: #FFF9F5; border-color: #8F3D22; }
-    .pwa-pilot button:disabled { opacity: .55; cursor: not-allowed; }
-    .pwa-pilot__hint { margin: 0; color: #7A706A; font-size: 12px; font-weight: 500; }
-  `;
-  document.head.append(style);
-}
-
-function createPilotPanel() {
-  if (!pilotEnabled || document.getElementById('pwa-pilot-panel')) return;
-
-  addPilotStyles();
-  const host = document.createElement('aside');
-  host.id = 'pwa-pilot-panel';
-  host.className = 'pwa-pilot';
-  host.setAttribute('aria-label', 'Teste privado do aplicativo Pão Doce');
-  host.innerHTML = `
-    <details>
-      <summary>PWA TESTE · privado</summary>
-      <div class="pwa-pilot__body">
-        <p class="pwa-pilot__status" data-pwa-status>Verificando este aparelho…</p>
-        <div class="pwa-pilot__actions">
-          <button type="button" data-pwa-install data-primary="true">Instalar app</button>
-          <button type="button" data-pwa-permission>Ativar notificações</button>
-          <button type="button" data-pwa-test-notification>Testar notificação</button>
-          <button type="button" data-pwa-refresh>Atualizar status</button>
-        </div>
-        <p class="pwa-pilot__hint" data-pwa-hint></p>
-      </div>
-    </details>
-  `;
+function showUpdate(reg){
+  if(document.querySelector('.pwa-update-toast'))return;
+  const host=document.createElement('aside');host.className='pwa-update-toast';host.setAttribute('role','status');
+  host.innerHTML='<span>Uma atualização do Pão Doce está pronta.</span><button type="button">Atualizar agora</button>';
+  host.querySelector('button').addEventListener('click',()=>{(reg.waiting||reg.installing)?.postMessage({type:'SKIP_WAITING'});});
   document.body.append(host);
-
-  const installButton = host.querySelector('[data-pwa-install]');
-  const permissionButton = host.querySelector('[data-pwa-permission]');
-  const testButton = host.querySelector('[data-pwa-test-notification]');
-  const refreshButton = host.querySelector('[data-pwa-refresh]');
-  const status = host.querySelector('[data-pwa-status]');
-  const hint = host.querySelector('[data-pwa-hint]');
-
-  const refresh = async () => {
-    const standalone = isStandalone();
-    const permission = notificationPermission();
-    const swSupported = 'serviceWorker' in navigator && window.isSecureContext;
-    let workerReady = false;
-    try { workerReady = Boolean(await getRegistration()); } catch { workerReady = false; }
-
-    status.textContent = [
-      standalone ? 'App instalado/aberto como PWA' : 'Aberto no navegador',
-      `notificações: ${permission}`,
-      workerReady ? 'serviço PWA pronto' : 'serviço PWA indisponível',
-    ].join(' · ');
-
-    installButton.disabled = standalone || (!deferredInstallPrompt && !isIOS());
-    permissionButton.disabled = permission === 'granted' || permission === 'unsupported' || !workerReady;
-    testButton.disabled = permission !== 'granted' || !workerReady;
-
-    if (standalone) {
-      hint.textContent = 'Piloto ativo somente neste endereço de teste. Nenhum dado do sistema é armazenado pelo PWA.';
-    } else if (isIOS()) {
-      hint.textContent = 'No iPhone: Safari → Compartilhar → Adicionar à Tela de Início. Depois abra o Pão Doce pelo ícone.';
-    } else if (!deferredInstallPrompt) {
-      hint.textContent = 'Se o botão Instalar ainda estiver bloqueado, atualize a página após o serviço PWA ficar pronto.';
-    } else {
-      hint.textContent = 'O piloto está pronto para instalação neste aparelho.';
-    }
-  };
-
-  installButton.addEventListener('click', async () => {
-    if (deferredInstallPrompt) {
-      deferredInstallPrompt.prompt();
-      try { await deferredInstallPrompt.userChoice; } catch { /* Browser can close the prompt. */ }
-      deferredInstallPrompt = null;
-      await refresh();
-      return;
-    }
-    if (isIOS()) {
-      hint.textContent = 'Use Safari → Compartilhar → Adicionar à Tela de Início.';
-    }
-  });
-
-  permissionButton.addEventListener('click', async () => {
-    if (!('Notification' in window)) return;
-    try {
-      await Notification.requestPermission();
-    } catch {
-      hint.textContent = 'O navegador não liberou a solicitação. No iPhone, abra primeiro pelo ícone instalado.';
-    }
-    await refresh();
-  });
-
-  testButton.addEventListener('click', async () => {
-    try {
-      const registration = await getRegistration();
-      if (!registration || notificationPermission() !== 'granted') return;
-      await registration.showNotification('Pão Doce Delivery 🍞', {
-        body: 'Notificação de teste funcionando neste aparelho.',
-        icon: ICON_URL,
-        badge: ICON_URL,
-        tag: 'pao-doce-pwa-local-test',
-        data: { url: '/?pwa-pilot=1#loja' },
-      });
-      hint.textContent = 'Notificação de teste enviada somente para este aparelho.';
-    } catch {
-      hint.textContent = 'Não foi possível exibir a notificação de teste neste navegador.';
-    }
-  });
-
-  refreshButton.addEventListener('click', () => { void refresh(); });
-  void refresh();
 }
-
-export async function showPwaNotification({ title, body, tag, url = '/#loja' } = {}) {
-  if (!pilotEnabled || notificationPermission() !== 'granted') return false;
-  const registration = await getRegistration();
-  if (!registration) return false;
-  await registration.showNotification(title || 'Pão Doce Delivery', {
-    body: body || 'Você tem uma nova atualização.',
-    icon: ICON_URL,
-    badge: ICON_URL,
-    tag: tag || 'pao-doce-update',
-    data: { url },
+function setupNetworkStatus(){
+  const render=()=>{
+    let host=document.querySelector('.pwa-network-status');
+    if(navigator.onLine){host?.remove();return;}
+    if(!host){host=document.createElement('aside');host.className='pwa-network-status';host.setAttribute('role','status');document.body.append(host);}
+    host.textContent='Sem internet. Pedidos e pagamentos não serão confirmados até a conexão voltar.';
+  };
+  addEventListener('online',render);addEventListener('offline',render);render();
+}
+function base64UrlToBytes(value){
+  const padding='='.repeat((4-value.length%4)%4);const base64=(value+padding).replace(/-/g,'+').replace(/_/g,'/');
+  const raw=atob(base64);return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)));
+}
+async function publicKey(){
+  if(!live)throw new Error('Entre na sua conta primeiro.');
+  const {data,error}=await live.client.rpc('trameli_push_public_key');
+  if(error)throw error;if(!data)throw new Error('O serviço de notificações ainda está inicializando.');
+  return data;
+}
+async function syncSubscription(create=false){
+  if(!live?.user?.id)return false;
+  const reg=await registration();if(!reg||!('PushManager'in window))return false;
+  let sub=await reg.pushManager.getSubscription();
+  if(!sub&&create){
+    const key=await publicKey();
+    sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:base64UrlToBytes(key)});
+  }
+  if(!sub)return false;
+  const data=sub.toJSON();
+  const {error}=await live.client.rpc('trameli_upsert_push_subscription',{
+    p_endpoint:sub.endpoint,p_p256dh:data.keys?.p256dh||'',p_auth:data.keys?.auth||'',
+    p_platform:platform(),p_user_agent:navigator.userAgent.slice(0,700),
   });
+  if(error)throw error;
   return true;
 }
-
-export function initPwaPilot() {
-  if (!pilotEnabled) return;
-
-  ensureHeadMetadata();
-
-  window.addEventListener('beforeinstallprompt', event => {
-    event.preventDefault();
-    deferredInstallPrompt = event;
-    document.querySelector('[data-pwa-refresh]')?.click();
+async function enablePush(){
+  if(permission()==='unsupported')throw new Error('Este navegador não oferece notificações Web Push.');
+  if(isIOS()&&!isStandalone())throw new Error('No iPhone, adicione o Pão Doce à Tela de Início e abra pelo ícone antes de ativar.');
+  let granted=permission();
+  if(granted!=='granted')granted=await Notification.requestPermission();
+  if(granted!=='granted')throw new Error('A permissão de notificações não foi liberada.');
+  await syncSubscription(true);await refreshInbox();return true;
+}
+async function disablePush(){
+  const reg=await registration();const sub=await reg?.pushManager?.getSubscription();
+  if(sub&&live){await live.client.rpc('trameli_disable_push_subscription',{p_endpoint:sub.endpoint});await sub.unsubscribe();}
+}
+async function refreshUnread(){
+  if(!live?.user?.id)return 0;
+  const {data,error}=await live.client.rpc('trameli_unread_notification_count');
+  if(!error)unread=Number(data||0);
+  const badge=document.getElementById('portal-notification-count');
+  if(badge){badge.textContent=unread>99?'99+':String(unread);badge.hidden=unread===0;}
+  try{if('setAppBadge'in navigator){if(unread)await navigator.setAppBadge(unread);else await navigator.clearAppBadge();}}catch{}
+  return unread;
+}
+async function refreshInbox(){
+  if(!live?.user?.id)return [];
+  const {data,error}=await live.client.rpc('trameli_notification_inbox',{p_limit:50});
+  if(error)throw error;inbox=data||[];await refreshUnread();return inbox;
+}
+async function markRead(id){
+  if(!live||!id)return;
+  await live.client.rpc('trameli_mark_notification_read',{p_notification_id:id});
+  const item=inbox.find(row=>row.id===id);if(item)item.read_at=new Date().toISOString();
+  await refreshUnread();
+}
+async function dispatch(id){
+  try{
+    const {error}=await live.client.functions.invoke('trameli-push',{body:{action:'dispatch',notificationId:id}});
+    if(error)throw error;
+  }catch(error){console.warn('Notificação enfileirada; o envio automático fará nova tentativa.',error?.message||error);}
+}
+async function queueOrderEvent(orderId,event){
+  if(!live||!orderId)return null;
+  try{
+    const {data,error}=await live.client.rpc('trameli_queue_order_event',{p_order_id:orderId,p_event:event});
+    if(error)throw error;if(data)void dispatch(data);return data;
+  }catch(error){console.warn('Pedido salvo, mas o aviso será tentado depois.',error?.message||error);return null;}
+}
+async function installApp(){
+  if(isStandalone())return 'O Pão Doce já está instalado neste aparelho.';
+  if(deferredInstallPrompt){deferredInstallPrompt.prompt();try{await deferredInstallPrompt.userChoice;}catch{}deferredInstallPrompt=null;return 'Instalação solicitada.';}
+  if(isIOS())return 'No iPhone: Safari → Compartilhar → Adicionar à Tela de Início.';
+  return 'Use o menu do navegador e escolha Instalar aplicativo / Adicionar à tela inicial.';
+}
+function pushStatusText(){
+  if(permission()==='granted')return 'Notificações permitidas neste aparelho.';
+  if(permission()==='denied')return 'Notificações bloqueadas nas configurações do aparelho.';
+  return 'Ative para receber confirmações, cobranças e lembretes.';
+}
+function inboxMarkup(){
+  const rows=inbox.map(item=>`<button type="button" class="pwa-inbox__item" data-notification-open="${esc(item.id)}" data-url="${esc(item.url||'/#loja')}" data-unread="${String(!item.read_at)}"><strong>${esc(item.title)}</strong><time>${new Date(item.created_at).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}</time><p>${esc(item.body)}</p></button>`).join('');
+  return rows||'<p>Nenhum aviso por aqui ainda.</p>';
+}
+function ensureInboxDialog(){
+  let dialog=document.getElementById('pwa-notification-dialog');if(dialog)return dialog;
+  dialog=document.createElement('dialog');dialog.id='pwa-notification-dialog';dialog.className='pwa-notification-dialog';document.body.append(dialog);
+  dialog.addEventListener('click',async event=>{
+    if(event.target.closest('[data-notification-close]')){dialog.close();return;}
+    const enable=event.target.closest('[data-notification-enable]');
+    if(enable){const feedback=dialog.querySelector('[data-notification-feedback]');try{enable.disabled=true;await enablePush();feedback.textContent='Notificações ativadas neste aparelho.';}catch(e){feedback.textContent=e.message;}finally{enable.disabled=false;renderInboxDialog(dialog);}return;}
+    const disable=event.target.closest('[data-notification-disable]');
+    if(disable){await disablePush();renderInboxDialog(dialog);return;}
+    const install=event.target.closest('[data-pwa-install-real]');
+    if(install){dialog.querySelector('[data-notification-feedback]').textContent=await installApp();return;}
+    const row=event.target.closest('[data-notification-open]');
+    if(row){await markRead(row.dataset.notificationOpen);dialog.close();const url=new URL(row.dataset.url||'/#loja',location.origin);location.assign(url.href);}
   });
+  return dialog;
+}
+function renderInboxDialog(dialog=ensureInboxDialog()){
+  dialog.innerHTML=`<header class="pwa-notification-dialog__head"><div><span class="portal-eyebrow">PÃO DOCE</span><h2>Avisos</h2><p>${unread?unread+' não lido'+(unread===1?'':'s'):'Tudo lido'}</p></div><button class="pwa-notification-dialog__close" type="button" data-notification-close aria-label="Fechar">×</button></header>
+  <div class="pwa-notification-dialog__body"><section class="pwa-push-card"><strong>Notificações no celular</strong><p>${esc(pushStatusText())}</p><div class="pwa-push-card__actions">${permission()==='granted'?'<button class="pwa-action" type="button" data-notification-disable>Desativar neste aparelho</button>':'<button class="pwa-action pwa-action--primary" type="button" data-notification-enable>Ativar notificações</button>'}${isStandalone()?'':'<button class="pwa-action" type="button" data-pwa-install-real>Instalar Pão Doce</button>'}</div><small data-notification-feedback></small></section><section class="pwa-inbox">${inboxMarkup()}</section></div>`;
+}
+async function openInbox(){
+  try{await refreshInbox();}catch{}
+  const dialog=ensureInboxDialog();renderInboxDialog(dialog);if(!dialog.open)dialog.showModal();
+}
 
-  window.addEventListener('appinstalled', () => {
-    deferredInstallPrompt = null;
-    document.querySelector('[data-pwa-refresh]')?.click();
+const statusLabel=status=>({queued:'Na fila',sending:'Enviando',sent:'Enviado',partial:'Parcial',failed:'Falhou'})[status]||status;
+function renderOperatorShell(){return '<section class="notifications-admin" data-notifications-admin><p>Carregando Central de Notificações…</p></section>';}
+async function loadOperator(){
+  if(!live?.operator||adminLoading)return;adminLoading=true;
+  try{
+    const [historyResult,profilesResult]=await Promise.all([
+      live.client.from('trameli_notifications').select('*').order('created_at',{ascending:false}).limit(50),
+      live.client.from('trameli_profiles').select('user_id,name').order('name'),
+    ]);
+    if(historyResult.error)throw historyResult.error;if(profilesResult.error)throw profilesResult.error;
+    operatorHistory=historyResult.data||[];customers=(profilesResult.data||[]).filter(row=>row.user_id!==live.user.id);
+  }finally{adminLoading=false;}
+}
+function operatorMarkup(){
+  const options=customers.map(c=>`<option value="${esc(c.user_id)}">${esc(c.name)}</option>`).join('');
+  const rows=operatorHistory.map(n=>`<div class="notifications-history__row"><div><strong>${esc(n.title)}</strong><small>${new Date(n.created_at).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}</small></div><span class="notifications-status">${esc(statusLabel(n.status))}</span><span>${Number(n.sent_count||0)}/${Number(n.target_count||0)}</span><span>${esc(n.audience)}</span></div>`).join('');
+  return `<div class="notifications-admin__grid"><section class="notifications-admin__card"><span class="screen-eyebrow">ENVIO MANUAL</span><h2>Nova notificação</h2><form class="notifications-admin__form" data-notification-form><label>Título<input name="title" maxlength="80" placeholder="Ex.: Pedidos de amanhã" required></label><label>Mensagem<textarea name="body" maxlength="360" rows="4" placeholder="Escreva o aviso para os clientes…" required></textarea></label><label>Destinatários<select name="audience" data-notification-audience><option value="all">Todos os clientes</option><option value="selected">Clientes selecionados</option><option value="order_tomorrow">Quem tem pedido amanhã</option><option value="payment_pending">Com pagamento pendente</option><option value="operators">Equipe / aparelhos da operação</option></select></label><label data-selected-customers hidden>Clientes<select name="customers" multiple size="8">${options}</select><small>Segure Ctrl/Cmd para selecionar mais de um.</small></label><label>Abrir ao tocar<select name="url"><option value="/#loja">Início do Pão Doce</option><option value="/?portal=orders#loja">Meus pedidos / pagamentos</option><option value="/?portal=catalog#loja">Catálogo</option></select></label><button class="screen-primary" type="submit">Enviar notificação</button><p class="notifications-admin__feedback" data-notification-admin-feedback></p></form></section><section class="notifications-admin__card notifications-admin__device"><span class="screen-eyebrow">ESTE APARELHO</span><h2>Push da operação</h2><p>${esc(pushStatusText())}</p><div><button class="pwa-action pwa-action--primary" type="button" data-notification-enable-admin>Ativar neste aparelho</button> <button class="pwa-action" type="button" data-pwa-test-real>Testar local</button></div><small data-device-feedback></small></section></div><section class="notifications-admin__card"><span class="screen-eyebrow">HISTÓRICO</span><h2>Últimos envios</h2><div class="notifications-history">${rows||'<p>Nenhum envio registrado ainda.</p>'}</div></section>`;
+}
+async function hydrateOperator(){
+  const host=document.querySelector('[data-notifications-admin]');if(!host||!live?.operator)return;
+  try{await loadOperator();host.innerHTML=operatorMarkup();}catch(e){host.innerHTML=`<p>Não foi possível carregar as notificações: ${esc(e.message)}</p>`;}
+}
+async function submitManual(form){
+  const feedback=form.querySelector('[data-notification-admin-feedback]');const button=form.querySelector('[type="submit"]');
+  const audience=form.elements.audience.value;
+  const ids=audience==='selected'?[...form.elements.customers.selectedOptions].map(o=>o.value):null;
+  button.disabled=true;feedback.textContent='Enfileirando…';
+  try{
+    const {data,error}=await live.client.rpc('trameli_create_notification',{
+      p_title:form.elements.title.value.trim(),p_body:form.elements.body.value.trim(),
+      p_url:form.elements.url.value,p_audience:audience,p_customer_ids:ids,
+    });
+    if(error)throw error;
+    feedback.textContent='Notificação criada. Enviando agora…';form.reset();
+    await dispatch(data);
+    await loadOperator();document.querySelector('[data-notifications-admin]').innerHTML=operatorMarkup();
+  }catch(e){feedback.textContent=e.message||'Não foi possível enviar.';}finally{button.disabled=false;}
+}
+async function testLocal(){
+  const reg=await registration();if(!reg)throw new Error('PWA indisponível.');
+  if(permission()!=='granted')await enablePush();
+  await reg.showNotification('Pão Doce Delivery 🍞',{body:'Notificação local de teste funcionando.',icon:ICON_URL,badge:ICON_URL,tag:'pao-doce-local-'+Date.now(),renotify:true,data:{url:'/#loja'}});
+}
+async function handleIncomingRead(){
+  if(!live)return;const params=new URLSearchParams(location.search);const id=params.get('notification');if(!id)return;
+  try{await markRead(id);}catch{}
+  params.delete('notification');const query=params.toString();history.replaceState(history.state,'',location.pathname+(query?'?'+query:'')+location.hash);
+}
+
+export function initPwa(){
+  ensureHead();setupNetworkStatus();void registration().catch(()=>{});
+  addEventListener('beforeinstallprompt',event=>{event.preventDefault();deferredInstallPrompt=event;});
+  addEventListener('appinstalled',()=>{deferredInstallPrompt=null;});
+  navigator.serviceWorker?.addEventListener('controllerchange',()=>location.reload());
+}
+export async function connectPwa(liveData){
+  live=liveData;if(!live?.user?.id)return;
+  window.TrameliNotifications={renderOperatorShell,hydrateOperator,openInbox,enablePush,disablePush,queueOrderEvent,refreshInbox,refreshUnread,installApp,testLocal,share:async data=>{
+    if(navigator.share){await navigator.share(data);return true;}
+    if(navigator.clipboard){await navigator.clipboard.writeText([data.title,data.text,data.url].filter(Boolean).join('\n'));return true;}
+    return false;
+  }};
+  if(permission()==='granted'){try{await syncSubscription(true);}catch(error){console.warn('Não foi possível sincronizar o push deste aparelho.',error?.message||error);}}
+  await handleIncomingRead();await refreshUnread();
+  const portalButton=document.getElementById('portal-notifications-link');portalButton?.addEventListener('click',()=>void openInbox());
+  if(new URLSearchParams(location.search).get('portal')==='notifications')setTimeout(()=>void openInbox(),50);
+  addEventListener('trameli:route-rendered',event=>{if(event.detail?.route==='notificacoes')void hydrateOperator();});
+  document.addEventListener('change',event=>{const select=event.target.closest('[data-notification-audience]');if(select){const host=select.form?.querySelector('[data-selected-customers]');if(host)host.hidden=select.value!=='selected';}});
+  document.addEventListener('submit',event=>{const form=event.target.closest('[data-notification-form]');if(form){event.preventDefault();void submitManual(form);}});
+  document.addEventListener('click',async event=>{
+    const enable=event.target.closest('[data-notification-enable-admin]');if(enable){const out=document.querySelector('[data-device-feedback]');try{enable.disabled=true;await enablePush();out.textContent='Este aparelho está inscrito para push real.';}catch(e){out.textContent=e.message;}finally{enable.disabled=false;}return;}
+    const test=event.target.closest('[data-pwa-test-real]');if(test){const out=document.querySelector('[data-device-feedback]');try{await testLocal();out.textContent='Teste enviado para este aparelho.';}catch(e){out.textContent=e.message;}return;}
   });
-
-  void getRegistration().catch(error => {
-    console.warn('Piloto PWA indisponível neste navegador.', error?.name || error);
-  });
-
-  if (document.body) createPilotPanel();
-  else window.addEventListener('DOMContentLoaded', createPilotPanel, { once: true });
 }
