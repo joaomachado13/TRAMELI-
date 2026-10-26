@@ -26,10 +26,13 @@ initPwa();
 if (!location.hash) {
   history.replaceState(history.state, '', `${location.pathname}${location.search}#loja`);
 }
-const deepLinkOrder = new URLSearchParams(location.search).get('open-order');
+const deepLinkParams = new URLSearchParams(location.search);
+const deepLinkOrder = deepLinkParams.get('open-order');
 if (deepLinkOrder) {
   try { sessionStorage.setItem('trameli-pending-open-order', deepLinkOrder); } catch { /* Direct hash navigation still works. */ }
-  if (location.hash !== '#operacao') location.hash = '#operacao';
+  deepLinkParams.delete('open-order');
+  const deepLinkQuery = deepLinkParams.toString();
+  history.replaceState(history.state, '', location.pathname + (deepLinkQuery ? '?' + deepLinkQuery : '') + '#operacao');
 }
 
 if (enabled) {
@@ -158,18 +161,12 @@ if (enabled) {
 
     [...realtimeNotifications.querySelectorAll('.realtime-order-toast')].slice(4).forEach(dismissRealtimeToast);
     setTimeout(() => dismissRealtimeToast(toast), 12000);
-    void playOrderSound();
-    navigator.vibrate?.(120);
-
-    if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
-      try {
-        const browserNotification = new Notification('Novo pedido recebido', {
-          body: `${formatCustomerName(row.customer_name || 'Cliente')} · ${formatDeliveryDate(row.delivery_date)}`,
-          tag: `trameli-order-${id}`,
-        });
-        browserNotification.onclick = () => { browserNotification.close(); void openRealtimeOrder(id); };
-      } catch { /* In-app alert remains the source of truth. */ }
+    if (!document.hidden) {
+      void playOrderSound();
+      navigator.vibrate?.(120);
     }
+
+    // Em segundo plano, o Web Push é a única notificação do sistema para evitar avisos duplicados.
   };
 
   window.addEventListener('trameli:remote-change', event => {
