@@ -1,0 +1,21 @@
+{
+  "name": "Pão Doce Delivery",
+  "short_name": "Pão Doce",
+  "description": "Portal de pedidos do Pão Doce Delivery.",
+  "lang": "pt-BR",
+  "id": "/pao-doce-pwa-pilot",
+  "start_url": "/?pwa-pilot=1#loja",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F7F2EA",
+  "theme_color": "#8F3D22",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/pwa-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
