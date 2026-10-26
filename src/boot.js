@@ -8,6 +8,7 @@ import { initShopping } from './shopping.js';
 import * as orderMath from './order-math.js';
 import * as financeMath from './finance-math.js';
 import { init as initMotion } from './motion.js';
+import { initPwaPilot } from './pwa.js';
 import clientCatalog from '../data/client-products.json';
 import { withOfficialProductPhoto } from './product-photos.js';
 import './live.css';
@@ -15,6 +16,10 @@ window.TrameliOrderMath = orderMath;
 window.TrameliFinanceMath = financeMath;
 window.TrameliSourceCatalog = clientCatalog.products.map(withOfficialProductPhoto);
 window.TrameliProductPhoto = withOfficialProductPhoto;
+
+// Piloto PWA só é ativado pelo endereço privado ?pwa-pilot=1.
+// Não altera o fluxo normal de clientes ou da operação.
+initPwaPilot();
 
 // A raiz pública sempre começa no portal do cliente, antes de carregar qualquer tela.
 // Preserve hashes de callback do Supabase e rotas internas explícitas.
