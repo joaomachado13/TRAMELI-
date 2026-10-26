@@ -41,7 +41,7 @@ try{
     create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
     grant usage on schema auth to authenticated; grant execute on function auth.uid() to authenticated;`);
   const dir=new URL('../supabase/migrations/',import.meta.url);
-  for(const name of (await readdir(dir)).filter(name=>/00[1-6]_.*\.sql$/.test(name)).sort())await db.exec(await readFile(new URL(name,dir),'utf8'));
+  for(const name of (await readdir(dir)).filter(name=>/^202609\d{2}00[1-6]_.*\.sql$/.test(name)).sort())await db.exec(await readFile(new URL(name,dir),'utf8'));
   const bundle=await readFile(new URL('../supabase/activate-payments-shopping.sql',import.meta.url),'utf8');
   await db.exec(bundle);
   await assert.rejects(db.exec(bundle),/já foi aplicada/);
