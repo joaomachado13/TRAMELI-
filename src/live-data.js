@@ -234,16 +234,18 @@ export class LiveData {
 
   async queueOrderEvent(orderId, event) {
     if (!orderId || !event) return null;
-    const { data, error } = await this.client.rpc('trameli_queue_order_event', {
-      p_order_id: orderId,
-      p_event: event,
-    });
-    if (error) {
+    try {
+      const { data, error } = await this.client.rpc('trameli_queue_order_event', {
+        p_order_id: orderId,
+        p_event: event,
+      });
+      if (error) throw error;
+      return data || null;
+    } catch (error) {
       // Notificação é complementar: nunca transformar um pedido já salvo em erro.
-      console.warn('Pedido salvo, mas o aviso não entrou na fila.', error.code || error.message || error);
+      console.warn('Pedido salvo, mas o aviso não entrou na fila.', error?.code || error?.message || error);
       return null;
     }
-    return data || null;
   }
 
   async confirmProductCost(productId) {
