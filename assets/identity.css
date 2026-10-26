@@ -67,6 +67,7 @@ body .nav2 .notification-dot.notification-count {
 .ico--gear { --tm-icon-image: url("icon-gear.svg"); }
 .ico--search { --tm-icon-image: url("icon-search.svg"); }
 .ico--notification { --tm-icon-image: url("icon-bell.svg"); }
+.ico--broadcast { --tm-icon-image: url("icon-broadcast.svg"); }
 .ico--chevron { --tm-icon-image: url("icon-chevron.svg"); }
 .ico--arrow { --tm-icon-image: url("icon-arrow.svg"); }
 .ico--cart { --tm-icon-image: url("icon-cart.svg"); }

@@ -81,7 +81,8 @@ export function initAccount(live) {
   document.body.append(dialog);
   accountButton.addEventListener('click', async () => {
     if (MASTER_MFA_REQUIRED && live.role === 'master') { try { await refreshMfa(); } catch { mfaState = null; } }
-    dialog.innerHTML = `<button type="button" class="account-dialog__close" aria-label="Fechar">×</button><h2>Minha conta</h2>${identity()}<p>Crie ou altere a senha da sua conta.</p>${live.role === 'master' ? mfaPanel() : ''}${passwordForm()}<button type="button" class="account-signout">Sair deste aparelho</button>`;
+    const pwa = !live.operator ? (window.TrameliNotifications?.renderPwaSettings?.('customer') || '') : '';
+    dialog.innerHTML = `<button type="button" class="account-dialog__close" aria-label="Fechar">×</button><h2>Minha conta</h2>${identity()}<p>Crie ou altere a senha da sua conta.</p>${pwa}${live.role === 'master' ? mfaPanel() : ''}${passwordForm()}<button type="button" class="account-signout">Sair deste aparelho</button>`;
     dialog.querySelector('.account-dialog__close').addEventListener('click', () => dialog.close());
     dialog.querySelector('.account-signout').addEventListener('click', () => logout.click());
     dialog.showModal();
