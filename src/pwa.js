@@ -220,10 +220,11 @@ async function handleIncomingRead(){
 }
 
 export function initPwa(){
+  const hadController=Boolean(navigator.serviceWorker?.controller);
   ensureHead();setupNetworkStatus();void registration().catch(()=>{});
   addEventListener('beforeinstallprompt',event=>{event.preventDefault();deferredInstallPrompt=event;});
   addEventListener('appinstalled',()=>{deferredInstallPrompt=null;});
-  navigator.serviceWorker?.addEventListener('controllerchange',()=>location.reload());
+  navigator.serviceWorker?.addEventListener('controllerchange',()=>{if(hadController)location.reload();});
 }
 export async function connectPwa(liveData){
   live=liveData;if(!live?.user?.id)return;
