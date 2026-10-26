@@ -209,6 +209,26 @@ initShopping(window.TrameliLive);
 await import('../assets/catalogo.js');
 await import('../assets/clientes.js');
 await import('../assets/operacao.js');
+const deepLinkOrderId = new URLSearchParams(location.search).get('open-order');
+if (deepLinkOrderId && window.TrameliLive?.operator) {
+  try {
+    location.hash = '#operacao';
+    await window.TrameliLive.load(true);
+    await window.TrameliOperation?.openOrder?.(deepLinkOrderId);
+  } catch (error) {
+    console.warn('Não foi possível abrir o pedido da notificação.', error?.code || error?.message || error);
+  } finally {
+    const deepLinkParams = new URLSearchParams(location.search);
+    deepLinkParams.delete('open-order');
+    const deepLinkQuery = deepLinkParams.toString();
+    history.replaceState(
+      history.state,
+      '',
+      `${location.pathname}${deepLinkQuery ? '?' + deepLinkQuery : ''}${location.hash}`
+    );
+  }
+}
+// trameli-deep-link-order
 await import('../assets/screens.js');
 await import('../assets/portal.js');
 await import('../assets/shirley-portal.js');
