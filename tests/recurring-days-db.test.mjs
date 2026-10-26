@@ -16,7 +16,15 @@ try {
     create table storage.objects(id uuid default gen_random_uuid(), bucket_id text, name text);
     alter table storage.objects enable row level security;`);
   const dir = new URL('../supabase/migrations/', import.meta.url);
+  const hostedOnlyMigrations = new Set([
+    '20261026140746_pwa_notifications_foundation.sql',
+    '20261026141007_pwa_vapid_server_init.sql',
+    '20261026141259_pwa_dispatch_guard.sql',
+    '20261026141648_pwa_operator_order_notifications.sql',
+    '20261026142242_pwa_rpc_privileges_hardening.sql',
+  ]);
   for (const file of (await readdir(dir)).filter(name => name.endsWith('.sql')).sort()) {
+    if (hostedOnlyMigrations.has(file)) continue; // Vault/pg_net/pg_cron do not exist in PGlite.
     try { await db.exec(await readFile(new URL(file, dir), 'utf8')); }
     catch (cause) { throw new Error(`${file}: ${cause.message}`); }
   }
