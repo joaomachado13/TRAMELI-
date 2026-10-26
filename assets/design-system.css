@@ -1778,3 +1778,128 @@ body .live-logout:hover { border-color: var(--color-primary); background: var(--
 .portal-welcome .portal-eyebrow,
 .portal-hero .portal-eyebrow { color: var(--color-on-primary) !important; }
 .attention-center .screen-eyebrow { color: var(--tm-ochre-600) !important; }
+
+
+/* Configurações — composição mobile dedicada.
+   Mantido no fim do arquivo para não ser sobrescrito pelas regras desktop
+   de largura fixa declaradas acima. */
+@media (max-width: 760px) {
+  .settings-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 14px;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+  }
+
+  .settings-tabs {
+    display: flex;
+    flex-direction: row !important;
+    gap: 8px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    border-radius: 14px;
+  }
+
+  .settings-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .settings-tabs button {
+    flex: 0 0 auto;
+    min-width: max-content;
+    min-height: 44px;
+    padding: 10px 16px;
+    white-space: nowrap;
+    scroll-snap-align: start;
+  }
+
+  .settings-content {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    min-height: 0;
+    margin: 0 !important;
+    padding: 18px !important;
+    border-radius: 16px;
+  }
+
+  .settings-content .screen-panel__heading {
+    margin-bottom: 14px;
+  }
+
+  .settings-content .screen-panel__heading h2 {
+    font-size: 1.5rem;
+    line-height: 1.15;
+  }
+
+  .settings-form,
+  .settings-content .account-panel,
+  .settings-content .account-panel form {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    gap: 14px;
+  }
+
+  .settings-form label,
+  .settings-form > div,
+  .settings-form input,
+  .settings-form select,
+  .settings-form textarea {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .settings-form input,
+  .settings-form select,
+  .settings-form textarea {
+    box-sizing: border-box;
+    min-height: 46px;
+    font-size: 16px;
+  }
+
+  .settings-form button[type="submit"],
+  .settings-form .screen-primary {
+    width: 100%;
+    justify-content: center;
+    min-height: 48px !important;
+    margin-top: 2px;
+  }
+
+  .settings-form .motion-toggle {
+    width: 100%;
+    min-height: 46px;
+  }
+
+  .settings-check {
+    width: 100%;
+  }
+
+  .settings-check input {
+    width: auto;
+  }
+
+  .settings-feedback {
+    width: 100%;
+    margin: 12px 0 0 !important;
+  }
+
+  #screen-view:has(.settings-shell) .screen-hero {
+    margin-bottom: 18px;
+  }
+
+  #screen-view:has(.settings-shell) .screen-hero .h1 {
+    font-size: 2rem;
+  }
+}
