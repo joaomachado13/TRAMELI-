@@ -30,6 +30,7 @@ assert.match(edge, /SUPABASE_SERVICE_ROLE_KEY/, 'Dispatcher usa service role som
 assert.doesNotMatch(pwa, /SUPABASE_SERVICE_ROLE_KEY|service_role/i, 'Frontend nunca pode conter service role.');
 assert.match(pwa, /trameli_upsert_push_subscription/, 'Frontend deve registrar a inscrição no backend.');
 assert.match(pwa, /trameli_notification_inbox/, 'Frontend deve ler a caixa de avisos.');
+assert.match(pwa, /pao-doce-push-disabled-v1/, 'Desativar push neste aparelho deve persistir e não reinscrever sozinho.');
 assert.match(sw, /request\.mode==='navigate'/, 'Service worker deve tratar navegação offline.');
 assert.match(sw, /caches\.match\('\/offline\.html'\)/, 'Fallback offline deve ser estático e seguro.');
 assert.doesNotMatch(sw, /caches\.match\(request\)/, 'Pedidos e respostas dinâmicas não devem vir de cache.');
