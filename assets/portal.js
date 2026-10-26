@@ -205,6 +205,7 @@ import '../src/featured-products.css';
     // Não deixe a barra fixa da sacola/semana ficar por cima da confirmação.
     // O conteúdo da barra é animado e pode continuar presente após o checkout.
     if (view === 'success' || view === 'weekSuccess') {
+      document.body.classList.remove('portal-cart-floating-active');
       clearTimeout(floatingTimer);
       clearTimeout(floatingSyncTimer);
       floatingHost.classList.remove(
@@ -220,6 +221,7 @@ import '../src/featured-products.css';
     }
     const isPortal = location.hash === '#loja';
     const cartVisible = isPortal && view === 'catalog' && count() > 0;
+    document.body.classList.toggle('portal-cart-floating-active', cartVisible);
     let weekHtml = '';
 
     if (isPortal && view === 'week') {
@@ -321,6 +323,7 @@ import '../src/featured-products.css';
       floatingHost.hidden = true;
       floatingHost.innerHTML = '';
       floatingMode = 'none';
+      document.body.classList.remove('portal-cart-floating-active');
     }
 
     renderSupport();
