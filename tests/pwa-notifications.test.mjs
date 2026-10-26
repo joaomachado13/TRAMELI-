@@ -35,10 +35,10 @@ assert.match(sw, /request\.mode==='navigate'/, 'Service worker deve tratar naveg
 assert.match(sw, /caches\.match\('\/offline\.html'\)/, 'Fallback offline deve ser estático e seguro.');
 assert.doesNotMatch(sw, /caches\.match\(request\)/, 'Pedidos e respostas dinâmicas não devem vir de cache.');
 const parsed = JSON.parse(manifest);
-assert.equal(parsed.id, '/pao-doce');
+assert.equal(parsed.id, '/pao-doce-pwa-pilot', 'Preserve o ID instalado para atualizar o piloto sem criar outro app.');
 assert.equal(parsed.start_url, '/#loja');
 assert.ok(Array.isArray(parsed.shortcuts) && parsed.shortcuts.length >= 3, 'PWA deve ter atalhos úteis.');
-assert.doesNotMatch(manifest, /pwa-pilot/, 'Manifesto de produção não pode manter o piloto.');
+assert.doesNotMatch(parsed.start_url, /pwa-pilot/, 'A inicialização de produção não pode depender do parâmetro do piloto.');
 for (const event of ['new_order','order_edited','order_cancelled','status_confirmed','status_delivered','operator_order_created']) {
   assert.match(live + orderEvents, new RegExp(event), `Evento ${event} precisa estar ligado ao push.`);
 }
