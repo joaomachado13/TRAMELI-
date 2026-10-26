@@ -48,6 +48,7 @@ export default defineConfig(({ command, mode }) => {
       name: 'copy-static-product-media',
       closeBundle() {
         cpSync('assets/products', 'dist/assets/products', { recursive: true });
+        cpSync('assets/logo-pao-doce.png', 'dist/pwa-icon.png');
       },
     }],
   };
