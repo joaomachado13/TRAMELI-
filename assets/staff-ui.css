@@ -386,3 +386,120 @@ body.staff-mode #screen-view .staff-metric>strong { font-weight:700; font-size:v
 body.staff-mode #operation-view .kanban { grid-auto-flow:row; grid-auto-columns:auto; overflow-x:visible; }
 
 body.staff-mode #main-navigation-panel:focus-visible { outline:2px solid var(--staff-focus); outline-offset:-3px; }
+
+
+/* Configurações — composição mobile.
+   Mantida no fim da folha para vencer os refinamentos desktop do design system. */
+@media (max-width:760px) {
+  body.staff-mode #screen-view .settings-shell {
+    display:grid;
+    grid-template-columns:minmax(0,1fr) !important;
+    width:100%;
+    max-width:none;
+    gap:var(--staff-space-4);
+    min-width:0;
+  }
+
+  body.staff-mode #screen-view .settings-tabs {
+    display:flex;
+    flex-direction:row;
+    width:100%;
+    min-width:0;
+    max-width:100%;
+    gap:var(--staff-space-2);
+    padding:4px 2px 8px;
+    overflow-x:auto;
+    overflow-y:hidden;
+    overscroll-behavior-inline:contain;
+    scroll-snap-type:x proximity;
+    scrollbar-width:none;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  body.staff-mode #screen-view .settings-tabs::-webkit-scrollbar {
+    display:none;
+  }
+
+  body.staff-mode #screen-view .settings-tabs > button {
+    flex:0 0 auto;
+    min-width:max-content;
+    min-height:44px;
+    padding:10px 16px;
+    border-radius:999px;
+    scroll-snap-align:start;
+    white-space:nowrap;
+  }
+
+  body.staff-mode #screen-view .settings-content.screen-panel {
+    width:100%;
+    max-width:none;
+    min-width:0;
+    margin:0 !important;
+    padding:18px 16px !important;
+    border:1px solid var(--staff-border) !important;
+    border-radius:18px !important;
+    background:var(--staff-surface) !important;
+    box-shadow:none !important;
+  }
+
+  body.staff-mode #screen-view .settings-content > .screen-panel__heading {
+    margin-bottom:var(--staff-space-4);
+  }
+
+  body.staff-mode #screen-view .settings-content > .screen-panel__heading h2 {
+    margin:0;
+    font-size:1.45rem;
+    line-height:1.15;
+  }
+
+  body.staff-mode #screen-view .settings-form,
+  body.staff-mode #screen-view .account-panel {
+    width:100%;
+    max-width:none;
+    min-width:0;
+    gap:var(--staff-space-4);
+  }
+
+  body.staff-mode #screen-view .settings-form label,
+  body.staff-mode #screen-view .account-panel label {
+    width:100%;
+    min-width:0;
+  }
+
+  body.staff-mode #screen-view .settings-form :is(input,select,textarea),
+  body.staff-mode #screen-view .account-panel :is(input,select,textarea) {
+    width:100%;
+    max-width:100%;
+    min-width:0;
+    box-sizing:border-box;
+  }
+
+  body.staff-mode #screen-view .settings-row--motion {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:var(--staff-space-3);
+    width:100%;
+  }
+
+  body.staff-mode #screen-view .settings-row--motion > span {
+    min-width:0;
+  }
+
+  body.staff-mode #screen-view .motion-toggle {
+    flex:0 0 auto;
+    min-width:116px;
+  }
+
+  body.staff-mode #screen-view .settings-form > .screen-primary,
+  body.staff-mode #screen-view .account-panel form > button[type="submit"] {
+    width:100%;
+    min-height:48px;
+    justify-content:center;
+  }
+
+  body.staff-mode #screen-view .settings-feedback {
+    width:100%;
+    margin:var(--staff-space-3) 0 0;
+  }
+}
