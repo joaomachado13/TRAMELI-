@@ -9,7 +9,7 @@ const portalView = document.getElementById('portal-view');
 const shirleyPortalView = document.getElementById('shirley-portal-view');
 const appShell = document.querySelector('.app-shell');
 const navigation = [...document.querySelectorAll('.nav__item')];
-const routes = new Set(['operacao', 'portal-shirley', 'inicio', 'pendencias', 'pedidos', 'clientes', 'produtos', 'agenda', 'financeiro', 'relatorios', 'configuracoes', 'loja']);
+const routes = new Set(['operacao', 'portal-shirley', 'inicio', 'pendencias', 'notificacoes', 'pedidos', 'clientes', 'produtos', 'agenda', 'financeiro', 'relatorios', 'configuracoes', 'loja']);
 const systemReducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 let userReducedMotion = false;
 try { userReducedMotion = localStorage.getItem('trameli-reduced-motion') === 'true'; } catch { /* Storage may be unavailable on file URLs. */ }
@@ -223,6 +223,7 @@ function productIntelligence() {
 }
 
 const pages = {
+  notificacoes: () => `${intro('', 'Notificações', '')}${window.TrameliNotifications?.renderOperatorShell?.() || '<section class="notifications-admin"><p>Carregando Central de Notificações…</p></section>'}`,
   pendencias: () => {
     const received=activeOrders().filter(order=>orderState(order)==='received');
     const api=window.TrameliPayments?.api;
@@ -527,7 +528,7 @@ function showRoute(force = false) {
   const finish = () => { if (revision !== routeRevision) return; renderRoute(route, force && previous === route); if (previous !== null && !force && route !== 'loja') animateRouteIn(route); else motion.refresh(); };
   if (previous !== null && previous !== 'loja' && route !== 'loja' && !force && !motionDisabled()) {
     const outgoing = previous === 'inicio' ? homeView : previous === 'operacao' ? operationView : previous === 'portal-shirley' ? shirleyPortalView : screenView;
-    const style = ({ inicio: 'curve', operacao: 'swipe', pedidos: 'swipe', clientes: 'swipe', produtos: 'diagonal', agenda: 'wave', financeiro: 'curve', relatorios: 'diagonal', configuracoes: 'wave', pendencias: 'curve' })[route] || 'curve';
+    const style = ({ inicio: 'curve', operacao: 'swipe', pedidos: 'swipe', notificacoes: 'curve', clientes: 'swipe', produtos: 'diagonal', agenda: 'wave', financeiro: 'curve', relatorios: 'diagonal', configuracoes: 'wave', pendencias: 'curve' })[route] || 'curve';
     motion.leave(outgoing, finish, { style });
   } else { motion.cancelTransition(); finish(); }
 }
