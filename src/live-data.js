@@ -240,10 +240,19 @@ export class LiveData {
         p_event: event,
       });
       if (error) throw error;
-      return data || null;
+      const notificationId = data || null;
+      if (notificationId) {
+        // Eventos de pedido são transacionais: entram na caixa de avisos e o
+        // push é disparado imediatamente. O cron continua como rede de segurança.
+        const dispatched = await this.client.functions.invoke('trameli-push', {
+          body: { action: 'dispatch', notificationId },
+        });
+        if (dispatched.error) throw dispatched.error;
+      }
+      return notificationId;
     } catch (error) {
-      // Notificação é complementar: nunca transformar um pedido já salvo em erro.
-      console.warn('Pedido salvo, mas o aviso não entrou na fila.', error?.code || error?.message || error);
+      // Push é complementar: nunca transformar um pedido já salvo em erro.
+      console.warn('Pedido salvo, mas o aviso push não foi enviado imediatamente.', error?.code || error?.message || error);
       return null;
     }
   }
