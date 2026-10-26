@@ -17,7 +17,8 @@ try {
     create table storage.objects(id uuid default gen_random_uuid(), bucket_id text, name text);
     alter table storage.objects enable row level security;`);
   const dir = new URL('../supabase/migrations/', import.meta.url);
-  for (const file of (await readdir(dir)).filter(name => name.endsWith('.sql')).sort()) {
+  const hostedOnly = name => /_pwa_/.test(name);
+  for (const file of (await readdir(dir)).filter(name => name.endsWith('.sql') && !hostedOnly(name)).sort()) {
     try { await db.exec(await readFile(new URL(file, dir), 'utf8')); }
     catch (cause) { throw new Error(`${file}: ${cause.message}`); }
   }
