@@ -510,3 +510,72 @@ body:not(.portal-mode) #portal-floating-host,body:not(.portal-mode) .portal-bott
     bottom:calc(92px + env(safe-area-inset-bottom));
   }
 }
+
+
+/* Catálogo mobile no navegador:
+   a mini-sacola não pode cobrir o último produto nem o stepper. */
+@media (max-width: 640px) {
+  .portal:has(#portal-floating-host:not([hidden])) .portal-section {
+    padding-bottom: calc(190px + env(safe-area-inset-bottom));
+  }
+
+  #portal-floating-host .portal-catalog__footer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    bottom: calc(82px + env(safe-area-inset-bottom));
+    width: calc(100vw - 16px);
+    padding: 10px 12px;
+    border-radius: 14px;
+  }
+
+  #portal-floating-host .portal-catalog__footer > span {
+    min-width: 0;
+    gap: 1px;
+  }
+
+  #portal-floating-host .portal-catalog__footer > span strong {
+    overflow: hidden;
+    font-size: .86rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #portal-floating-host .portal-catalog__footer > span small {
+    overflow: hidden;
+    font-size: .7rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #portal-floating-host .portal-catalog__footer > div {
+    display: block !important;
+    min-width: 118px;
+  }
+
+  #portal-floating-host .portal-catalog__footer > div > .portal-primary {
+    width: auto !important;
+    min-width: 118px;
+    min-height: 44px;
+    margin: 0;
+    padding: 10px 14px;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 370px) {
+  #portal-floating-host .portal-catalog__footer {
+    grid-template-columns: minmax(0, 1fr) 108px;
+    gap: 8px;
+  }
+
+  #portal-floating-host .portal-catalog__footer > div,
+  #portal-floating-host .portal-catalog__footer > div > .portal-primary {
+    min-width: 108px;
+  }
+
+  #portal-floating-host .portal-catalog__footer > div > .portal-primary {
+    padding-inline: 10px;
+  }
+}
