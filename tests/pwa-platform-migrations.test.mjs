@@ -3,12 +3,14 @@ import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL('../' + path, import.meta.url), 'utf8');
 
-const [foundation, vapid, guard, orderEvents, hardening] = await Promise.all([
+const [foundation, vapid, guard, orderEvents, hardening, automation, liveData] = await Promise.all([
   read('supabase/migrations/20261026140746_pwa_notifications_foundation.sql'),
   read('supabase/migrations/20261026141007_pwa_vapid_server_init.sql'),
   read('supabase/migrations/20261026141259_pwa_dispatch_guard.sql'),
   read('supabase/migrations/20261026141648_pwa_operator_order_notifications.sql'),
   read('supabase/migrations/20261026142242_pwa_rpc_privileges_hardening.sql'),
+  read('supabase/migrations/20261026165704_notification_automation_without_delivered.sql'),
+  read('src/live-data.js'),
 ]);
 
 assert.match(foundation, /create extension if not exists pg_net/i);
@@ -36,4 +38,13 @@ for (const fn of ['trameli_upsert_push_subscription','trameli_create_notificatio
   assert.match(hardening, new RegExp(`revoke all on function public\\.${fn}`, 'i'), `${fn} precisa de hardening explícito.`);
 }
 
-console.log('Migrations PWA/Supabase: extensões, Vault, cron, push, RLS e privilégios verificados.');
+assert.match(automation, /if p_event = 'status_delivered' then\s+return null/i, 'Entregue precisa permanecer silencioso.');
+assert.match(automation, /recurring_order_created/i, 'Pedido recorrente materializado precisa gerar aviso ao cliente.');
+assert.match(automation, /Seu fechamento está pronto/i, 'Fechamento precisa continuar gerando lembrete de pagamento.');
+assert.match(automation, /Último dia para pagar/i, 'Fim da carência precisa continuar gerando lembrete.');
+assert.match(automation, /Vai querer pão amanhã/i, 'Lembrete habitual precisa continuar automático.');
+assert.doesNotMatch(automation, /exists \(\s*select 1 from public\.trameli_push_subscriptions/i, 'Inbox não deve depender de PushSubscription.');
+assert.doesNotMatch(liveData, /delivered:\s*'status_delivered'/i, 'Frontend não deve solicitar push ao marcar Entregue.');
+assert.match(liveData, /recurring_order_created/i, 'Frontend deve tentar entregar imediatamente avisos recorrentes.');
+
+console.log('Migrations PWA/Supabase: extensões, Vault, cron, push, automações, RLS e privilégios verificados.');
