@@ -12,6 +12,9 @@ let unread=0;
 let operatorHistory=[];
 let customers=[];
 let adminLoading=false;
+let pushEnabled=false;
+const PUSH_DISABLED_KEY='pao-doce-push-disabled-v1';
+const locallyDisabled=()=>{try{return localStorage.getItem(PUSH_DISABLED_KEY)==='true';}catch{return false;}};
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const isStandalone=()=>window.matchMedia?.('(display-mode: standalone)').matches===true||window.navigator.standalone===true;
@@ -76,13 +79,14 @@ async function syncSubscription(create=false){
     const key=await publicKey();
     sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:base64UrlToBytes(key)});
   }
-  if(!sub)return false;
+  if(!sub){pushEnabled=false;return false;}
   const data=sub.toJSON();
   const {error}=await live.client.rpc('trameli_upsert_push_subscription',{
     p_endpoint:sub.endpoint,p_p256dh:data.keys?.p256dh||'',p_auth:data.keys?.auth||'',
     p_platform:platform(),p_user_agent:navigator.userAgent.slice(0,700),
   });
   if(error)throw error;
+  pushEnabled=true;
   return true;
 }
 async function enablePush(){
@@ -91,11 +95,14 @@ async function enablePush(){
   let granted=permission();
   if(granted!=='granted')granted=await Notification.requestPermission();
   if(granted!=='granted')throw new Error('A permissão de notificações não foi liberada.');
+  try{localStorage.removeItem(PUSH_DISABLED_KEY);}catch{}
   await syncSubscription(true);await refreshInbox();return true;
 }
 async function disablePush(){
   const reg=await registration();const sub=await reg?.pushManager?.getSubscription();
   if(sub&&live){await live.client.rpc('trameli_disable_push_subscription',{p_endpoint:sub.endpoint});await sub.unsubscribe();}
+  pushEnabled=false;
+  try{localStorage.setItem(PUSH_DISABLED_KEY,'true');}catch{}
 }
 async function refreshUnread(){
   if(!live?.user?.id)return 0;
@@ -137,7 +144,9 @@ async function installApp(){
   return 'Use o menu do navegador e escolha Instalar aplicativo / Adicionar à tela inicial.';
 }
 function pushStatusText(){
-  if(permission()==='granted')return 'Notificações permitidas neste aparelho.';
+  if(pushEnabled)return 'Notificações ativas neste aparelho.';
+  if(permission()==='granted'&&locallyDisabled())return 'Notificações desativadas neste aparelho pelo Pão Doce.';
+  if(permission()==='granted')return 'Permissão liberada; toque em Ativar para registrar este aparelho.';
   if(permission()==='denied')return 'Notificações bloqueadas nas configurações do aparelho.';
   return 'Ative para receber confirmações, cobranças e lembretes.';
 }
@@ -163,7 +172,7 @@ function ensureInboxDialog(){
 }
 function renderInboxDialog(dialog=ensureInboxDialog()){
   dialog.innerHTML=`<header class="pwa-notification-dialog__head"><div><span class="portal-eyebrow">PÃO DOCE</span><h2>Avisos</h2><p>${unread?unread+' não lido'+(unread===1?'':'s'):'Tudo lido'}</p></div><button class="pwa-notification-dialog__close" type="button" data-notification-close aria-label="Fechar">×</button></header>
-  <div class="pwa-notification-dialog__body"><section class="pwa-push-card"><strong>Notificações no celular</strong><p>${esc(pushStatusText())}</p><div class="pwa-push-card__actions">${permission()==='granted'?'<button class="pwa-action" type="button" data-notification-disable>Desativar neste aparelho</button>':'<button class="pwa-action pwa-action--primary" type="button" data-notification-enable>Ativar notificações</button>'}${isStandalone()?'':'<button class="pwa-action" type="button" data-pwa-install-real>Instalar Pão Doce</button>'}</div><small data-notification-feedback></small></section><section class="pwa-inbox">${inboxMarkup()}</section></div>`;
+  <div class="pwa-notification-dialog__body"><section class="pwa-push-card"><strong>Notificações no celular</strong><p>${esc(pushStatusText())}</p><div class="pwa-push-card__actions">${pushEnabled?'<button class="pwa-action" type="button" data-notification-disable>Desativar neste aparelho</button>':'<button class="pwa-action pwa-action--primary" type="button" data-notification-enable>Ativar notificações</button>'}${isStandalone()?'':'<button class="pwa-action" type="button" data-pwa-install-real>Instalar Pão Doce</button>'}</div><small data-notification-feedback></small></section><section class="pwa-inbox">${inboxMarkup()}</section></div>`;
 }
 async function openInbox(){
   try{await refreshInbox();}catch{}
@@ -233,7 +242,8 @@ export async function connectPwa(liveData){
     if(navigator.clipboard){await navigator.clipboard.writeText([data.title,data.text,data.url].filter(Boolean).join('\n'));return true;}
     return false;
   }};
-  if(permission()==='granted'){try{await syncSubscription(true);}catch(error){console.warn('Não foi possível sincronizar o push deste aparelho.',error?.message||error);}}
+  if(permission()==='granted'&&!locallyDisabled()){try{await syncSubscription(true);}catch(error){console.warn('Não foi possível sincronizar o push deste aparelho.',error?.message||error);}}
+  else {try{await syncSubscription(false);}catch{}}
   await handleIncomingRead();await refreshUnread();
   const portalButton=document.getElementById('portal-notifications-link');portalButton?.addEventListener('click',()=>void openInbox());
   if(new URLSearchParams(location.search).get('portal')==='notifications')setTimeout(()=>void openInbox(),50);
