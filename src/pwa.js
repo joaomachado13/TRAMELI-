@@ -202,7 +202,7 @@ function createPilotPanel() {
 }
 
 export async function showPwaNotification({ title, body, tag, url = '/#loja' } = {}) {
-  if (!pilotEnabled || notificationPermission() !== 'granted') return false;
+  if (notificationPermission() !== 'granted') return false;
   const registration = await getRegistration();
   if (!registration) return false;
   await registration.showNotification(title || 'Pão Doce Delivery', {
@@ -246,6 +246,15 @@ export async function promptPwaInstall() {
 
 export function initPwaFoundation() {
   ensureHeadMetadata();
+
+  // Quem instalou o piloto continua no mesmo app. Remova apenas o parâmetro
+  // antigo da URL para que o lançamento passe imediatamente ao fluxo real.
+  const legacyParams = new URLSearchParams(location.search);
+  if (legacyParams.has('pwa-pilot')) {
+    legacyParams.delete('pwa-pilot');
+    const query = legacyParams.toString();
+    history.replaceState(history.state, '', `${location.pathname}${query ? '?' + query : ''}${location.hash || '#loja'}`);
+  }
   window.addEventListener('beforeinstallprompt', event => {
     event.preventDefault();
     deferredInstallPrompt = event;
