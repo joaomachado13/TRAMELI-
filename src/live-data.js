@@ -351,8 +351,35 @@ export class LiveData {
       p_delivery_date: date,
     });
     if (error) throw error;
+    const created = Number(data || 0);
+
+    // A RPC já cria os avisos dos pedidos recorrentes. Tente entregar agora;
+    // o cron de 1 minuto continua como fallback se a rede/Edge Function falhar.
+    if (created > 0 && this.user?.id) {
+      try {
+        const queued = await this.client.from('trameli_notifications')
+          .select('id,metadata')
+          .eq('created_by', this.user.id)
+          .eq('status', 'queued')
+          .order('created_at', { ascending: false })
+          .limit(Math.max(20, created * 3));
+        if (queued.error) throw queued.error;
+        const notificationIds = (queued.data || [])
+          .filter(row => row.metadata?.event === 'recurring_order_created' && row.metadata?.deliveryDate === date)
+          .map(row => row.id);
+        for (const notificationId of notificationIds) {
+          const dispatched = await this.client.functions.invoke('trameli-push', {
+            body: { action: 'dispatch', notificationId },
+          });
+          if (dispatched.error) throw dispatched.error;
+        }
+      } catch (cause) {
+        console.warn('Pedidos recorrentes criados; o push será retomado pela fila automática.', cause?.code || cause?.message || cause);
+      }
+    }
+
     await this.load(true);
-    return Number(data || 0);
+    return created;
   }
 
   async recurringSchedules() {
@@ -386,7 +413,9 @@ export class LiveData {
       p_order_id: order.id, p_expected_version: order.version, p_status: status,
     });
     if (error) throw error;
-    const event = ({ confirmed: 'status_confirmed', ready: 'status_ready', delivered: 'status_delivered', cancelled: 'status_cancelled' })[status];
+    // "Entregue" é silencioso: a operação pode atualizar dias depois e não deve
+    // gerar uma notificação atrasada/confusa para o cliente.
+    const event = ({ confirmed: 'status_confirmed', ready: 'status_ready', cancelled: 'status_cancelled' })[status];
     if (event) await this.queueOrderEvent(order.id, event);
     await this.load(true);
   }

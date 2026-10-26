@@ -25,6 +25,7 @@ try {
     '20261026141259_pwa_dispatch_guard.sql',
     '20261026141648_pwa_operator_order_notifications.sql',
     '20261026142242_pwa_rpc_privileges_hardening.sql',
+    '20261026165704_notification_automation_without_delivered.sql',
   ]);
   for (const file of (await readdir(dir)).filter(name => name.endsWith('.sql')).sort()) {
     if (supabasePlatformMigrations.has(file)) continue;
