@@ -444,7 +444,7 @@ body:not(.portal-mode) #portal-floating-host,body:not(.portal-mode) .portal-bott
     border:0;
     border-radius:17px;
     background:transparent;
-    color:var(--color-text-muted);
+    color:#66554e;
     font-size:.79rem;
     font-weight:650;
     line-height:1;
