@@ -426,7 +426,7 @@ body:not(.portal-mode) #portal-floating-host,body:not(.portal-mode) .portal-bott
     border:1px solid var(--color-border);
     border-bottom:0;
     border-radius:24px 24px 0 0;
-    background:color-mix(in srgb,var(--color-surface) 96%,transparent);
+    background:var(--color-surface);
     box-shadow:0 -10px 32px color-mix(in srgb,var(--color-text-primary) 10%,transparent);
     backdrop-filter:blur(18px);
     -webkit-backdrop-filter:blur(18px);
@@ -453,7 +453,7 @@ body:not(.portal-mode) #portal-floating-host,body:not(.portal-mode) .portal-bott
   }
   .portal-bottom-nav button:active{transform:scale(.97)}
   .portal-bottom-nav button[aria-current="true"]{
-    background:color-mix(in srgb,var(--color-primary) 11%,var(--color-surface));
+    background:#f2e4da;
     color:var(--color-primary);
   }
   .portal-bottom-nav__icon{
