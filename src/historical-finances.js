@@ -219,7 +219,7 @@ export function initHistoricalFinances(live) {
     }
   }
   async function fileSelected(file) {
-    state.message='';state.fileName=file.name;state.batchId=crypto.randomUUID();
+    state.message='';state.error='';state.fileName=file.name;state.batchId=crypto.randomUUID();
     if(file.size>6*1024*1024)throw new Error('O arquivo deve ter no máximo 6 MB.');
     let raw;
     if(/\.csv$/i.test(file.name))raw=parseCSV(await file.text());
