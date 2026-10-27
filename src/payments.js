@@ -85,7 +85,7 @@ export function initPayments(live) {
     });
   }
   function customerRender() {
-    return `<section class="payment-panel payment-customer"><span class="payment-customer__eyebrow">PAGAMENTOS</span><h2>Meus pagamentos</h2><p class="payment-customer__intro">Veja o que já foi confirmado e o que ainda falta pagar. O pagamento só aparece como concluído depois que a operação confere o recebimento.</p><div data-payment-content="customer">${warning()?`<p role="status">${esc(warning())}</p>`:customerContent()}</div></section>`;
+    return `<section class="payment-panel payment-customer"><span class="payment-customer__eyebrow">PAGAMENTOS</span><h2>Meus pagamentos</h2><p class="payment-customer__intro">Veja o que já foi confirmado e o que ainda falta pagar. O pagamento só aparece como concluído depois que a operação confere o recebimento.</p><div data-payment-content="customer">${warning()?`<p role="status">${esc(warning())}</p>`:customerContent()}</div></section>` + (window.TrameliFinancialHistory?.customerMarkup() || '');
   }
   function upcomingRecurringMarkup() {
     const tomorrow = new Date(`${today()}T12:00:00Z`); tomorrow.setUTCDate(tomorrow.getUTCDate()+1); const tomorrowKey = tomorrow.toISOString().slice(0,10);
@@ -140,7 +140,7 @@ export function initPayments(live) {
 
   function render() {
     return `${window.TrameliPix?.render() || ''}<section class="screen-panel payment-panel"><div class="screen-panel__heading"><div><span class="screen-eyebrow">PENDÊNCIAS</span><h2>Recebimentos</h2></div></div><div data-payment-content="operator">${operatorContent()}</div></section>
-      <section class="screen-panel payment-panel payment-closing"><div class="screen-panel__heading"><div><span class="screen-eyebrow">CONTROLE</span><h2>Fechamento diário</h2></div></div><div class="payment-actions"><label>Data<input type="date" data-closing-day value="${selectedDay}" max="${today()}"></label><button type="button" data-day-preview>Ver resumo</button><button type="button" data-day-close>Fechar dia</button></div><div data-day-summary aria-live="polite"></div><div data-day-history></div></section>`;
+      <section class="screen-panel payment-panel payment-closing"><div class="screen-panel__heading"><div><span class="screen-eyebrow">CONTROLE</span><h2>Fechamento diário</h2></div></div><div class="payment-actions"><label>Data<input type="date" data-closing-day value="${selectedDay}" max="${today()}"></label><button type="button" data-day-preview>Ver resumo</button><button type="button" data-day-close>Fechar dia</button></div><div data-day-summary aria-live="polite"></div><div data-day-history></div></section>` + (window.TrameliFinancialHistory?.operatorMarkup() || '');
   }
   function refreshContent() {
     document.querySelectorAll('[data-payment-content]').forEach(host=>{host.innerHTML=warning()?`<p role="status">${esc(warning())}</p><button type="button" data-pay-refresh>Verificar novamente</button>`:host.dataset.paymentContent==='customer'?customerContent():operatorContent();});
@@ -363,5 +363,6 @@ export function initPayments(live) {
   window.TrameliPayments={render,customerRender,refresh,previewDay,openForCustomer,api};
   window.addEventListener('trameli:orders-changed',()=>{if(document.querySelector('[data-payment-content]'))refresh();});
   window.addEventListener('trameli:payments-refresh',()=>refresh());
+  window.addEventListener('trameli:historical-finances-changed',()=>{ if(document.querySelector('[data-payment-content]')) refreshContent(); });
   refresh();
 }
