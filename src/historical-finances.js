@@ -79,7 +79,7 @@ async function parseXlsx(file) {
       let col=0;for(const c of letters)col=col*26+c.charCodeAt(0)-64;col--;
       const v=cell.getElementsByTagName('v')[0]?.textContent??'';
       const type=cell.getAttribute('t');
-      row[col]=type==='s'?shared[Number(v)]??'':type==='inlineStr'?[...cell.getElementsByTagName('t')].map(x=>x.textContent).join(''):type==='n'||!type?Number(v):v;
+      row[col]=type==='s'?shared[Number(v)]??'':type==='inlineStr'?[...cell.getElementsByTagName('t')].map(x=>x.textContent).join(''):type==='n'||!type?(v===''?'':Number(v)):v;
       if(!Number.isFinite(row[col]))row[col]=v;
     }
     result.push({number,values:row});
