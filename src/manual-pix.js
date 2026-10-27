@@ -98,12 +98,15 @@ export function initManualPix(live) {
     opening=true;
     open('<h2>Pix do histórico financeiro</h2><p>Conferindo o saldo em aberto…</p>');
     try{
-      await Promise.all([refresh(),window.TrameliFinancialHistory?.refresh?.()]);
+      await refresh();
       if(problem)throw new Error(problem);
       if(!config?.enabled)throw new Error('Pix ainda não está habilitado. Combine o pagamento diretamente com a Shirley.');
-      const history=window.TrameliFinancialHistory;
-      if(!history)throw new Error('Não foi possível consultar o histórico financeiro.');
-      const pending=history.entries().filter(e=>e.customer_id===live.user.id && e.status==='pending');
+      // Reconsulta o banco no instante do pagamento para nao cobrar um historico ja quitado.
+      const result=await live.client.from('trameli_historical_finances')
+        .select('entry_date,amount_cents').eq('customer_id',live.user.id)
+        .eq('status','pending').is('removed_at',null);
+      if(result.error)throw result.error;
+      const pending=result.data||[];
       const amount=pending.reduce((sum,e)=>sum+Number(e.amount_cents),0);
       if(!pending.length||amount<1)throw new Error('Seu histórico financeiro não tem valores pendentes.');
       // Nunca usa trameli_signal_pix_payment: essa RPC aceita apenas pedidos reais.
@@ -126,7 +129,7 @@ export function initManualPix(live) {
         <section class="pix-signal-reminder" aria-label="Conferência após pagamento">
           <span>DEPOIS DE PAGAR</span>
           <strong>Avise a Shirley para dar baixa no histórico</strong>
-          <p>O pagamento pode ser feito hoje, antes do fechamento. O sistema só marcará como pago quando a Shirley conferir o recebimento.</p>
+          <p>O pagamento pode ser feito hoje, antes do fechamento. O sistema só marcará como pago quando a Shirley conferir o recebimento. Se você já transferiu, não pague novamente.</p>
           ${waHref?`<a class="pix-whatsapp pix-whatsapp--wide" href="${waHref}" target="_blank" rel="noopener noreferrer">${whatsappIcon}<span>Já paguei · Avisar pelo WhatsApp</span></a>`:'<p>Informe o pagamento diretamente à Shirley e envie o comprovante para conferência.</p>'}
         </section>
       </div>`);
