@@ -58,3 +58,18 @@ test('historico nao afeta producao e rls protege visualizacao', () => {
   assert.match(grace,/open_history as \(/);
   assert.match(grace,/historical_due_cents/);
 });
+
+test('historico pendente aparece imediatamente e oferece Pix antecipado separado', () => {
+  const customer=readFileSync(new URL('../src/historical-finances.js',import.meta.url),'utf8');
+  const pix=readFileSync(new URL('../src/manual-pix.js',import.meta.url),'utf8');
+  const payments=readFileSync(new URL('../src/payments.js',import.meta.url),'utf8');
+  assert.match(customer,/data-history-pix/);
+  assert.match(customer,/t\.due\?/);
+  assert.match(customer,/mesmo antes do fechamento/);
+  assert.match(pix,/async function payHistorical\(/);
+  assert.match(pix,/pixForAmount\(config\.payload,amount\)/);
+  assert.match(pix,/data-history-pix/);
+  assert.match(pix,/Já paguei · Avisar pelo WhatsApp/);
+  assert.match(pix,/shownOrderIds=\[\];shownAmount=amount;shownOrderText='Histórico financeiro';intentRequestId=null/);
+  assert.match(payments,/combinedDue=t\.due_cents\+historyTotals\.due/);
+});
