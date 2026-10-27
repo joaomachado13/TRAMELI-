@@ -3,6 +3,7 @@ import { enabled, LiveData } from './live-data.js';
 import { requireAccess } from './auth-ui.js';
 import { initAccount } from './account.js';
 import { initPayments } from './payments.js';
+import { initHistoricalFinances } from './historical-finances.js';
 import { initManualPix } from './manual-pix.js';
 import { initShopping } from './shopping.js';
 import * as orderMath from './order-math.js';
@@ -201,6 +202,7 @@ if (enabled) {
   document.addEventListener('visibilitychange', () => { if (!document.hidden) synchronize(); });
 }
 
+initHistoricalFinances(window.TrameliLive);
 initPayments(window.TrameliLive);
 initManualPix(window.TrameliLive);
 initShopping(window.TrameliLive);
