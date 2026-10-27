@@ -138,11 +138,12 @@ export function initHistoricalFinances(live) {
   function customerMarkup() {
     const rows=period(null,null,live.user.id);
     const t=sums(rows);
-    return '<section class="payment-panel history-client" data-history-customer><h3>Histórico financeiro anterior ao aplicativo</h3><p>Valores registrados pela Shirley sem detalhamento de produtos. Entram no fechamento da sua quinzena ou mês, mas não são novos pedidos.</p>'+
+    return '<section class="payment-panel history-client" data-history-customer><h3>Histórico financeiro anterior ao aplicativo</h3><p>Seus valores anteriores ao aplicativo aparecem assim que a Shirley os registra. Você pode pagar os pendentes agora, mesmo antes do fechamento da quinzena ou do mês. Não são novos pedidos.</p>'+
       (state.error?'<p role="status">'+esc(state.error)+'</p>':'')+
       '<div class="history-totals"><span>Total <strong>'+money(t.total)+'</strong></span><span>Pago <strong>'+money(t.paid)+'</strong></span><span>Em aberto <strong>'+money(t.due)+'</strong></span></div>'+
+      (t.due?'<button class="history-pay-early" type="button" data-history-pix>Pagar histórico agora com Pix · '+money(t.due)+'</button>':'')+
       (rows.length?'<div class="history-items">'+rows.map(e=>'<div class="history-item"><span>'+fmt(e.entry_date)+' · Histórico financeiro</span><strong>'+money(e.amount_cents)+'</strong><small>'+statusLabel(e)+'</small></div>').join('')+'</div>':'<p>Nenhum lançamento histórico para esta conta.</p>')+
-      (t.due?'<p class="history-note">Os valores históricos pendentes devem ser acertados com a Shirley; o Pix automático dos pedidos não inclui esses lançamentos.</p>':'')+'</section>';
+      (t.due?'<p class="history-note">O Pix do histórico é separado do Pix dos pedidos. Depois de pagar, avise a Shirley para ela conferir e dar baixa; o sistema não confirma o recebimento automaticamente.</p>':'')+'</section>';
   }
   function operationMarkup(day) {
     const rows=period(day,day),t=sums(rows);
