@@ -161,7 +161,7 @@ export function initHistoricalFinances(live) {
       ' · '+(counts.ready||0)+' prontas · '+(counts.unmatched||0)+' não identificadas · '+(counts.duplicate||0)+' possíveis duplicadas · '+(counts.invalid||0)+' inválidas</p>'+
       '<div class="history-preview-table"><table><thead><tr><th>Linha</th><th>Nome no arquivo</th><th>Data</th><th>Valor</th><th>Cliente vinculado</th><th>Conferência</th></tr></thead><tbody>'+
       state.draft.map((r,i)=>'<tr><td>'+r.number+'</td><td>'+esc(r.name)+'</td><td>'+esc(fmt(r.date))+'</td><td>'+money(r.amount)+'</td><td>'+
-      (r.state==='invalid'?'—':r.state==='ready'?esc(profileName(r.customerId)):'<select data-history-match="'+i+'">'+options(r.customerId)+'</select>')+
+      (r.state==='invalid'?'—':'<select data-history-match="'+i+'">'+options(r.customerId)+'</select>')+
       '</td><td>'+({ready:'Pronto',unmatched:'Vincular cliente',duplicate:'Possível duplicado',invalid:'Dados inválidos',inserted:'Importado',skipped:'Já existia',failed:'Falhou'}[r.state]||r.state)+
       (r.state==='duplicate'?'<label><input type="checkbox" data-history-override="'+i+'" '+(r.override?'checked':'')+'> Importar mesmo assim</label>':'')+
       '</td></tr>').join('')+'</tbody></table></div><button type="button" data-history-import '+(!active||state.busy?'disabled':'')+'>Importar '+active+' lançamento(s) conferido(s)</button>'+
