@@ -40,6 +40,16 @@ function parseCSV(text) {
   if(row.length || field){row.push(field);rows.push(row);}
   return rows;
 }
+function decodeXlsxCell(type, rawValue, shared, inlineText='') {
+  if(type==='s') {
+    const index=Number(rawValue);
+    if(!Number.isInteger(index) || index<0 || index>=shared.length) throw new Error('O Excel contém uma referência de texto inválida.');
+    return shared[index];
+  }
+  if(type==='inlineStr')return inlineText;
+  if(type==='n'||!type)return rawValue===''?'':Number(rawValue);
+  return rawValue;
+}
 async function parseXlsx(file) {
   const bin=new Uint8Array(await file.arrayBuffer()), view=new DataView(bin.buffer);
   const u16=i=>view.getUint16(i,true),u32=i=>view.getUint32(i,true);
@@ -79,8 +89,10 @@ async function parseXlsx(file) {
       let col=0;for(const c of letters)col=col*26+c.charCodeAt(0)-64;col--;
       const v=cell.getElementsByTagName('v')[0]?.textContent??'';
       const type=cell.getAttribute('t');
-      row[col]=type==='s'?shared[Number(v)]??'':type==='inlineStr'?[...cell.getElementsByTagName('t')].map(x=>x.textContent).join(''):type==='n'||!type?(v===''?'':Number(v)):v;
-      if(!Number.isFinite(row[col]))row[col]=v;
+      // Strings em sharedStrings precisam continuar texto. Antes, o teste
+      // Number.isFinite() trocava NOME/DATA/VALOR pelo indice 0/1/2 do XLSX.
+      const inlineText=type==='inlineStr'?[...cell.getElementsByTagName('t')].map(x=>x.textContent).join(''):'';
+      row[col]=decodeXlsxCell(type,v,shared,inlineText);
     }
     result.push({number,values:row});
   }

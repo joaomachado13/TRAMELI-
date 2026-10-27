@@ -7,7 +7,7 @@ const source = readFileSync(new URL('../src/historical-finances.js', import.meta
   .replace("import './historical-finances.css';", '')
   .replace('export function initHistoricalFinances', 'function initHistoricalFinances');
 const context = {};
-runInNewContext(source + '\nglobalThis.helpers={extractedRows,dateValue,toCents,validDate,parseCSV,norm};', context);
+runInNewContext(source + '\nglobalThis.helpers={extractedRows,dateValue,toCents,validDate,parseCSV,norm,decodeXlsxCell};', context);
 const h=context.helpers;
 
 test('planilha de 16/10 e 17/10 com campo fixo e pago isolados', () => {
@@ -72,4 +72,22 @@ test('historico pendente aparece imediatamente e oferece Pix antecipado separado
   assert.match(pix,/Já paguei · Avisar pelo WhatsApp/);
   assert.match(pix,/shownOrderIds=\[\];shownAmount=amount;shownOrderText='Histórico financeiro';intentRequestId=null/);
   assert.match(payments,/combinedDue=t\.due_cents\+historyTotals\.due/);
+});
+
+test('XLSX da Shirley: textos compartilhados sao reconhecidos como cabecalhos e nomes, sem virar numeros', () => {
+  // O arquivo real usa t="s" + sharedStrings.xml. Os indices sao 0,1,2...
+  const shared=['NOME','DATA','VALOR','FLÁVIA NEWELL ','Fixo','pago','LAYLA'];
+  const header=[0,1,2].map(v=>h.decodeXlsxCell('s',String(v),shared));
+  const first=[h.decodeXlsxCell('s','3',shared),h.decodeXlsxCell(null,'46311',shared),h.decodeXlsxCell(null,'18',shared),h.decodeXlsxCell('s','4',shared),h.decodeXlsxCell(null,'',shared)];
+  const second=[h.decodeXlsxCell('s','6',shared),h.decodeXlsxCell(null,'46312',shared),h.decodeXlsxCell(null,'7.6',shared),undefined,h.decodeXlsxCell('s','5',shared)];
+  assert.deepEqual(Array.from(header),['NOME','DATA','VALOR']);
+  const result=h.extractedRows([header,first,second]);
+  assert.equal(result.length,2);
+  assert.equal(result[0].name,'FLÁVIA NEWELL');
+  assert.equal(result[0].date,'2026-10-16');
+  assert.equal(result[0].amount,1800);
+  assert.equal(result[0].paid,false);
+  assert.equal(result[1].date,'2026-10-17');
+  assert.equal(result[1].amount,760);
+  assert.equal(result[1].paid,true);
 });
