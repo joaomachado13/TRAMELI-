@@ -91,12 +91,56 @@ export function initManualPix(live) {
     }catch(error){if(dialog.open)fail(error.message||'Não foi possível preparar o Pix.');}
     finally{opening=false;}
   }
+  // Pagamento antecipado dos lancamentos historicos: nao precisa aguardar o fechamento.
+  // Pagamento e aviso por WhatsApp continuam sujeitos a confirmacao manual da Shirley.
+  async function payHistorical() {
+    if(!live||opening)return;
+    opening=true;
+    open('<h2>Pix do histórico financeiro</h2><p>Conferindo o saldo em aberto…</p>');
+    try{
+      await Promise.all([refresh(),window.TrameliFinancialHistory?.refresh?.()]);
+      if(problem)throw new Error(problem);
+      if(!config?.enabled)throw new Error('Pix ainda não está habilitado. Combine o pagamento diretamente com a Shirley.');
+      const history=window.TrameliFinancialHistory;
+      if(!history)throw new Error('Não foi possível consultar o histórico financeiro.');
+      const pending=history.entries().filter(e=>e.customer_id===live.user.id && e.status==='pending');
+      const amount=pending.reduce((sum,e)=>sum+Number(e.amount_cents),0);
+      if(!pending.length||amount<1)throw new Error('Seu histórico financeiro não tem valores pendentes.');
+      // Nunca usa trameli_signal_pix_payment: essa RPC aceita apenas pedidos reais.
+      shownOrderIds=[];shownAmount=amount;shownOrderText='Histórico financeiro';intentRequestId=null;
+      const payload=pixForAmount(config.payload,amount);
+      const dataUrl=await QRCode.toDataURL(payload,{errorCorrectionLevel:'M',width:320,margin:4});
+      const phone=whatsappNumber(live.settings?.contact);
+      const dates=[...new Set(pending.map(e=>e.entry_date))].sort();
+      const datesText=dates.length<=4?dates.map(d=>new Date(d+'T12:00:00').toLocaleDateString('pt-BR')).join(', '):dates.length+' datas';
+      const waMessage='Olá! Fiz o pagamento do histórico financeiro do Pão Doce ('+datesText+'), no valor de '+money(amount)+'. Vou enviar o comprovante por aqui para conferência.';
+      const waHref=phone?'https://wa.me/'+phone+'?text='+encodeURIComponent(waMessage):'';
+      if(!dialog.open)return;
+      open(`<div class="pix-flow">
+        <div class="pix-flow__head"><span>PAGAMENTO ANTECIPADO · HISTÓRICO FINANCEIRO</span><h2 class="pix-amount">${money(amount)}</h2><p>${pending.length} ${pending.length===1?'lançamento pendente':'lançamentos pendentes'} · ${esc(datesText)}</p></div>
+        <div class="pix-flow__receiver">Recebedor: <strong>${esc(config.receiver_label)}</strong></div>
+        <img class="pix-qr" src="${dataUrl}" width="320" height="320" alt="QR Code Pix do histórico financeiro">
+        <label class="pix-copy-field"><span>Pix Copia e Cola</span><textarea data-pix-payload readonly rows="3">${esc(payload)}</textarea></label>
+        <button type="button" class="pix-copy-button" data-pix-copy>Copiar código Pix</button>
+        <p class="pix-copy-status" data-pix-copy-status role="status"></p>
+        <section class="pix-signal-reminder" aria-label="Conferência após pagamento">
+          <span>DEPOIS DE PAGAR</span>
+          <strong>Avise a Shirley para dar baixa no histórico</strong>
+          <p>O pagamento pode ser feito hoje, antes do fechamento. O sistema só marcará como pago quando a Shirley conferir o recebimento.</p>
+          ${waHref?`<a class="pix-whatsapp pix-whatsapp--wide" href="${waHref}" target="_blank" rel="noopener noreferrer">${whatsappIcon}<span>Já paguei · Avisar pelo WhatsApp</span></a>`:'<p>Informe o pagamento diretamente à Shirley e envie o comprovante para conferência.</p>'}
+        </section>
+      </div>`);
+      expires=setTimeout(()=>{if(dialog.open)fail('Consulte o saldo atualizado antes de gerar outro Pix.');},300000);
+    }catch(error){if(dialog.open)fail(error.message||'Não foi possível gerar o Pix do histórico.');}
+    finally{opening=false;}
+  }
   document.addEventListener('click',async event=>{
     const button=event.target.closest('button');if(!button)return;
     if(button.matches('[data-pix-close]')){if(!dialog.querySelector('[data-busy]')){dialog.close();clearTimeout(expires);}return;}
     if(button.matches('[data-pix-config]')){await refresh();configure();return;}
     if(button.matches('[data-pix-refresh]')){await refresh();return;}
     if(button.matches('[data-pix-order]')){await pay(button.dataset.pixOrder);return;}
+    if(button.matches('[data-history-pix]')){await payHistorical();return;}
     if(button.matches('[data-pix-signal]')){
       if(!intentRequestId||!shownOrderIds.length)return;
       button.disabled=true;
