@@ -195,6 +195,11 @@ window.addEventListener('trameli:orders-changed', () => {
   refreshRouteWhenIdle(['#pendencias', '#pedidos', '#agenda', '#financeiro', '#relatorios']);
 });
 window.addEventListener('trameli:payments-changed', updateOverview);
+window.addEventListener('trameli:historical-finances-changed', () => {
+  updateOverview();
+  if (location.hash === '#financeiro') renderCostSummary('finance-cost-summary', financeRange.from || null, financeRange.to || null);
+  if (location.hash === '#relatorios' && reportState.generated) renderReportResults();
+});
 window.addEventListener('trameli:catalog-changed', () => { updateOverview(); refreshRouteWhenIdle(['#produtos','#pendencias']); });
 window.addEventListener('trameli:clients-changed', () => { refreshRouteWhenIdle(['#clientes']); });
 
@@ -693,7 +698,14 @@ document.addEventListener('click', async event => {
             status: !reconciled ? 'A conferir' : due <= 0 ? 'Pago' : paid > 0 ? 'Parcial' : 'Em aberto',
             totalCents: orderTotal(order), paidCents: paid, dueCents: due,
             items: order.items.map(item => ({ label: window.TrameliOrderMath.itemLabel(item), amountCents: item.weightGrams ? Number(item.priceCents || 0) : Number(item.quantity || 0) * Number(item.priceCents || 0) })),
-          })),
+          })).concat((customer.history || []).map(entry => ({
+            date: entry.entry_date, code: 'HIST', dueDate: billingDeadlineForDelivery(entry.entry_date),
+            status: entry.status === 'paid' ? 'Pago' : 'Em aberto',
+            totalCents: Number(entry.amount_cents),
+            paidCents: entry.status === 'paid' ? Number(entry.amount_cents) : 0,
+            dueCents: entry.status === 'paid' ? 0 : Number(entry.amount_cents),
+            items: [{ label: 'Histórico financeiro (sem produtos discriminados)', amountCents: Number(entry.amount_cents) }],
+          }))),
         })) : null,
         businessName: readSettings().businessName || 'Pão Doce',
         filename: `trameli-${reportState.type}-${reportRange.from || 'inicio'}-${reportRange.to || saoPauloToday()}`,
