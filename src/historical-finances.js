@@ -1,3 +1,4 @@
+import './historical-finances.css';
 // Historico financeiro avulso. Nao cria pedido, produto ou tarefa de separacao.
 const TABLE = 'trameli_historical_finances';
 const money = n => (Number(n || 0) / 100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
