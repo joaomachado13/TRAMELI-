@@ -278,7 +278,12 @@ const pages = {
     <div class="report-filters finance-custom-dates" ${financeRange.period === 'custom' ? '' : 'hidden'}><label>De<input id="finance-from" type="date" value="${financeRange.from}"></label><label>Até<input id="finance-to" type="date" value="${financeRange.to}"></label></div><div id="finance-cost-summary" aria-live="polite"></div>`;
   },
   relatorios: () => {
-    const customers = [...new Map(activeOrders().map(order => [reportCustomerKey(order), { key: reportCustomerKey(order), name: order.customer }])).values()].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+    const allCustomers = new Map(activeOrders().map(order => [reportCustomerKey(order), { key: reportCustomerKey(order), name: order.customer }]));
+    for (const entry of window.TrameliFinancialHistory?.entries() || []) {
+      const profile = window.TrameliPayments?.api?.profiles?.find(p => p.user_id === entry.customer_id);
+      if (profile && !allCustomers.has(entry.customer_id)) allCustomers.set(entry.customer_id, { key: entry.customer_id, name: profile.name });
+    }
+    const customers = [...allCustomers.values()].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
     return `${intro('Documentos', 'Relatórios', 'Gere relatórios gerais ou filtre por um cliente específico.')}
       <section class="report-generator"><div class="report-generator__form"><label>Tipo de relatório<select id="report-type"><option value="financial" ${reportState.type === 'financial' ? 'selected' : ''}>Resumo financeiro</option><option value="sales" ${reportState.type === 'sales' ? 'selected' : ''}>Vendas</option><option value="customers" ${reportState.type === 'customers' ? 'selected' : ''}>Clientes</option><option value="billing" ${reportState.type === 'billing' ? 'selected' : ''}>Cobrança detalhada</option><option value="products" ${reportState.type === 'products' ? 'selected' : ''}>Produtos</option><option value="orders" ${reportState.type === 'orders' ? 'selected' : ''}>Pedidos</option><option value="deliveries" ${reportState.type === 'deliveries' ? 'selected' : ''}>Entregas</option></select></label><label>Período<select id="report-period"><option value="today" ${reportState.period === 'today' ? 'selected' : ''}>Hoje</option><option value="week" ${reportState.period === 'week' ? 'selected' : ''}>Últimos 7 dias</option><option value="fortnight" ${reportState.period === 'fortnight' ? 'selected' : ''}>Últimos 15 dias</option><option value="month" ${reportState.period === 'month' ? 'selected' : ''}>Últimos 30 dias</option><option value="custom" ${reportState.period === 'custom' ? 'selected' : ''}>Personalizado</option></select></label><label>Cliente<select id="report-customer"><option value="all" ${reportState.customer === 'all' ? 'selected' : ''}>Todos os clientes</option>${customers.map(customer => `<option value="${escapeHtml(customer.key)}" ${reportState.customer === customer.key ? 'selected' : ''}>${escapeHtml(formatCustomerName(customer.name))}</option>`).join('')}</select></label><div class="report-custom-dates" ${reportState.period === 'custom' ? '' : 'hidden'}><label>De<input id="report-from" type="date" value="${reportRange.from}"></label><label>Até<input id="report-to" type="date" value="${reportRange.to}"></label></div><button class="screen-primary" type="button" data-report-generate>Gerar relatório</button></div><div id="report-results" class="report-preview" aria-live="polite">${reportState.generated ? '' : '<div class="friendly-empty"><strong>Nenhum relatório gerado.</strong><span>Escolha um tipo, período e cliente para começar.</span></div>'}</div></section>`;
   },
@@ -313,7 +318,11 @@ function renderReportResults() {
   }
   const rangedOrders = inRange(activeOrders(), from, to);
   const orders = rangedOrders.filter(order => reportState.customer === 'all' || reportCustomerKey(order) === reportState.customer);
-  const total = orders.reduce((sum, order) => sum + orderTotal(order), 0);
+  const historical = ['financial','billing'].includes(reportState.type)
+    ? (window.TrameliFinancialHistory?.period(from,to) || []).filter(item => reportState.customer === 'all' || item.customer_id === reportState.customer)
+    : [];
+  const historicSums = window.TrameliFinancialHistory?.sums(historical) || { total:0, paid:0, due:0 };
+  const total = orders.reduce((sum, order) => sum + orderTotal(order), 0) + historicSums.total;
   const title = ({ financial: 'Resumo financeiro', sales: 'Vendas', customers: 'Clientes', billing: 'Cobrança detalhada', products: 'Produtos', orders: 'Pedidos', deliveries: 'Entregas' })[reportState.type];
   const period = reportPeriodLabel();
   reportBillingCustomers = [];
@@ -338,6 +347,16 @@ function renderReportResults() {
       if (!balance) entry.reconciled = false;
       customers.set(key, entry);
     });
+    for (const item of historical) {
+      const key=item.customer_id;
+      const profile=window.TrameliPayments?.api?.profiles?.find(p => p.user_id===key);
+      const entry=customers.get(key) || { key, name:profile?.name||item.original_name, orders:[], history:[], total:0, paid:0, due:0, reconciled:true };
+      entry.history ||= [];
+      entry.history.push(item);
+      entry.total += Number(item.amount_cents);
+      if(item.status==='paid') entry.paid += Number(item.amount_cents); else entry.due += Number(item.amount_cents);
+      customers.set(key,entry);
+    }
     const sortedCustomers = [...customers.values()].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
     reportBillingCustomers = sortedCustomers;
     const cards = sortedCustomers.map(customer => {
@@ -349,9 +368,16 @@ function renderReportResults() {
         }).join('');
         return `<section class="billing-order"><header><div><strong>${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR')}</strong><small>#${escapeHtml(orderCode(order))} · vence ${new Date(`${billingDeadlineForDelivery(order.date)}T12:00:00`).toLocaleDateString('pt-BR')}</small></div><span class="screen-badge ${due <= 0 ? 'screen-badge--green' : 'screen-badge--amber'}">${paymentStatus}</span></header><ul>${items}</ul><footer><span>Total <strong>${currency(orderTotal(order))}</strong></span><span>Pago <strong>${currency(paid)}</strong></span><span>Em aberto <strong>${currency(due)}</strong></span></footer></section>`;
       }).join('');
-      return `<article class="billing-customer" data-billing-customer="${escapeHtml(customer.key)}"><header class="billing-customer__head"><label><input type="checkbox" data-billing-select value="${escapeHtml(customer.key)}" checked> <span><strong>${escapeHtml(formatCustomerName(customer.name))}</strong><small>${customer.orders.length} ${customer.orders.length === 1 ? 'pedido' : 'pedidos'} no período</small></span></label><button type="button" data-billing-only="${escapeHtml(customer.key)}">PDF deste cliente</button></header><div class="billing-customer__totals"><span>Compras <strong>${currency(customer.total)}</strong></span><span>Pago <strong>${currency(customer.paid)}</strong></span><span>Em aberto <strong>${currency(customer.due)}</strong></span></div>${customer.reconciled ? '' : '<p class="report-note">Há pedido sem saldo conciliado; confira o Financeiro antes de cobrar.</p>'}${orderRows}</article>`;
+      const historicalRows = (customer.history || []).map(item => {
+        const paid=item.status==='paid'?Number(item.amount_cents):0;
+        const due=item.status==='paid'?0:Number(item.amount_cents);
+        return `<section class="billing-order"><header><div><strong>${new Date(`${item.entry_date}T12:00:00`).toLocaleDateString('pt-BR')}</strong><small>Histórico financeiro (sem produtos)</small></div><span class="screen-badge ${due===0?'screen-badge--green':'screen-badge--amber'}">${due===0?'Pago':'Em aberto'}</span></header><ul><li><span>Lançamento anterior ao aplicativo</span><strong>${currency(item.amount_cents)}</strong></li></ul><footer><span>Total <strong>${currency(item.amount_cents)}</strong></span><span>Pago <strong>${currency(paid)}</strong></span><span>Em aberto <strong>${currency(due)}</strong></span></footer></section>`;
+      }).join('');
+      return `<article class="billing-customer" data-billing-customer="${escapeHtml(customer.key)}"><header class="billing-customer__head"><label><input type="checkbox" data-billing-select value="${escapeHtml(customer.key)}" checked> <span><strong>${escapeHtml(formatCustomerName(customer.name))}</strong><small>${customer.orders.length} ${customer.orders.length === 1 ? 'pedido' : 'pedidos'} no período${(customer.history||[]).length ? ` · ${(customer.history||[]).length} histórico(s)` : ''}</small></span></label><button type="button" data-billing-only="${escapeHtml(customer.key)}">PDF deste cliente</button></header><div class="billing-customer__totals"><span>Compras <strong>${currency(customer.total)}</strong></span><span>Pago <strong>${currency(customer.paid)}</strong></span><span>Em aberto <strong>${currency(customer.due)}</strong></span></div>${customer.reconciled ? '' : '<p class="report-note">Há pedido sem saldo conciliado; confira o Financeiro antes de cobrar.</p>'}${orderRows}${historicalRows}</article>`;
     }).join('');
     detail = `<div class="billing-toolbar"><div><strong>Quem vai no PDF?</strong><span>Marque um, vários ou todos os clientes.</span></div><button type="button" data-billing-select-all>Selecionar todos</button><button type="button" data-billing-clear>Limpar seleção</button></div><div class="billing-report-customers">${cards}</div>`;
+  } else if (reportState.type === 'financial') {
+    detail = `<div class="report-table">${orders.slice().sort((a, b) => b.date.localeCompare(a.date)).map(order => `<div><strong>#${escapeHtml(orderCode(order))} · ${escapeHtml(formatCustomerName(order.customer))}</strong><span>${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR')} · Pedido</span><strong>${currency(orderTotal(order))}</strong></div>`).join('')}${historical.map(e => `<div><strong>${escapeHtml(window.TrameliPayments?.api?.profiles?.find(p=>p.user_id===e.customer_id)?.name || e.original_name)}</strong><span>${new Date(`${e.entry_date}T12:00:00`).toLocaleDateString('pt-BR')} · Histórico financeiro · ${e.status==='paid'?'Pago':'Pendente'}</span><strong>${currency(e.amount_cents)}</strong></div>`).join('')}</div>`;
   } else if (reportState.type === 'products') {
     const rows = new Map();
     orders.forEach(order => order.items.forEach(item => { const row = rows.get(item.name) || { quantity: 0, total: 0 }; row.quantity += item.weightGrams ? 1 : item.quantity; row.total += item.quantity * item.priceCents; rows.set(item.name, row); }));
@@ -359,8 +385,8 @@ function renderReportResults() {
   } else {
     detail = `<div class="report-table">${orders.slice().sort((a, b) => b.date.localeCompare(a.date)).map(order => `<div><strong>#${escapeHtml(orderCode(order))} · ${escapeHtml(formatCustomerName(order.customer))}</strong><span>${new Date(`${order.date}T12:00:00`).toLocaleDateString('pt-BR')} · ${orderStateLabel(order)}</span><strong>${currency(orderTotal(order))}</strong></div>`).join('')}</div>`;
   }
-  const body = `<article class="generated-report"><header><div><span>PÃO DOCE · RELATÓRIO</span><h2>${title}</h2><p>${period}</p></div><strong>${orders.length} pedidos</strong></header><div class="report-summary"><div><span>Pedidos</span><strong>${orders.length}</strong></div><div><span>Valor total</span><strong>${currency(total)}</strong></div></div>${orders.length ? detail : '<div class="friendly-empty"><strong>Nenhum dado neste período.</strong><span>Escolha outro intervalo para gerar o relatório.</span></div>'}</article>`;
-  host.innerHTML = `${body}<div class="report-actions"><button class="screen-primary" type="button" data-report-print ${orders.length ? '' : 'disabled'}>Baixar PDF</button><button type="button" data-report-generate>Atualizar relatório</button></div>`;
+  const body = `<article class="generated-report"><header><div><span>PÃO DOCE · RELATÓRIO</span><h2>${title}</h2><p>${period}</p></div><strong>${orders.length} pedidos · ${historical.length} históricos</strong></header><div class="report-summary"><div><span>Pedidos</span><strong>${orders.length}</strong></div>${['billing','financial'].includes(reportState.type) ? `<div><span>Histórico financeiro</span><strong>${currency(historicSums.total)}</strong></div><div><span>Histórico em aberto</span><strong>${currency(historicSums.due)}</strong></div>` : ''}<div><span>Valor total</span><strong>${currency(total)}</strong></div></div>${orders.length || historical.length ? detail : '<div class="friendly-empty"><strong>Nenhum dado neste período.</strong><span>Escolha outro intervalo para gerar o relatório.</span></div>'}</article>`;
+  host.innerHTML = `${body}<div class="report-actions"><button class="screen-primary" type="button" data-report-print ${orders.length || historical.length ? '' : 'disabled'}>Baixar PDF</button><button type="button" data-report-generate>Atualizar relatório</button></div>`;
   let sheet = document.getElementById('report-print-sheet');
   if (!sheet) { sheet = document.createElement('div'); sheet.id = 'report-print-sheet'; document.body.append(sheet); }
   sheet.innerHTML = body;
@@ -374,12 +400,14 @@ async function renderCostSummary(hostId, from = null, to = null) {
   const initial = financeMath.summarizeFinancials(orders, null);
   const overview = (summary, note) => {
     const balances = (window.TrameliPayments?.api?.balances || []).filter(row => (!from || row.delivery_date >= from) && (!to || row.delivery_date <= to));
-    const received = balances.reduce((sum, row) => sum + Number(row.paid_cents || 0), 0);
-    const due = balances.reduce((sum, row) => sum + Number(row.due_cents || 0), 0);
+    const history = window.TrameliFinancialHistory?.period(from, to) || [];
+    const historyTotals = window.TrameliFinancialHistory?.sums(history) || {total:0,paid:0,due:0};
+    const received = balances.reduce((sum, row) => sum + Number(row.paid_cents || 0), 0) + historyTotals.paid;
+    const due = balances.reduce((sum, row) => sum + Number(row.due_cents || 0), 0) + historyTotals.due;
     const days = new Map();
     orders.forEach(order => days.set(order.date, (days.get(order.date) || 0) + orderTotal(order)));
     const bars = revenueChart([...days.entries()], currency);
-    return `<div class="finance-headline">${metric('Vendas', currency(summary.customerCents + summary.deliveryCents), `${orders.length} pedidos`)}${metric('Recebido', live ? currency(received) : '—', live ? 'Recebimentos conferidos' : 'Requer conexão')}${metric('Em aberto', live ? currency(due) : '—', live ? `${balances.filter(row => Number(row.due_cents) > 0).length} pedidos` : 'Requer conexão')}${metric('Lucro bruto', summary.profitCents === null ? 'Pendente' : currency(summary.profitCents), summary.profitCents === null ? 'Há custo realmente ausente' : 'Produtos vendidos − custo da padaria')}</div><div class="finance-charts"><section><div class="screen-panel__heading"><h2>Faturamento por dia</h2></div>${bars}</section><section><div class="screen-panel__heading"><h2>Recebido × em aberto</h2></div>${live ? balanceProgress(received, due, currency) : feedback({ title: 'Conecte a operação.', description: 'Os recebimentos aparecem quando a conexão está disponível.' })}</section></div><details class="finance-help"><summary>Como estes valores são calculados?</summary><p>${escapeHtml(note)}</p><p>Taxas de entrega no período: ${currency(summary.deliveryCents)}. Elas não entram no lucro bruto dos produtos.</p></details>`;
+    return `<div class="finance-headline">${metric('Vendas + histórico', currency(summary.customerCents + summary.deliveryCents + historyTotals.total), `${orders.length} pedidos · ${history.length} registros financeiros`)}${metric('Recebido', live ? currency(received) : '—', live ? 'Recebimentos conferidos' : 'Requer conexão')}${metric('Em aberto', live ? currency(due) : '—', live ? `${balances.filter(row => Number(row.due_cents) > 0).length} pedidos · ${history.filter(e=>e.status==='pending').length} históricos` : 'Requer conexão')}${metric('Lucro bruto', summary.profitCents === null ? 'Pendente' : currency(summary.profitCents), summary.profitCents === null ? 'Há custo realmente ausente' : 'Produtos vendidos − custo da padaria')}</div><div class="finance-charts"><section><div class="screen-panel__heading"><h2>Faturamento por dia</h2></div>${bars}</section><section><div class="screen-panel__heading"><h2>Recebido × em aberto</h2></div>${live ? balanceProgress(received, due, currency) : feedback({ title: 'Conecte a operação.', description: 'Os recebimentos aparecem quando a conexão está disponível.' })}</section></div><details class="finance-help"><summary>Como estes valores são calculados?</summary><p>${escapeHtml(note)}</p><p>Taxas de entrega no período: ${currency(summary.deliveryCents)}. Elas não entram no lucro bruto dos produtos.</p></details>`;
   };
   const request = ++costRequest;
   if (from && to && from > to) {
