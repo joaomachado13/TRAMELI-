@@ -97,7 +97,7 @@ export function initPayments(live) {
     // An operator opening the storefront must not see other customers in "Minha conta".
     const rows=api.balances.filter(row=>row.customer_id===live.user.id);
     const upcomingMarkup=upcomingRecurringMarkup();
-    if(!rows.length) return upcomingMarkup || '<div class="payment-customer-empty"><strong>Nenhum pagamento pendente.</strong><p>Quando você tiver pedidos vinculados à sua conta, o resumo aparecerá aqui.</p></div>';
+    if(!rows.length) return (upcomingMarkup || '<div class="payment-customer-empty"><strong>Nenhum pedido pendente.</strong><p>Confira também os lançamentos históricos logo abaixo.</p></div>');
     const t=totals(rows), openRows=rows.filter(row=>Number(row.due_cents)>0);
     const pixReady=window.TrameliPix && openRows.length>0;
     const billingFrequency=['mensal','quinzenal'].includes(live.profile?.billing_frequency) ? live.profile.billing_frequency : 'quinzenal';
@@ -107,7 +107,10 @@ export function initPayments(live) {
     const reminderClass=reminder.state==='overdue'?'is-overdue':reminder.state==='today'?'is-today':'is-upcoming';
     const frequencyLabel=billingFrequency==='mensal'?'FECHAMENTO MENSAL':'FECHAMENTO QUINZENAL';
     const reminderMarkup=reminder.state==='clear'?'':`<aside class="payment-deadline ${reminderClass}" role="status"><div><span>${frequencyLabel}</span><strong>${esc(reminder.message)}</strong><small>${money(reminder.dueCents)} neste fechamento · fecha ${closingDate} · pagar até ${reminderDate}</small></div>${reminder.days!==null&&reminder.days<=7?'<span class="payment-deadline__pulse" aria-hidden="true">!</span>':''}</aside>`;
-    return `${reminderMarkup}<div class="payment-customer-hero ${t.due_cents>0?'has-due':'is-clear'}">
+    const historyRows = window.TrameliFinancialHistory?.period(null,null,live.user.id) || [];
+    const historyDue = historyRows.filter(entry=>entry.status==='pending').reduce((sum,entry)=>sum+Number(entry.amount_cents),0);
+    const historyNotice = historyDue > 0 ? `<aside class="history-note">Além do saldo dos pedidos, você tem ${money(historyDue)} em lançamentos financeiros anteriores ao aplicativo. Esses valores fazem parte do fechamento, mas não do Pix automático dos pedidos.</aside>` : '';
+    return `${historyNotice}${reminderMarkup}<div class="payment-customer-hero ${t.due_cents>0?'has-due':'is-clear'}">
       <div class="payment-customer-hero__balance"><span>${t.due_cents>0?'Saldo em aberto':'Tudo certo por aqui'}</span><strong>${t.due_cents>0?money(t.due_cents):'R$ 0,00'}</strong><p>${t.due_cents>0?`Você tem ${openRows.length} ${openRows.length===1?'pedido aguardando pagamento':'pedidos aguardando pagamento'}.`:'Todos os pagamentos destes pedidos já foram confirmados.'}</p></div>
       <div class="payment-customer-hero__details"><div><span>Total em pedidos</span><strong>${money(t.total_cents)}</strong></div><div><span>Já confirmado</span><strong>${money(t.paid_cents)}</strong></div>${t.refund_due_cents>0?`<div class="is-refund"><span>A devolver</span><strong>${money(t.refund_due_cents)}</strong></div>`:''}</div>
       ${pixReady?`<button type="button" class="payment-pay-all" data-pix-order="all">${openRows.length===1?'Pagar agora':'Pagar saldo total'} · ${money(t.due_cents)}</button>`:''}
