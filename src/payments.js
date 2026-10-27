@@ -96,24 +96,28 @@ export function initPayments(live) {
   function customerContent() {
     // An operator opening the storefront must not see other customers in "Minha conta".
     const rows=api.balances.filter(row=>row.customer_id===live.user.id);
+    const historyRows=window.TrameliFinancialHistory?.period(null,null,live.user.id) || [];
+    const historyTotals=window.TrameliFinancialHistory?.sums(historyRows) || {total:0,paid:0,due:0};
     const upcomingMarkup=upcomingRecurringMarkup();
-    if(!rows.length) return (upcomingMarkup || '<div class="payment-customer-empty"><strong>Nenhum pedido pendente.</strong><p>Confira também os lançamentos históricos logo abaixo.</p></div>');
+    if(!rows.length&&!historyRows.length) return upcomingMarkup || '<div class="payment-customer-empty"><strong>Nenhum pagamento pendente.</strong><p>Seus pagamentos aparecerão aqui.</p></div>';
     const t=totals(rows), openRows=rows.filter(row=>Number(row.due_cents)>0);
+    const combinedDue=t.due_cents+historyTotals.due;
+    const combinedTotal=t.total_cents+historyTotals.total;
+    const combinedPaid=t.paid_cents+historyTotals.paid;
+    const historyPending=historyRows.filter(entry=>entry.status==='pending');
     const pixReady=window.TrameliPix && openRows.length>0;
     const billingFrequency=['mensal','quinzenal'].includes(live.profile?.billing_frequency) ? live.profile.billing_frequency : 'quinzenal';
-    const reminder=billingReminder(rows,today(),billingFrequency);
+    const reminder=billingReminder([...rows, ...historyPending.map(entry=>({delivery_date:entry.entry_date,due_cents:entry.amount_cents}))],today(),billingFrequency);
     const reminderDate=reminder.deadline?dateLabel(reminder.deadline):'';
     const closingDate=reminder.closingDate?dateLabel(reminder.closingDate):'';
     const reminderClass=reminder.state==='overdue'?'is-overdue':reminder.state==='today'?'is-today':'is-upcoming';
     const frequencyLabel=billingFrequency==='mensal'?'FECHAMENTO MENSAL':'FECHAMENTO QUINZENAL';
     const reminderMarkup=reminder.state==='clear'?'':`<aside class="payment-deadline ${reminderClass}" role="status"><div><span>${frequencyLabel}</span><strong>${esc(reminder.message)}</strong><small>${money(reminder.dueCents)} neste fechamento · fecha ${closingDate} · pagar até ${reminderDate}</small></div>${reminder.days!==null&&reminder.days<=7?'<span class="payment-deadline__pulse" aria-hidden="true">!</span>':''}</aside>`;
-    const historyRows = window.TrameliFinancialHistory?.period(null,null,live.user.id) || [];
-    const historyDue = historyRows.filter(entry=>entry.status==='pending').reduce((sum,entry)=>sum+Number(entry.amount_cents),0);
-    const historyNotice = historyDue > 0 ? `<aside class="history-note">Além do saldo dos pedidos, você tem ${money(historyDue)} em lançamentos financeiros anteriores ao aplicativo. Esses valores fazem parte do fechamento, mas não do Pix automático dos pedidos.</aside>` : '';
-    return `${historyNotice}${reminderMarkup}<div class="payment-customer-hero ${t.due_cents>0?'has-due':'is-clear'}">
-      <div class="payment-customer-hero__balance"><span>${t.due_cents>0?'Saldo em aberto':'Tudo certo por aqui'}</span><strong>${t.due_cents>0?money(t.due_cents):'R$ 0,00'}</strong><p>${t.due_cents>0?`Você tem ${openRows.length} ${openRows.length===1?'pedido aguardando pagamento':'pedidos aguardando pagamento'}.`:'Todos os pagamentos destes pedidos já foram confirmados.'}</p></div>
-      <div class="payment-customer-hero__details"><div><span>Total em pedidos</span><strong>${money(t.total_cents)}</strong></div><div><span>Já confirmado</span><strong>${money(t.paid_cents)}</strong></div>${t.refund_due_cents>0?`<div class="is-refund"><span>A devolver</span><strong>${money(t.refund_due_cents)}</strong></div>`:''}</div>
-      ${pixReady?`<button type="button" class="payment-pay-all" data-pix-order="all">${openRows.length===1?'Pagar agora':'Pagar saldo total'} · ${money(t.due_cents)}</button>`:''}
+    const historyNotice = historyTotals.due > 0 ? `<aside class="history-note">Os ${money(historyTotals.due)} de histórico pendente já estão incluídos no saldo total e no fechamento. O Pix automático ainda paga apenas pedidos; acerte o histórico com a Shirley.</aside>` : '';
+    return `${historyNotice}${reminderMarkup}<div class="payment-customer-hero ${combinedDue>0?'has-due':'is-clear'}">
+      <div class="payment-customer-hero__balance"><span>${combinedDue>0?'Total em aberto · pedidos + histórico':'Tudo certo por aqui'}</span><strong>${combinedDue>0?money(combinedDue):'R$ 0,00'}</strong><p>${combinedDue>0?`${openRows.length} pedido(s) e ${historyPending.length} lançamento(s) histórico(s) pendentes.`:'Nenhum valor pendente nesta conta.'}</p></div>
+      <div class="payment-customer-hero__details"><div><span>Total da conta</span><strong>${money(combinedTotal)}</strong></div><div><span>Já confirmado</span><strong>${money(combinedPaid)}</strong></div>${historyRows.length?`<div><span>Histórico pendente</span><strong>${money(historyTotals.due)}</strong></div>`:''}${t.refund_due_cents>0?`<div class="is-refund"><span>A devolver</span><strong>${money(t.refund_due_cents)}</strong></div>`:''}</div>
+      ${pixReady?`<button type="button" class="payment-pay-all" data-pix-order="all">${openRows.length===1?'Pagar este pedido':'Pagar pedidos com Pix'} · ${money(t.due_cents)}</button>`:''}
     </div>
     ${pixReady?`<div class="payment-how"><div><span>1</span><p><strong>Escolha</strong><small>Pague tudo de uma vez ou selecione pedidos específicos.</small></p></div><div><span>2</span><p><strong>Faça o Pix</strong><small>Confira o valor e o titular no aplicativo do seu banco.</small></p></div><div><span>3</span><p><strong>Aguarde a conferência</strong><small>Depois do aviso, a operação confirma o recebimento.</small></p></div></div>`:''}
     <div class="payment-customer-list-head"><div><span>SEUS PEDIDOS</span><h3>${openRows.length?'Escolha o que deseja pagar':'Pedidos desta conta'}</h3><p>${openRows.length>1?'Marque mais de um pedido para gerar um único Pix com a soma dos saldos.':openRows.length===1?'Você pode pagar este pedido diretamente pelo botão abaixo.':'Consulte os valores já confirmados.'}</p></div></div>
