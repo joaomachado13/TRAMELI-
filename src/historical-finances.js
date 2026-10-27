@@ -119,6 +119,23 @@ function extractedRows(data) {
   if(out.length>2000)throw new Error('Importe no máximo 2.000 linhas por arquivo.');
   return out;
 }
+// Mantem o host preso ao DOM mesmo quando a mudança de foco dispara outra
+// renderizacao da pagina. Evita NotFoundError ao aplicar outerHTML num no movido.
+function updateHistorySection(host, markup) {
+  if (!host?.isConnected) return;
+  const template=document.createElement('template');
+  template.innerHTML=markup.trim();
+  const fresh=template.content.firstElementChild;
+  if(!fresh)return;
+  const manualOpen=host.querySelector('.history-manual')?.open||false;
+  const savedScroll=[...host.querySelectorAll('.history-preview-table')].map(node=>node.scrollTop);
+  host.innerHTML=fresh.innerHTML;
+  if(manualOpen) {
+    const manual=host.querySelector('.history-manual');
+    if(manual)manual.open=true;
+  }
+  [...host.querySelectorAll('.history-preview-table')].forEach((node,i)=>{node.scrollTop=savedScroll[i]||0;});
+}
 export function initHistoricalFinances(live) {
   if(!live?.client||!live?.user)return;
   const state={entries:[],profiles:[],draft:[],fileName:'',batchId:'',message:'',error:'',busy:false,loaded:false,loading:null};
@@ -195,10 +212,13 @@ export function initHistoricalFinances(live) {
       (names?'':'<p>Carregando clientes…</p>')+'</section>';
   }
   function repaint() {
-    document.querySelectorAll('[data-history-customer]').forEach(el=>el.outerHTML=customerMarkup());
-    document.querySelectorAll('[data-history-operator]').forEach(el=>el.outerHTML=operatorMarkup());
+    // Nunca substitua a tag raiz com outerHTML: seletores, blur e eventos do
+    // financeiro podem recriar/remover o no durante a importacao no celular.
+    // Atualize somente o conteudo, preservando o proprio elemento montado.
+    document.querySelectorAll('[data-history-customer]').forEach(el=>updateHistorySection(el,customerMarkup()));
+    document.querySelectorAll('[data-history-operator]').forEach(el=>updateHistorySection(el,operatorMarkup()));
     const day=document.getElementById('delivery-date')?.value||isoToday();
-    document.querySelectorAll('[data-history-operation]').forEach(el=>el.innerHTML=operationMarkup(day));
+    document.querySelectorAll('[data-history-operation]').forEach(el=>{if(el.isConnected)el.innerHTML=operationMarkup(day);});
   }
   function mountOperation() {
     if(!allowed)return;

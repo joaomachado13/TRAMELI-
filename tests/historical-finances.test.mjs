@@ -7,7 +7,7 @@ const source = readFileSync(new URL('../src/historical-finances.js', import.meta
   .replace("import './historical-finances.css';", '')
   .replace('export function initHistoricalFinances', 'function initHistoricalFinances');
 const context = {};
-runInNewContext(source + '\nglobalThis.helpers={extractedRows,dateValue,toCents,validDate,parseCSV,norm,decodeXlsxCell};', context);
+runInNewContext(source + '\nglobalThis.helpers={extractedRows,dateValue,toCents,validDate,parseCSV,norm,decodeXlsxCell,updateHistorySection};', context);
 const h=context.helpers;
 
 test('planilha de 16/10 e 17/10 com campo fixo e pago isolados', () => {
@@ -90,4 +90,48 @@ test('XLSX da Shirley: textos compartilhados sao reconhecidos como cabecalhos e 
   assert.equal(result[1].date,'2026-10-17');
   assert.equal(result[1].amount,760);
   assert.equal(result[1].paid,true);
+});
+
+test('renderizacao do historico nao usa outerHTML e conserva host, rolagem e formulario aberto', () => {
+  const before={scrollTop:420}, after={scrollTop:0};
+  const manual={open:false};
+  const host={
+    isConnected:true,stage:0,_html:'antes',
+    get innerHTML(){return this._html;},
+    set innerHTML(value){this._html=value;this.stage=1;},
+    set outerHTML(_value){throw new Error('O elemento foi removido durante blur');},
+    querySelector(selector){
+      if(selector==='.history-manual')return this.stage===0?{open:true}:manual;
+      return null;
+    },
+    querySelectorAll(selector){
+      if(selector==='.history-preview-table')return this.stage===0?[before]:[after];
+      return [];
+    }
+  };
+  context.document={
+    createElement(tag){
+      assert.equal(tag,'template');
+      return {
+        content:{firstElementChild:null},
+        set innerHTML(markup){
+          const match=markup.match(/^<section[^>]*>([\s\S]*)<\/section>$/);
+          this.content.firstElementChild=match?{innerHTML:match[1]}:null;
+        }
+      };
+    }
+  };
+  h.updateHistorySection(host,'<section data-history-operator><p>Pronto para importar</p></section>');
+  assert.equal(host.innerHTML,'<p>Pronto para importar</p>');
+  assert.equal(host.isConnected,true);
+  assert.equal(after.scrollTop,420);
+  assert.equal(manual.open,true);
+
+  const disconnected={
+    isConnected:false,
+    set innerHTML(_){throw new Error('Tentou alterar nodo desconectado');}
+  };
+  h.updateHistorySection(disconnected,'<section>outro</section>');
+  const historySrc=readFileSync(new URL('../src/historical-finances.js',import.meta.url),'utf8');
+  assert.doesNotMatch(historySrc,/el\.outerHTML\s*=/);
 });
