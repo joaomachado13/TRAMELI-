@@ -1,0 +1,45 @@
+
+.history-operator,.history-operation,.history-client {border:1px solid var(--color-border,#e6ddd3);border-radius:16px;padding:20px;background:var(--color-background,#fffdfa);margin:18px 0;color:var(--color-text-primary,#382920)}
+.history-operator h2,.history-operation h2,.history-client h3 {margin:3px 0 9px;font-size:1.15rem}
+.history-operator p,.history-operation p,.history-client p{color:var(--color-text-secondary,#75675c);font-size:.86rem;line-height:1.5}
+.history-totals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0}
+.history-totals>span{padding:14px 16px;border:1px solid var(--color-border,#e6ddd3);border-radius:12px;background:var(--color-surface,#fff);display:flex;flex-direction:column;gap:5px;font-size:.77rem;color:var(--color-text-secondary,#75675c)}
+.history-totals strong{font-size:1.1rem;color:var(--color-text-primary,#382920);font-variant-numeric:tabular-nums}
+.history-operation-head{display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap}
+.history-operation-head a{border:1px solid var(--color-border,#e6ddd3);border-radius:12px;padding:10px 14px;text-decoration:none;color:var(--color-primary,#855236);font-weight:650;background:#fff}
+.history-items{display:grid;gap:7px;max-height:370px;overflow:auto}
+.history-item{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:12px;border:1px solid var(--color-border,#e6ddd3);border-radius:10px;background:var(--color-surface,#fff);font-size:.86rem}
+.history-item small{border-radius:6px;padding:4px 8px;background:#f6eee7;white-space:nowrap}
+.history-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.history-actions label{display:grid;gap:5px;font-weight:650}
+.history-operator button,.history-operator select,.history-operator input{font:inherit}
+.history-operator button{padding:9px 12px;border:1px solid var(--color-border,#d8c6b7);border-radius:10px;background:white;color:var(--color-primary,#855236);cursor:pointer;font-size:.83rem;font-weight:650}
+.history-operator button:disabled{opacity:.45;cursor:not-allowed}
+.history-operator input:not([type=checkbox]):not([type=file]),.history-operator select{min-width:0;width:100%;padding:9px 10px;border:1px solid var(--color-border,#d8c6b7);border-radius:8px;background:white;color:inherit}
+.history-operator input[type=file]{max-width:100%;font-size:.82rem}
+.history-operator details{padding:14px;margin:12px 0;border-radius:12px;border:1px solid var(--color-border,#e6ddd3);background:var(--color-surface,#fff)}
+.history-operator summary{cursor:pointer;font-weight:700}
+.history-manual form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:16px}
+.history-manual form label{display:grid;gap:5px;font-size:.8rem}
+.history-manual form button{justify-self:start;align-self:end}
+.history-preview{margin:12px 0;border:1px solid var(--color-border,#e6ddd3);border-radius:12px;padding:12px}
+.history-preview-table{width:100%;overflow:auto;max-height:460px;margin:12px 0}
+.history-preview-table table{width:100%;border-collapse:collapse;text-align:left;font-size:.82rem}
+.history-preview-table th,.history-preview-table td{border-bottom:1px solid var(--color-border,#eee0d4);padding:9px 12px;vertical-align:middle}
+.history-preview-table th{background:#f7efe7;position:sticky;top:0;white-space:nowrap;z-index:1}
+.history-preview-table td{min-width:65px}
+.history-preview-table td select{min-width:150px}
+.history-preview-table td label{display:block;margin-top:6px}
+.history-message,.history-note{border-left:3px solid #ae825f;padding:9px 12px;background:#f9f1ea;border-radius:6px}
+.history-client{margin-top:14px}
+.history-client .history-item{grid-template-columns:minmax(0,1fr) auto auto}
+@media(max-width:640px){
+  .history-operator,.history-operation,.history-client{padding:14px}
+  .history-totals{grid-template-columns:1fr 1fr;gap:7px}
+  .history-totals>span{padding:11px}
+  .history-totals strong{font-size:1rem}
+  .history-manual form{grid-template-columns:1fr}
+  .history-item{grid-template-columns:1fr auto;gap:5px}
+  .history-item small{grid-column:1/-1;width:max-content}
+  .history-preview-table th,.history-preview-table td{padding:8px}
+}
