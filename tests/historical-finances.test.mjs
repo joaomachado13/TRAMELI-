@@ -135,3 +135,19 @@ test('renderizacao do historico nao usa outerHTML e conserva host, rolagem e for
   const historySrc=readFileSync(new URL('../src/historical-finances.js',import.meta.url),'utf8');
   assert.doesNotMatch(historySrc,/el\.outerHTML\s*=/);
 });
+
+test('histórico importado entra no perfil do cliente por ID, inclusive sem pedidos normais', () => {
+  const clients=readFileSync(new URL('../assets/clientes.js',import.meta.url),'utf8');
+  const history=readFileSync(new URL('../src/historical-finances.js',import.meta.url),'utf8');
+  assert.match(clients,/const historyRows = customerId \? \(window\.TrameliFinancialHistory\?\.period\(null, null, customerId\)/);
+  assert.match(clients,/const totalCents = orderTotalCents \+ historyTotals\.total/);
+  assert.match(clients,/const paidCents = orderPaidCents \+ historyTotals\.paid/);
+  assert.match(clients,/const dueCents = orderDueCents \+ historyTotals\.due/);
+  assert.match(clients,/\.\.\.payment\.historyRows\.map\(entry => \(\{ type: 'historical'/);
+  assert.match(clients,/entry\.entry_date/);
+  assert.match(clients,/data-client-history-status/);
+  assert.match(clients,/trameli:historical-finances-changed/);
+  assert.match(history,/async function setStatus\(id, status\)/);
+  assert.match(history,/if\(!allowed\)throw new Error/);
+  assert.match(history,/el\.hidden = period\(day,day\)\.length === 0/);
+});
