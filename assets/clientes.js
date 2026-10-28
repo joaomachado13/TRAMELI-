@@ -156,9 +156,15 @@ import { feedback, statusBadge, listRow } from '../src/staff-components.js';
       || (!ids.size && normalize(row.customer_name) === normalize(client.name))
     );
     const customerId = client.customerId || rows.find(row => row.customer_id)?.customer_id || null;
-    const totalCents = rows.reduce((sum, row) => sum + Number(row.total_cents || 0), 0);
-    const paidCents = rows.reduce((sum, row) => sum + Number(row.paid_cents || 0), 0);
-    const dueCents = rows.reduce((sum, row) => sum + Number(row.due_cents || 0), 0);
+    const orderTotalCents = rows.reduce((sum, row) => sum + Number(row.total_cents || 0), 0);
+    const orderPaidCents = rows.reduce((sum, row) => sum + Number(row.paid_cents || 0), 0);
+    const orderDueCents = rows.reduce((sum, row) => sum + Number(row.due_cents || 0), 0);
+    // Apenas registros vinculados ao ID da conta; nunca apropriar valores por coincidencia de nome.
+    const historyRows = customerId ? (window.TrameliFinancialHistory?.period(null, null, customerId) || []) : [];
+    const historyTotals = window.TrameliFinancialHistory?.sums(historyRows) || { total: 0, paid: 0, due: 0 };
+    const totalCents = orderTotalCents + historyTotals.total;
+    const paidCents = orderPaidCents + historyTotals.paid;
+    const dueCents = orderDueCents + historyTotals.due;
     const pendingIntents = customerId ? (api?.intents || []).filter(intent => intent.customer_id === customerId && intent.status === 'pending') : [];
     const receiptByIntent = new Map();
     const profile = customerId ? (api?.profiles || []).find(item => item.user_id === customerId) || null : null;
@@ -170,7 +176,8 @@ import { feedback, statusBadge, listRow } from '../src/staff-components.js';
     else if (dueCents > 0 && paidCents > 0) status = 'partial';
     else if (dueCents > 0) status = 'open';
     else if (totalCents > 0) status = 'paid';
-    return { api, rows, customerId, totalCents, paidCents, dueCents, pendingIntents, receiptByIntent, profile, overdueRows, overdueCents, status };
+    return { api, rows, customerId, totalCents, paidCents, dueCents, orderTotalCents, orderPaidCents, orderDueCents,
+      historyRows, historyTotals, pendingIntents, receiptByIntent, profile, overdueRows, overdueCents, status };
   }
 
   const statusLabel = status => ({
@@ -298,7 +305,7 @@ import { feedback, statusBadge, listRow } from '../src/staff-components.js';
 
     let empty;
     if (payment.status === 'paid') empty = '<div class="client-payment-ok"><strong>Conta em dia.</strong><span>Não há saldo pendente para este cliente.</span></div>';
-    else if (payment.dueCents > 0) empty = `<div class="client-payment-open"><strong>${money(payment.dueCents)} em aberto</strong><span>Nenhum pagamento informado ainda.</span><button type="button" data-client-open-finance data-customer-id="${escapeHtml(payment.customerId || '')}" data-customer-name="${escapeHtml(client.name)}" data-client-key="${escapeHtml(client.key)}">Dar baixa manual</button></div>`;
+    else if (payment.dueCents > 0) empty = `<div class="client-payment-open"><strong>${money(payment.dueCents)} em aberto</strong><span>${payment.historyTotals.due ? 'Inclui ' + money(payment.historyTotals.due) + ' de lançamentos históricos anteriores ao aplicativo.' : 'Nenhum pagamento informado ainda.'}</span>${payment.orderDueCents > 0 ? `<button type="button" data-client-open-finance data-customer-id="${escapeHtml(payment.customerId || '')}" data-customer-name="${escapeHtml(client.name)}" data-client-key="${escapeHtml(client.key)}">Conferir pagamento dos pedidos</button>` : '<small>Para dar baixa no histórico, use os lançamentos abaixo.</small>'}</div>`;
     else empty = '<p class="entity-muted">Nenhuma movimentação financeira registrada.</p>';
 
     const orderAccess = payment.customerId && (payment.profile?.order_blocked || payment.overdueRows.length)
@@ -329,16 +336,30 @@ import { feedback, statusBadge, listRow } from '../src/staff-components.js';
   function orderHistory(client, payment) {
     const balanceByOrder = new Map(payment.rows.map(row => [row.order_id, row]));
     const pendingOrders = new Set(payment.pendingIntents.flatMap(intent => intent.order_ids || []));
-    const history = client.active.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    if (!history.length) return '<p class="entity-muted">Nenhum pedido registrado.</p>';
-    return `<div class="entity-order-list client-order-list">${history.map(order => {
+    // A ficha e um extrato unico: pedidos reais + lancamentos anteriores ao aplicativo.
+    const history = [
+      ...client.active.map(order => ({ type: 'order', date: order.date, order })),
+      ...payment.historyRows.map(entry => ({ type: 'historical', date: entry.entry_date, entry })),
+    ].sort((a, b) => b.date.localeCompare(a.date) || (a.type === 'historical' ? -1 : 1));
+    if (!history.length) return '<p class="entity-muted">Nenhum pedido ou lançamento histórico registrado.</p>';
+    return `<div class="entity-order-list client-order-list">${history.map(item => {
+      if (item.type === 'historical') {
+        const entry = item.entry;
+        const paid = entry.status === 'paid';
+        return `<article class="client-history-entry" data-history-entry="${escapeHtml(entry.id)}">
+          <span class="client-history-entry__detail"><strong>${dateLabel(entry.entry_date)}</strong><small>Histórico financeiro · sem produtos</small></span>
+          <span class="client-order-payment"><span class="client-payment-badge ${paid ? 'is-paid' : 'is-open'}">${paid ? 'Pago' : 'Pendente'}</span><strong>${money(entry.amount_cents)}</strong></span>
+          ${live?.operator ? `<button type="button" class="client-history-entry__action" data-client-history-status="${escapeHtml(entry.id)}" data-history-next="${paid ? 'pending' : 'paid'}">${paid ? 'Voltar a pendente' : 'Confirmar pagamento'}</button>` : ''}
+        </article>`;
+      }
+      const order = item.order;
       const row = balanceByOrder.get(order.id);
       const due = Number(row?.due_cents || 0);
       const paid = Number(row?.paid_cents || 0);
       const financial = pendingOrders.has(order.id) ? 'Aguardando conferência' : row ? (due <= 0 ? 'Pago' : paid > 0 ? 'Parcial' : 'Em aberto') : 'A conferir';
       const cls = pendingOrders.has(order.id) ? 'is-review' : due <= 0 && row ? 'is-paid' : paid > 0 ? 'is-partial' : 'is-open';
       return `<button type="button" data-open-order="${escapeHtml(order.id)}">
-        <span><strong>#${escapeHtml(orderCode(order))}</strong><small>${dateLabel(order.date)}</small></span>
+        <span><strong>#${escapeHtml(orderCode(order))}</strong><small>${dateLabel(order.date)} · Pedido</small></span>
         <span class="client-order-payment"><span class="client-payment-badge ${cls}">${financial}</span><strong>${money(total(order))}</strong>${row && due > 0 ? `<small>${money(due)} em aberto</small>` : ''}</span>
       </button>`;
     }).join('')}</div>`;
@@ -355,16 +376,19 @@ import { feedback, statusBadge, listRow } from '../src/staff-components.js';
       </header>
       <div class="entity-detail__body">
         <section class="entity-summary client-summary">
-          <div><span>Total em pedidos</span><strong>${money(payment.totalCents || client.spent)}</strong></div>
+          <div><span>Pedidos</span><strong>${money(payment.orderTotalCents || client.spent)}</strong></div>
+          <div><span>Histórico financeiro</span><strong>${money(payment.historyTotals.total)}</strong></div>
+          <div><span>Total da conta</span><strong>${money(payment.totalCents)}</strong></div>
           <div><span>Pago</span><strong>${money(payment.paidCents)}</strong></div>
           <div><span>Em aberto</span><strong>${money(payment.dueCents)}</strong></div>
-          <div><span>Pedidos</span><strong>${client.active.length}</strong></div>
+          <div><span>Registros</span><strong>${client.active.length + payment.historyRows.length}</strong></div>
         </section>
         ${live && payment.customerId ? `<section class="entity-block client-billing-frequency"><div class="entity-block__heading"><div><h3>Frequência de pagamento</h3><p>Defina como este cliente combina o pagamento com a Shirley.</p></div></div><form data-client-billing-frequency data-customer-id="${escapeHtml(payment.customerId)}" data-client-key="${escapeHtml(client.key)}"><label>Periodicidade<select name="billing_frequency" required><option value="" ${!payment.profile?.billing_frequency ? 'selected' : ''}>Não definida</option><option value="semanal" ${payment.profile?.billing_frequency === 'semanal' ? 'selected' : ''}>Semanal</option><option value="quinzenal" ${payment.profile?.billing_frequency === 'quinzenal' ? 'selected' : ''}>Quinzenal</option><option value="mensal" ${payment.profile?.billing_frequency === 'mensal' ? 'selected' : ''}>Mensal</option></select></label><p class="entity-muted">Essa informação fica salva no cadastro e não altera a aprovação, os pedidos ou os pagamentos já registrados.</p><button class="screen-primary" type="submit">Salvar frequência</button><p class="catalog-error" role="alert" hidden></p></form></section>` : ''}
         ${paymentBlock(client, payment)}
         <section class="entity-block">
-          <div class="entity-block__heading"><h3>Pedidos e cobrança</h3><span>${client.active.length}</span></div>
+          <div class="entity-block__heading"><div><h3>Pedidos e histórico financeiro</h3><p class="entity-muted">Registros em ordem de data, inclusive os valores anteriores ao aplicativo.</p></div><span>${client.active.length + payment.historyRows.length}</span></div>
           ${orderHistory(client, payment)}
+          ${live?.operator ? '<p class="entity-muted client-history-guidance">Pedido esquecido depois de 17/10? Use + Novo pedido, escolha a data correta e ele entra no Kanban como Novo. Os registros anteriores ao aplicativo ficam apenas no histórico financeiro.</p>' : ''}
         </section>
         <section class="entity-block client-contact">
           <h3>Contato e entrega</h3>
@@ -467,6 +491,25 @@ import { feedback, statusBadge, listRow } from '../src/staff-components.js';
       return;
     }
 
+    const historyButton = event.target.closest('[data-client-history-status]');
+    if (historyButton && live?.operator) {
+      const id = historyButton.dataset.clientHistoryStatus;
+      const next = historyButton.dataset.historyNext;
+      const historyEntry = window.TrameliFinancialHistory?.entries()?.find(entry => entry.id === id);
+      if (!historyEntry || !['paid', 'pending'].includes(next)) return;
+      if (!confirm(next === 'paid'
+        ? `Confirmar recebimento de ${money(historyEntry.amount_cents)} do histórico de ${dateLabel(historyEntry.entry_date)}? Confira o pagamento no banco antes de continuar.`
+        : `Voltar o lançamento de ${money(historyEntry.amount_cents)} para pendente?`)) return;
+      historyButton.disabled = true;
+      try {
+        await window.TrameliFinancialHistory.setStatus(id, next);
+      } catch (cause) {
+        alert(cause.message || 'Não foi possível atualizar o pagamento histórico.');
+        if (historyButton.isConnected) historyButton.disabled = false;
+      }
+      return;
+    }
+
     const orderButton = event.target.closest('[data-open-order]');
     if (orderButton) { detailDrawer.close(); window.TrameliOperation?.openOrder(orderButton.dataset.openOrder); return; }
     const button = event.target.closest('[data-client-action]');
@@ -517,6 +560,20 @@ import { feedback, statusBadge, listRow } from '../src/staff-components.js';
       error.hidden = false;
     } finally {
       submit.disabled = false;
+    }
+  });
+
+  window.addEventListener('trameli:historical-finances-changed', () => {
+    if (document.querySelector('[data-client-root]')) rerender();
+    if (detailDrawer.open) {
+      const key = detailDrawer.querySelector('[data-client-action="new-order"]')?.dataset.key;
+      if (key) {
+        const body = detailDrawer.querySelector('.entity-detail__body');
+        const scrollTop = body?.scrollTop || 0;
+        openDetail(key);
+        const nextBody = detailDrawer.querySelector('.entity-detail__body');
+        if (nextBody) nextBody.scrollTop = scrollTop;
+      }
     }
   });
 
