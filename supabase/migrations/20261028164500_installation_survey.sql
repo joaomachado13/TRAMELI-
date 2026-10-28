@@ -36,4 +36,4 @@ with check (user_id = (select auth.uid()));
 
 revoke all on public.trameli_install_campaign from anon;
 grant select, insert, update on public.trameli_install_campaign to authenticated;
-grant all on public.trameli_install_campaign to service_role;
+-- Em producao, service_role usa o acesso de servico padrao do Supabase.
