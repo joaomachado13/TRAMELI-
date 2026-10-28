@@ -388,6 +388,7 @@ import { feedback, statusBadge, listRow } from '../src/staff-components.js';
         <section class="entity-block">
           <div class="entity-block__heading"><div><h3>Pedidos e histórico financeiro</h3><p class="entity-muted">Registros em ordem de data, inclusive os valores anteriores ao aplicativo.</p></div><span>${client.active.length + payment.historyRows.length}</span></div>
           ${orderHistory(client, payment)}
+          ${live?.operator ? '<p class="entity-muted client-history-guidance">Pedido esquecido depois de 17/10? Use + Novo pedido, escolha a data correta e ele entra no Kanban como Novo. Os registros anteriores ao aplicativo ficam apenas no histórico financeiro.</p>' : ''}
         </section>
         <section class="entity-block client-contact">
           <h3>Contato e entrega</h3>
