@@ -7,7 +7,7 @@ const source = readFileSync(new URL('../src/historical-finances.js', import.meta
   .replace("import './historical-finances.css';", '')
   .replace('export function initHistoricalFinances', 'function initHistoricalFinances');
 const context = {};
-runInNewContext(source + '\nglobalThis.helpers={extractedRows,dateValue,toCents,validDate,parseCSV,norm,decodeXlsxCell,updateHistorySection};', context);
+runInNewContext(source + '\nglobalThis.helpers={extractedRows,dateValue,toCents,validDate,parseCSV,norm,decodeXlsxCell,updateHistorySection,groupHistoricalBalances};', context);
 const h=context.helpers;
 
 test('planilha de 16/10 e 17/10 com campo fixo e pago isolados', () => {
@@ -134,4 +134,35 @@ test('renderizacao do historico nao usa outerHTML e conserva host, rolagem e for
   h.updateHistorySection(disconnected,'<section>outro</section>');
   const historySrc=readFileSync(new URL('../src/historical-finances.js',import.meta.url),'utf8');
   assert.doesNotMatch(historySrc,/el\.outerHTML\s*=/);
+});
+
+test('operacao apresenta por cliente todos os historicos mensais sem filtrar pela data do dia', () => {
+  const entries=[
+    {customer_id:'mensal-a',original_name:'CARLA',entry_date:'2026-10-01',amount_cents:1000,status:'pending',removed_at:null},
+    {customer_id:'mensal-a',original_name:'CARLA',entry_date:'2026-10-16',amount_cents:500,status:'pending',removed_at:null},
+    {customer_id:'mensal-a',original_name:'CARLA',entry_date:'2026-10-17',amount_cents:300,status:'paid',removed_at:null},
+    {customer_id:'quinzenal-b',original_name:'BIA',entry_date:'2026-10-17',amount_cents:760,status:'pending',removed_at:null},
+    {customer_id:'mensal-a',original_name:'CARLA',entry_date:'2026-10-02',amount_cents:9999,status:'pending',removed_at:'2026-10-18T00:00:00Z'}
+  ];
+  const profiles=[
+    {user_id:'mensal-a',name:'Carla',billing_frequency:'mensal'},
+    {user_id:'quinzenal-b',name:'Bia',billing_frequency:'quinzenal'}
+  ];
+  const groups=h.groupHistoricalBalances(entries,profiles);
+  assert.equal(groups.length,2);
+  const monthly=groups.find(g=>g.customerId==='mensal-a');
+  assert.equal(monthly.name,'Carla');
+  assert.equal(monthly.billingFrequency,'Mensal');
+  assert.equal(monthly.rows.length,3);
+  assert.deepEqual(Array.from(monthly.rows.map(e=>e.entry_date)),['2026-10-01','2026-10-16','2026-10-17']);
+  assert.equal(monthly.total,1800);
+  assert.equal(monthly.paid,300);
+  assert.equal(monthly.due,1500);
+  assert.equal(groups.find(g=>g.customerId==='quinzenal-b').due,760);
+  const src=readFileSync(new URL('../src/historical-finances.js',import.meta.url),'utf8');
+  assert.match(src,/function operationMarkup\(day\)/);
+  assert.match(src,/const all=list\(\),total=sums\(all\),groups=groupHistoricalBalances\(all,state\.profiles\)/);
+  assert.match(src,/historyCustomerBalancesMarkup\(\)/);
+  assert.match(src,/Valores históricos por cliente/);
+  assert.match(src,/Saldo histórico por cliente/);
 });
