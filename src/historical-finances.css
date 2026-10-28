@@ -46,3 +46,6 @@
 
 .history-client .history-pay-early{display:block;width:100%;margin:10px 0 14px;padding:13px 15px;border:0;border-radius:12px;background:var(--color-primary,#855236);color:#fff;font:inherit;font-weight:750;cursor:pointer;text-align:center}
 .history-client .history-pay-early:focus-visible{outline:3px solid var(--color-accent,#a9744c);outline-offset:3px}
+
+
+.history-operation[hidden]{display:none!important}
