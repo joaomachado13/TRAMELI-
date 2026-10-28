@@ -136,6 +136,31 @@ function updateHistorySection(host, markup) {
   }
   [...host.querySelectorAll('.history-preview-table')].forEach((node,i)=>{node.scrollTop=savedScroll[i]||0;});
 }
+// Soma os valores por cliente sem filtrar pela data operacional selecionada.
+// O pagamento continua separado da producao e os totais sao sempre em centavos.
+function groupHistoricalBalances(entries, profiles=[]) {
+  const names=new Map(profiles.map(p=>[p.user_id,p]));
+  const grouped=new Map();
+  for(const entry of entries) {
+    if(entry.removed_at)continue;
+    const profile=names.get(entry.customer_id);
+    let group=grouped.get(entry.customer_id);
+    if(!group){
+      group={customerId:entry.customer_id,name:profile?.name||entry.original_name||'Cliente sem cadastro',
+        billingFrequency:profile?.billing_frequency==='mensal'?'Mensal':profile?.billing_frequency==='quinzenal'?'Quinzenal':'Não configurado',
+        total:0,paid:0,due:0,rows:[]};
+      grouped.set(entry.customer_id,group);
+    }
+    const amount=Number(entry.amount_cents)||0;
+    group.total+=amount;
+    if(entry.status==='paid')group.paid+=amount;else group.due+=amount;
+    group.rows.push(entry);
+  }
+  return [...grouped.values()].map(group=>({
+    ...group,
+    rows:group.rows.slice().sort((a,b)=>a.entry_date.localeCompare(b.entry_date))
+  })).sort((a,b)=>(b.due-a.due)||a.name.localeCompare(b.name,'pt-BR'));
+}
 export function initHistoricalFinances(live) {
   if(!live?.client||!live?.user)return;
   const state={entries:[],profiles:[],draft:[],fileName:'',batchId:'',message:'',error:'',busy:false,loaded:false,loading:null};
@@ -153,7 +178,7 @@ export function initHistoricalFinances(live) {
         if(error)throw error;
         state.entries=data||[];state.loaded=true;state.error='';
         if(allowed){
-          const profiles=await live.client.from('trameli_profiles').select('user_id,name').order('name').limit(2000);
+          const profiles=await live.client.from('trameli_profiles').select('user_id,name,billing_frequency').order('name').limit(2000);
           if(profiles.error)throw profiles.error;
           state.profiles=profiles.data||[];
         }
@@ -174,11 +199,37 @@ export function initHistoricalFinances(live) {
       (rows.length?'<div class="history-items">'+rows.map(e=>'<div class="history-item"><span>'+fmt(e.entry_date)+' · Histórico financeiro</span><strong>'+money(e.amount_cents)+'</strong><small>'+statusLabel(e)+'</small></div>').join('')+'</div>':'<p>Nenhum lançamento histórico para esta conta.</p>')+
       (t.due?'<p class="history-note">O Pix do histórico é separado do Pix dos pedidos. Depois de pagar, avise a Shirley para ela conferir e dar baixa; o sistema não confirma o recebimento automaticamente.</p>':'')+'</section>';
   }
+  function historyCustomerBalancesMarkup() {
+    const groups=groupHistoricalBalances(list(),state.profiles);
+    if(!groups.length)return '<p class="history-empty">Nenhum lançamento histórico cadastrado ainda.</p>';
+    return '<div class="history-customer-balances">'+groups.map(group=>{
+      const dateFirst=group.rows[0]?.entry_date,dateLast=group.rows[group.rows.length-1]?.entry_date;
+      const range=dateFirst===dateLast?fmt(dateFirst):fmt(dateFirst)+' a '+fmt(dateLast);
+      return '<details class="history-customer-balance" data-history-balance-id="'+esc(group.customerId)+'">'+
+        '<summary><span class="history-customer-name"><strong>'+esc(group.name)+'</strong>'+
+        '<small>'+esc(group.billingFrequency)+' · '+group.rows.length+' lançamento(s) · '+esc(range)+'</small></span>'+
+        '<span class="history-customer-money"><small>'+ (group.due?'Em aberto':'Quitado') +'</small><strong>'+money(group.due)+'</strong></span></summary>'+
+        '<div class="history-balance-breakdown"><span>Total histórico <strong>'+money(group.total)+'</strong></span>'+
+        '<span>Já pago <strong>'+money(group.paid)+'</strong></span>'+
+        '<span>Em aberto <strong>'+money(group.due)+'</strong></span></div>'+
+        '<div class="history-balance-lines">'+group.rows.map(row=>'<div><span>'+fmt(row.entry_date)+'</span><span>'+money(row.amount_cents)+'</span><small>'+statusLabel(row)+'</small></div>').join('')+'</div>'+
+        '</details>';
+    }).join('')+'</div>';
+  }
   function operationMarkup(day) {
-    const rows=period(day,day),t=sums(rows);
-    return '<div class="history-operation-head"><div><span class="screen-eyebrow">CONTROLE FINANCEIRO DO DIA</span><h2>Histórico financeiro · '+fmt(day)+'</h2><p>Registros sem produtos, separados das tarefas de produção.</p></div><a href="#financeiro">Gerenciar no Financeiro</a></div>'+
-      '<div class="history-totals"><span>Lançado <strong>'+money(t.total)+'</strong></span><span>Pago <strong>'+money(t.paid)+'</strong></span><span>Em aberto <strong>'+money(t.due)+'</strong></span></div>'+
-      (rows.length?'<div class="history-items">'+rows.map(e=>'<div class="history-item"><strong>'+esc(profileName(e.customer_id))+'</strong><span>'+money(e.amount_cents)+'</span><small>'+statusLabel(e)+'</small></div>').join('')+'</div>':'<p>Sem histórico financeiro nesta data.</p>');
+    const all=list(),total=sums(all),groups=groupHistoricalBalances(all,state.profiles);
+    const dayRows=period(day,day),dayTotals=sums(dayRows);
+    const dueClients=groups.filter(group=>group.due>0).length;
+    return '<div class="history-operation-head"><div><span class="screen-eyebrow">FINANCEIRO · CONTROLE DA SHIRLEY</span>'+
+      '<h2>Valores históricos por cliente</h2><p>Todos os saldos anteriores, inclusive mensais e de outras datas. Aparecem aqui mesmo ao consultar a operação de hoje. Não são novos pedidos.</p></div>'+
+      '<a href="#financeiro">Ver no Financeiro</a></div>'+
+      '<div class="history-totals"><span>Histórico pendente <strong>'+money(total.due)+'</strong></span>'+
+      '<span>Clientes com saldo <strong>'+dueClients+'</strong></span>'+
+      '<span>Histórico já pago <strong>'+money(total.paid)+'</strong></span></div>'+
+      '<h3 class="history-subheading">Saldo por cliente · '+groups.length+' cliente(s)</h3>'+
+      historyCustomerBalancesMarkup()+
+      (dayRows.length?'<details class="history-day-details"><summary>Ver os '+dayRows.length+' lançamentos com data '+fmt(day)+' · '+money(dayTotals.total)+'</summary>'+
+      '<div class="history-items">'+dayRows.map(e=>'<div class="history-item"><strong>'+esc(profileName(e.customer_id))+'</strong><span>'+money(e.amount_cents)+'</span><small>'+statusLabel(e)+'</small></div>').join('')+'</div></details>':'');
   }
   function options(selected='') {
     return '<option value="">Selecione o cliente</option>'+state.profiles.map(p=>'<option value="'+esc(p.user_id)+'" '+(p.user_id===selected?'selected':'')+'>'+esc(p.name)+'</option>').join('');
@@ -205,6 +256,7 @@ export function initHistoricalFinances(live) {
       (state.error?'<p role="alert">'+esc(state.error)+'</p>':'')+
       (state.message?'<p class="history-message" role="status">'+esc(state.message)+'</p>':'')+
       '<div class="history-totals"><span>Total <strong>'+money(t.total)+'</strong></span><span>Pago <strong>'+money(t.paid)+'</strong></span><span>Pendente <strong>'+money(t.due)+'</strong></span></div>'+
+      '<h3 class="history-subheading">Saldo histórico por cliente</h3>'+historyCustomerBalancesMarkup()+
       '<div class="history-actions"><label>Importar Excel ou CSV <input type="file" accept=".xlsx,.csv" data-history-file></label><p>Confirme os nomes antes de gravar. O Excel pode trazer várias datas no mesmo arquivo.</p></div>'+previewRows()+
       '<details class="history-manual"><summary>+ Novo lançamento financeiro manual</summary><form data-history-manual><label>Cliente<select name="customer" required>'+options()+'</select></label><label>Data<input type="date" name="date" value="'+isoToday()+'" required></label><label>Valor (R$)<input type="text" name="amount" inputmode="decimal" placeholder="12,50" required></label><label>Situação<select name="status"><option value="pending">Pendente</option><option value="paid">Pago</option></select></label><label>Observação (opcional)<input name="note" maxlength="280"></label><button type="submit">Salvar lançamento</button></form></details>'+
       '<h3>Lançamentos cadastrados · '+list().length+'</h3><p>Use “Pago / Pendente” para corrigir a situação. “Anular” remove o registro dos totais, preservando auditoria.</p>'+
