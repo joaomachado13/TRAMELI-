@@ -11,6 +11,7 @@ import * as financeMath from './finance-math.js';
 import { init as initMotion } from './motion.js';
 import { initPwaFoundation } from './pwa.js';
 import { initNotifications } from './notifications.js';
+import { initInstallationCampaign } from './installation-campaign.js';
 import clientCatalog from '../data/client-products.json';
 import { withOfficialProductPhoto } from './product-photos.js';
 import './live.css';
@@ -235,6 +236,8 @@ await import('../assets/shirley-portal.js');
 initMotion();
 // Só revela a aplicação depois que a rota correta e seus componentes estão prontos.
 document.body.classList.remove('app-booting');
+// Enquete de instalacao: somente clientes, campanha de hoje; nao bloqueia a loja.
+initInstallationCampaign(window.TrameliLive);
 
 
 /* Modal UX: clicking the backdrop closes any non-busy dialog. */
