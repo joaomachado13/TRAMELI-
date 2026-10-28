@@ -218,7 +218,11 @@ export function initHistoricalFinances(live) {
     document.querySelectorAll('[data-history-customer]').forEach(el=>updateHistorySection(el,customerMarkup()));
     document.querySelectorAll('[data-history-operator]').forEach(el=>updateHistorySection(el,operatorMarkup()));
     const day=document.getElementById('delivery-date')?.value||isoToday();
-    document.querySelectorAll('[data-history-operation]').forEach(el=>{if(el.isConnected)el.innerHTML=operationMarkup(day);});
+    document.querySelectorAll('[data-history-operation]').forEach(el=>{
+      if(!el.isConnected)return;
+      el.hidden = period(day,day).length === 0;
+      if(!el.hidden)el.innerHTML=operationMarkup(day);
+    });
   }
   function mountOperation() {
     if(!allowed)return;
@@ -226,7 +230,9 @@ export function initHistoricalFinances(live) {
     if(!summary)return;
     let el=document.querySelector('[data-history-operation]');
     if(!el){el=document.createElement('section');el.className='history-operation';el.dataset.historyOperation='';summary.insertAdjacentElement('afterend',el);}
-    el.innerHTML=operationMarkup(document.getElementById('delivery-date')?.value||isoToday());
+    const day=document.getElementById('delivery-date')?.value||isoToday();
+    el.hidden=period(day,day).length===0;
+    if(!el.hidden)el.innerHTML=operationMarkup(day);
   }
   function recalcDraft() {
     const existing=new Set(list().map(e=>e.customer_id+'|'+e.entry_date+'|'+e.amount_cents));
@@ -332,7 +338,16 @@ export function initHistoricalFinances(live) {
   });
   window.addEventListener('trameli:route-rendered',mountOperation);
   window.addEventListener('trameli:payments-refresh',refresh);
-  window.TrameliFinancialHistory={refresh,customerMarkup,operatorMarkup,operationMarkup,period,sums,entries:list};
+  // A mesma baixa individual e utilizada pela lista geral e pela ficha do cliente.
+  async function setStatus(id, status) {
+    if(!allowed)throw new Error('Somente a operação pode confirmar pagamentos.');
+    if(!['paid','pending'].includes(status))throw new Error('Situação financeira inválida.');
+    const entry=list().find(item=>item.id===id);
+    if(!entry)throw new Error('Lançamento histórico não encontrado ou anulado.');
+    if(entry.status===status)return;
+    await updateEntry(id,{status,paid_at:status==='paid'?new Date().toISOString():null});
+  }
+  window.TrameliFinancialHistory={refresh,customerMarkup,operatorMarkup,operationMarkup,period,sums,entries:list,setStatus};
   mountOperation();
   refresh();
 }
