@@ -1,194 +1,185 @@
 <!doctype html>
-<html lang="pt-BR">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="noindex,nofollow">
-<meta name="color-scheme" content="light">
-<title>Gestão Modular · Prévia do Pão Doce</title>
+<html lang="pt-BR"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><meta name="color-scheme" content="light">
+<title>Refinamento visual · Gestão Pão Doce (teste)</title>
 <link rel="icon" href="../assets/favicon-pao-doce.png" type="image/png">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/operacao.css">
+<link rel="stylesheet" href="../assets/design-system.css">
+<link rel="stylesheet" href="../assets/identity.css">
 <link rel="stylesheet" href="../assets/staff-ui.css">
-<link rel="stylesheet" href="../assets/staff-modular.css">
+<link rel="stylesheet" href="../assets/staff-modular.css?v=2">
 <style>
-*{box-sizing:border-box}html{scroll-behavior:smooth}body.gm-preview{margin:0;font-family:Manrope,"Segoe UI",system-ui,sans-serif;font-size:14px;color:var(--staff-text);background:var(--staff-canvas)}
-body.gm-preview button,body.gm-preview input,body.gm-preview select{font:inherit}body.gm-preview button{cursor:pointer}body.gm-preview button:disabled{cursor:not-allowed;opacity:.55}
-body.gm-preview .demo-shell{display:grid;grid-template-columns:244px minmax(0,1fr);min-height:100dvh}
-body.gm-preview .nav{position:sticky;top:0;display:flex;flex-direction:column;justify-content:space-between;width:244px;height:100dvh;padding:25px 15px;background:var(--staff-surface);border-right:1px solid var(--staff-border);overflow-y:auto}
-body.gm-preview .demo-brand{display:flex;align-items:center;gap:11px;padding:0 9px 24px;border-bottom:1px solid var(--staff-border);color:var(--staff-text);font-weight:800;font-size:19px;letter-spacing:-.5px}
-body.gm-preview .demo-mark{display:grid;place-items:center;width:36px;height:36px;border-radius:12px;background:var(--staff-brand);color:white;font-size:22px}
-body.gm-preview .demo-small{color:var(--staff-text-secondary);font-size:12px;font-weight:600}
-body.gm-preview .demo-menu{padding-top:24px}
-body.gm-preview .demo-menu-title{padding:0 11px 9px;color:var(--staff-text-secondary);font-weight:700;font-size:11px;letter-spacing:.1em;text-transform:uppercase}
-body.gm-preview .demo-nav{display:flex;align-items:center;gap:12px;width:100%;margin-bottom:4px;padding:11px 12px;border:0;border-radius:10px;background:transparent;color:var(--staff-text-secondary);text-align:left;font-weight:650}
-body.gm-preview .demo-nav:hover{background:var(--staff-neutral-soft)}body.gm-preview .demo-nav[aria-current=page]{background:var(--staff-brand-soft);color:var(--staff-brand)}body.gm-preview .demo-nav .symbol{width:19px;text-align:center;font-size:18px}
-body.gm-preview .demo-side-note{margin-top:22px;padding:15px;border-radius:13px;background:var(--staff-canvas);font-size:12px;line-height:1.6;color:var(--staff-text-secondary)}
-body.gm-preview .demo-side-note strong{display:block;color:var(--staff-brand);margin-bottom:3px}
-body.gm-preview .demo-main{min-width:0}body.gm-preview .nav2{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:18px;height:67px;min-height:67px;margin:0;padding:0 30px!important;background:var(--staff-surface);border-bottom:1px solid var(--staff-border);box-shadow:0 2px 8px rgb(43 26 18 / 3%)}
-body.gm-preview .demo-search{display:flex;align-items:center;gap:10px;max-width:440px;flex:1;height:40px;padding:0 13px;border:1px solid var(--staff-border);border-radius:10px;background:white;color:var(--staff-text-secondary)}
-body.gm-preview .demo-search input{width:100%;border:0;outline:0;background:transparent;color:var(--staff-text)}
-body.gm-preview .demo-top-actions{display:flex;align-items:center;gap:9px}body.gm-preview .demo-top-actions span{white-space:nowrap}
-body.gm-preview .demo-avatar{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--staff-brand-soft);color:var(--staff-brand);font-size:12px;font-weight:800}
-body.gm-preview .demo-content{max-width:1360px;margin:auto;padding:30px 30px 64px}
-body.gm-preview .demo-label{font-size:11px;font-weight:750;letter-spacing:.11em;text-transform:uppercase;color:var(--staff-text-secondary)}
-body.gm-preview .demo-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:6px 0 22px}
-body.gm-preview h1{margin:4px 0 5px;font-size:29px;line-height:1.2;letter-spacing:-.04em;color:var(--staff-text)}
-body.gm-preview h2{font-size:18px;line-height:1.3;margin:0}body.gm-preview p{margin:0}
-body.gm-preview .demo-muted{font-size:13px;color:var(--staff-text-secondary)}
-body.gm-preview .demo-actions{display:flex;align-items:center;flex-wrap:wrap;gap:9px}
-body.gm-preview .demo-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:8px 16px;border:1px solid var(--staff-border);border-radius:10px;background:white;color:var(--staff-text);font-weight:700;white-space:nowrap}
-body.gm-preview .demo-button:hover{background:var(--staff-brand-soft);border-color:var(--staff-brand);color:var(--staff-brand)}
-body.gm-preview .demo-button--primary{background:var(--staff-brand);border-color:var(--staff-brand);color:#fff}
-body.gm-preview .demo-button--primary:hover{background:var(--staff-brand-hover);border-color:var(--staff-brand-hover);color:#fff}
-body.gm-preview .demo-button--sm{min-height:33px;padding:6px 10px;font-size:12px}
-body.gm-preview .demo-input{height:40px;padding:7px 12px;border:1px solid var(--staff-border);border-radius:10px;background:white;color:var(--staff-text)}
-body.gm-preview .demo-card{padding:20px;border:1px solid var(--staff-border);border-radius:16px;background:#fff;box-shadow:0 2px 12px rgb(43 26 18 / 4%)}
-body.gm-preview #operation-view .summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0 0 24px;padding:0;border:0;background:transparent}
-body.gm-preview #operation-view .summary-card{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:18px 20px!important;min-width:0;border:1px solid var(--staff-border);border-radius:16px;background:white}
-body.gm-preview #operation-view .summary-card>span{font-size:13px;color:var(--staff-text-secondary)}
-body.gm-preview #operation-view .summary-card>strong{margin:0;font-size:30px;line-height:1.1;font-weight:800;color:var(--staff-text)}
-body.gm-preview #operation-view .summary-card>small{display:block;color:var(--staff-text-secondary);font-size:12px}
-body.gm-preview .demo-section-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px}
-body.gm-preview .demo-filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-body.gm-preview #operation-view .kanban{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;align-items:start}
-body.gm-preview #operation-view .kanban-column{min-width:0;overflow:hidden;border:1px solid var(--staff-border);border-top:3px solid var(--staff-warning);border-radius:16px;background:white}
-body.gm-preview #operation-view .kanban-column--confirmed{border-top-color:var(--staff-info)}body.gm-preview #operation-view .kanban-column--delivered{border-top-color:var(--staff-success)}
-body.gm-preview #operation-view .kanban-column>header{display:flex;align-items:center;justify-content:space-between;padding:15px 17px;border-bottom:1px solid var(--staff-border)}
-body.gm-preview #operation-view .kanban-column>header h3{margin:0;font-size:14px;font-weight:800}
-body.gm-preview .demo-count{display:grid;place-items:center;min-width:27px;height:27px;padding:0 5px;border-radius:100px;background:var(--staff-neutral-soft);color:var(--staff-text-secondary);font-size:12px;font-weight:800}
-body.gm-preview #operation-view .kanban-column__cards{display:grid;align-content:start;gap:9px;min-height:180px;max-height:450px;padding:12px;overflow-y:auto;overscroll-behavior:contain}
-body.gm-preview .demo-order{padding:14px;border:1px solid var(--staff-border);border-radius:12px;background:white}
-body.gm-preview .demo-order-top{display:flex;justify-content:space-between;gap:9px;align-items:flex-start}
-body.gm-preview .demo-order-name{font-weight:800;color:var(--staff-text);font-size:14px}
-body.gm-preview .demo-order-id{font-size:11px;color:var(--staff-text-secondary)}
-body.gm-preview .demo-order-info{display:grid;gap:6px;margin:10px 0 12px;color:var(--staff-text-secondary);font-size:12px;line-height:1.4}
-body.gm-preview .demo-order-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;border-top:1px solid var(--staff-border);padding-top:10px}
-body.gm-preview .demo-order-foot select{max-width:145px;min-height:34px;padding:5px 8px;border:1px solid var(--staff-border);border-radius:8px;background:var(--staff-surface);color:var(--staff-text)}
-body.gm-preview .demo-chip{display:inline-block;padding:4px 8px;border-radius:999px;background:var(--staff-brand-soft);color:var(--staff-brand);font-size:11px;font-weight:750}
-body.gm-preview .demo-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin-bottom:18px}
-body.gm-preview .demo-value{font-size:26px;font-weight:800;margin:10px 0 5px;font-variant-numeric:tabular-nums}
-body.gm-preview .demo-list{display:grid;gap:0}body.gm-preview .demo-row{display:flex;gap:15px;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--staff-border)}body.gm-preview .demo-row:last-child{border-bottom:0}
-body.gm-preview .demo-row strong{font-size:14px}body.gm-preview .demo-placeholder{display:grid;place-items:center;min-height:145px;text-align:center;color:var(--staff-text-secondary)}
-body.gm-preview .demo-products{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-body.gm-preview .demo-product{padding:14px;border:1px solid var(--staff-border);border-radius:13px;background:#fff}
-body.gm-preview .demo-product-image{height:105px;margin-bottom:13px;border-radius:9px;background:linear-gradient(145deg,var(--staff-neutral-soft),var(--staff-brand-soft));display:grid;place-items:center;font-size:36px}
-body.gm-preview .demo-product h3{margin:0 0 8px;font-size:14px}
-body.gm-preview .demo-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:20px;padding:11px 15px;border:1px solid var(--staff-border);border-radius:12px;background:var(--staff-brand-soft);color:var(--staff-text)}
-body.gm-preview .demo-banner strong{color:var(--staff-brand)}
-body.gm-preview .demo-view[hidden]{display:none!important}
-body.gm-preview .demo-mobile-menu{display:none}
-body.gm-preview .demo-toast{position:fixed;z-index:60;bottom:25px;right:25px;max-width:min(400px,calc(100vw - 32px));padding:14px 18px;border-radius:12px;background:var(--staff-text);color:white;box-shadow:0 8px 30px rgb(0 0 0 / 16%)}
-body.gm-preview dialog{border:1px solid var(--staff-border);border-radius:16px;padding:24px;width:min(440px,calc(100% - 28px));box-shadow:0 15px 50px rgb(0 0 0 / 18%);background:#fff;color:var(--staff-text)}
-body.gm-preview dialog::backdrop{background:rgb(43 26 18 / 40%)}
-body.gm-preview .demo-form{display:grid;gap:15px;margin-top:18px}
-body.gm-preview .demo-form label{display:grid;gap:6px;font-size:13px;font-weight:700}
-body.gm-preview .demo-form input,body.gm-preview .demo-form select{width:100%;height:42px;padding:8px 12px;border:1px solid var(--staff-border);border-radius:10px;background:white}
-body.gm-preview .demo-footer-note{margin-top:24px;color:var(--staff-text-secondary);font-size:12px;line-height:1.5}
-@media(max-width:1050px){body.gm-preview .demo-shell{grid-template-columns:210px minmax(0,1fr)}body.gm-preview .nav{width:210px}body.gm-preview .demo-content{padding:24px 18px}body.gm-preview .nav2{padding:0 18px!important}body.gm-preview .demo-order-foot{flex-wrap:wrap}}
-@media(max-width:780px){body.gm-preview .demo-shell{display:block}body.gm-preview .nav{display:none;position:fixed;z-index:30;left:0;top:60px;width:min(300px,85vw);height:calc(100dvh - 60px);box-shadow:0 10px 30px rgb(0 0 0 / 12%)}body.gm-preview .nav.demo-open{display:flex}body.gm-preview .demo-mobile-menu{display:inline-flex}body.gm-preview .nav2{height:60px;min-height:60px}body.gm-preview .demo-top-actions span{display:none}body.gm-preview #operation-view .kanban{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:14px}body.gm-preview #operation-view .kanban-column{flex:0 0 min(325px,85vw);scroll-snap-align:start}body.gm-preview .demo-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:520px){body.gm-preview .demo-content{padding:19px 13px 40px}body.gm-preview .nav2{padding:0 13px!important}body.gm-preview .demo-top-actions{display:none}body.gm-preview .demo-banner{font-size:12px}body.gm-preview h1{font-size:24px}body.gm-preview #operation-view .summary{gap:7px}body.gm-preview #operation-view .summary-card{padding:12px!important}body.gm-preview #operation-view .summary-card>strong{font-size:23px}body.gm-preview #operation-view .summary-card>small{display:none}body.gm-preview .demo-products{grid-template-columns:repeat(2,minmax(0,1fr))}body.gm-preview .demo-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media print{body.gm-preview .nav,body.gm-preview .nav2,body.gm-preview .demo-actions,body.gm-preview .demo-banner,body.gm-preview .demo-filters{display:none!important}body.gm-preview .demo-shell{display:block}body.gm-preview .demo-content{padding:0}body.gm-preview #operation-view .kanban-column__cards{max-height:none;overflow:visible}}
+/* Complementos exclusivos da prévia estática, sem afetar a aplicação de produção. */
+html{scroll-behavior:smooth}
+body.gm-preview{margin:0;min-width:320px;background:var(--staff-canvas);color:var(--staff-text);font-family:var(--font-interface,Manrope,Arial,sans-serif)}
+body.gm-preview .preview-frame{display:grid;grid-template-columns:72px minmax(0,1fr);min-height:100dvh}
+body.gm-preview .preview-sidebar{position:sticky;top:0;z-index:10;display:flex;flex-direction:column;align-items:center;gap:9px;height:100dvh;padding:17px 10px;border-right:1px solid var(--staff-border);background:var(--staff-surface)}
+body.gm-preview .preview-icon{display:grid;place-items:center;width:43px;height:43px;border:0;border-radius:10px;background:transparent;color:var(--staff-text-secondary);font-size:21px;text-decoration:none;cursor:pointer}
+body.gm-preview .preview-icon:hover,body.gm-preview .preview-icon[aria-current=page]{background:var(--staff-brand-soft);color:var(--staff-brand)}
+body.gm-preview .preview-icon[aria-current=page]{position:relative}
+body.gm-preview .preview-icon[aria-current=page]:before{content:"";position:absolute;left:-6px;top:10px;bottom:10px;width:3px;border-radius:3px;background:var(--staff-brand)}
+body.gm-preview .preview-icon--bottom{margin-top:auto}
+body.gm-preview .preview-body{min-width:0}
+body.gm-preview .preview-topbar{position:sticky;top:0;z-index:9;display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:59px;padding:8px 32px;background:var(--staff-surface);border-bottom:1px solid var(--staff-border)}
+body.gm-preview .preview-search{display:flex;align-items:center;gap:9px;width:min(480px,55vw);height:40px;padding:8px 13px;border:1px solid var(--staff-border);border-radius:9px;color:var(--staff-text-secondary);background:var(--staff-surface)}
+body.gm-preview .preview-search input{min-width:0;width:100%;border:0;outline:0;background:transparent;color:var(--staff-text);font:inherit;font-size:13px}
+body.gm-preview .preview-account{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--staff-text-secondary)}
+body.gm-preview .preview-avatar{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--staff-brand-soft);color:var(--staff-brand);font-weight:700}
+body.gm-preview .preview-stage{max-width:1430px;margin:0 auto;padding:22px 32px 70px}
+body.gm-preview .preview-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 14px;margin-bottom:18px;border:1px solid var(--staff-border);border-radius:10px;background:var(--staff-brand-soft);color:var(--staff-text-secondary);font-size:12px;line-height:1.45}
+body.gm-preview .preview-banner strong{color:var(--staff-brand)}
+body.gm-preview .preview-banner span{padding:3px 8px;border:1px solid var(--staff-border);border-radius:20px;background:white;color:var(--staff-brand);font-weight:700;white-space:nowrap}
+body.gm-preview .view{display:block!important}
+body.gm-preview #operation-view{max-width:none!important;width:100%!important;margin:0!important;padding:0!important}
+body.gm-preview #operation-view .workspace{width:100%!important;max-width:none!important;margin:0!important;padding:0!important}
+body.gm-preview #operation-view :is(.supplier-list,.orders-section){scroll-margin-top:85px}
+body.gm-preview #operation-view .supplier-list .section-heading{min-width:0}
+body.gm-preview .preview-toast{position:fixed;bottom:22px;right:22px;z-index:50;width:min(400px,calc(100vw - 44px));padding:12px 18px;border-radius:12px;background:var(--staff-text);color:#fff;font-size:13px;box-shadow:0 12px 28px rgb(0 0 0 / 20%)}
+body.gm-preview #operation-view .kanban-card__move{position:static;display:flex;padding:0 14px 14px}
+body.gm-preview #operation-view .kanban-card__move label{display:block;width:100%;flex:1}
+body.gm-preview #operation-view .kanban-card__move select{min-height:38px;width:100%;padding:5px 9px;border:1px solid var(--staff-border);border-radius:9px;background:white}
+body.gm-preview #operation-view .kanban-card__move .kanban-drag-handle{display:none}
+body.gm-preview #operation-view .order-card{cursor:default}
+body.gm-preview #operation-view .kanban-column__cards{max-height:min(58vh,610px)}
+body.gm-preview #operation-view .supplier-list .section-heading .eyebrow{display:block}
+body.gm-preview #operation-view .supplier-list__actions select{max-width:220px}
+body.gm-preview #operation-view .supplier-totals ul{margin-top:12px}
+body.gm-preview :is(#operation-view .intro__actions .button,#operation-view .supplier-list__actions .button,#operation-view .kanban-toolbar .button){cursor:pointer}
+body.gm-preview #operation-view :is(.supplier-list__help,.section-description){color:var(--staff-text-secondary)!important}
+body.gm-preview #operation-view .supplier-totals .supplier-cost-total{display:block}
+body.gm-preview #operation-view .supplier-totals li strong{color:var(--staff-brand)}
+body.gm-preview #operation-view .supplier-list__feedback:empty{display:none}
+body.gm-preview .preview-footer{margin:24px 0;font-size:12px;color:var(--staff-text-secondary)}
+body.gm-preview .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+@media(max-width:850px){
+body.gm-preview .preview-stage{padding:18px}
+body.gm-preview .preview-topbar{padding:7px 18px}
+body.gm-preview .preview-account{font-size:0}
+body.gm-preview #operation-view .supplier-list__actions{justify-content:flex-start}
+}
+@media(max-width:620px){
+body.gm-preview .preview-frame{grid-template-columns:minmax(0,1fr)}
+body.gm-preview .preview-sidebar{position:fixed;top:auto;bottom:0;left:0;right:0;height:58px;flex-direction:row;justify-content:space-around;padding:5px 8px;border-right:0;border-top:1px solid var(--staff-border)}
+body.gm-preview .preview-icon{width:48px;height:44px;font-size:20px}
+body.gm-preview .preview-icon--bottom{margin:0}
+body.gm-preview .preview-icon[aria-current=page]:before{left:14px;right:14px;top:auto;bottom:0;width:auto;height:3px}
+body.gm-preview .preview-stage{padding:15px 13px 90px}
+body.gm-preview .preview-topbar{padding:7px 13px}
+body.gm-preview .preview-search{width:100%}
+body.gm-preview .preview-account{display:none}
+body.gm-preview #operation-view .supplier-list__actions select{max-width:none}
+body.gm-preview #operation-view .summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media print{
+body.gm-preview .preview-sidebar,body.gm-preview .preview-topbar,body.gm-preview .preview-banner,body.gm-preview .preview-footer{display:none!important}
+body.gm-preview .preview-frame{display:block}
+body.gm-preview #operation-view .kanban-column__cards{overflow:visible;max-height:none}
+}
 </style>
-</head>
-<body class="staff-mode gm-preview">
-<div class="demo-shell">
-  <aside class="nav" id="demo-side" aria-label="Navegação da prévia">
-    <div><div class="demo-brand"><span class="demo-mark" aria-hidden="true">✦</span><span>Pão Doce<small style="display:block;font-size:10px;font-weight:650;color:var(--staff-text-secondary)">DELIVERY · GESTÃO</small></span></div>
-      <div class="demo-menu">
-      <div class="demo-menu-title">Operação</div>
-      <button class="demo-nav" data-nav="operation" aria-current="page"><span class="symbol">▦</span> Operação diária</button>
-      <div class="demo-menu-title" style="margin-top:22px">Cadastros</div>
-      <button class="demo-nav" data-nav="clients"><span class="symbol">♙</span> Clientes</button>
-      <button class="demo-nav" data-nav="products"><span class="symbol">▤</span> Produtos</button>
-      <div class="demo-menu-title" style="margin-top:22px">Gestão</div>
-      <button class="demo-nav" data-nav="finance"><span class="symbol">▥</span> Financeiro</button>
-      </div>
-    </div>
-    <div class="demo-side-note"><strong>Prévia visual · Versão 1</strong>Pedidos e valores são fictícios. Nada aqui acessa o banco real.</div>
-  </aside>
-  <div class="demo-main">
-    <header class="nav2">
-      <button class="demo-button demo-button--sm demo-mobile-menu" id="menu-button" aria-label="Abrir menu" aria-expanded="false">☰</button>
-      <label class="demo-search"><span aria-hidden="true">⌕</span><input id="global-demo-search" type="search" placeholder="Buscar na gestão de demonstração…" aria-label="Buscar pedido fictício"></label>
-      <div class="demo-top-actions"><span class="demo-small">Ambiente de demonstração</span><div class="demo-avatar" aria-label="Perfil demonstrativo">PD</div></div>
-    </header>
-    <div class="demo-content" id="inicio">
-      <div class="demo-banner"><div><strong>Gestão Modular — prévia isolada.</strong> Explore as telas e teste a apresentação. Nenhuma ação chega à produção.</div><span class="demo-chip">Somente demonstração</span></div>
-      <section class="demo-view" id="operation-view" data-view="operation">
-        <div class="demo-label">OPERAÇÃO DO DIA</div>
-        <div class="demo-heading"><div><h1>Central de pedidos</h1><p class="demo-muted">Acompanhamento claro, sem perder os controles atuais.</p></div><div class="demo-actions"><input class="demo-input" type="date" id="demo-date" value="2026-10-29" aria-label="Data de referência (fictícia)"><button class="demo-button demo-button--primary" id="new-demo">+ Novo pedido</button><button class="demo-button" id="print-demo">Imprimir</button></div></div>
-        <div class="summary" aria-label="Indicadores demonstrativos"><div class="summary-card"><span>Pedidos do dia</span><strong id="count-all">0</strong><small>pedidos fictícios</small></div><div class="summary-card"><span>Novos</span><strong id="count-new">0</strong><small>aguardando conferência</small></div><div class="summary-card"><span>Entregues</span><strong id="count-delivered">0</strong><small>finalizados na prévia</small></div></div>
-        <div class="demo-section-header"><div><h2>Acompanhamento</h2><p class="demo-muted">Três etapas preservadas, com rolagem em cada coluna.</p></div><div class="demo-filters"><select class="demo-input" id="filter-status" aria-label="Filtrar etapa"><option value="all">Todas as etapas</option><option value="new">Novos</option><option value="confirmed">Conferidos</option><option value="delivered">Entregues</option></select><button class="demo-button" id="clear-demo">Limpar filtros</button></div></div>
-        <div class="kanban" aria-label="Kanban fictício" id="kanban"></div>
-        <p class="demo-footer-note">Teste a rolagem vertical dentro das colunas, a busca no topo e a mudança de etapa: todas as interações são apenas locais nesta página.</p>
-      </section>
-      <section class="demo-view" data-view="clients" hidden>
-        <div class="demo-label">CADASTROS</div><div class="demo-heading"><div><h1>Clientes</h1><p class="demo-muted">Mesmo cabeçalho, mesma escala e mesmos componentes da operação.</p></div><button class="demo-button demo-button--primary" data-demo-toast="O cadastro será mantido na aplicação real. Esta tela usa somente exemplos.">+ Novo cliente</button></div>
-        <div class="demo-grid"><div class="demo-card"><span class="demo-small">Clientes ativos</span><div class="demo-value">—</div><span class="demo-muted">Dados reais não carregados</span></div><div class="demo-card"><span class="demo-small">Novos no período</span><div class="demo-value">—</div><span class="demo-muted">Indicador demonstrativo</span></div><div class="demo-card"><span class="demo-small">Cadastros incompletos</span><div class="demo-value">—</div><span class="demo-muted">Indicador demonstrativo</span></div></div>
-        <div class="demo-card"><div class="demo-section-header"><h2>Lista de clientes</h2><button class="demo-button demo-button--sm" data-demo-toast="Filtros reais permanecem preservados no projeto.">Filtrar</button></div><div class="demo-list"><div class="demo-row"><div><strong>Cliente exemplo A</strong><p class="demo-muted">Rua exemplo, 10</p></div><span class="demo-chip">Ativo</span></div><div class="demo-row"><div><strong>Cliente exemplo B</strong><p class="demo-muted">Rua exemplo, 20</p></div><span class="demo-chip">Ativo</span></div><div class="demo-row"><div><strong>Cliente exemplo C</strong><p class="demo-muted">Rua exemplo, 30</p></div><span class="demo-chip">Ativo</span></div></div></div>
-      </section>
-      <section class="demo-view" data-view="products" hidden>
-        <div class="demo-label">CATÁLOGO INTERNO</div><div class="demo-heading"><div><h1>Produtos</h1><p class="demo-muted">Cartões uniformes, filtros limpos e ações consistentes.</p></div><button class="demo-button demo-button--primary" data-demo-toast="A edição real de produtos está desativada nesta prévia.">+ Novo produto</button></div>
-        <div class="demo-card" style="margin-bottom:16px"><div class="demo-filters"><input class="demo-input" placeholder="Buscar produtos…" disabled aria-label="Busca indisponível nesta simulação"><select class="demo-input" disabled aria-label="Categoria indisponível"><option>Todas as categorias</option></select><button class="demo-button" data-demo-toast="Filtros e categorias serão mantidos no aplicativo completo.">Mais filtros</button></div></div>
-        <div class="demo-products"><div class="demo-product"><div class="demo-product-image" aria-hidden="true">▤</div><h3>Produto exemplo A</h3><span class="demo-muted">Dados demonstrativos</span></div><div class="demo-product"><div class="demo-product-image" aria-hidden="true">▥</div><h3>Produto exemplo B</h3><span class="demo-muted">Dados demonstrativos</span></div><div class="demo-product"><div class="demo-product-image" aria-hidden="true">▦</div><h3>Produto exemplo C</h3><span class="demo-muted">Dados demonstrativos</span></div></div>
-      </section>
-      <section class="demo-view" data-view="finance" hidden>
-        <div class="demo-label">GESTÃO</div><div class="demo-heading"><div><h1>Financeiro</h1><p class="demo-muted">Legibilidade e consistência, sem modificar regras de cálculo.</p></div><button class="demo-button" data-demo-toast="Relatórios reais não são acessados na prévia.">Exportar relatório</button></div>
-        <div class="demo-grid"><div class="demo-card"><span class="demo-small">Total de vendas</span><div class="demo-value">—</div><span class="demo-muted">Dados isolados</span></div><div class="demo-card"><span class="demo-small">Recebimentos</span><div class="demo-value">—</div><span class="demo-muted">Dados isolados</span></div><div class="demo-card"><span class="demo-small">Pendências</span><div class="demo-value">—</div><span class="demo-muted">Dados isolados</span></div></div>
-        <div class="demo-card"><div class="demo-section-header"><h2>Visão financeira</h2><div class="demo-filters"><button class="demo-button demo-button--sm" data-demo-toast="Presets mantidos no financeiro real.">Hoje</button><button class="demo-button demo-button--sm" data-demo-toast="Presets mantidos no financeiro real.">15 dias</button><button class="demo-button demo-button--sm" data-demo-toast="Presets mantidos no financeiro real.">Período</button></div></div><div class="demo-placeholder">Os relatórios e valores verdadeiros não são carregados neste ambiente.</div></div>
-      </section>
-    </div>
-  </div>
-</div>
-<dialog id="new-order-dialog" aria-labelledby="demo-dialog-heading"><h2 id="demo-dialog-heading">Novo pedido fictício</h2><p class="demo-muted">Só aparecerá nesta prévia, até recarregar a página.</p><form id="demo-order-form" class="demo-form"><label>Nome demonstrativo<input name="name" required maxlength="48" placeholder="Ex.: Cliente exemplo"></label><label>Descrição do pedido<input name="items" required maxlength="90" placeholder="Ex.: 2 unidades do produto A"></label><label>Etapa inicial<select name="status"><option value="new">Novo</option><option value="confirmed">Conferido</option><option value="delivered">Entregue</option></select></label><div class="demo-actions" style="justify-content:flex-end"><button type="button" class="demo-button" id="cancel-new">Cancelar</button><button type="submit" class="demo-button demo-button--primary">Criar na prévia</button></div></form></dialog>
-<div class="demo-toast" id="demo-toast" role="status" hidden></div>
+</head><body class="staff-mode gm-preview">
+<div class="preview-frame">
+<aside class="preview-sidebar" aria-label="Navegação da prévia">
+<a class="preview-icon" href="#operation-view" aria-current="page" title="Pedidos do dia" aria-label="Pedidos do dia">☼</a>
+<a class="preview-icon" href="#orders-title" title="Kanban de pedidos" aria-label="Kanban de pedidos">▤</a>
+<a class="preview-icon" href="#supplier-list-title" title="Pedidos para a padaria" aria-label="Pedidos para a padaria">▦</a>
+<a class="preview-icon" href="#separation-list-title" title="Lista de separação" aria-label="Lista de separação">☷</a>
+<a class="preview-icon preview-icon--bottom" href="#operation-view" title="Voltar ao topo" aria-label="Voltar ao topo">↑</a>
+</aside>
+<div class="preview-body">
+<header class="preview-topbar">
+<label class="preview-search"><span aria-hidden="true">⌕</span><input id="preview-global-search" type="search" aria-label="Buscar pedido fictício" placeholder="Buscar clientes, pedidos ou produtos..."></label>
+<div class="preview-account"><span>Ambiente de teste</span><div class="preview-avatar" aria-label="Perfil de demonstração">PD</div></div>
+</header>
+<main class="preview-stage" id="inicio">
+<div class="preview-banner"><div><strong>Refinamento visual — operação real como referência.</strong> Estrutura da operação e repasse trazida do projeto. Pedidos e valores são exemplos; nenhuma ligação com o Supabase.</div><span>Somente teste</span></div>
+<div class="app-shell"><div id="operation-view" class="view"><div class="workspace">
+            <section class="intro staff-page-header">
+              <div><h1>Pedidos do dia</h1></div>
+              <div class="intro__actions"><label class="staff-inline-date" for="delivery-date"><span class="sr-only">Dia da operação</span><input id="delivery-date" type="date"></label><button class="button button--primary" id="new-order" type="button">+ Novo pedido</button><button class="button button--quiet" id="manage-recurring-orders" type="button">Pedidos recorrentes</button><button class="button button--quiet" id="print-orders" type="button">Imprimir etiquetas</button></div>
+            </section>
+            <p class="sr-only" id="operation-day-hint">Escolha uma data para acompanhar a fila.</p>
+            <section class="summary" aria-label="Resumo do dia"><div class="summary-card"><span>Pedidos</span><strong id="total-orders">0</strong><small>ativos nesta data</small></div><div class="summary-card summary-card--warm"><span>Novos</span><strong id="pending-orders">0</strong><small>aguardando conferência</small></div><div class="summary-card"><span>Entregues</span><strong id="completed-orders">0</strong><small>finalizados no dia</small></div><div class="summary-card summary-card--total"><span>Total dos pedidos</span><strong id="grand-total">R$ 0,00</strong><small>produtos + entregas</small></div></section>
+            <section class="orders-section" aria-labelledby="orders-title"><div class="section-heading"><div><p class="eyebrow">FLUXO DO DIA</p><h2 id="orders-title">Acompanhe cada pedido</h2><p class="section-description" id="kanban-help">Use apenas as etapas A conferir, Conferido e Entregue. Pedidos em separação ou prontos ficam agrupados em Conferido até serem entregues. Arraste os pedidos ou use Mover para. Use a ação em lote ao finalizar.</p></div><label class="search-box">Buscar pedido<input id="order-search" type="search" placeholder="Nome, endereço ou produto"></label></div><p class="kanban-feedback" id="kanban-feedback" role="status"></p><div class="orders-list" id="orders-list" aria-live="polite"></div></section>
+            <section class="supplier-list" aria-labelledby="supplier-list-title"><div class="section-heading"><div><p class="eyebrow">REPASSE DA PADARIA · PREÇO DE CUSTO</p><h2 id="supplier-list-title">Pedidos para a padaria</h2></div><div class="supplier-list__actions"><label class="supplier-period">Origem<select id="supplier-provider"><option value="divano">Padaria do Divano</option><option value="sandra">Padaria Sandra</option><option value="outros">Outros (compra à parte)</option></select></label><label class="supplier-period">Período<select id="supplier-period"><option value="diario">Diário</option><option value="quinzenal">Quinzenal (fechamento)</option><option value="mensal">Mensal</option></select></label><button class="button button--primary" id="download-supplier-pdf" type="button">Baixar PDF</button><button class="button button--quiet" id="copy-supplier-list" type="button">Copiar resumo</button><button class="button button--quiet" id="copy-supplier-clients" type="button" hidden>Copiar por cliente</button></div></div><p class="supplier-list__period" id="supplier-period-label" role="status"></p><details class="supplier-help-details"><summary>Como funcionam origens, períodos e relatórios</summary><p class="supplier-list__help">Escolha a origem e o período. Os relatórios mostram somente os produtos e custos da origem selecionada. Em Outros, acompanhe os itens adquiridos à parte, sem misturá-los aos pedidos das duas padarias. Para a Padaria Sandra, o PDF e a cópia por cliente também mostram quem pediu cada item, sem misturar esses produtos na lista operacional da outra padaria. O quinzenal (dia 1 a 15 e 16 ao fim do mês, iguais aos fechamentos) e o mensal trazem itens, custo por dia e total a pagar. A data selecionada acima define a quinzena ou o mês.</p></details><section class="supplier-totals" aria-labelledby="supplier-totals-title"><h3 id="supplier-totals-title">Lista consolidada por material</h3><p>Quantidades totais para separar tudo de uma vez.</p><div id="supplier-list-totals"></div><div id="supplier-list-items" hidden></div></section><p class="supplier-list__feedback" id="supplier-list-feedback" role="status"></p></section>
+            <section class="supplier-list" aria-labelledby="separation-list-title"><div class="section-heading"><div><p class="eyebrow">OPERAÇÃO · SEPARAÇÃO</p><h2 id="separation-list-title">Lista de separação</h2></div><div class="supplier-list__actions"><button class="button button--primary" id="download-separation-pdf" type="button">Baixar PDF de separação</button></div></div><p class="supplier-list__help">Somente os produtos da Padaria do Divano, com clientes ordenados por endereço/rua e depois pelo nome. PDF operacional sem preços, em formato compacto para economizar páginas.</p><p class="supplier-list__feedback" id="separation-list-feedback" role="status"></p></section>
+</div></div></div>
+<p class="preview-footer">Prévia de aparência e controles demonstrativos: PDFs e pedidos verdadeiros continuam exclusivos do sistema original.</p>
+</main>
+</div></div>
+<div id="preview-toast" class="preview-toast" role="status" hidden></div>
 <script>
 (()=>{
 'use strict';
-let orders=[
-{id:1001,name:'Cliente exemplo A',items:'2 itens · Pão francês',address:'Rua exemplo, 10',status:'new'},
-{id:1002,name:'Cliente exemplo B',items:'3 itens · Produtos variados',address:'Rua exemplo, 20',status:'new'},
-{id:1003,name:'Cliente exemplo C',items:'1 item · Broa doce',address:'Rua exemplo, 30',status:'confirmed'},
-{id:1004,name:'Cliente exemplo D',items:'2 itens · Biscoitos',address:'Rua exemplo, 40',status:'confirmed'},
-{id:1005,name:'Cliente exemplo E',items:'1 item · Pão francês',address:'Rua exemplo, 50',status:'delivered'},
-{id:1006,name:'Cliente exemplo F',items:'4 itens · Produtos variados',address:'Rua exemplo, 60',status:'delivered'},
-{id:1007,name:'Cliente exemplo G',items:'3 itens · Produtos variados',address:'Rua exemplo, 70',status:'delivered'},
-{id:1008,name:'Cliente exemplo H',items:'1 item · Pão francês',address:'Rua exemplo, 80',status:'delivered'},
-{id:1009,name:'Cliente exemplo I',items:'2 itens · Biscoitos',address:'Rua exemplo, 90',status:'delivered'}
+const data=[
+  {id:101,name:"Cliente exemplo A",status:"received",items:2,value:4.80,edited:true},
+  {id:102,name:"Cliente exemplo B",status:"received",items:4,value:12.40},
+  {id:103,name:"Cliente exemplo C",status:"confirmed",items:3,value:6.20},
+  {id:104,name:"Cliente exemplo D",status:"confirmed",items:5,value:19.60},
+  {id:105,name:"Cliente exemplo E",status:"delivered",items:2,value:4.80},
+  {id:106,name:"Cliente exemplo F",status:"delivered",items:7,value:25.00},
+  {id:107,name:"Cliente exemplo G",status:"delivered",items:4,value:10.40},
+  {id:108,name:"Cliente exemplo H",status:"delivered",items:2,value:13.30},
+  {id:109,name:"Cliente exemplo I",status:"delivered",items:1,value:2.50},
+  {id:110,name:"Cliente exemplo J",status:"delivered",items:3,value:9.90}
 ];
-const titles={operation:'Central de pedidos',clients:'Clientes',products:'Produtos',finance:'Financeiro'};
-const keys=[['new','Novos',''],['confirmed','Conferidos','kanban-column--confirmed'],['delivered','Entregues','kanban-column--delivered']];
-const escape=(s)=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const toast=document.getElementById('demo-toast');
+const supplierData={
+  divano:[["1×","Bandeja Rosca Fondant","R$ 4,95"],["1×","Bolo pedaço fubá tradicional","R$ 2,59"],["7×","Bomba de chocolate","R$ 14,00"],["1×","Café 500 g","R$ 42,00"],["2×","Leite saquinho","R$ 14,00"],["12×","Mini salgados","R$ 13,20"],["700 g","Mussarela","R$ 30,62"],["1×","Pão de milho","R$ 1,90"],["1×","Pão de batata","R$ 1,90"],["7×","Pão de queijo","R$ 6,30"],["232×","Pão francês","R$ 208,80"],["2×","Pct pão de batata","R$ 9,90"]],
+  sandra:[["3×","Broa salgada","R$ 9,00"],["2×","Biscoito de queijo","R$ 8,00"],["4×","Bolacha de nata","R$ 12,00"],["3×","Biscoito da vovó","R$ 9,00"]],
+  outros:[["2×","Item de compra à parte","R$ 18,00"],["1×","Embalagem especial","R$ 8,50"]]
+};
+const money=v=>v.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+const esc=s=>String(s).replace(/[&<>"']/g,x=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[x]));
+const statuses=[["received","A conferir"],["confirmed","Conferido"],["delivered","Entregue"]];
+const ordersHost=document.getElementById("orders-list");
+const toast=document.getElementById("preview-toast");
 let toastTimer;
-function message(t){toast.textContent=t;toast.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{toast.hidden=true},3500);}
+function notice(message){toast.textContent=message;toast.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{toast.hidden=true},3800)}
 function render(){
- const q=document.getElementById('global-demo-search').value.trim().toLocaleLowerCase('pt-BR');
- const select=document.getElementById('filter-status').value;
- const counts=Object.fromEntries(keys.map(([k])=>[k,orders.filter(o=>o.status===k).length]));
- document.getElementById('count-all').textContent=orders.length;
- document.getElementById('count-new').textContent=counts.new;
- document.getElementById('count-delivered').textContent=counts.delivered;
- document.getElementById('kanban').innerHTML=keys.map(([key,title,cls])=>{
-  const visible=orders.filter(o=>o.status===key && (select==='all'||select===key) && [o.name,o.items,o.address,String(o.id)].some(v=>v.toLocaleLowerCase('pt-BR').includes(q)));
-  const cards=visible.map(o=>'<article class="demo-order"><div class="demo-order-top"><span class="demo-order-name">'+escape(o.name)+'</span><span class="demo-order-id">#'+o.id+'</span></div><div class="demo-order-info"><span>'+escape(o.items)+'</span><span>'+escape(o.address)+'</span></div><div class="demo-order-foot"><span class="demo-chip">Simulação</span><select aria-label="Mudar etapa do pedido fictício '+o.id+'" data-order-id="'+o.id+'">'+keys.map(([k,t])=>'<option value="'+k+'"'+(k===o.status?' selected':'')+'>'+t+'</option>').join('')+'</select></div></article>').join('');
-  return '<section class="kanban-column '+cls+'"><header><h3>'+title+'</h3><span class="demo-count">'+counts[key]+'</span></header><div class="kanban-column__cards">'+(cards||'<p class="demo-muted" style="padding:14px">Nenhum pedido fictício neste filtro.</p>')+'</div></section>';
- }).join('');
+  const q=document.getElementById("order-search").value.toLocaleLowerCase("pt-BR");
+  const matched=data.filter(o=>o.name.toLocaleLowerCase("pt-BR").includes(q)||String(o.id).includes(q));
+  document.getElementById("total-orders").textContent=data.length;
+  document.getElementById("pending-orders").textContent=data.filter(o=>o.status==="received").length;
+  document.getElementById("completed-orders").textContent=data.filter(o=>o.status==="delivered").length;
+  document.getElementById("grand-total").textContent=money(data.reduce((s,o)=>s+o.value,0));
+  ordersHost.innerHTML='<div class="kanban-toolbar"><span>'+data.length+' pedidos fictícios · '+data.filter(o=>o.status==="delivered").length+' entregues</span><button class="button button--primary" type="button" data-bulk>Marcar todos como entregues</button></div><div class="kanban" aria-label="Pedidos demonstrativos por etapa">'+statuses.map(([key,title])=>{
+    const these=matched.filter(o=>o.status===key);
+    return '<section class="kanban-column kanban-column--'+key+'" aria-label="'+title+'"><header><h3>'+title+'</h3><strong>'+data.filter(o=>o.status===key).length+'</strong></header><div class="kanban-column__cards">'+(these.map(o=>'<article class="kanban-card" data-id="'+o.id+'"><button class="order-card order-card--'+o.status+'" type="button" data-show="'+o.id+'"><strong class="order-card__customer">'+esc(o.name)+'</strong><span class="order-card__origin"><span class="order-card__id">#EX-'+o.id+'</span> · Demonstração</span>'+(o.edited?'<span class="order-edited-badge">EDITADO PELA OPERAÇÃO</span>':'')+'<span class="order-card__meta">'+o.items+' itens · '+money(o.value)+'</span><span class="order-card__delivery">Entrega 29/10</span></button><div class="kanban-card__move"><label><span class="sr-only">Mover '+esc(o.name)+' para</span><select data-move="'+o.id+'"><option value="">Mover para...</option>'+statuses.filter(([k])=>k!==o.status).map(([k,t])=>'<option value="'+k+'">'+t+'</option>').join('')+'</select></label></div></article>').join('')||'<p class="kanban-empty">Nenhum pedido nesta etapa.</p>')+'</div></section>';
+  }).join('')+'</div>';
 }
-function view(key){if(!titles[key])return;document.querySelectorAll('.demo-view').forEach(el=>el.hidden=el.dataset.view!==key);document.querySelectorAll('.demo-nav').forEach(el=>{if(el.dataset.nav===key)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current');});document.getElementById('demo-side').classList.remove('demo-open');document.getElementById('menu-button').setAttribute('aria-expanded','false');if(key==='operation')render();document.title=titles[key]+' · Gestão Modular (Prévia)';}
-document.querySelectorAll('[data-nav]').forEach(el=>el.addEventListener('click',()=>view(el.dataset.nav)));
-document.getElementById('menu-button').addEventListener('click',()=>{const side=document.getElementById('demo-side');const next=side.classList.toggle('demo-open');document.getElementById('menu-button').setAttribute('aria-expanded',String(next));});
-document.getElementById('global-demo-search').addEventListener('input',()=>{view('operation');render();});
-document.getElementById('filter-status').addEventListener('change',render);
-document.getElementById('kanban').addEventListener('change',e=>{const id=Number(e.target.dataset.orderId);const obj=orders.find(o=>o.id===id);if(!obj||!keys.some(([k])=>k===e.target.value))return;obj.status=e.target.value;render();message('Etapa alterada apenas na demonstração.');});
-document.getElementById('clear-demo').addEventListener('click',()=>{document.getElementById('global-demo-search').value='';document.getElementById('filter-status').value='all';render();});
-document.getElementById('print-demo').addEventListener('click',()=>window.print());
-const dialog=document.getElementById('new-order-dialog');
-document.getElementById('new-demo').addEventListener('click',()=>dialog.showModal());
-document.getElementById('cancel-new').addEventListener('click',()=>dialog.close());
-document.getElementById('demo-order-form').addEventListener('submit',e=>{e.preventDefault();const fd=new FormData(e.currentTarget);const name=String(fd.get('name')).trim(),items=String(fd.get('items')).trim(),status=String(fd.get('status'));if(!name||!items)return;orders.unshift({id:Math.max(...orders.map(o=>o.id))+1,name,items,address:'Endereço demonstrativo',status});dialog.close();e.currentTarget.reset();document.getElementById('filter-status').value='all';render();message('Pedido de teste adicionado apenas nesta página.');});
-document.querySelectorAll('[data-demo-toast]').forEach(el=>el.addEventListener('click',()=>message(el.dataset.demoToast)));
-document.getElementById('demo-date').addEventListener('change',()=>message('A data escolhida é apenas ilustrativa e não consulta pedidos reais.'));
-render();
+function supplier(){
+ const provider=document.getElementById("supplier-provider").value;
+ const period=document.getElementById("supplier-period").value;
+ const options={divano:"Padaria do Divano",sandra:"Padaria Sandra",outros:"Outros (compra à parte)"};
+ const date=new Date(document.getElementById("delivery-date").value+'T12:00:00');
+ const dateText=Number.isFinite(date.getTime())?date.toLocaleDateString("pt-BR"):"29/10/2026";
+ document.getElementById("supplier-period-label").textContent=({diario:"Diário",quinzenal:"Quinzenal",mensal:"Mensal"})[period]+": "+dateText+" · "+options[provider]+" (exemplo)";
+ document.getElementById("copy-supplier-clients").hidden=provider==="divano";
+ const items=supplierData[provider];
+ document.getElementById("supplier-list-totals").innerHTML="<ul>"+items.map(i=>'<li><strong>'+esc(i[0])+'</strong><span>'+esc(i[1])+'</span><em class="supplier-cost">'+esc(i[2])+'</em></li>').join("")+'</ul><p class="supplier-cost-total"><strong>Valores ilustrativos.</strong> Não representam custos ou repasses reais.</p>';
+}
+document.getElementById("order-search").addEventListener("input",render);
+ordersHost.addEventListener("change",e=>{const id=Number(e.target.dataset.move);const x=data.find(o=>o.id===id);if(x&&statuses.some(s=>s[0]===e.target.value)){x.status=e.target.value;render();notice("Etapa alterada apenas na demonstração.")}});
+ordersHost.addEventListener("click",e=>{
+  if(e.target.closest("[data-bulk]")){data.forEach(o=>o.status="delivered");render();notice("Todos os pedidos fictícios foram movidos para Entregue.")};
+  const target=e.target.closest("[data-show]");if(target){const o=data.find(o=>o.id===Number(target.dataset.show));notice(o.name+" · Pedido demonstrativo #EX-"+o.id)}
+});
+document.getElementById("supplier-provider").addEventListener("change",supplier);
+document.getElementById("supplier-period").addEventListener("change",supplier);
+document.getElementById("delivery-date").value="2026-10-29";
+document.getElementById("delivery-date").addEventListener("change",supplier);
+document.getElementById("new-order").addEventListener("click",()=>{const next=111+data.length-10;data.unshift({id:next,name:"Novo cliente fictício",status:"received",items:2,value:4.8});render();notice("Pedido criado apenas nesta demonstração.")});
+for(const [id,message] of [["manage-recurring-orders","Recorrências mantidas na aplicação original; esta é uma prévia visual."],["print-orders","Impressão real não foi carregada nesta prévia isolada."],["download-supplier-pdf","Exportação PDF real não está habilitada nesta prévia sem banco."],["download-separation-pdf","Exportação real de separação será preservada na aplicação principal."]]){
+  document.getElementById(id).addEventListener("click",()=>notice(message));
+}
+document.getElementById("copy-supplier-list").addEventListener("click",async()=>{
+ const dataForCopy=supplierData[document.getElementById("supplier-provider").value].map(i=>i.join(" · ")).join("\n");
+ try{await navigator.clipboard.writeText("REPASSE DEMONSTRATIVO — SEM VALIDADE COMERCIAL\n"+dataForCopy);notice("Resumo fictício copiado.");}catch{notice("Cópia não autorizada pelo navegador.");}
+});
+document.getElementById("copy-supplier-clients").addEventListener("click",()=>notice("Detalhamento real por cliente permanece no aplicativo; não está nesta amostra."));
+document.getElementById("preview-global-search").addEventListener("input",e=>{document.getElementById("order-search").value=e.target.value;render();document.getElementById("orders-title").scrollIntoView({block:"start"})});
+render();supplier();
 })();
 </script>
-</body>
-</html>
+</body></html>
