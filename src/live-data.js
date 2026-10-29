@@ -267,12 +267,13 @@ export class LiveData {
 
   async saveOperatorOrder(order, requestId, customerId) {
     const wasExisting = Boolean(order.id);
-    const { data, error } = await this.client.rpc('trameli_operator_order_for_customer', {
+    const { data, error } = await this.client.rpc('trameli_operator_order_with_delivery', {
       p_order_id: order.id || null, p_expected_version: order.version || null,
       p_request_id: requestId,
       p_delivery_date: order.date, p_name: order.customer, p_phone: order.phone,
       p_address: order.address, p_notes: order.notes,
       p_fee_cents: order.feeCents, p_items: order.items, p_customer_id: customerId,
+      p_delivery_address: order.address, p_delivery_fee_cents: order.feeCents,
     });
     if (error) throw error;
     await this.queueOrderEvent(data || order.id, wasExisting ? 'order_edited' : 'operator_order_created');
@@ -292,13 +293,25 @@ export class LiveData {
       deliveryFeeCents: Number(this.settings?.delivery_fee_cents ?? 200),
       productPrices: new Map(),
     };
-    const negotiatedFee = Number(termsResult.data?.delivery_fee_cents);
-    if (Number.isSafeInteger(negotiatedFee) && negotiatedFee >= 0) result.deliveryFeeCents = negotiatedFee;
+    const negotiatedFee = termsResult.data ? Number(termsResult.data.delivery_fee_cents) : null;
+    result.customFeeCents = negotiatedFee;
+    if (negotiatedFee != null && Number.isSafeInteger(negotiatedFee) && negotiatedFee >= 0) result.deliveryFeeCents = negotiatedFee;
     for (const row of priceResult.data || []) {
       const price = Number(row.price_cents);
       if (row.product_id && Number.isSafeInteger(price) && price >= 0) result.productPrices.set(row.product_id, price);
     }
     return result;
+  }
+
+  async setCustomerDeliveryFee(customerId, feeCents = null) {
+    if (!this.operator) throw new Error('Acesso restrito à operação.');
+    if (!customerId) throw new Error('Selecione um cliente existente.');
+    const { error } = await this.client.rpc('trameli_set_customer_delivery_fee', {
+      p_customer_id: customerId, p_delivery_fee_cents: feeCents,
+    });
+    if (error) throw error;
+    window.dispatchEvent(new Event('trameli:payments-refresh'));
+    window.dispatchEvent(new Event('trameli:delivery-fee-updated'));
   }
 
   async saveRecurringOrder(schedule, requestId, scheduleId = null) {
