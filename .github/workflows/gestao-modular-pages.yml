@@ -1,0 +1,49 @@
+name: Gestão Modular · Prévia GitHub Pages
+
+on:
+  push:
+    branches:
+      - gh-pages
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: gestao-modular-pages
+  cancel-in-progress: true
+
+jobs:
+  publish-preview:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: \${{ steps.publish.outputs.page_url }}
+    steps:
+      - name: Checkout da branch de teste
+        uses: actions/checkout@v4
+
+      - name: Preparar apenas arquivos estáticos da demonstração
+        run: |
+          set -eu
+          mkdir -p _site/gestao-modular _site/assets
+          cp gestao-modular/index.html _site/gestao-modular/index.html
+          cp assets/staff-ui.css assets/staff-tokens.css assets/staff-modular.css assets/favicon-pao-doce.png _site/assets/
+          printf '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="refresh" content="0;url=gestao-modular/"><title>Gestão Modular · Pão Doce</title></head><body><a href="gestao-modular/">Abrir prévia da gestão</a></body></html>\n' > _site/index.html
+          touch _site/.nojekyll
+          test ! -e _site/assets/portal.js
+          test ! -e _site/assets/operacao.js
+
+      - name: Preparar GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Enviar prévia estática
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Publicar prévia
+        id: publish
+        uses: actions/deploy-pages@v4
