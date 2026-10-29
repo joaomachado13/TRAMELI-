@@ -370,6 +370,7 @@ function openForm(order = null, schedule = null, makeRecurring = false) {
     }
     renderProductCatalog();
   }
+  form.elements.fee.readOnly = form.elements.recurrence.value !== 'once';
   document.getElementById('dialog-title').textContent = schedule ? 'Editar pedido recorrente' : makeRecurring ? 'Transformar pedido em recorrente' : order ? 'Editar pedido' : 'Novo pedido';
   updateFormTotal();
   dialog.showModal();
@@ -898,6 +899,7 @@ function preparePrint(orderSelection = null, printMode = 'a4') {
 
 document.getElementById('new-order').addEventListener('click', () => { location.hash = '#portal-shirley'; });
 form.elements.recurrence.addEventListener('change', () => {
+  form.elements.fee.readOnly = form.elements.recurrence.value !== 'once';
   const weekdaysFieldset = document.getElementById('recurrence-weekdays');
   if (weekdaysFieldset) weekdaysFieldset.hidden = form.elements.recurrence.value === 'once';
 });
