@@ -384,6 +384,7 @@ import { feedback, statusBadge, listRow } from '../src/staff-components.js';
           <div><span>Registros</span><strong>${client.active.length + payment.historyRows.length}</strong></div>
         </section>
         ${live && payment.customerId ? `<section class="entity-block client-billing-frequency"><div class="entity-block__heading"><div><h3>Frequência de pagamento</h3><p>Defina como este cliente combina o pagamento com a Shirley.</p></div></div><form data-client-billing-frequency data-customer-id="${escapeHtml(payment.customerId)}" data-client-key="${escapeHtml(client.key)}"><label>Periodicidade<select name="billing_frequency" required><option value="" ${!payment.profile?.billing_frequency ? 'selected' : ''}>Não definida</option><option value="semanal" ${payment.profile?.billing_frequency === 'semanal' ? 'selected' : ''}>Semanal</option><option value="quinzenal" ${payment.profile?.billing_frequency === 'quinzenal' ? 'selected' : ''}>Quinzenal</option><option value="mensal" ${payment.profile?.billing_frequency === 'mensal' ? 'selected' : ''}>Mensal</option></select></label><p class="entity-muted">Essa informação fica salva no cadastro e não altera a aprovação, os pedidos ou os pagamentos já registrados.</p><button class="screen-primary" type="submit">Salvar frequência</button><p class="catalog-error" role="alert" hidden></p></form></section>` : ''}
+        ${live?.operator && payment.customerId ? `<section class="entity-block client-delivery-fee"><div class="entity-block__heading"><div><h3>Taxa de entrega deste cliente</h3><p>Valor padrão dos próximos pedidos. Alterações pontuais são feitas no próprio pedido.</p></div></div><form data-client-delivery-fee data-customer-id="${escapeHtml(payment.customerId)}" data-client-key="${escapeHtml(client.key)}"><label>Taxa personalizada (R$)<input name="deliveryFee" inputmode="decimal" placeholder="Carregando…" autocomplete="off" disabled></label><p class="entity-muted">Deixe vazio para usar a taxa geral (${money(live?.settings?.delivery_fee_cents ?? 200)}). Não altera pedidos já registrados.</p><button class="screen-primary" type="submit" disabled>Salvar taxa</button><p class="catalog-error" role="alert" hidden></p></form></section>` : ''}
         ${paymentBlock(client, payment)}
         <section class="entity-block">
           <div class="entity-block__heading"><div><h3>Pedidos e histórico financeiro</h3><p class="entity-muted">Registros em ordem de data, inclusive os valores anteriores ao aplicativo.</p></div><span>${client.active.length + payment.historyRows.length}</span></div>
@@ -399,6 +400,23 @@ import { feedback, statusBadge, listRow } from '../src/staff-components.js';
       <footer class="entity-detail__actions"><button class="screen-primary" type="button" data-client-action="new-order" data-key="${escapeHtml(client.key)}">+ Novo pedido</button>${live && client.customerId ? `<button type="button" data-client-action="edit-live" data-key="${escapeHtml(client.key)}">Editar cadastro</button>` : client.id && !live ? `<button type="button" data-client-action="edit" data-id="${escapeHtml(client.id)}">Editar dados</button>` : ''}</footer>
     </div>`;
     if (!detailDrawer.open) detailDrawer.showModal();
+    const feeForm = detailDrawer.querySelector('form[data-client-delivery-fee]');
+    if (feeForm) {
+      const customerId = feeForm.dataset.customerId;
+      void live.customerCommercialTerms(customerId).then(terms => {
+        if (!feeForm.isConnected || feeForm.dataset.customerId !== customerId) return;
+        const input = feeForm.elements.deliveryFee;
+        input.value = terms.customFeeCents == null ? '' : (terms.customFeeCents / 100).toFixed(2).replace('.', ',');
+        input.placeholder = 'Taxa padrão: ' + money(live?.settings?.delivery_fee_cents ?? 200);
+        input.disabled = false;
+        feeForm.querySelector('button[type=submit]').disabled = false;
+      }).catch(cause => {
+        if (!feeForm.isConnected) return;
+        const error = feeForm.querySelector('[role=alert]');
+        error.textContent = cause.message || 'Não foi possível consultar a taxa individual.';
+        error.hidden = false;
+      });
+    }
   }
 
   document.addEventListener('input', event => {
@@ -411,6 +429,38 @@ import { feedback, statusBadge, listRow } from '../src/staff-components.js';
   });
 
   document.addEventListener('submit', async event => {
+    const feeForm = event.target.closest('form[data-client-delivery-fee]');
+    if (feeForm) {
+      event.preventDefault();
+      const input = feeForm.elements.deliveryFee;
+      const value = String(input.value || '').trim();
+      const alertNode = feeForm.querySelector('[role=alert]');
+      const submit = feeForm.querySelector('button[type=submit]');
+      let cents = null;
+      if (value) {
+        const normalized = value.replace(',', '.');
+        if (!/^\d+(?:\.\d{1,2})?$/.test(normalized)) {
+          alertNode.textContent = 'Informe uma taxa válida, como 3,50. Ou deixe vazio para o valor geral.';
+          alertNode.hidden = false; return;
+        }
+        const [whole, decimal = ''] = normalized.split('.');
+        cents = Number(whole) * 100 + Number(decimal.padEnd(2, '0'));
+        if (!Number.isSafeInteger(cents) || cents > 100000000) {
+          alertNode.textContent = 'Taxa fora do limite permitido.';
+          alertNode.hidden = false; return;
+        }
+      }
+      submit.disabled = true;
+      alertNode.hidden = true;
+      try {
+        await live.setCustomerDeliveryFee(feeForm.dataset.customerId, cents);
+        openDetail(feeForm.dataset.clientKey);
+      } catch (cause) {
+        alertNode.textContent = cause.message || 'Não foi possível alterar a taxa.';
+        alertNode.hidden = false;
+      } finally { if (submit.isConnected) submit.disabled = false; }
+      return;
+    }
     const frequencyForm = event.target.closest('form[data-client-billing-frequency]');
     if (!frequencyForm) return;
     event.preventDefault();

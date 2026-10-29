@@ -234,10 +234,30 @@ function customerProfiles() {
   })).filter(profile => profile.user_id && profile.name)
     .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
 }
+let customerFeeLoadToken = 0;
+let manualFeeTouched = false;
 function syncSelectedCustomer() {
   const profile = customerProfiles().find(item => item.user_id === form.elements.customerId.value);
+  const token = ++customerFeeLoadToken;
   form.elements.phone.value = profile?.phone || '';
   form.elements.address.value = profile?.address || '';
+  if (editingId || editingScheduleId) return;
+  manualFeeTouched = false;
+  const globalFee = Number(live?.settings?.delivery_fee_cents ?? 200);
+  form.elements.fee.value = (globalFee / 100).toFixed(2).replace('.', ',');
+  updateFormTotal();
+  if (profile?.user_id && live?.customerCommercialTerms) {
+    void live.customerCommercialTerms(profile.user_id).then(terms => {
+      if (token !== customerFeeLoadToken || form.elements.customerId.value !== profile.user_id || manualFeeTouched) return;
+      form.elements.fee.value = (terms.deliveryFeeCents / 100).toFixed(2).replace('.', ',');
+      updateFormTotal();
+    }).catch(cause => {
+      if (token === customerFeeLoadToken) {
+        formError.textContent = 'Não foi possível consultar a taxa do cliente: ' + cause.message;
+        formError.hidden = false;
+      }
+    });
+  }
 }
 function fillCustomerOptions(selectedId = '', selectedName = '') {
   const profiles = customerProfiles();
@@ -295,7 +315,7 @@ function formItems() {
   });
 }
 function updateFormTotal() {
-  const fee = parseMoney(form.elements.fee.value || '2,00');
+  const fee = parseMoney(form.elements.fee.value);
   const items = formItems();
   const valid = fee !== null && items.every(item => Number.isInteger(item.quantity) && item.quantity > 0
     && item.priceCents !== null && (item.weightGrams === undefined || (Number.isInteger(item.weightGrams)
@@ -315,8 +335,11 @@ function openForm(order = null, schedule = null, makeRecurring = false) {
   itemsHost.replaceChildren();
   selectedProductQuantities.clear();
   form.elements.date.value = schedule ? dateInput.value : order?.date || dateInput.value;
-  form.elements.fee.value = ((schedule?.fee_cents ?? 200) / 100).toFixed(2).replace('.', ',');
   fillCustomerOptions(schedule?.customer_id || order?.customerId || '', order?.customer || '');
+  if (order || schedule) {
+    form.elements.address.value = order?.address || form.elements.address.value;
+    form.elements.fee.value = ((order?.feeCents ?? schedule?.fee_cents ?? live?.settings?.delivery_fee_cents ?? 200) / 100).toFixed(2).replace('.', ',');
+  }
   form.elements.notes.value = schedule?.notes || order?.notes || '';
   form.elements.recurrence.value = schedule?.recurrence || (makeRecurring ? 'fixed' : 'once');
   form.elements.recurrence.disabled = Boolean(order && !makeRecurring);
@@ -347,6 +370,7 @@ function openForm(order = null, schedule = null, makeRecurring = false) {
     }
     renderProductCatalog();
   }
+  form.elements.fee.readOnly = form.elements.recurrence.value !== 'once';
   document.getElementById('dialog-title').textContent = schedule ? 'Editar pedido recorrente' : makeRecurring ? 'Transformar pedido em recorrente' : order ? 'Editar pedido' : 'Novo pedido';
   updateFormTotal();
   dialog.showModal();
@@ -875,6 +899,7 @@ function preparePrint(orderSelection = null, printMode = 'a4') {
 
 document.getElementById('new-order').addEventListener('click', () => { location.hash = '#portal-shirley'; });
 form.elements.recurrence.addEventListener('change', () => {
+  form.elements.fee.readOnly = form.elements.recurrence.value !== 'once';
   const weekdaysFieldset = document.getElementById('recurrence-weekdays');
   if (weekdaysFieldset) weekdaysFieldset.hidden = form.elements.recurrence.value === 'once';
 });
@@ -959,7 +984,7 @@ catalogHost.addEventListener('click', event => {
   renderProductCatalog();
   updateFormTotal();
 });
-form.elements.fee.addEventListener('input', updateFormTotal);
+form.elements.fee.addEventListener('input', () => { manualFeeTouched = true; updateFormTotal(); });
 dateInput.addEventListener('change', async () => {
   if (live?.operator && dateInput.value) {
     try { await live.materializeRecurringOrders(dateInput.value); orders = readOrders(); }
@@ -1104,7 +1129,8 @@ form.addEventListener('submit', async event => {
   event.preventDefault();
   if (submitting) return;
   const items = formItems();
-  const feeCents = 200;
+  const feeCents = parseMoney(form.elements.fee.value);
+  const deliveryAddress = form.elements.address.value.trim();
   const customerId = form.elements.customerId.value;
   const customerProfile = customerProfiles().find(profile => profile.user_id === customerId);
   const customer = customerProfile?.name || '';
@@ -1114,11 +1140,11 @@ form.addEventListener('submit', async event => {
   const weekdays = [...new Set([...form.querySelectorAll('input[name="weekdays"]:checked')].map(input => Number(input.value)))].sort((a, b) => a - b);
   const sundayDelivery = Boolean(form.elements.date.value)
     && new Date(form.elements.date.value + 'T12:00:00').getDay() === 0;
-  if (!customerId || !customer || !address || !form.elements.date.value || sundayDelivery || (recurrence !== 'once' && !weekdays.length) || !items.length
+  if (!customerId || !customer || !deliveryAddress || deliveryAddress.length < 3 || deliveryAddress.length > 180 || feeCents === null || !form.elements.date.value || sundayDelivery || (recurrence !== 'once' && !weekdays.length) || !items.length
     || items.some(item => !item.name || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 999
       || !Number.isInteger(item.priceCents) || item.priceCents < 0
       || (item.weightGrams !== undefined && (!Number.isInteger(item.weightGrams) || item.weightGrams < 50 || item.weightGrams > 4950 || item.weightGrams % 50 !== 0)))) {
-    formError.textContent = sundayDelivery ? 'Não fazemos entregas aos domingos. Escolha outra data.' : (recurrence !== 'once' && !weekdays.length) ? 'Selecione pelo menos um dia para a recorrência.' : 'Selecione um cliente cadastrado e pelo menos um produto com quantidade válida.';
+    formError.textContent = sundayDelivery ? 'Não fazemos entregas aos domingos. Escolha outra data.' : feeCents === null ? 'Informe uma taxa de entrega válida, como 3,50.' : (!deliveryAddress || deliveryAddress.length < 3) ? 'Informe o endereço de entrega.' : (recurrence !== 'once' && !weekdays.length) ? 'Selecione pelo menos um dia para a recorrência.' : 'Selecione um cliente cadastrado e pelo menos um produto com quantidade válida.';
     formError.hidden = false;
     return;
   }
@@ -1146,7 +1172,7 @@ form.addEventListener('submit', async event => {
     checked: Boolean(previous && orderStatus(previous) === 'delivered'),
     status: previous && orderStatus(previous) === 'delivered' ? 'delivered' : 'received',
     editedAt: previous ? new Date().toISOString() : null,
-    customerId, customer, address, phone,
+    customerId, customer, address: deliveryAddress, phone,
     date: form.elements.date.value, feeCents, items, notes: form.elements.notes.value.trim(),
   };
   if (live) {
