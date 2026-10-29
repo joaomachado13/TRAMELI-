@@ -118,8 +118,8 @@ export function supplierPeriodReport(orders, costMap, from, to, catalogProducts 
 const dateBr = date => date.split('-').reverse().join('/');
 export const periodLabel = (from, to) => from === to ? dateBr(from) : dateBr(from) + ' a ' + dateBr(to);
 
-export function supplierPeriodCustomerText(report, kindLabel, businessName = 'Pão Doce') {
-  const lines = [businessName + ' - Repasse da padaria (' + kindLabel + ')', 'Período: ' + periodLabel(report.from, report.to) + ' · ' + report.orderCount + ' pedidos', '', 'ITENS POR CLIENTE (preço de custo)'];
+export function supplierPeriodCustomerText(report, kindLabel, businessName = 'Pão Doce', supplierName = 'Padaria') {
+  const lines = [businessName + ' - Repasse: ' + supplierName + ' (' + kindLabel + ')', 'Período: ' + periodLabel(report.from, report.to) + ' · ' + report.orderCount + ' pedidos', '', 'ITENS POR CLIENTE (preço de custo)'];
   const customers = new Map();
   for (const order of report.customerOrders || []) {
     const key = JSON.stringify([order.customer || '', order.address || '']);
@@ -145,8 +145,8 @@ export function supplierPeriodCustomerText(report, kindLabel, businessName = 'P�
   return lines.join('\n');
 }
 
-export function supplierPeriodText(report, kindLabel, businessName = 'Pão Doce') {
-  const lines = [businessName + ' - Repasse da padaria (' + kindLabel + ')', 'Período: ' + periodLabel(report.from, report.to) + ' · ' + report.orderCount + ' pedidos', '', 'ITENS (preço de custo)'];
+export function supplierPeriodText(report, kindLabel, businessName = 'Pão Doce', supplierName = 'Padaria') {
+  const lines = [businessName + ' - Repasse: ' + supplierName + ' (' + kindLabel + ')', 'Período: ' + periodLabel(report.from, report.to) + ' · ' + report.orderCount + ' pedidos', '', 'ITENS (preço de custo)'];
   for (const product of report.products) {
     lines.push(product.label + ' — ' + (product.missing ? 'custo não informado' : formatMoney(product.costCents)) + (product.unitCents != null && !product.weighted ? ' (' + formatMoney(product.unitCents) + ' un.)' : ''));
   }
