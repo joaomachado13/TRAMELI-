@@ -1,0 +1,263 @@
+/*
+ * Pão Doce · Gestão Modular v1
+ * Camada visual SOMENTE para a gestão. Sem modificações em dados, etapas ou ações.
+ * Adicionar sempre DEPOIS de staff-ui.css.
+ * Paleta cromática herdada integralmente de staff-tokens.css.
+ */
+body.staff-mode:not(.portal-mode) {
+  --gm-card-radius: 16px;
+  --gm-control-radius: 10px;
+  --gm-inset-radius: 12px;
+  --gm-line: var(--staff-border);
+  --gm-shadow: 0 2px 12px rgb(43 26 18 / 4%);
+  --gm-shadow-hover: 0 6px 20px rgb(43 26 18 / 8%);
+  --gm-tight: var(--staff-space-3);
+  --gm-gutter: var(--staff-space-6);
+  --gm-page-gap: var(--staff-space-6);
+  background: var(--staff-canvas);
+  color: var(--staff-text);
+}
+body.staff-mode:not(.portal-mode) :is(#home-view,#screen-view,#operation-view,#shirley-portal-view) {
+  padding-block: var(--gm-page-gap);
+}
+body.staff-mode:not(.portal-mode) .nav2 {
+  background: var(--staff-surface);
+  border-bottom: 1px solid var(--gm-line);
+  box-shadow: 0 2px 8px rgb(43 26 18 / 3%);
+}
+body.staff-mode:not(.portal-mode) #main-navigation-panel {
+  background: var(--staff-surface);
+  border-right: 1px solid var(--gm-line);
+}
+body.staff-mode:not(.portal-mode) .nav__links { gap: var(--staff-space-4); }
+body.staff-mode:not(.portal-mode) .nav .nav__item {
+  border-radius: var(--gm-control-radius);
+  transition: background-color .16s ease, color .16s ease;
+}
+body.staff-mode:not(.portal-mode) .nav .nav__item[aria-current="page"] {
+  border-radius: var(--gm-control-radius);
+  background: var(--staff-brand-soft) !important;
+  color: var(--staff-brand) !important;
+}
+body.staff-mode:not(.portal-mode) .nav .nav__item[aria-current="page"]::before { top: 10px; bottom: 10px; }
+body.staff-mode:not(.portal-mode) :is(.screen-hero h1,.overview-hero h1,#operation-view .intro h1,.shirley-hero h1) {
+  color: var(--staff-text);
+  font-weight: 750;
+  letter-spacing: -.035em;
+}
+body.staff-mode:not(.portal-mode) :is(.staff-page-header,.overview-hero,#operation-view .intro,.shirley-hero) {
+  gap: var(--staff-space-3) var(--staff-space-4);
+  margin-bottom: var(--gm-page-gap);
+}
+body.staff-mode:not(.portal-mode) :is(.staff-page-actions,#operation-view .intro__actions) {
+  gap: var(--staff-space-2);
+}
+body.staff-mode:not(.portal-mode) :is(
+  #home-view .panel,
+  #screen-view .screen-panel,
+  .screen-metric,
+  .kpi-card,
+  .summary-card,
+  .insight-card,
+  .catalog-card,
+  .report-generator,
+  .generated-report,
+  .finance-charts > section,
+  .shirley-panel,
+  #home-view .attention-center
+) {
+  background: var(--staff-surface);
+  border: 1px solid var(--gm-line);
+  border-radius: var(--gm-card-radius);
+  box-shadow: var(--gm-shadow);
+}
+body.staff-mode:not(.portal-mode) :is(.screen-panel__heading,.panel__heading) {
+  padding-bottom: var(--staff-space-3);
+  border-bottom: 1px solid var(--gm-line);
+}
+body.staff-mode:not(.portal-mode) :is(.screen-panel__heading h2,.panel__heading h2,.section-heading h2) {
+  font-weight: 700;
+  letter-spacing: -.02em;
+}
+body.staff-mode:not(.portal-mode) :is(.screen-metrics,.overview-kpis,.finance-headline,.product-insights) {
+  gap: var(--staff-space-3);
+}
+/* Ações: um único tamanho, três níveis de ênfase. Evita regras por módulo. */
+body.staff-mode:not(.portal-mode) :is(#inicio,#main-navigation-panel,dialog) :is(
+  .screen-primary,.button,.staff-button,.catalog-toolbar button,
+  .catalog-actions button,.report-actions button,.entity-detail__actions button,
+  .dialog-actions button,.account-panel button,.record-toolbar>button,
+  .staff-page-actions>button
+) {
+  min-height: 40px !important;
+  border-radius: var(--gm-control-radius) !important;
+  padding: 8px 16px !important;
+  font-weight: 650 !important;
+  transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+body.staff-mode:not(.portal-mode) :is(#inicio,#main-navigation-panel,dialog) :is(
+  .button--quiet,.staff-button--secondary
+) {
+  background: var(--staff-surface) !important;
+  color: var(--staff-text) !important;
+  border-color: var(--gm-line) !important;
+}
+body.staff-mode:not(.portal-mode) :is(#inicio,#main-navigation-panel,dialog) :is(
+  .button--quiet,.staff-button--secondary
+):hover:not(:disabled) {
+  background: var(--staff-brand-soft) !important;
+  color: var(--staff-brand) !important;
+}
+body.staff-mode:not(.portal-mode) :is(#inicio,#main-navigation-panel,dialog) :is(
+  input:not([type=checkbox]):not([type=radio]):not([type=color]),select,textarea
+) {
+  border-radius: var(--gm-control-radius);
+  background-color: var(--staff-surface);
+}
+body.staff-mode:not(.portal-mode) :is(button,a,input,select,textarea,summary):focus-visible {
+  outline: 2px solid var(--staff-focus) !important;
+  outline-offset: 3px !important;
+}
+/* Indicadores da operação: módulos individuais, compactos e legíveis. */
+body.staff-mode:not(.portal-mode) #operation-view .summary {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: var(--staff-space-3);
+  margin-bottom: var(--gm-page-gap);
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+body.staff-mode:not(.portal-mode) #operation-view .summary-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--staff-space-1);
+  min-width: 0;
+  padding: var(--staff-space-4) var(--staff-space-6) !important;
+  border: 1px solid var(--gm-line) !important;
+  border-radius: var(--gm-card-radius);
+  background: var(--staff-surface);
+  box-shadow: var(--gm-shadow);
+}
+body.staff-mode:not(.portal-mode) #operation-view .summary-card>span {
+  font-size: var(--staff-label);
+  color: var(--staff-text-secondary);
+}
+body.staff-mode:not(.portal-mode) #operation-view .summary-card>strong {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+body.staff-mode:not(.portal-mode) #operation-view .summary-card>small {
+  display: block;
+  font-size: 12px;
+  color: var(--staff-text-secondary);
+}
+/* Kanban: continuam exatamente 3 etapas; apenas apresentação e rolagem. */
+body.staff-mode:not(.portal-mode) #operation-view .kanban {
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  align-items: start;
+  gap: var(--staff-space-3);
+}
+body.staff-mode:not(.portal-mode) #operation-view .kanban-column {
+  min-width: 0;
+  overflow: hidden;
+  border-radius: var(--gm-card-radius);
+  border: 1px solid var(--gm-line);
+  border-top: 3px solid var(--staff-warning);
+  background: var(--staff-surface);
+  box-shadow: var(--gm-shadow);
+}
+body.staff-mode:not(.portal-mode) #operation-view .kanban-column--confirmed { border-top-color: var(--staff-info); }
+body.staff-mode:not(.portal-mode) #operation-view .kanban-column--delivered { border-top-color: var(--staff-success); }
+body.staff-mode:not(.portal-mode) #operation-view .kanban-column>header {
+  background: var(--staff-surface);
+  border-bottom: 1px solid var(--gm-line);
+  padding: var(--staff-space-3) var(--staff-space-4);
+}
+body.staff-mode:not(.portal-mode) #operation-view .kanban-column__cards {
+  padding: var(--staff-space-3);
+  gap: var(--staff-space-2);
+  max-height: min(58vh,640px);
+  min-height: 160px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+body.staff-mode:not(.portal-mode) #operation-view .kanban-card {
+  border-radius: var(--gm-inset-radius);
+  box-shadow: 0 1px 2px rgb(43 26 18 / 4%);
+}
+body.staff-mode:not(.portal-mode) #operation-view .kanban-card:hover {
+  border-color: var(--staff-brand);
+  box-shadow: var(--gm-shadow-hover);
+}
+body.staff-mode:not(.portal-mode) #operation-view .order-card {
+  border-radius: var(--gm-inset-radius) !important;
+}
+body.staff-mode:not(.portal-mode) .staff-more-filters__panel {
+  border-radius: var(--gm-card-radius);
+  box-shadow: var(--gm-shadow-hover);
+}
+/* A organização de tabelas, filtros e dados fica uniforme entre módulos. */
+body.staff-mode:not(.portal-mode) :is(.record-toolbar--orders,.catalog-filters) {
+  gap: var(--staff-space-3);
+}
+body.staff-mode:not(.portal-mode) :is(.record-list,.record-list--clients,.orders-browser,.home-next-list) {
+  border-radius: var(--gm-inset-radius);
+}
+body.staff-mode:not(.portal-mode) :is(.record-row,.orders-browser__row,.orders-table td,.orders-table th) {
+  border-color: var(--gm-line);
+}
+body.staff-mode:not(.portal-mode) #screen-view .catalog-card {
+  overflow: hidden;
+  border-radius: var(--gm-card-radius);
+  transition: box-shadow .16s ease, border-color .16s ease;
+}
+body.staff-mode:not(.portal-mode) #screen-view .catalog-card:hover {
+  border-color: var(--staff-brand);
+  box-shadow: var(--gm-shadow-hover);
+}
+body.staff-mode:not(.portal-mode) #screen-view .catalog-card__body {
+  padding: var(--staff-space-4) var(--staff-space-4) var(--staff-space-6);
+}
+body.staff-mode:not(.portal-mode) :is(.finance-presets,.finance-charts>section,.shirley-portal__workspace) {
+  border-radius: var(--gm-card-radius);
+}
+@media (max-width: 900px) {
+  body.staff-mode:not(.portal-mode) {
+    --gm-page-gap: var(--staff-space-4);
+  }
+  body.staff-mode:not(.portal-mode) #operation-view .summary {
+    gap: var(--staff-space-2);
+  }
+  body.staff-mode:not(.portal-mode) #operation-view .summary-card {
+    padding: var(--staff-space-3) !important;
+  }
+  body.staff-mode:not(.portal-mode) #operation-view .kanban {
+    gap: var(--staff-space-2);
+  }
+}
+@media (max-width: 640px) {
+  body.staff-mode:not(.portal-mode) #operation-view .summary {
+    grid-template-columns: repeat(3,minmax(0,1fr));
+  }
+  body.staff-mode:not(.portal-mode) #operation-view .summary-card {
+    min-width: 0;
+  }
+  body.staff-mode:not(.portal-mode) #operation-view .summary-card>strong { font-size: 24px; }
+  body.staff-mode:not(.portal-mode) #operation-view .summary-card>small { display: none; }
+  /* Respeita o comportamento horizontal do Kanban já existente no mobile. */
+  body.staff-mode:not(.portal-mode) #operation-view .kanban-column__cards {
+    max-height: min(60vh,540px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.staff-mode:not(.portal-mode) :is(.nav__item,.kanban-card,.catalog-card,button) {
+    transition: none !important;
+  }
+}
