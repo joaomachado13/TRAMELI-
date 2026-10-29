@@ -989,10 +989,10 @@ supplierCopy.addEventListener('click', async () => {
       if (costsAvailable()) await loadCostsFor(orders.filter(order => order.date === exportDate && orderStatus(order) !== 'cancelled'));
       const groups = repasseGroups();
       if (!groups.length) throw new Error('Não há itens dessa padaria nesta data.');
-      content = supplierText(groups, exportDate);
+      content = supplierText(groups, exportDate, supplierDisplayName());
     } else {
       const { period, report } = await buildPeriodReport();
-      content = supplierPeriodText(report, periodKinds[period.kind], businessLabel());
+      content = supplierPeriodText(report, periodKinds[period.kind], businessLabel(), supplierDisplayName());
     }
   } catch (cause) { supplierFeedback.textContent = cause.message; return; }
   try {
@@ -1012,10 +1012,10 @@ supplierCustomerCopy?.addEventListener('click', async () => {
       if (costsAvailable()) await loadCostsFor(orders.filter(order => order.date === exportDate && orderStatus(order) !== 'cancelled'));
       const groups = repasseGroups();
       if (!groups.length) throw new Error('Não há itens dessa origem nesta data.');
-      content = supplierCustomerText(groups, exportDate, businessLabel());
+      content = supplierCustomerText(groups, exportDate, businessLabel(), supplierDisplayName());
     } else {
       const { period, report } = await buildPeriodReport();
-      content = supplierPeriodCustomerText(report, periodKinds[period.kind], businessLabel());
+      content = supplierPeriodCustomerText(report, periodKinds[period.kind], businessLabel(), supplierDisplayName());
     }
   } catch (cause) { supplierFeedback.textContent = cause.message; return; }
   try {
