@@ -57,9 +57,12 @@ import { weekdayNames, recurringItemsText, recurringScheduleText } from '../src/
     const result = Number(whole) * 100 + Number(cents.padEnd(2, '0'));
     return Number.isSafeInteger(result) && result >= 0 && result <= 100000000 ? result : null;
   };
-  const selectedDeliveryFee = () => recurrenceInput.value !== 'once'
-    ? defaultDeliveryFee()
-    : feeFromInput($('#shirley-delivery-fee').value);
+  const selectedDeliveryFee = () => {
+    if (recurrenceInput.value !== 'once') return defaultDeliveryFee();
+    const raw = $('#shirley-delivery-fee').value.trim();
+    if (!raw && !selectedCustomerId) return defaultDeliveryFee();
+    return feeFromInput(raw);
+  };
   const updateDeliverySummary = () => {
     const fee = selectedDeliveryFee();
     $('#shirley-delivery-fee-summary').textContent = fee === null ? 'Confira a taxa de entrega' : 'Taxa de entrega: ' + money(fee);
