@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="color-scheme" content="light">
+<title>Gestão Modular · Prévia do Pão Doce</title>
+<link rel="icon" href="../assets/favicon-pao-doce.png" type="image/png">
+<link rel="stylesheet" href="../assets/staff-ui.css">
+<link rel="stylesheet" href="../assets/staff-modular.css">
+<style>
+*{box-sizing:border-box}html{scroll-behavior:smooth}body.gm-preview{margin:0;font-family:Manrope,"Segoe UI",system-ui,sans-serif;font-size:14px;color:var(--staff-text);background:var(--staff-canvas)}
+body.gm-preview button,body.gm-preview input,body.gm-preview select{font:inherit}body.gm-preview button{cursor:pointer}body.gm-preview button:disabled{cursor:not-allowed;opacity:.55}
+body.gm-preview .demo-shell{display:grid;grid-template-columns:244px minmax(0,1fr);min-height:100dvh}
+body.gm-preview .nav{position:sticky;top:0;display:flex;flex-direction:column;justify-content:space-between;width:244px;height:100dvh;padding:25px 15px;background:var(--staff-surface);border-right:1px solid var(--staff-border);overflow-y:auto}
+body.gm-preview .demo-brand{display:flex;align-items:center;gap:11px;padding:0 9px 24px;border-bottom:1px solid var(--staff-border);color:var(--staff-text);font-weight:800;font-size:19px;letter-spacing:-.5px}
+body.gm-preview .demo-mark{display:grid;place-items:center;width:36px;height:36px;border-radius:12px;background:var(--staff-brand);color:white;font-size:22px}
+body.gm-preview .demo-small{color:var(--staff-text-secondary);font-size:12px;font-weight:600}
+body.gm-preview .demo-menu{padding-top:24px}
+body.gm-preview .demo-menu-title{padding:0 11px 9px;color:var(--staff-text-secondary);font-weight:700;font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+body.gm-preview .demo-nav{display:flex;align-items:center;gap:12px;width:100%;margin-bottom:4px;padding:11px 12px;border:0;border-radius:10px;background:transparent;color:var(--staff-text-secondary);text-align:left;font-weight:650}
+body.gm-preview .demo-nav:hover{background:var(--staff-neutral-soft)}body.gm-preview .demo-nav[aria-current=page]{background:var(--staff-brand-soft);color:var(--staff-brand)}body.gm-preview .demo-nav .symbol{width:19px;text-align:center;font-size:18px}
+body.gm-preview .demo-side-note{margin-top:22px;padding:15px;border-radius:13px;background:var(--staff-canvas);font-size:12px;line-height:1.6;color:var(--staff-text-secondary)}
+body.gm-preview .demo-side-note strong{display:block;color:var(--staff-brand);margin-bottom:3px}
+body.gm-preview .demo-main{min-width:0}body.gm-preview .nav2{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:18px;height:67px;min-height:67px;margin:0;padding:0 30px!important;background:var(--staff-surface);border-bottom:1px solid var(--staff-border);box-shadow:0 2px 8px rgb(43 26 18 / 3%)}
+body.gm-preview .demo-search{display:flex;align-items:center;gap:10px;max-width:440px;flex:1;height:40px;padding:0 13px;border:1px solid var(--staff-border);border-radius:10px;background:white;color:var(--staff-text-secondary)}
+body.gm-preview .demo-search input{width:100%;border:0;outline:0;background:transparent;color:var(--staff-text)}
+body.gm-preview .demo-top-actions{display:flex;align-items:center;gap:9px}body.gm-preview .demo-top-actions span{white-space:nowrap}
+body.gm-preview .demo-avatar{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--staff-brand-soft);color:var(--staff-brand);font-size:12px;font-weight:800}
+body.gm-preview .demo-content{max-width:1360px;margin:auto;padding:30px 30px 64px}
+body.gm-preview .demo-label{font-size:11px;font-weight:750;letter-spacing:.11em;text-transform:uppercase;color:var(--staff-text-secondary)}
+body.gm-preview .demo-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:6px 0 22px}
+body.gm-preview h1{margin:4px 0 5px;font-size:29px;line-height:1.2;letter-spacing:-.04em;color:var(--staff-text)}
+body.gm-preview h2{font-size:18px;line-height:1.3;margin:0}body.gm-preview p{margin:0}
+body.gm-preview .demo-muted{font-size:13px;color:var(--staff-text-secondary)}
+body.gm-preview .demo-actions{display:flex;align-items:center;flex-wrap:wrap;gap:9px}
+body.gm-preview .demo-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:8px 16px;border:1px solid var(--staff-border);border-radius:10px;background:white;color:var(--staff-text);font-weight:700;white-space:nowrap}
+body.gm-preview .demo-button:hover{background:var(--staff-brand-soft);border-color:var(--staff-brand);color:var(--staff-brand)}
+body.gm-preview .demo-button--primary{background:var(--staff-brand);border-color:var(--staff-brand);color:#fff}
+body.gm-preview .demo-button--primary:hover{background:var(--staff-brand-hover);border-color:var(--staff-brand-hover);color:#fff}
+body.gm-preview .demo-button--sm{min-height:33px;padding:6px 10px;font-size:12px}
+body.gm-preview .demo-input{height:40px;padding:7px 12px;border:1px solid var(--staff-border);border-radius:10px;background:white;color:var(--staff-text)}
+body.gm-preview .demo-card{padding:20px;border:1px solid var(--staff-border);border-radius:16px;background:#fff;box-shadow:0 2px 12px rgb(43 26 18 / 4%)}
+body.gm-preview #operation-view .summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0 0 24px;padding:0;border:0;background:transparent}
+body.gm-preview #operation-view .summary-card{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:18px 20px!important;min-width:0;border:1px solid var(--staff-border);border-radius:16px;background:white}
+body.gm-preview #operation-view .summary-card>span{font-size:13px;color:var(--staff-text-secondary)}
+body.gm-preview #operation-view .summary-card>strong{margin:0;font-size:30px;line-height:1.1;font-weight:800;color:var(--staff-text)}
+body.gm-preview #operation-view .summary-card>small{display:block;color:var(--staff-text-secondary);font-size:12px}
+body.gm-preview .demo-section-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+body.gm-preview .demo-filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+body.gm-preview #operation-view .kanban{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;align-items:start}
+body.gm-preview #operation-view .kanban-column{min-width:0;overflow:hidden;border:1px solid var(--staff-border);border-top:3px solid var(--staff-warning);border-radius:16px;background:white}
+body.gm-preview #operation-view .kanban-column--confirmed{border-top-color:var(--staff-info)}body.gm-preview #operation-view .kanban-column--delivered{border-top-color:var(--staff-success)}
+body.gm-preview #operation-view .kanban-column>header{display:flex;align-items:center;justify-content:space-between;padding:15px 17px;border-bottom:1px solid var(--staff-border)}
+body.gm-preview #operation-view .kanban-column>header h3{margin:0;font-size:14px;font-weight:800}
+body.gm-preview .demo-count{display:grid;place-items:center;min-width:27px;height:27px;padding:0 5px;border-radius:100px;background:var(--staff-neutral-soft);color:var(--staff-text-secondary);font-size:12px;font-weight:800}
+body.gm-preview #operation-view .kanban-column__cards{display:grid;align-content:start;gap:9px;min-height:180px;max-height:450px;padding:12px;overflow-y:auto;overscroll-behavior:contain}
+body.gm-preview .demo-order{padding:14px;border:1px solid var(--staff-border);border-radius:12px;background:white}
+body.gm-preview .demo-order-top{display:flex;justify-content:space-between;gap:9px;align-items:flex-start}
+body.gm-preview .demo-order-name{font-weight:800;color:var(--staff-text);font-size:14px}
+body.gm-preview .demo-order-id{font-size:11px;color:var(--staff-text-secondary)}
+body.gm-preview .demo-order-info{display:grid;gap:6px;margin:10px 0 12px;color:var(--staff-text-secondary);font-size:12px;line-height:1.4}
+body.gm-preview .demo-order-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;border-top:1px solid var(--staff-border);padding-top:10px}
+body.gm-preview .demo-order-foot select{max-width:145px;min-height:34px;padding:5px 8px;border:1px solid var(--staff-border);border-radius:8px;background:var(--staff-surface);color:var(--staff-text)}
+body.gm-preview .demo-chip{display:inline-block;padding:4px 8px;border-radius:999px;background:var(--staff-brand-soft);color:var(--staff-brand);font-size:11px;font-weight:750}
+body.gm-preview .demo-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin-bottom:18px}
+body.gm-preview .demo-value{font-size:26px;font-weight:800;margin:10px 0 5px;font-variant-numeric:tabular-nums}
+body.gm-preview .demo-list{display:grid;gap:0}body.gm-preview .demo-row{display:flex;gap:15px;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--staff-border)}body.gm-preview .demo-row:last-child{border-bottom:0}
+body.gm-preview .demo-row strong{font-size:14px}body.gm-preview .demo-placeholder{display:grid;place-items:center;min-height:145px;text-align:center;color:var(--staff-text-secondary)}
+body.gm-preview .demo-products{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+body.gm-preview .demo-product{padding:14px;border:1px solid var(--staff-border);border-radius:13px;background:#fff}
+body.gm-preview .demo-product-image{height:105px;margin-bottom:13px;border-radius:9px;background:linear-gradient(145deg,var(--staff-neutral-soft),var(--staff-brand-soft));display:grid;place-items:center;font-size:36px}
+body.gm-preview .demo-product h3{margin:0 0 8px;font-size:14px}
+body.gm-preview .demo-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:20px;padding:11px 15px;border:1px solid var(--staff-border);border-radius:12px;background:var(--staff-brand-soft);color:var(--staff-text)}
+body.gm-preview .demo-banner strong{color:var(--staff-brand)}
+body.gm-preview .demo-view[hidden]{display:none!important}
+body.gm-preview .demo-mobile-menu{display:none}
+body.gm-preview .demo-toast{position:fixed;z-index:60;bottom:25px;right:25px;max-width:min(400px,calc(100vw - 32px));padding:14px 18px;border-radius:12px;background:var(--staff-text);color:white;box-shadow:0 8px 30px rgb(0 0 0 / 16%)}
+body.gm-preview dialog{border:1px solid var(--staff-border);border-radius:16px;padding:24px;width:min(440px,calc(100% - 28px));box-shadow:0 15px 50px rgb(0 0 0 / 18%);background:#fff;color:var(--staff-text)}
+body.gm-preview dialog::backdrop{background:rgb(43 26 18 / 40%)}
+body.gm-preview .demo-form{display:grid;gap:15px;margin-top:18px}
+body.gm-preview .demo-form label{display:grid;gap:6px;font-size:13px;font-weight:700}
+body.gm-preview .demo-form input,body.gm-preview .demo-form select{width:100%;height:42px;padding:8px 12px;border:1px solid var(--staff-border);border-radius:10px;background:white}
+body.gm-preview .demo-footer-note{margin-top:24px;color:var(--staff-text-secondary);font-size:12px;line-height:1.5}
+@media(max-width:1050px){body.gm-preview .demo-shell{grid-template-columns:210px minmax(0,1fr)}body.gm-preview .nav{width:210px}body.gm-preview .demo-content{padding:24px 18px}body.gm-preview .nav2{padding:0 18px!important}body.gm-preview .demo-order-foot{flex-wrap:wrap}}
+@media(max-width:780px){body.gm-preview .demo-shell{display:block}body.gm-preview .nav{display:none;position:fixed;z-index:30;left:0;top:60px;width:min(300px,85vw);height:calc(100dvh - 60px);box-shadow:0 10px 30px rgb(0 0 0 / 12%)}body.gm-preview .nav.demo-open{display:flex}body.gm-preview .demo-mobile-menu{display:inline-flex}body.gm-preview .nav2{height:60px;min-height:60px}body.gm-preview .demo-top-actions span{display:none}body.gm-preview #operation-view .kanban{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:14px}body.gm-preview #operation-view .kanban-column{flex:0 0 min(325px,85vw);scroll-snap-align:start}body.gm-preview .demo-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){body.gm-preview .demo-content{padding:19px 13px 40px}body.gm-preview .nav2{padding:0 13px!important}body.gm-preview .demo-top-actions{display:none}body.gm-preview .demo-banner{font-size:12px}body.gm-preview h1{font-size:24px}body.gm-preview #operation-view .summary{gap:7px}body.gm-preview #operation-view .summary-card{padding:12px!important}body.gm-preview #operation-view .summary-card>strong{font-size:23px}body.gm-preview #operation-view .summary-card>small{display:none}body.gm-preview .demo-products{grid-template-columns:repeat(2,minmax(0,1fr))}body.gm-preview .demo-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media print{body.gm-preview .nav,body.gm-preview .nav2,body.gm-preview .demo-actions,body.gm-preview .demo-banner,body.gm-preview .demo-filters{display:none!important}body.gm-preview .demo-shell{display:block}body.gm-preview .demo-content{padding:0}body.gm-preview #operation-view .kanban-column__cards{max-height:none;overflow:visible}}
+</style>
+</head>
+<body class="staff-mode gm-preview">
+<div class="demo-shell">
+  <aside class="nav" id="demo-side" aria-label="Navegação da prévia">
+    <div><div class="demo-brand"><span class="demo-mark" aria-hidden="true">✦</span><span>Pão Doce<small style="display:block;font-size:10px;font-weight:650;color:var(--staff-text-secondary)">DELIVERY · GESTÃO</small></span></div>
+      <div class="demo-menu">
+      <div class="demo-menu-title">Operação</div>
+      <button class="demo-nav" data-nav="operation" aria-current="page"><span class="symbol">▦</span> Operação diária</button>
+      <div class="demo-menu-title" style="margin-top:22px">Cadastros</div>
+      <button class="demo-nav" data-nav="clients"><span class="symbol">♙</span> Clientes</button>
+      <button class="demo-nav" data-nav="products"><span class="symbol">▤</span> Produtos</button>
+      <div class="demo-menu-title" style="margin-top:22px">Gestão</div>
+      <button class="demo-nav" data-nav="finance"><span class="symbol">▥</span> Financeiro</button>
+      </div>
+    </div>
+    <div class="demo-side-note"><strong>Prévia visual · Versão 1</strong>Pedidos e valores são fictícios. Nada aqui acessa o banco real.</div>
+  </aside>
+  <div class="demo-main">
+    <header class="nav2">
+      <button class="demo-button demo-button--sm demo-mobile-menu" id="menu-button" aria-label="Abrir menu" aria-expanded="false">☰</button>
+      <label class="demo-search"><span aria-hidden="true">⌕</span><input id="global-demo-search" type="search" placeholder="Buscar na gestão de demonstração…" aria-label="Buscar pedido fictício"></label>
+      <div class="demo-top-actions"><span class="demo-small">Ambiente de demonstração</span><div class="demo-avatar" aria-label="Perfil demonstrativo">PD</div></div>
+    </header>
+    <div class="demo-content" id="inicio">
+      <div class="demo-banner"><div><strong>Gestão Modular — prévia isolada.</strong> Explore as telas e teste a apresentação. Nenhuma ação chega à produção.</div><span class="demo-chip">Somente demonstração</span></div>
+      <section class="demo-view" id="operation-view" data-view="operation">
+        <div class="demo-label">OPERAÇÃO DO DIA</div>
+        <div class="demo-heading"><div><h1>Central de pedidos</h1><p class="demo-muted">Acompanhamento claro, sem perder os controles atuais.</p></div><div class="demo-actions"><input class="demo-input" type="date" id="demo-date" value="2026-10-29" aria-label="Data de referência (fictícia)"><button class="demo-button demo-button--primary" id="new-demo">+ Novo pedido</button><button class="demo-button" id="print-demo">Imprimir</button></div></div>
+        <div class="summary" aria-label="Indicadores demonstrativos"><div class="summary-card"><span>Pedidos do dia</span><strong id="count-all">0</strong><small>pedidos fictícios</small></div><div class="summary-card"><span>Novos</span><strong id="count-new">0</strong><small>aguardando conferência</small></div><div class="summary-card"><span>Entregues</span><strong id="count-delivered">0</strong><small>finalizados na prévia</small></div></div>
+        <div class="demo-section-header"><div><h2>Acompanhamento</h2><p class="demo-muted">Três etapas preservadas, com rolagem em cada coluna.</p></div><div class="demo-filters"><select class="demo-input" id="filter-status" aria-label="Filtrar etapa"><option value="all">Todas as etapas</option><option value="new">Novos</option><option value="confirmed">Conferidos</option><option value="delivered">Entregues</option></select><button class="demo-button" id="clear-demo">Limpar filtros</button></div></div>
+        <div class="kanban" aria-label="Kanban fictício" id="kanban"></div>
+        <p class="demo-footer-note">Teste a rolagem vertical dentro das colunas, a busca no topo e a mudança de etapa: todas as interações são apenas locais nesta página.</p>
+      </section>
+      <section class="demo-view" data-view="clients" hidden>
+        <div class="demo-label">CADASTROS</div><div class="demo-heading"><div><h1>Clientes</h1><p class="demo-muted">Mesmo cabeçalho, mesma escala e mesmos componentes da operação.</p></div><button class="demo-button demo-button--primary" data-demo-toast="O cadastro será mantido na aplicação real. Esta tela usa somente exemplos.">+ Novo cliente</button></div>
+        <div class="demo-grid"><div class="demo-card"><span class="demo-small">Clientes ativos</span><div class="demo-value">—</div><span class="demo-muted">Dados reais não carregados</span></div><div class="demo-card"><span class="demo-small">Novos no período</span><div class="demo-value">—</div><span class="demo-muted">Indicador demonstrativo</span></div><div class="demo-card"><span class="demo-small">Cadastros incompletos</span><div class="demo-value">—</div><span class="demo-muted">Indicador demonstrativo</span></div></div>
+        <div class="demo-card"><div class="demo-section-header"><h2>Lista de clientes</h2><button class="demo-button demo-button--sm" data-demo-toast="Filtros reais permanecem preservados no projeto.">Filtrar</button></div><div class="demo-list"><div class="demo-row"><div><strong>Cliente exemplo A</strong><p class="demo-muted">Rua exemplo, 10</p></div><span class="demo-chip">Ativo</span></div><div class="demo-row"><div><strong>Cliente exemplo B</strong><p class="demo-muted">Rua exemplo, 20</p></div><span class="demo-chip">Ativo</span></div><div class="demo-row"><div><strong>Cliente exemplo C</strong><p class="demo-muted">Rua exemplo, 30</p></div><span class="demo-chip">Ativo</span></div></div></div>
+      </section>
+      <section class="demo-view" data-view="products" hidden>
+        <div class="demo-label">CATÁLOGO INTERNO</div><div class="demo-heading"><div><h1>Produtos</h1><p class="demo-muted">Cartões uniformes, filtros limpos e ações consistentes.</p></div><button class="demo-button demo-button--primary" data-demo-toast="A edição real de produtos está desativada nesta prévia.">+ Novo produto</button></div>
+        <div class="demo-card" style="margin-bottom:16px"><div class="demo-filters"><input class="demo-input" placeholder="Buscar produtos…" disabled aria-label="Busca indisponível nesta simulação"><select class="demo-input" disabled aria-label="Categoria indisponível"><option>Todas as categorias</option></select><button class="demo-button" data-demo-toast="Filtros e categorias serão mantidos no aplicativo completo.">Mais filtros</button></div></div>
+        <div class="demo-products"><div class="demo-product"><div class="demo-product-image" aria-hidden="true">▤</div><h3>Produto exemplo A</h3><span class="demo-muted">Dados demonstrativos</span></div><div class="demo-product"><div class="demo-product-image" aria-hidden="true">▥</div><h3>Produto exemplo B</h3><span class="demo-muted">Dados demonstrativos</span></div><div class="demo-product"><div class="demo-product-image" aria-hidden="true">▦</div><h3>Produto exemplo C</h3><span class="demo-muted">Dados demonstrativos</span></div></div>
+      </section>
+      <section class="demo-view" data-view="finance" hidden>
+        <div class="demo-label">GESTÃO</div><div class="demo-heading"><div><h1>Financeiro</h1><p class="demo-muted">Legibilidade e consistência, sem modificar regras de cálculo.</p></div><button class="demo-button" data-demo-toast="Relatórios reais não são acessados na prévia.">Exportar relatório</button></div>
+        <div class="demo-grid"><div class="demo-card"><span class="demo-small">Total de vendas</span><div class="demo-value">—</div><span class="demo-muted">Dados isolados</span></div><div class="demo-card"><span class="demo-small">Recebimentos</span><div class="demo-value">—</div><span class="demo-muted">Dados isolados</span></div><div class="demo-card"><span class="demo-small">Pendências</span><div class="demo-value">—</div><span class="demo-muted">Dados isolados</span></div></div>
+        <div class="demo-card"><div class="demo-section-header"><h2>Visão financeira</h2><div class="demo-filters"><button class="demo-button demo-button--sm" data-demo-toast="Presets mantidos no financeiro real.">Hoje</button><button class="demo-button demo-button--sm" data-demo-toast="Presets mantidos no financeiro real.">15 dias</button><button class="demo-button demo-button--sm" data-demo-toast="Presets mantidos no financeiro real.">Período</button></div></div><div class="demo-placeholder">Os relatórios e valores verdadeiros não são carregados neste ambiente.</div></div>
+      </section>
+    </div>
+  </div>
+</div>
+<dialog id="new-order-dialog" aria-labelledby="demo-dialog-heading"><h2 id="demo-dialog-heading">Novo pedido fictício</h2><p class="demo-muted">Só aparecerá nesta prévia, até recarregar a página.</p><form id="demo-order-form" class="demo-form"><label>Nome demonstrativo<input name="name" required maxlength="48" placeholder="Ex.: Cliente exemplo"></label><label>Descrição do pedido<input name="items" required maxlength="90" placeholder="Ex.: 2 unidades do produto A"></label><label>Etapa inicial<select name="status"><option value="new">Novo</option><option value="confirmed">Conferido</option><option value="delivered">Entregue</option></select></label><div class="demo-actions" style="justify-content:flex-end"><button type="button" class="demo-button" id="cancel-new">Cancelar</button><button type="submit" class="demo-button demo-button--primary">Criar na prévia</button></div></form></dialog>
+<div class="demo-toast" id="demo-toast" role="status" hidden></div>
+<script>
+(()=>{
+'use strict';
+let orders=[
+{id:1001,name:'Cliente exemplo A',items:'2 itens · Pão francês',address:'Rua exemplo, 10',status:'new'},
+{id:1002,name:'Cliente exemplo B',items:'3 itens · Produtos variados',address:'Rua exemplo, 20',status:'new'},
+{id:1003,name:'Cliente exemplo C',items:'1 item · Broa doce',address:'Rua exemplo, 30',status:'confirmed'},
+{id:1004,name:'Cliente exemplo D',items:'2 itens · Biscoitos',address:'Rua exemplo, 40',status:'confirmed'},
+{id:1005,name:'Cliente exemplo E',items:'1 item · Pão francês',address:'Rua exemplo, 50',status:'delivered'},
+{id:1006,name:'Cliente exemplo F',items:'4 itens · Produtos variados',address:'Rua exemplo, 60',status:'delivered'},
+{id:1007,name:'Cliente exemplo G',items:'3 itens · Produtos variados',address:'Rua exemplo, 70',status:'delivered'},
+{id:1008,name:'Cliente exemplo H',items:'1 item · Pão francês',address:'Rua exemplo, 80',status:'delivered'},
+{id:1009,name:'Cliente exemplo I',items:'2 itens · Biscoitos',address:'Rua exemplo, 90',status:'delivered'}
+];
+const titles={operation:'Central de pedidos',clients:'Clientes',products:'Produtos',finance:'Financeiro'};
+const keys=[['new','Novos',''],['confirmed','Conferidos','kanban-column--confirmed'],['delivered','Entregues','kanban-column--delivered']];
+const escape=(s)=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const toast=document.getElementById('demo-toast');
+let toastTimer;
+function message(t){toast.textContent=t;toast.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{toast.hidden=true},3500);}
+function render(){
+ const q=document.getElementById('global-demo-search').value.trim().toLocaleLowerCase('pt-BR');
+ const select=document.getElementById('filter-status').value;
+ const counts=Object.fromEntries(keys.map(([k])=>[k,orders.filter(o=>o.status===k).length]));
+ document.getElementById('count-all').textContent=orders.length;
+ document.getElementById('count-new').textContent=counts.new;
+ document.getElementById('count-delivered').textContent=counts.delivered;
+ document.getElementById('kanban').innerHTML=keys.map(([key,title,cls])=>{
+  const visible=orders.filter(o=>o.status===key && (select==='all'||select===key) && [o.name,o.items,o.address,String(o.id)].some(v=>v.toLocaleLowerCase('pt-BR').includes(q)));
+  const cards=visible.map(o=>'<article class="demo-order"><div class="demo-order-top"><span class="demo-order-name">'+escape(o.name)+'</span><span class="demo-order-id">#'+o.id+'</span></div><div class="demo-order-info"><span>'+escape(o.items)+'</span><span>'+escape(o.address)+'</span></div><div class="demo-order-foot"><span class="demo-chip">Simulação</span><select aria-label="Mudar etapa do pedido fictício '+o.id+'" data-order-id="'+o.id+'">'+keys.map(([k,t])=>'<option value="'+k+'"'+(k===o.status?' selected':'')+'>'+t+'</option>').join('')+'</select></div></article>').join('');
+  return '<section class="kanban-column '+cls+'"><header><h3>'+title+'</h3><span class="demo-count">'+counts[key]+'</span></header><div class="kanban-column__cards">'+(cards||'<p class="demo-muted" style="padding:14px">Nenhum pedido fictício neste filtro.</p>')+'</div></section>';
+ }).join('');
+}
+function view(key){if(!titles[key])return;document.querySelectorAll('.demo-view').forEach(el=>el.hidden=el.dataset.view!==key);document.querySelectorAll('.demo-nav').forEach(el=>{if(el.dataset.nav===key)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current');});document.getElementById('demo-side').classList.remove('demo-open');document.getElementById('menu-button').setAttribute('aria-expanded','false');if(key==='operation')render();document.title=titles[key]+' · Gestão Modular (Prévia)';}
+document.querySelectorAll('[data-nav]').forEach(el=>el.addEventListener('click',()=>view(el.dataset.nav)));
+document.getElementById('menu-button').addEventListener('click',()=>{const side=document.getElementById('demo-side');const next=side.classList.toggle('demo-open');document.getElementById('menu-button').setAttribute('aria-expanded',String(next));});
+document.getElementById('global-demo-search').addEventListener('input',()=>{view('operation');render();});
+document.getElementById('filter-status').addEventListener('change',render);
+document.getElementById('kanban').addEventListener('change',e=>{const id=Number(e.target.dataset.orderId);const obj=orders.find(o=>o.id===id);if(!obj||!keys.some(([k])=>k===e.target.value))return;obj.status=e.target.value;render();message('Etapa alterada apenas na demonstração.');});
+document.getElementById('clear-demo').addEventListener('click',()=>{document.getElementById('global-demo-search').value='';document.getElementById('filter-status').value='all';render();});
+document.getElementById('print-demo').addEventListener('click',()=>window.print());
+const dialog=document.getElementById('new-order-dialog');
+document.getElementById('new-demo').addEventListener('click',()=>dialog.showModal());
+document.getElementById('cancel-new').addEventListener('click',()=>dialog.close());
+document.getElementById('demo-order-form').addEventListener('submit',e=>{e.preventDefault();const fd=new FormData(e.currentTarget);const name=String(fd.get('name')).trim(),items=String(fd.get('items')).trim(),status=String(fd.get('status'));if(!name||!items)return;orders.unshift({id:Math.max(...orders.map(o=>o.id))+1,name,items,address:'Endereço demonstrativo',status});dialog.close();e.currentTarget.reset();document.getElementById('filter-status').value='all';render();message('Pedido de teste adicionado apenas nesta página.');});
+document.querySelectorAll('[data-demo-toast]').forEach(el=>el.addEventListener('click',()=>message(el.dataset.demoToast)));
+document.getElementById('demo-date').addEventListener('change',()=>message('A data escolhida é apenas ilustrativa e não consulta pedidos reais.'));
+render();
+})();
+</script>
+</body>
+</html>
