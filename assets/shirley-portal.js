@@ -18,6 +18,7 @@ import { weekdayNames, recurringItemsText, recurringScheduleText } from '../src/
   let editingDay = null;
   let editingDailySchedule = false;
   let selectedCustomerId = '';
+  let specificFeeTouched = false;
   let selectedCommercialTerms = { deliveryFeeCents: Number(live?.settings?.delivery_fee_cents ?? 200), productPrices: new Map() };
   let editingScheduleId = null;
   let profiles = [];
@@ -48,7 +49,23 @@ import { weekdayNames, recurringItemsText, recurringScheduleText } from '../src/
   const resetCommercialTerms = () => {
     selectedCommercialTerms = { deliveryFeeCents: Number(live?.settings?.delivery_fee_cents ?? 200), productPrices: new Map() };
   };
-  const selectedDeliveryFee = () => Number(selectedCommercialTerms?.deliveryFeeCents ?? live?.settings?.delivery_fee_cents ?? 200);
+  const defaultDeliveryFee = () => Number(selectedCommercialTerms?.deliveryFeeCents ?? live?.settings?.delivery_fee_cents ?? 200);
+  const feeFromInput = raw => {
+    const value = String(raw || '').trim().replace(',', '.');
+    if (!/^\\d+(?:\\.\\d{1,2})?$/.test(value)) return null;
+    const [whole, cents = ''] = value.split('.');
+    const result = Number(whole) * 100 + Number(cents.padEnd(2, '0'));
+    return Number.isSafeInteger(result) && result >= 0 && result <= 100000000 ? result : null;
+  };
+  const selectedDeliveryFee = () => recurrenceInput.value !== 'once'
+    ? defaultDeliveryFee()
+    : feeFromInput($('#shirley-delivery-fee').value);
+  const updateDeliverySummary = () => {
+    const fee = selectedDeliveryFee();
+    $('#shirley-delivery-fee-summary').textContent = fee === null ? 'Confira a taxa de entrega' : 'Taxa de entrega: ' + money(fee);
+    const amount = totalCents();
+    $('#shirley-order-total').textContent = amount === null ? '—' : money(amount);
+  };
   const activeProducts = () => products
     .filter(p=>p.active && Number.isSafeInteger(p.priceCents) && p.priceCents>=0)
     .map(p=>{
@@ -96,7 +113,9 @@ import { weekdayNames, recurringItemsText, recurringScheduleText } from '../src/
   }
   const totalCents = () => {
     const items = chosenLines();
-    return items.length ? window.TrameliOrderMath.totalCents({ items, feeCents: selectedDeliveryFee() }) : 0;
+    const fee = selectedDeliveryFee();
+    if (fee === null) return null;
+    return items.length ? window.TrameliOrderMath.totalCents({ items, feeCents: fee }) : 0;
   };
   function setTab(tab){
     activeTab=tab;
@@ -114,12 +133,14 @@ import { weekdayNames, recurringItemsText, recurringScheduleText } from '../src/
   }
   async function loadCustomerCommercialTerms(id){
     resetCommercialTerms();
+    if (!specificFeeTouched) $('#shirley-delivery-fee').value = (defaultDeliveryFee() / 100).toFixed(2).replace('.', ',');
     renderProducts();
     if(!id||!live?.customerCommercialTerms)return;
     try{
       const terms=await live.customerCommercialTerms(id);
       if(selectedCustomerId!==id)return;
       selectedCommercialTerms=terms;
+      if (!specificFeeTouched) $('#shirley-delivery-fee').value = (defaultDeliveryFee() / 100).toFixed(2).replace('.', ',');
       renderProducts();
     }catch(error){
       if(selectedCustomerId!==id)return;
@@ -131,6 +152,8 @@ import { weekdayNames, recurringItemsText, recurringScheduleText } from '../src/
   function chooseCustomer(id){
     const p=profiles.find(x=>x.user_id===id); if(!p)return;
     selectedCustomerId=id; customerId.value=id; customerSearch.value=formatCustomerName(p.name);
+    $('#shirley-delivery-address').value=p.address||'';
+    specificFeeTouched=false;
     $('#shirley-selected-customer').textContent=[formatCustomerName(p.name),p.address,p.phone].filter(Boolean).join(' · ');
     customerResults.hidden=true;
     void loadCustomerCommercialTerms(id);
@@ -160,7 +183,7 @@ import { weekdayNames, recurringItemsText, recurringScheduleText } from '../src/
     }).join(''):'<p class="shirley-portal__empty">Nenhum produto ativo corresponde à pesquisa.</p>';
     const count=chosenLines().reduce((sum,line)=>sum+(line.weightGrams?1:line.quantity),0);
     $('#shirley-item-count').textContent=count+' '+(count===1?'item selecionado':'itens selecionados');
-    $('#shirley-order-total').textContent=money(totalCents());
+    updateDeliverySummary();
     $('#shirley-retained-items').innerHTML = retainedLines.map((line, index) => `<article><span>${esc(recurringItemsText([line]))} — item da programação anterior</span><button type="button" class="shirley-portal__secondary" data-remove-retained="${index}">Retirar item</button></article>`).join('');
     renderDayEditor();
     if (focused?.id) {
@@ -199,7 +222,7 @@ import { weekdayNames, recurringItemsText, recurringScheduleText } from '../src/
   function startScheduleEdit(schedule){
     profiles=window.TrameliPayments?.api?.profiles||profiles; products=live.products||[];
     editingScheduleId=schedule.id; selectedCustomerId=schedule.customer_id; customerId.value=schedule.customer_id;
-    resetCommercialTerms(); void loadCustomerCommercialTerms(schedule.customer_id);
+    resetCommercialTerms(); specificFeeTouched=false; void loadCustomerCommercialTerms(schedule.customer_id);
     const p=profiles.find(x=>x.user_id===schedule.customer_id); customerSearch.value=formatCustomerName(p?.name);
     $('#shirley-selected-customer').textContent=[formatCustomerName(p?.name),p?.address,p?.phone].filter(Boolean).join(' · ');
     dateInput.value=schedule.starts_on||schedule.start_date||today(); recurrenceInput.value=schedule.recurrence;
@@ -220,7 +243,8 @@ import { weekdayNames, recurringItemsText, recurringScheduleText } from '../src/
     setTab('new'); syncRecurrence(); renderProducts();
   }
   function resetForm(){
-    form.reset(); editingScheduleId=null; selectedCustomerId=''; customerId.value=''; resetCommercialTerms(); selectedQuantities=new Map();retainedLines=[];
+    form.reset(); editingScheduleId=null; selectedCustomerId=''; customerId.value=''; resetCommercialTerms(); selectedQuantities=new Map();retainedLines=[]; specificFeeTouched=false;
+    $('#shirley-delivery-address').value=''; $('#shirley-delivery-fee').value=(defaultDeliveryFee()/100).toFixed(2).replace('.', ',');
     dayDrafts.clear();editingDay=null;editingDailySchedule=false;dailyInput.checked=false;
     recurrenceInput.querySelector('option[value="once"]').disabled=false;
     dateInput.value=shiftDate(today()); recurrenceInput.value='once'; weekdayHost.hidden=true;
@@ -233,6 +257,8 @@ import { weekdayNames, recurringItemsText, recurringScheduleText } from '../src/
   function syncRecurrence(){
     const once=recurrenceInput.value==='once';
     weekdayHost.hidden=once;recurringOptions.hidden=once;
+    $('#shirley-specific-delivery').hidden=!once;
+    updateDeliverySummary();
     if(dailyMode()){
       const days=selectedDays();
       for(const day of days) if(!dayDrafts.has(day)) dayDrafts.set(day,cloneDraft());
@@ -261,6 +287,8 @@ import { weekdayNames, recurringItemsText, recurringScheduleText } from '../src/
     const button=event.target.closest('[data-remove-retained]');if(!button)return;
     retainedLines.splice(Number(button.dataset.removeRetained),1);renderProducts();
   });
+  $('#shirley-delivery-fee').addEventListener('input',()=>{specificFeeTouched=true;updateDeliverySummary();});
+  $('#shirley-delivery-address').addEventListener('input',()=>{ /* endereço pontual, não altera cadastro */ });
   customerSearch.addEventListener('input',()=>{selectedCustomerId='';customerId.value='';resetCommercialTerms();$('#shirley-selected-customer').textContent='Selecione o cliente correto na lista.';renderCustomers();renderProducts();});
   customerSearch.addEventListener('focus',()=>renderCustomers());
   customerResults.addEventListener('click',event=>{const button=event.target.closest('[data-customer-id]');if(button)chooseCustomer(button.dataset.customerId);});
@@ -315,6 +343,11 @@ import { weekdayNames, recurringItemsText, recurringScheduleText } from '../src/
     })):null;
     const emptyDay=dailyMode()?weekdays.find(day=>!itemsByWeekday[String(day)].length):null;
     if(emptyDay){activateDay(emptyDay);renderProducts();setFeedback(feedback,`Adicione pelo menos um produto para ${weekdayNames[emptyDay].toLocaleLowerCase('pt-BR')}.`,'error');return;}
+    const fee = selectedDeliveryFee();
+    const oneOffAddress = $('#shirley-delivery-address').value.trim();
+    if (recurrence==='once' && (fee === null || !oneOffAddress || oneOffAddress.length < 3 || oneOffAddress.length > 180)) {
+      setFeedback(feedback,fee === null ? 'Informe uma taxa válida, como 3,50.' : 'Informe o endereço desta entrega.','error');return;
+    }
     if(!profile||!date||new Date(date+'T12:00:00').getDay()===0||!items.length||(recurrence!=='once'&& !weekdays.length)){
       setFeedback(feedback,new Date(date+'T12:00:00').getDay()===0?'Não fazemos entregas aos domingos. Escolha outra data.':!profile?'Selecione um cliente cadastrado na lista.':!items.length?'Adicione pelo menos um produto.':'Selecione os dias da recorrência.','error');return;
     }
@@ -327,7 +360,7 @@ import { weekdayNames, recurringItemsText, recurringScheduleText } from '../src/
     const submit=form.querySelector('[type=submit]');submit.disabled=true;setFeedback(feedback,'Salvando pedido…');
     try{
       if(recurrence==='once'&&!editingScheduleId){
-        const order={id:null,publicCode:'',createdAt:new Date().toISOString(),checked:false,status:'received',editedAt:null,customerId:profile.user_id,customer:profile.name,address:profile.address||'',phone:profile.phone||'',date,feeCents:selectedDeliveryFee(),items,notes};
+        const order={id:null,publicCode:'',createdAt:new Date().toISOString(),checked:false,status:'received',editedAt:null,customerId:profile.user_id,customer:profile.name,address:oneOffAddress,phone:profile.phone||'',date,feeCents:fee,items,notes};
         await live.saveOperatorOrder(order,requestId,profile.user_id);
       }else{
         await live.saveRecurringOrder({customerId:profile.user_id,recurrence:recurrence==='once'?'fixed':recurrence,startDate:date,notes,feeCents:selectedDeliveryFee(),weekdays,items:items.map(i=>({...i})),...((dailyMode()||editingDailySchedule)?{itemsByWeekday}:{})},requestId,editingScheduleId);
