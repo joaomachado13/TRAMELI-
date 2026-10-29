@@ -25,8 +25,8 @@ export function bakerySupplierForItem(item, products = []) {
     ? products.find(product => product.id === line.productId)
     : null;
   const byName = byId || products.find(product => normalize(product.name) === normalize(line.name));
-  if (byName?.bakerySupplier === 'sandra' || byName?.bakerySupplier === 'divano') return byName.bakerySupplier;
-  if (line.bakerySupplier === 'sandra' || line.bakerySupplier === 'divano') return line.bakerySupplier;
+  if (['sandra', 'divano', 'outros'].includes(byName?.bakerySupplier)) return byName.bakerySupplier;
+  if (['sandra', 'divano', 'outros'].includes(line.bakerySupplier)) return line.bakerySupplier;
   return SANDRA_ITEMS.includes(normalize(line.name)) ? 'sandra' : 'divano';
 }
 
@@ -36,7 +36,7 @@ export const isSandraSupplierItem = (item, products = []) => bakerySupplierForIt
 export function bakeryLabelOrders(orders, products = []) {
   return orders.map(order => ({
     ...order,
-    items: (order.items || []).filter(item => !isSandraSupplierItem(item, products)),
+    items: (order.items || []).filter(item => bakerySupplierForItem(item, products) === 'divano'),
   })).filter(order => order.items.length);
 }
 
