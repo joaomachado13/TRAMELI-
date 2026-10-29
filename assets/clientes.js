@@ -439,7 +439,7 @@ import { feedback, statusBadge, listRow } from '../src/staff-components.js';
       let cents = null;
       if (value) {
         const normalized = value.replace(',', '.');
-        if (!/^\\d+(?:\\.\\d{1,2})?$/.test(normalized)) {
+        if (!/^\d+(?:\.\d{1,2})?$/.test(normalized)) {
           alertNode.textContent = 'Informe uma taxa válida, como 3,50. Ou deixe vazio para o valor geral.';
           alertNode.hidden = false; return;
         }
