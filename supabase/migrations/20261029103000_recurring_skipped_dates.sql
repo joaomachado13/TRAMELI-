@@ -81,7 +81,7 @@ begin
   delete from public.trameli_order_events where order_id = p_order_id;
   delete from public.trameli_orders where id = p_order_id;
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.trameli_master_delete_order_unchecked(p_order_id uuid)
@@ -127,7 +127,7 @@ begin
     raise exception 'Pedido nao encontrado.';
   end if;
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.trameli_materialize_recurring_orders(p_delivery_date date)
@@ -273,7 +273,7 @@ begin
   end loop;
   return v_count;
 end;
-$function$
+$function$;
 
 
 notify pgrst, 'reload schema';
