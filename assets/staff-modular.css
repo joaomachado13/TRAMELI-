@@ -1,263 +1,502 @@
 /*
- * Pão Doce · Gestão Modular v1
- * Camada visual SOMENTE para a gestão. Sem modificações em dados, etapas ou ações.
- * Adicionar sempre DEPOIS de staff-ui.css.
- * Paleta cromática herdada integralmente de staff-tokens.css.
- */
+  PÃO DOCE · GESTÃO MODULAR — REFINAMENTO VISUAL V2
+  Somente administração (staff-mode), sem mudanças em comportamento, dados ou portal.
+  Esta folha consolida os padrões já existentes; não cria nova paleta nem novo layout.
+  Mantém o Kanban de três etapas, o resumo de quatro indicadores e os controles reais.
+*/
 body.staff-mode:not(.portal-mode) {
-  --gm-card-radius: 16px;
-  --gm-control-radius: 10px;
-  --gm-inset-radius: 12px;
-  --gm-line: var(--staff-border);
-  --gm-shadow: 0 2px 12px rgb(43 26 18 / 4%);
-  --gm-shadow-hover: 0 6px 20px rgb(43 26 18 / 8%);
-  --gm-tight: var(--staff-space-3);
-  --gm-gutter: var(--staff-space-6);
-  --gm-page-gap: var(--staff-space-6);
-  background: var(--staff-canvas);
-  color: var(--staff-text);
+  --gm-space-1: 4px;
+  --gm-space-2: 8px;
+  --gm-space-3: 12px;
+  --gm-space-4: 16px;
+  --gm-space-5: 20px;
+  --gm-space-6: 24px;
+  --gm-radius-input: 9px;
+  --gm-radius-panel: 13px;
+  --gm-radius-item: 10px;
+  --gm-border: var(--staff-border);
+  --gm-muted: var(--staff-text-secondary);
+  --gm-surface: var(--staff-surface);
+  --gm-shadow: 0 2px 10px rgb(43 26 18 / 3%);
 }
-body.staff-mode:not(.portal-mode) :is(#home-view,#screen-view,#operation-view,#shirley-portal-view) {
-  padding-block: var(--gm-page-gap);
+
+/* 1 · Ritmo consistente para títulos, descrições e comandos. */
+body.staff-mode:not(.portal-mode) #operation-view .workspace {
+  display: block;
 }
-body.staff-mode:not(.portal-mode) .nav2 {
-  background: var(--staff-surface);
-  border-bottom: 1px solid var(--gm-line);
-  box-shadow: 0 2px 8px rgb(43 26 18 / 3%);
+body.staff-mode:not(.portal-mode) #operation-view .intro {
+  align-items: center;
+  gap: var(--gm-space-3) var(--gm-space-5);
+  margin-bottom: var(--gm-space-5);
 }
-body.staff-mode:not(.portal-mode) #main-navigation-panel {
-  background: var(--staff-surface);
-  border-right: 1px solid var(--gm-line);
-}
-body.staff-mode:not(.portal-mode) .nav__links { gap: var(--staff-space-4); }
-body.staff-mode:not(.portal-mode) .nav .nav__item {
-  border-radius: var(--gm-control-radius);
-  transition: background-color .16s ease, color .16s ease;
-}
-body.staff-mode:not(.portal-mode) .nav .nav__item[aria-current="page"] {
-  border-radius: var(--gm-control-radius);
-  background: var(--staff-brand-soft) !important;
-  color: var(--staff-brand) !important;
-}
-body.staff-mode:not(.portal-mode) .nav .nav__item[aria-current="page"]::before { top: 10px; bottom: 10px; }
-body.staff-mode:not(.portal-mode) :is(.screen-hero h1,.overview-hero h1,#operation-view .intro h1,.shirley-hero h1) {
-  color: var(--staff-text);
-  font-weight: 750;
+body.staff-mode:not(.portal-mode) #operation-view .intro h1 {
+  margin: 0;
+  font-size: var(--staff-page-title) !important;
+  line-height: 1.18;
   letter-spacing: -.035em;
-}
-body.staff-mode:not(.portal-mode) :is(.staff-page-header,.overview-hero,#operation-view .intro,.shirley-hero) {
-  gap: var(--staff-space-3) var(--staff-space-4);
-  margin-bottom: var(--gm-page-gap);
-}
-body.staff-mode:not(.portal-mode) :is(.staff-page-actions,#operation-view .intro__actions) {
-  gap: var(--staff-space-2);
-}
-body.staff-mode:not(.portal-mode) :is(
-  #home-view .panel,
-  #screen-view .screen-panel,
-  .screen-metric,
-  .kpi-card,
-  .summary-card,
-  .insight-card,
-  .catalog-card,
-  .report-generator,
-  .generated-report,
-  .finance-charts > section,
-  .shirley-panel,
-  #home-view .attention-center
-) {
-  background: var(--staff-surface);
-  border: 1px solid var(--gm-line);
-  border-radius: var(--gm-card-radius);
-  box-shadow: var(--gm-shadow);
-}
-body.staff-mode:not(.portal-mode) :is(.screen-panel__heading,.panel__heading) {
-  padding-bottom: var(--staff-space-3);
-  border-bottom: 1px solid var(--gm-line);
-}
-body.staff-mode:not(.portal-mode) :is(.screen-panel__heading h2,.panel__heading h2,.section-heading h2) {
   font-weight: 700;
-  letter-spacing: -.02em;
 }
-body.staff-mode:not(.portal-mode) :is(.screen-metrics,.overview-kpis,.finance-headline,.product-insights) {
-  gap: var(--staff-space-3);
+body.staff-mode:not(.portal-mode) #operation-view .intro__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--gm-space-2);
 }
-/* Ações: um único tamanho, três níveis de ênfase. Evita regras por módulo. */
-body.staff-mode:not(.portal-mode) :is(#inicio,#main-navigation-panel,dialog) :is(
-  .screen-primary,.button,.staff-button,.catalog-toolbar button,
-  .catalog-actions button,.report-actions button,.entity-detail__actions button,
-  .dialog-actions button,.account-panel button,.record-toolbar>button,
-  .staff-page-actions>button
-) {
-  min-height: 40px !important;
-  border-radius: var(--gm-control-radius) !important;
-  padding: 8px 16px !important;
-  font-weight: 650 !important;
-  transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease;
+body.staff-mode:not(.portal-mode) #operation-view .intro__actions .staff-inline-date {
+  flex: 0 0 auto;
 }
-body.staff-mode:not(.portal-mode) :is(#inicio,#main-navigation-panel,dialog) :is(
-  .button--quiet,.staff-button--secondary
-) {
-  background: var(--staff-surface) !important;
+body.staff-mode:not(.portal-mode) #operation-view :is(.intro__actions input,.supplier-period select,.search-box input) {
+  min-height: 40px;
+  height: 40px;
+  border: 1px solid var(--gm-border);
+  border-radius: var(--gm-radius-input);
+  background: var(--gm-surface);
+  color: var(--staff-text);
+  font-size: var(--staff-body);
+}
+body.staff-mode:not(.portal-mode) #operation-view :is(.intro__actions .button,.supplier-list__actions .button,.kanban-toolbar .button) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gm-space-2);
+  min-height: 40px;
+  padding: 8px 14px !important;
+  border: 1px solid var(--gm-border) !important;
+  border-radius: var(--gm-radius-input) !important;
+  background: var(--gm-surface) !important;
   color: var(--staff-text) !important;
-  border-color: var(--gm-line) !important;
+  box-shadow: none !important;
+  font-size: var(--staff-body) !important;
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: nowrap;
 }
-body.staff-mode:not(.portal-mode) :is(#inicio,#main-navigation-panel,dialog) :is(
-  .button--quiet,.staff-button--secondary
-):hover:not(:disabled) {
+body.staff-mode:not(.portal-mode) #operation-view :is(.intro__actions .button--primary,.supplier-list__actions .button--primary,.kanban-toolbar .button--primary) {
+  color: var(--staff-on-brand) !important;
+  background: var(--staff-brand) !important;
+  border-color: var(--staff-brand) !important;
+}
+body.staff-mode:not(.portal-mode) #operation-view :is(.intro__actions .button--primary,.supplier-list__actions .button--primary,.kanban-toolbar .button--primary):hover:not(:disabled) {
+  background: var(--staff-brand-hover) !important;
+  border-color: var(--staff-brand-hover) !important;
+}
+body.staff-mode:not(.portal-mode) #operation-view :is(.intro__actions .button--quiet,.supplier-list__actions .button--quiet,.kanban-toolbar .button--quiet):hover:not(:disabled) {
   background: var(--staff-brand-soft) !important;
+  border-color: var(--staff-brand) !important;
   color: var(--staff-brand) !important;
 }
-body.staff-mode:not(.portal-mode) :is(#inicio,#main-navigation-panel,dialog) :is(
-  input:not([type=checkbox]):not([type=radio]):not([type=color]),select,textarea
-) {
-  border-radius: var(--gm-control-radius);
-  background-color: var(--staff-surface);
+body.staff-mode:not(.portal-mode) #operation-view .section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gm-space-4);
+  margin-bottom: var(--gm-space-4);
 }
-body.staff-mode:not(.portal-mode) :is(button,a,input,select,textarea,summary):focus-visible {
-  outline: 2px solid var(--staff-focus) !important;
-  outline-offset: 3px !important;
+body.staff-mode:not(.portal-mode) #operation-view .section-heading h2 {
+  margin: 0;
+  font-size: var(--staff-section-title);
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -.025em;
 }
-/* Indicadores da operação: módulos individuais, compactos e legíveis. */
+body.staff-mode:not(.portal-mode) #operation-view .section-heading .eyebrow {
+  margin: 0 0 5px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .09em;
+  color: var(--staff-brand);
+}
+body.staff-mode:not(.portal-mode) #operation-view .section-description {
+  margin: var(--gm-space-2) 0 0;
+  max-width: 700px;
+  color: var(--gm-muted);
+  font-size: var(--staff-label);
+  line-height: 1.48;
+}
+
+/* 2 · Indicadores do dia: manter faixa única, quatro valores, hierarquia igual. */
 body.staff-mode:not(.portal-mode) #operation-view .summary {
   display: grid;
-  grid-template-columns: repeat(3,minmax(0,1fr));
-  gap: var(--staff-space-3);
-  margin-bottom: var(--gm-page-gap);
-  padding: 0;
-  background: transparent;
-  border: 0;
-  border-radius: 0;
+  grid-template-columns: repeat(4,minmax(0,1fr));
+  gap: 0;
+  margin: 0 0 var(--gm-space-6);
+  padding: 8px 0;
+  overflow: hidden;
+  border: 1px solid var(--gm-border);
+  border-radius: var(--gm-radius-panel);
+  background: var(--gm-surface);
+  box-shadow: var(--gm-shadow);
 }
 body.staff-mode:not(.portal-mode) #operation-view .summary-card {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  gap: var(--staff-space-1);
+  flex-wrap: wrap;
+  gap: 4px 8px;
   min-width: 0;
-  padding: var(--staff-space-4) var(--staff-space-6) !important;
-  border: 1px solid var(--gm-line) !important;
-  border-radius: var(--gm-card-radius);
-  background: var(--staff-surface);
-  box-shadow: var(--gm-shadow);
+  min-height: 42px;
+  padding: 7px 12px !important;
+  border: 0 !important;
+  border-right: 1px solid var(--gm-border) !important;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  text-align: center;
 }
-body.staff-mode:not(.portal-mode) #operation-view .summary-card>span {
+body.staff-mode:not(.portal-mode) #operation-view .summary-card:last-child {
+  border-right: 0 !important;
+}
+body.staff-mode:not(.portal-mode) #operation-view .summary-card > span {
+  color: var(--gm-muted);
   font-size: var(--staff-label);
-  color: var(--staff-text-secondary);
+  font-weight: 500;
 }
-body.staff-mode:not(.portal-mode) #operation-view .summary-card>strong {
+body.staff-mode:not(.portal-mode) #operation-view .summary-card > strong {
   margin: 0;
-  font-size: 28px;
+  color: var(--staff-text);
+  font-size: 17px;
   line-height: 1.15;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
-body.staff-mode:not(.portal-mode) #operation-view .summary-card>small {
-  display: block;
-  font-size: 12px;
-  color: var(--staff-text-secondary);
+body.staff-mode:not(.portal-mode) #operation-view .summary-card > small {
+  display: none;
 }
-/* Kanban: continuam exatamente 3 etapas; apenas apresentação e rolagem. */
+
+/* 3 · Mesma linguagem de barra de pesquisa e ações na operação. */
+body.staff-mode:not(.portal-mode) #operation-view .orders-section {
+  margin-top: var(--gm-space-6);
+}
+body.staff-mode:not(.portal-mode) #operation-view .orders-section > .section-heading {
+  align-items: end;
+}
+body.staff-mode:not(.portal-mode) #operation-view .orders-section .search-box {
+  width: min(290px,100%);
+  min-width: 220px;
+  color: var(--gm-muted);
+  font-size: var(--staff-label);
+}
+body.staff-mode:not(.portal-mode) #operation-view .orders-section .search-box input {
+  width: 100%;
+  margin-top: 5px;
+  padding: 8px 12px;
+}
+body.staff-mode:not(.portal-mode) #operation-view .kanban-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gm-space-3);
+  align-items: center;
+  justify-content: space-between;
+  padding: 0;
+  margin-bottom: var(--gm-space-3);
+  color: var(--gm-muted);
+}
 body.staff-mode:not(.portal-mode) #operation-view .kanban {
+  display: grid;
   grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: var(--gm-space-3);
   align-items: start;
-  gap: var(--staff-space-3);
 }
 body.staff-mode:not(.portal-mode) #operation-view .kanban-column {
   min-width: 0;
-  overflow: hidden;
-  border-radius: var(--gm-card-radius);
-  border: 1px solid var(--gm-line);
+  padding: 0;
+  border: 1px solid var(--gm-border);
   border-top: 3px solid var(--staff-warning);
-  background: var(--staff-surface);
+  border-radius: var(--gm-radius-panel);
+  background: var(--gm-surface);
   box-shadow: var(--gm-shadow);
 }
-body.staff-mode:not(.portal-mode) #operation-view .kanban-column--confirmed { border-top-color: var(--staff-info); }
-body.staff-mode:not(.portal-mode) #operation-view .kanban-column--delivered { border-top-color: var(--staff-success); }
-body.staff-mode:not(.portal-mode) #operation-view .kanban-column>header {
-  background: var(--staff-surface);
-  border-bottom: 1px solid var(--gm-line);
-  padding: var(--staff-space-3) var(--staff-space-4);
+body.staff-mode:not(.portal-mode) #operation-view .kanban-column--confirmed {
+  border-top-color: var(--staff-info);
+}
+body.staff-mode:not(.portal-mode) #operation-view .kanban-column--delivered {
+  border-top-color: var(--staff-success);
+}
+body.staff-mode:not(.portal-mode) #operation-view .kanban-column > header {
+  min-height: 56px;
+  padding: var(--gm-space-3) var(--gm-space-4);
+  border-bottom: 1px solid var(--gm-border);
+  background: var(--gm-surface);
+}
+body.staff-mode:not(.portal-mode) #operation-view .kanban-column h3 {
+  font-size: 15px;
+  line-height: 1.35;
+  font-weight: 700;
 }
 body.staff-mode:not(.portal-mode) #operation-view .kanban-column__cards {
-  padding: var(--staff-space-3);
-  gap: var(--staff-space-2);
-  max-height: min(58vh,640px);
+  display: grid;
+  align-content: start;
+  gap: var(--gm-space-2);
   min-height: 160px;
+  max-height: min(64vh,680px);
+  padding: var(--gm-space-3);
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
 }
 body.staff-mode:not(.portal-mode) #operation-view .kanban-card {
-  border-radius: var(--gm-inset-radius);
-  box-shadow: 0 1px 2px rgb(43 26 18 / 4%);
+  border: 1px solid var(--gm-border);
+  border-radius: var(--gm-radius-item);
+  background: var(--gm-surface);
+  box-shadow: 0 1px 3px rgb(43 26 18 / 3%);
 }
 body.staff-mode:not(.portal-mode) #operation-view .kanban-card:hover {
   border-color: var(--staff-brand);
-  box-shadow: var(--gm-shadow-hover);
 }
 body.staff-mode:not(.portal-mode) #operation-view .order-card {
-  border-radius: var(--gm-inset-radius) !important;
+  padding: var(--gm-space-4) !important;
+  border-radius: var(--gm-radius-item) !important;
 }
-body.staff-mode:not(.portal-mode) .staff-more-filters__panel {
-  border-radius: var(--gm-card-radius);
-  box-shadow: var(--gm-shadow-hover);
+body.staff-mode:not(.portal-mode) #operation-view .order-card__customer {
+  font-size: 15px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
 }
-/* A organização de tabelas, filtros e dados fica uniforme entre módulos. */
-body.staff-mode:not(.portal-mode) :is(.record-toolbar--orders,.catalog-filters) {
-  gap: var(--staff-space-3);
+body.staff-mode:not(.portal-mode) #operation-view :is(.order-card__origin,.order-card__id) {
+  font-size: var(--staff-caption);
+  line-height: 1.45;
 }
-body.staff-mode:not(.portal-mode) :is(.record-list,.record-list--clients,.orders-browser,.home-next-list) {
-  border-radius: var(--gm-inset-radius);
+body.staff-mode:not(.portal-mode) #operation-view .order-card__meta {
+  margin-top: var(--gm-space-2);
 }
-body.staff-mode:not(.portal-mode) :is(.record-row,.orders-browser__row,.orders-table td,.orders-table th) {
-  border-color: var(--gm-line);
+body.staff-mode:not(.portal-mode) #operation-view .kanban-card__move select {
+  border-radius: var(--gm-radius-input);
 }
-body.staff-mode:not(.portal-mode) #screen-view .catalog-card {
-  overflow: hidden;
-  border-radius: var(--gm-card-radius);
-  transition: box-shadow .16s ease, border-color .16s ease;
+
+/* 4 · Repasse: mesma superfície do painel, sem efeito caixa-dentro-de-caixa. */
+body.staff-mode:not(.portal-mode) #operation-view .supplier-list {
+  display: block;
+  margin-top: var(--gm-space-6);
+  padding: var(--gm-space-6);
+  border: 1px solid var(--gm-border);
+  border-radius: var(--gm-radius-panel);
+  background: var(--gm-surface);
+  box-shadow: var(--gm-shadow);
 }
-body.staff-mode:not(.portal-mode) #screen-view .catalog-card:hover {
-  border-color: var(--staff-brand);
-  box-shadow: var(--gm-shadow-hover);
+body.staff-mode:not(.portal-mode) #operation-view .supplier-list > .section-heading {
+  align-items: center;
+  gap: var(--gm-space-3) var(--gm-space-5);
+  margin-bottom: var(--gm-space-3);
 }
-body.staff-mode:not(.portal-mode) #screen-view .catalog-card__body {
-  padding: var(--staff-space-4) var(--staff-space-4) var(--staff-space-6);
+body.staff-mode:not(.portal-mode) #operation-view .supplier-list__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: flex-end;
+  gap: var(--gm-space-2);
 }
-body.staff-mode:not(.portal-mode) :is(.finance-presets,.finance-charts>section,.shirley-portal__workspace) {
-  border-radius: var(--gm-card-radius);
+body.staff-mode:not(.portal-mode) #operation-view .supplier-period {
+  display: grid;
+  align-items: start;
+  gap: 5px;
+  color: var(--gm-muted);
+  font-size: var(--staff-caption);
+  font-weight: 600;
+  line-height: 1.4;
 }
-@media (max-width: 900px) {
-  body.staff-mode:not(.portal-mode) {
-    --gm-page-gap: var(--staff-space-4);
+body.staff-mode:not(.portal-mode) #operation-view .supplier-period select {
+  min-width: 138px;
+  padding: 6px 11px;
+}
+body.staff-mode:not(.portal-mode) #operation-view .supplier-list__period {
+  margin: 0 0 var(--gm-space-2);
+  color: var(--staff-brand);
+  font-size: var(--staff-body);
+  font-weight: 700;
+  line-height: 1.4;
+}
+body.staff-mode:not(.portal-mode) #operation-view .supplier-help-details {
+  display: block;
+  width: 100%;
+  margin: 0 0 var(--gm-space-4);
+  color: var(--gm-muted);
+}
+body.staff-mode:not(.portal-mode) #operation-view .supplier-help-details summary {
+  width: fit-content;
+  padding: 4px 0;
+  color: var(--staff-brand);
+  font-size: var(--staff-label);
+  font-weight: 600;
+  cursor: pointer;
+}
+body.staff-mode:not(.portal-mode) #operation-view .supplier-help-details summary:hover {
+  text-decoration: underline;
+}
+body.staff-mode:not(.portal-mode) #operation-view .supplier-help-details .supplier-list__help {
+  margin: var(--gm-space-2) 0 0;
+  max-width: 950px;
+  color: var(--gm-muted);
+  font-size: var(--staff-label);
+  line-height: 1.55;
+}
+body.staff-mode:not(.portal-mode) #operation-view .supplier-totals {
+  margin-top: var(--gm-space-4);
+  padding: var(--gm-space-5) 0 0;
+  border: 0;
+  border-top: 1px solid var(--gm-border);
+  border-radius: 0;
+  background: transparent;
+}
+body.staff-mode:not(.portal-mode) #operation-view .supplier-totals h3 {
+  margin: 0;
+  color: var(--staff-text);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+body.staff-mode:not(.portal-mode) #operation-view .supplier-totals > p {
+  margin: 4px 0 0;
+  color: var(--gm-muted);
+  font-size: var(--staff-label);
+}
+body.staff-mode:not(.portal-mode) #operation-view .supplier-totals ul {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  column-gap: var(--gm-space-5);
+  row-gap: 0;
+  margin: var(--gm-space-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+body.staff-mode:not(.portal-mode) #operation-view .supplier-totals li {
+  display: grid;
+  grid-template-columns: minmax(40px,auto) minmax(0,1fr) auto;
+  align-items: start;
+  gap: var(--gm-space-2);
+  min-width: 0;
+  min-height: 48px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--gm-border);
+  color: var(--staff-text);
+  font-size: var(--staff-label);
+  line-height: 1.45;
+}
+body.staff-mode:not(.portal-mode) #operation-view .supplier-totals li strong {
+  min-width: 0;
+  white-space: nowrap;
+  color: var(--staff-brand);
+  font-size: var(--staff-label);
+  font-weight: 700;
+}
+body.staff-mode:not(.portal-mode) #operation-view .supplier-totals li span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+body.staff-mode:not(.portal-mode) #operation-view .supplier-totals .supplier-cost {
+  margin-left: 0;
+  justify-self: end;
+  color: var(--staff-text);
+  font-size: var(--staff-label);
+  font-style: normal;
+  font-weight: 700;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+body.staff-mode:not(.portal-mode) #operation-view .supplier-cost-total {
+  margin-top: var(--gm-space-4);
+  padding: var(--gm-space-3) var(--gm-space-4);
+  border-radius: var(--gm-radius-input);
+  background: var(--staff-brand-soft);
+  color: var(--staff-text);
+}
+body.staff-mode:not(.portal-mode) #operation-view .supplier-list__feedback {
+  margin-top: var(--gm-space-3);
+  color: var(--gm-muted);
+  font-size: var(--staff-label);
+}
+body.staff-mode:not(.portal-mode) #operation-view .supplier-list__help {
+  color: var(--gm-muted);
+}
+body.staff-mode:not(.portal-mode) #operation-view .supplier-list__actions [hidden],
+body.staff-mode:not(.portal-mode) #operation-view #supplier-list-items[hidden] {
+  display: none !important;
+}
+
+/* 5 · Responsividade: mesmo sistema, sem alterar funcionalidades nem esconder ações. */
+@media (max-width: 1150px) {
+  body.staff-mode:not(.portal-mode) #operation-view .supplier-list > .section-heading {
+    align-items: stretch;
+    flex-direction: column;
   }
-  body.staff-mode:not(.portal-mode) #operation-view .summary {
-    gap: var(--staff-space-2);
+  body.staff-mode:not(.portal-mode) #operation-view .supplier-list__actions {
+    justify-content: flex-start;
   }
-  body.staff-mode:not(.portal-mode) #operation-view .summary-card {
-    padding: var(--staff-space-3) !important;
-  }
-  body.staff-mode:not(.portal-mode) #operation-view .kanban {
-    gap: var(--staff-space-2);
+  body.staff-mode:not(.portal-mode) #operation-view .supplier-totals ul {
+    grid-template-columns: repeat(2,minmax(0,1fr));
   }
 }
-@media (max-width: 640px) {
-  body.staff-mode:not(.portal-mode) #operation-view .summary {
-    grid-template-columns: repeat(3,minmax(0,1fr));
+@media (max-width: 850px) {
+  body.staff-mode:not(.portal-mode) #operation-view .intro {
+    align-items: flex-start;
+    flex-direction: column;
   }
-  body.staff-mode:not(.portal-mode) #operation-view .summary-card {
+  body.staff-mode:not(.portal-mode) #operation-view .intro__actions {
+    justify-content: flex-start;
+  }
+  body.staff-mode:not(.portal-mode) #operation-view .orders-section > .section-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  body.staff-mode:not(.portal-mode) #operation-view .orders-section .search-box {
+    width: 100%;
     min-width: 0;
   }
-  body.staff-mode:not(.portal-mode) #operation-view .summary-card>strong { font-size: 24px; }
-  body.staff-mode:not(.portal-mode) #operation-view .summary-card>small { display: none; }
-  /* Respeita o comportamento horizontal do Kanban já existente no mobile. */
+  body.staff-mode:not(.portal-mode) #operation-view .summary {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+  body.staff-mode:not(.portal-mode) #operation-view .summary-card:nth-child(2) {
+    border-right: 0 !important;
+  }
+  body.staff-mode:not(.portal-mode) #operation-view .summary-card:nth-child(-n+2) {
+    border-bottom: 1px solid var(--gm-border) !important;
+  }
+}
+@media (max-width: 760px) {
+  body.staff-mode:not(.portal-mode) #operation-view .kanban {
+    display: flex;
+    align-items: start;
+    gap: var(--gm-space-3);
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+  }
+  body.staff-mode:not(.portal-mode) #operation-view .kanban-column {
+    flex: 0 0 min(330px,88vw);
+    scroll-snap-align: start;
+  }
   body.staff-mode:not(.portal-mode) #operation-view .kanban-column__cards {
-    max-height: min(60vh,540px);
+    max-height: min(58vh,560px);
+  }
+  body.staff-mode:not(.portal-mode) #operation-view .supplier-list {
+    padding: var(--gm-space-4);
+  }
+}
+@media (max-width: 620px) {
+  body.staff-mode:not(.portal-mode) #operation-view .supplier-totals ul {
+    grid-template-columns: 1fr;
+  }
+  body.staff-mode:not(.portal-mode) #operation-view .supplier-list__actions {
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    align-items: stretch;
+  }
+  body.staff-mode:not(.portal-mode) #operation-view .supplier-list__actions .supplier-period,
+  body.staff-mode:not(.portal-mode) #operation-view .supplier-period select {
+    width: 100%;
+    min-width: 0;
+  }
+  body.staff-mode:not(.portal-mode) #operation-view .supplier-list__actions .button {
+    white-space: normal;
+  }
+  body.staff-mode:not(.portal-mode) #operation-view .summary-card > strong {
+    font-size: 16px;
+  }
+  body.staff-mode:not(.portal-mode) #operation-view .supplier-totals li {
+    grid-template-columns: 52px minmax(0,1fr) auto;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  body.staff-mode:not(.portal-mode) :is(.nav__item,.kanban-card,.catalog-card,button) {
+  body.staff-mode:not(.portal-mode) #operation-view :is(.order-card,.kanban-column,.button) {
     transition: none !important;
   }
 }
