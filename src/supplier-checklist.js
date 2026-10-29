@@ -120,16 +120,16 @@ export function supplierDayCost(groups) {
     withCosts: lines.some(line => 'costKnown' in line) };
 }
 
-export function supplierText(groups, date) {
+export function supplierText(groups, date, supplierName = 'Padaria') {
   const totals = supplierTotals(groups);
   const day = supplierDayCost(groups);
   const totalLine = product => product.hasCost ? `${product.label}${costTail(!product.costMissing, product.costCents)}` : product.label;
-  return `Repasse da padaria - ${date}\n\nLISTA CONSOLIDADA POR MATERIAL\n${totals.map(totalLine).join('\n')}${day.withCosts ? `\n\nTOTAL (preço de custo): ${formatMoney(day.totalCents)}${day.missing ? ` — ${day.missing} item(ns) sem custo, total incompleto` : ''}` : ''}`;
+  return `Repasse: ${supplierName} - ${date}\n\nLISTA CONSOLIDADA POR MATERIAL\n${totals.map(totalLine).join('\n')}${day.withCosts ? `\n\nTOTAL (preço de custo): ${formatMoney(day.totalCents)}${day.missing ? ` — ${day.missing} item(ns) sem custo, total incompleto` : ''}` : ''}`;
 }
 
-export function supplierCustomerText(groups, date, businessName = 'Pão Doce') {
+export function supplierCustomerText(groups, date, businessName = 'Pão Doce', supplierName = 'Padaria') {
   const ordered = [...groups].sort((a, b) => String(a.customer || '').localeCompare(String(b.customer || ''), 'pt-BR', { sensitivity: 'base' }));
-  const lines = [`${businessName} - Repasse da padaria`, `Data: ${date}`, '', 'ITENS POR CLIENTE (preço de custo)'];
+  const lines = [`${businessName} - Repasse: ${supplierName}`,  `Data: ${date}`, '', 'ITENS POR CLIENTE (preço de custo)'];
   for (const group of ordered) {
     const customerLines = group.orders.flatMap(order => order.lines);
     const withCosts = customerLines.some(line => 'costKnown' in line);
@@ -147,7 +147,7 @@ export function supplierCustomerText(groups, date, businessName = 'Pão Doce') {
     if (withCosts) lines.push(`Subtotal: ${formatMoney(subtotalCents)}${missing ? ` — ${missing} item(ns) sem custo` : ''}`);
   }
   const day = supplierDayCost(groups);
-  if (day.withCosts) lines.push('', `TOTAL A PAGAR À PADARIA: ${formatMoney(day.totalCents)}${day.missing ? ` — ${day.missing} item(ns) sem custo, total incompleto` : ''}`);
+  if (day.withCosts) lines.push('', `${supplierName.startsWith('Outros') ? 'TOTAL DE COMPRAS À PARTE' : 'TOTAL A PAGAR À PADARIA'}: ${formatMoney(day.totalCents)}${day.missing ? ` — ${day.missing} item(ns) sem custo, total incompleto` : ''}`);
   return lines.join('\n');
 }
 
