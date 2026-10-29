@@ -52,7 +52,7 @@ import { weekdayNames, recurringItemsText, recurringScheduleText } from '../src/
   const defaultDeliveryFee = () => Number(selectedCommercialTerms?.deliveryFeeCents ?? live?.settings?.delivery_fee_cents ?? 200);
   const feeFromInput = raw => {
     const value = String(raw || '').trim().replace(',', '.');
-    if (!/^\\d+(?:\\.\\d{1,2})?$/.test(value)) return null;
+    if (!/^\d+(?:\.\d{1,2})?$/.test(value)) return null;
     const [whole, cents = ''] = value.split('.');
     const result = Number(whole) * 100 + Number(cents.padEnd(2, '0'));
     return Number.isSafeInteger(result) && result >= 0 && result <= 100000000 ? result : null;
