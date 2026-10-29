@@ -177,7 +177,7 @@ import { weekdayNames, recurringItemsText, recurringScheduleText } from '../src/
       const status=({received:'A conferir',confirmed:'Conferido',packing:'Em separação',ready:'Pronto',delivered:'Entregue',cancelled:'Cancelado'})[o.status||'received']||'A conferir';
       const items=(o.items||[]).map(i=>(i.weightGrams?i.weightGrams+' g de ':i.quantity+'× ')+i.name).join(' · ');
       const total=window.TrameliOrderMath.totalCents(o);
-      return '<article class="shirley-portal__record"><div class="shirley-portal__record-main"><strong>'+esc(formatCustomerName(o.customer))+' · '+esc(o.publicCode||'Pedido')+'</strong><small>'+esc(o.address||'')+' · '+esc(status)+' · '+money(total)+'</small><p>'+esc(items)+'</p></div><div class="shirley-portal__record-actions"><button type="button" class="shirley-portal__secondary" data-edit-order="'+esc(o.id)+'">Editar pedido</button></div></article>';
+      return '<article class="shirley-portal__record"><div class="shirley-portal__record-main"><strong>'+esc(formatCustomerName(o.customer))+' · '+esc(o.publicCode||'Pedido')+'</strong><small>'+esc(o.address||'')+' · '+esc(status)+' · '+money(total)+'</small><p>'+esc(items)+'</p></div><div class="shirley-portal__record-actions"><button type="button" class="shirley-portal__secondary" data-edit-order="'+esc(o.id)+'">Editar pedido</button>'+(o.status!=='delivered'?'<button type="button" class="shirley-portal__secondary" data-cancel-order="'+esc(o.id)+'">Cancelar esta entrega</button>':'')+'</div></article>';
     }).join(''):'<p class="shirley-portal__empty">Nenhum pedido encontrado para essa data e pesquisa.</p>';
   }
   async function loadSchedules(){
@@ -277,7 +277,22 @@ import { weekdayNames, recurringItemsText, recurringScheduleText } from '../src/
   recurrenceInput.addEventListener('change',syncRecurrence);
   root.querySelectorAll('[data-shirley-tab]').forEach(button=>button.addEventListener('click',()=>setTab(button.dataset.shirleyTab)));
   ordersDate.addEventListener('change',renderOrders);ordersSearch.addEventListener('input',renderOrders);
-  $('#shirley-orders-list').addEventListener('click',event=>{
+  $('#shirley-orders-list').addEventListener('click',async event=>{
+    const cancel=event.target.closest('[data-cancel-order]');
+    if(cancel){
+      const order=(live.orders||[]).find(o=>o.id===cancel.dataset.cancelOrder);
+      if(!order || ['delivered','cancelled'].includes(order.status))return;
+      if(!confirm('Cancelar somente esta entrega? Ela sairá dos pedidos ativos, e a programação recorrente (se existir) continuará normalmente nos próximos dias.'))return;
+      cancel.disabled=true;
+      try{
+        await live.setStatus(order,'cancelled');
+        renderOrders();
+        setFeedback($('#shirley-orders-feedback'),'Entrega cancelada. As próximas datas da recorrência não foram alteradas.','success');
+      }catch(error){
+        setFeedback($('#shirley-orders-feedback'),'Não foi possível cancelar: '+error.message,'error');
+      }finally{cancel.disabled=false;}
+      return;
+    }
     const button=event.target.closest('[data-edit-order]');if(!button)return;
     const id=button.dataset.editOrder;location.hash='#operacao';
     setTimeout(()=>window.TrameliOperation?.openOrder(id),300);

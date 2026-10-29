@@ -29,9 +29,10 @@ export async function createSupplierPeriodPdf(report, kindLabel, { businessName 
   const primary = rgb(122 / 255, 59 / 255, 40 / 255);
   const rule = rgb(224 / 255, 216 / 255, 209 / 255);
   const label = periodLabel(report.from, report.to);
-  pdf.setTitle('Repasse da padaria - ' + supplierName + ' - ' + kindLabel + ' - ' + label);
+  const isOutsidePurchase = supplierName.startsWith('Outros');
+  pdf.setTitle((isOutsidePurchase ? 'Compras à parte - ' : 'Repasse da padaria - ') + supplierName + ' - ' + kindLabel + ' - ' + label);
   pdf.setAuthor(businessName);
-  pdf.setSubject('Itens e custo total do período para a padaria');
+  pdf.setSubject(isOutsidePurchase ? 'Itens e custos comprados à parte' : 'Itens e custo total do período para a padaria');
   let page;
   let y;
 
@@ -40,7 +41,7 @@ export async function createSupplierPeriodPdf(report, kindLabel, { businessName 
     y = HEIGHT - MARGIN;
     page.drawText(businessName, { x: MARGIN, y, size: 10, font: strong, color: primary });
     y -= 26;
-    page.drawText('Repasse da padaria - ' + kindLabel, { x: MARGIN, y, size: 20, font: strong, color: ink });
+    page.drawText((isOutsidePurchase ? 'Compras à parte - ' : 'Repasse da padaria - ') + kindLabel, { x: MARGIN, y, size: 20, font: strong, color: ink });
     y -= 22;
     page.drawText('Período: ' + label + '   |   ' + report.orderCount + ' ' + (report.orderCount === 1 ? 'pedido' : 'pedidos'),
       { x: MARGIN, y, size: 10, font, color: muted });
@@ -251,7 +252,7 @@ export async function createSupplierPeriodPdf(report, kindLabel, { businessName 
   y -= PDF_TOTAL_MARGIN;
   page.drawLine({ start: { x: MARGIN, y }, end: { x: WIDTH - MARGIN, y }, thickness: 1, color: primary });
   y -= PDF_TOTAL_PADDING + 8;
-  page.drawText('TOTAL A PAGAR À PADARIA', { x: MARGIN + 6, y, size: 12.5, font: strong, color: ink });
+  page.drawText(isOutsidePurchase ? 'TOTAL DE COMPRAS À PARTE' : 'TOTAL A PAGAR À PADARIA', { x: MARGIN + 6, y, size: 12.5, font: strong, color: ink });
   drawRight(formatMoney(report.totalCents), y, 13.5, strong, ink);
   y -= PDF_TOTAL_PADDING + 3;
   page.drawLine({ start: { x: MARGIN, y }, end: { x: WIDTH - MARGIN, y }, thickness: 0.6, color: rule });

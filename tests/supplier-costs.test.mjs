@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { PDFDocument } from 'pdf-lib';
-import { supplierGroups, supplierTotals, supplierText, supplierCustomerText } from '../src/supplier-checklist.js';
+import { supplierGroups, supplierTotals, supplierText, supplierCustomerText, bakerySupplierForItem, filterSupplierGroups, bakeryLabelOrders } from '../src/supplier-checklist.js';
 import { costMapFromRows, supplierPeriodReport, supplierPeriodText, supplierPeriodCustomerText } from '../src/supplier-costs.js';
 import { createSupplierPdf } from '../src/supplier-pdf.js';
 import { createSupplierPeriodPdf } from '../src/supplier-period-pdf.js';
@@ -101,4 +101,32 @@ assert(daily.getPageCount() >= 1, 'O consolidado diário deve caber em uma pági
 const periodPdf = await PDFDocument.load(await createSupplierPeriodPdf(month, 'Mensal', { regular, bold }));
 assert(periodPdf.getPageCount() >= 1);
 await assert.rejects(createSupplierPeriodPdf(supplierPeriodReport(orders, costMap, '2027-01-01', '2027-01-31'), 'Mensal', { regular, bold }), /Não há pedidos/);
+// A terceira origem deve ficar isolada em TODOS os relatórios de compra.
+const originCatalog = [
+  { id: 'd', name: 'Pão de teste', bakerySupplier: 'divano' },
+  { id: 's', name: 'Broa de teste', bakerySupplier: 'sandra' },
+  { id: 'x', name: 'Item externo', bakerySupplier: 'outros' },
+];
+const mixedOrigin = [
+  mk('origins', '2026-10-22', [
+    { productId: 'd', name: 'Pão de teste', quantity: 3, priceCents: 100 },
+    { productId: 's', name: 'Broa de teste', quantity: 2, priceCents: 200 },
+    { productId: 'x', name: 'Item externo', quantity: 1, priceCents: 300 },
+  ]),
+];
+const mixedGroups = supplierGroups(mixedOrigin, '2026-10-22');
+for (const origin of ['divano', 'sandra', 'outros']) {
+  const filtered = filterSupplierGroups(mixedGroups, origin, originCatalog);
+  assert.equal(filtered.length, 1, origin + ' deve ter um pedido');
+  assert.equal(filtered[0].orders[0].lines.length, 1, origin + ' deve conter só seu produto');
+  assert.equal(bakerySupplierForItem(filtered[0].orders[0].lines[0], originCatalog), origin);
+  const period = supplierPeriodReport(mixedOrigin, new Map(), '2026-10-22', '2026-10-22', originCatalog,
+    item => bakerySupplierForItem(item, originCatalog) === origin);
+  assert.equal(period.products.length, 1, 'Repasse do período não deve misturar origens');
+}
+assert.deepEqual(bakeryLabelOrders(mixedOrigin, originCatalog)[0].items.map(item => item.productId), ['d'],
+  'Etiquetas e lista de separação do Divano devem excluir Sandra e Outros.');
+assert.equal(bakerySupplierForItem({ name: 'Item externo', bakerySupplier: 'outros' }), 'outros',
+  'Pedidos antigos devem preservar a origem Outros quando ela estiver na linha.');
+
 console.log('Repasse com preço de custo (diário, quinzenal, mensal): OK.');

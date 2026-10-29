@@ -21,7 +21,8 @@ export async function createSupplierPdf(groups, date, { businessName = 'Pão Doc
   const pale = rgb(244 / 255, 222 / 255, 213 / 255);
   const primary = rgb(122 / 255, 59 / 255, 40 / 255);
   const dateLabel = new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR');
-  pdf.setTitle(`Repasse da padaria - ${supplierName} - ${dateLabel}`);
+  const isOutsidePurchase = supplierName.startsWith('Outros');
+  pdf.setTitle(`${isOutsidePurchase ? 'Compras à parte' : 'Repasse da padaria'} - ${supplierName} - ${dateLabel}`);
   pdf.setAuthor(businessName);
   pdf.setSubject('Lista consolidada por material, com valores de custo quando disponíveis');
   let page;
@@ -58,7 +59,7 @@ export async function createSupplierPdf(groups, date, { businessName = 'Pão Doc
     for (const line of wrap(businessName, 10, WIDTH - 2 * MARGIN, strong)) {
       page.drawText(line, { x: MARGIN, y, size: 10, font: strong, color: primary }); y -= 14;
     }
-    page.drawText('Repasse da padaria', { x: MARGIN, y: y - 10, size: 21, font: strong, color: ink });
+    page.drawText(isOutsidePurchase ? 'Compras à parte' : 'Repasse da padaria', { x: MARGIN, y: y - 10, size: 21, font: strong, color: ink });
     y -= 34;
     page.drawText(`Entrega: ${dateLabel}   |   ${groups.length} clientes`, { x: MARGIN, y, size: 10, font, color: muted });
     y -= 20;
@@ -121,7 +122,7 @@ export async function createSupplierPdf(groups, date, { businessName = 'Pão Doc
     if (y - 50 < BOTTOM) newPage();
     const total = formatMoney(day.totalCents);
     page.drawRectangle({ x: MARGIN, y: y - 30, width: WIDTH - 2 * MARGIN, height: 30, color: primary });
-    page.drawText('TOTAL A PAGAR À PADARIA (custo)', { x: MARGIN + 10, y: y - 20, size: 11, font: strong, color: rgb(1, 1, 1) });
+    page.drawText(isOutsidePurchase ? 'TOTAL DE COMPRAS À PARTE (custo)' : 'TOTAL A PAGAR À PADARIA (custo)', { x: MARGIN + 10, y: y - 20, size: 11, font: strong, color: rgb(1, 1, 1) });
     page.drawText(total, { x: WIDTH - MARGIN - 10 - strong.widthOfTextAtSize(total, 13), y: y - 21, size: 13, font: strong, color: rgb(1, 1, 1) });
     y -= 40;
     if (day.missing) { page.drawText(`Atenção: ${day.missing} item(ns) sem custo cadastrado; total incompleto.`, { x: MARGIN, y, size: 9, font, color: muted }); y -= 14; }

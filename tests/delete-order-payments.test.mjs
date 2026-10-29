@@ -102,6 +102,38 @@ try {
   assert.equal((await db.query('select 1 from public.trameli_payment_allocations where order_id=$1', [generatedA])).rows.length, 0);
   assert.equal((await db.query('select 1 from public.trameli_payment_allocations where order_id=$1', [b])).rows.length, 1);
 
+  // Uma ocorrência excluída manualmente fica dispensada somente naquela data.
+  // O próximo dia elegível da MESMA programação deve continuar normalmente.
+  await db.exec('reset role');
+  await db.query("insert into public.trameli_profiles(user_id,name,address) values($1,'Cliente de teste','Rua teste 2') on conflict(user_id) do nothing", [customer]);
+  const dates = (await db.query(`select gs::date::text as day
+    from generate_series(
+      (now() at time zone 'America/Sao_Paulo')::date + interval '1 month',
+      (now() at time zone 'America/Sao_Paulo')::date + interval '1 month 14 days',
+      interval '1 day'
+    ) gs where extract(dow from gs) between 1 and 6 order by gs limit 2`)).rows.map(row => row.day);
+  assert.equal(dates.length, 2);
+  const exceptionSchedule = randomUUID();
+  await db.query(`insert into public.trameli_recurring_orders
+    (id,customer_id,recurrence,starts_on,active,notes,fee_cents,items,created_by)
+    values($1,$2,'fixed',$3,true,'',200,'[{"name":"Teste","quantity":1,"priceCents":1000}]'::jsonb,$4)`,
+    [exceptionSchedule,customer,dates[0],master]);
+  const exceptionOrder = (await db.query(`insert into public.trameli_orders
+    (customer_id,source,customer_name,address,delivery_date,items,subtotal_cents,fee_cents,status)
+    values($1,'operator','Cliente','Rua teste 2',$2,'[{"name":"Teste","quantity":1,"priceCents":1000}]'::jsonb,1000,200,'confirmed') returning id`,
+    [customer,dates[0]])).rows[0].id;
+  await db.query('insert into public.trameli_recurring_occurrences(schedule_id,delivery_date,order_id) values($1,$2,$3)',
+    [exceptionSchedule,dates[0],exceptionOrder]);
+  await as(master);
+  await del(exceptionOrder,'none');
+  assert.equal((await db.query('select 1 from public.trameli_recurring_skipped_dates where schedule_id=$1 and delivery_date=$2',
+    [exceptionSchedule,dates[0]])).rows.length,1,'A data deve ficar marcada como dispensada.');
+  assert.equal((await db.query('select 1 from public.trameli_recurring_occurrences where order_id=$1',[exceptionOrder])).rows.length,0);
+  assert.equal(Number((await db.query('select public.trameli_materialize_recurring_orders($1) as n',[dates[0]])).rows[0].n),0,
+    'Reabrir a data excluída não pode ressuscitar a entrega.');
+  assert.equal(Number((await db.query('select public.trameli_materialize_recurring_orders($1) as n',[dates[1]])).rows[0].n),1,
+    'A próxima data da mesma programação deve ser criada normalmente.');
+
   // Clientes e operadores comuns não executam.
   await as(customer);
   await assert.rejects(del(b, 'delete'), /Master|restrito|permission/i);
