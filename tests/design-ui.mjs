@@ -207,11 +207,13 @@ try {
       await waitFor('.portal-week');
       assert(await evaluate('!document.querySelector(".portal-week__footer")'), 'Resumo semanal apareceu antes de selecionar um produto.');
       const weekDates = await evaluate('[...document.querySelectorAll("[data-week-day]")].map(button=>button.dataset.weekDay)');
-      assert(weekDates.length === 7 && new Set(weekDates).size === 7, 'Planejamento não mostrou sete datas consecutivas.');
+      assert(weekDates.length === 7 && new Set(weekDates).size === 7 && weekDates.every(date => new Date(date + 'T12:00:00Z').getUTCDay() !== 0), 'Planejamento deve mostrar sete datas de entrega distintas, sem domingos.');
       const expectedFirst = await evaluate(`(() => {
         const parts=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date()).filter(p=>p.type!=='literal').map(p=>[p.type,Number(p.value)]));
         const [h,m]=String(window.TrameliSettings?.cutoffTime||'21:00').split(':').map(Number);
         const base=new Date(Date.UTC(parts.year,parts.month-1,parts.day+(parts.hour*60+parts.minute>h*60+m?2:1)));
+        // O portal usa nextAvailableDeliveryDate: pula domingos após aplicar o corte.
+        if (base.getUTCDay() === 0) base.setUTCDate(base.getUTCDate() + 1);
         return [base.getUTCFullYear(),String(base.getUTCMonth()+1).padStart(2,'0'),String(base.getUTCDate()).padStart(2,'0')].join('-');
       })()`);
       assert(weekDates[0] === expectedFirst, 'A semana não começou na primeira data permitida pelo horário de corte.');
