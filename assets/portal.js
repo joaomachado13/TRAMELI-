@@ -352,8 +352,8 @@ import '../src/featured-products.css';
     if (typeof saved.start === 'number' && element.setSelectionRange) element.setSelectionRange(saved.start, saved.end);
   }
   const productInitial = product => String(product?.name || 'P').trim().charAt(0).toLocaleUpperCase('pt-BR') || 'P';
-  const photo = product => product.image
-    ? `<img src="${escapeHtml(product.image)}" style="${photoStyle(product.image)}" alt="${escapeHtml(product.name)}" loading="lazy">`
+  const photo = (product, eager = false) => product.image
+    ? `<img src="${escapeHtml(product.image)}" style="${photoStyle(product.image)}" alt="${escapeHtml(product.name)}" loading="${eager ? 'eager' : 'lazy'}" decoding="async"${eager ? ' fetchpriority="high"' : ''}>`
     : `<span class="portal-photo-empty" aria-label="Foto em breve"><span class="portal-photo-empty__mark" aria-hidden="true">${escapeHtml(productInitial(product))}</span><span>Foto em breve</span></span>`;
   function stepper(product) {
     const quantity = cart[product.id] || 0;
@@ -527,9 +527,13 @@ import '../src/featured-products.css';
     const unavailable = allProducts().filter(item => unavailableFor(item));
     const categories = ['Todos', ...new Set(all.map(product => product.category || 'Outros'))];
     const visible = filteredProducts();
+    const highlightsHidden = Boolean(query.trim()) || category !== 'Todos' || personalFilter !== 'all';
     const highlights = featuredProductsMarkup(all, {
-      headingId: 'portal-featured-title', renderPhoto: photo, renderControls: stepper,
-      hidden: Boolean(query.trim()) || category !== 'Todos' || personalFilter !== 'all',
+      headingId: 'portal-featured-title',
+      // Uma foto de destaque imediata; o restante não compete com o carregamento inicial.
+      renderPhoto: (product, index) => photo(product, index === 0 && !highlightsHidden),
+      renderControls: stepper,
+      hidden: highlightsHidden,
     });
     const notice=unavailable.length?`<aside class="portal-review-notice" role="status"><strong>Indisponíveis para a próxima entrega</strong><ul>${unavailable.map(item=>{const substitute=allProducts().find(candidate=>candidate.id===item.substituteProductId&&!unavailableFor(candidate));return `<li>${escapeHtml(item.name)}${substitute?` — sugestão: ${escapeHtml(substitute.name)}`:''}</li>`;}).join('')}</ul><p>A troca não é automática; escolha a sugestão no catálogo se desejar.</p></aside>`:'';
     const closedNotice = storeClosed() ? (() => {
