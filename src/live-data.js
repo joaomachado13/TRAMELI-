@@ -188,8 +188,11 @@ export class LiveData {
     const { data, error } = await this.client.rpc('trameli_customer_purchase_status');
     if (error?.code === 'PGRST202') return this.purchaseStatus;
     if (error) throw error;
-    this.purchaseStatus = data || { blocked: false, kind: 'clear', reason: '', dueCents: 0 };
-    window.dispatchEvent(new Event('trameli:purchase-status-changed'));
+    const nextStatus = data || { blocked: false, kind: 'clear', reason: '', dueCents: 0 };
+    // Evita reconstruir a tela em cada consulta, mesmo quando nada mudou.
+    const changed = JSON.stringify(this.purchaseStatus) !== JSON.stringify(nextStatus);
+    this.purchaseStatus = nextStatus;
+    if (changed) window.dispatchEvent(new Event('trameli:purchase-status-changed'));
     return this.purchaseStatus;
   }
 
