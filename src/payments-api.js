@@ -20,29 +20,35 @@ export class PaymentsApi {
     this.pending = (async () => {
       try {
         const c = this.live.client;
-        const balances = await this.rows(() => c.rpc('trameli_payment_balances'), ['order_id']);
-        const upcomingResult = await c.rpc('trameli_upcoming_recurring_orders');
+        // Consultas independentes iniciam juntas: evita uma cascata de esperas
+        // de rede no Android/iPhone. Paginacao e regras de acesso continuam iguais.
+        const [
+          balances, upcomingResult, statement, payments, allocations,
+          intentResult, profiles, receiptResult,
+        ] = await Promise.all([
+          this.rows(() => c.rpc('trameli_payment_balances'), ['order_id']),
+          c.rpc('trameli_upcoming_recurring_orders'),
+          this.rows(() => c.rpc('trameli_payment_statement'), ['payment_id', 'order_id']),
+          this.live.operator
+            ? this.rows(() => c.from('trameli_payments').select('id,kind,amount_cents,method,reference,note,reverses_id,actor_id,recorded_at'), ['id'])
+            : Promise.resolve([]),
+          this.live.operator
+            ? this.rows(() => c.from('trameli_payment_allocations').select('payment_id,order_id,amount_cents'), ['payment_id', 'order_id'])
+            : Promise.resolve([]),
+          c.from('trameli_payment_intents').select('id,customer_id,order_ids,amount_cents,status,created_at,resolved_at').order('created_at', { ascending: false }).limit(500),
+          this.live.operator
+            ? this.rows(() => c.from('trameli_profiles').select('user_id,name,phone,address,billing_frequency,order_blocked,order_blocked_at,order_block_reason'), ['user_id'])
+            : Promise.resolve([]),
+          this.live.operator
+            ? c.from('trameli_payment_receipts').select('id,intent_id,customer_id,storage_path,file_name,mime_type,created_at').order('created_at', { ascending: false }).limit(500)
+            : Promise.resolve(null),
+        ]);
         if (upcomingResult.error && upcomingResult.error.code !== 'PGRST202') throw upcomingResult.error;
-        const upcoming = upcomingResult.error ? [] : (upcomingResult.data || []);
-        const statement = await this.rows(() => c.rpc('trameli_payment_statement'), ['payment_id', 'order_id']);
-        const payments = this.live.operator ? await this.rows(() => c.from('trameli_payments').select('id,kind,amount_cents,method,reference,note,reverses_id,actor_id,recorded_at'), ['id']) : [];
-        const allocations = this.live.operator ? await this.rows(() => c.from('trameli_payment_allocations').select('payment_id,order_id,amount_cents'), ['payment_id', 'order_id']) : [];
-        const intentResult = await c.from('trameli_payment_intents').select('id,customer_id,order_ids,amount_cents,status,created_at,resolved_at').order('created_at',{ascending:false}).limit(500);
         if (intentResult.error && intentResult.error.code !== 'PGRST205') throw intentResult.error;
+        if (receiptResult?.error && receiptResult.error.code !== 'PGRST205') throw receiptResult.error;
+        const upcoming = upcomingResult.error ? [] : (upcomingResult.data || []);
         const intents = intentResult.error ? [] : intentResult.data;
-        let receipts = [];
-        let profiles = [];
-        if (this.live.operator) {
-          profiles = await this.rows(
-            () => c.from('trameli_profiles').select('user_id,name,phone,address,billing_frequency,order_blocked,order_blocked_at,order_block_reason'),
-            ['user_id']
-          );
-          const receiptResult = await c.from('trameli_payment_receipts')
-            .select('id,intent_id,customer_id,storage_path,file_name,mime_type,created_at')
-            .order('created_at',{ascending:false}).limit(500);
-          if (receiptResult.error && receiptResult.error.code !== 'PGRST205') throw receiptResult.error;
-          receipts = receiptResult.error ? [] : receiptResult.data;
-        }
+        const receipts = receiptResult?.error ? [] : (receiptResult?.data || []);
         const snapshot = JSON.stringify({ balances, upcoming, statement, payments, allocations, intents, receipts, profiles });
         const changed = snapshot !== this.snapshot || this.ready !== true;
         this.snapshot = snapshot;
