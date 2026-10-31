@@ -162,6 +162,8 @@ import '../src/featured-products.css';
   let submitting = false;
   // Persiste entre renderizações: um segundo toque não pode reenviar a mesma solicitação.
   const recurringRequestsPending = new Set();
+  // A trava sobrevive a reconstruções da tela enquanto o cancelamento está pendente.
+  const cancellationsPending = new Set();
   const requestKey = 'trameli-checkout-request-v1';
   let checkoutRequestId = null;
   if (live) {
@@ -987,17 +989,34 @@ import '../src/featured-products.css';
     }
     const cancelButton = event.target.closest('[data-cancel-order]');
     if (cancelButton) {
+      const id = cancelButton.dataset.cancelOrder;
+      if (cancellationsPending.has(id)) return;
       const oldOrders = readOrders();
-      const order = oldOrders.find(item => item.id === cancelButton.dataset.cancelOrder && owns(item) && editable(item) && item.date >= dateKey(new Date()));
+      const order = oldOrders.find(item => item.id === id && owns(item) && editable(item) && item.date >= dateKey(new Date()));
       if (!order || !confirm('Cancelar este pedido?')) return;
-      if (live) {
-        live.cancelCustomerOrder(order).then(() => render(true)).catch(cause => alert(`Não foi possível cancelar: ${cause.message}`));
-        return;
+      cancellationsPending.add(id);
+      const previousLabel = cancelButton.textContent;
+      cancelButton.disabled = true;
+      cancelButton.textContent = 'Cancelando...';
+      cancelButton.setAttribute('aria-busy', 'true');
+      try {
+        if (live) {
+          await live.cancelCustomerOrder(order);
+        } else {
+          localStorage.setItem(orderKey, JSON.stringify(oldOrders.map(item => item.id === order.id ? { ...item, status: 'cancelled', checked: true } : item)));
+          window.dispatchEvent(new Event('trameli:orders-changed'));
+        }
+        render(true);
+      } catch (cause) {
+        alert(`Não foi possível cancelar o pedido: ${cause.message || 'tente novamente.'}`);
+      } finally {
+        cancellationsPending.delete(id);
+        if (cancelButton.isConnected) {
+          cancelButton.disabled = false;
+          cancelButton.textContent = previousLabel;
+          cancelButton.removeAttribute('aria-busy');
+        }
       }
-      try { localStorage.setItem(orderKey, JSON.stringify(oldOrders.map(item => item.id === order.id ? { ...item, status: 'cancelled', checked: true } : item))); }
-      catch { alert('Não foi possível cancelar o pedido.'); return; }
-      window.dispatchEvent(new Event('trameli:orders-changed'));
-      render(true);
     }
   });
   host.addEventListener('change', event => {
