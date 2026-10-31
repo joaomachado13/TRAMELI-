@@ -160,6 +160,8 @@ import '../src/featured-products.css';
   let lastOrder = null;
   let error = '';
   let submitting = false;
+  // Persiste entre renderizações: um segundo toque não pode reenviar a mesma solicitação.
+  const recurringRequestsPending = new Set();
   const requestKey = 'trameli-checkout-request-v1';
   let checkoutRequestId = null;
   if (live) {
@@ -559,7 +561,7 @@ import '../src/featured-products.css';
   function ordersView() {
     const orders = readOrders().filter(owns).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     const labels = { received: 'A conferir', confirmed: 'Conferido', packing: 'Em separação', ready: 'Pronto', delivered: 'Entregue', cancelled: 'Cancelado' };
-    return `<section class="portal-page portal-orders-page"><button class="portal-back" type="button" data-view="catalog">← Voltar aos produtos</button><span class="portal-eyebrow">SEUS PEDIDOS</span><h1>Meus pedidos</h1>${error ? `<p class="portal-error" role="alert">${escapeHtml(error)}</p>` : ''}${reviewNotice()}${orders.length ? `<div class="portal-history portal-history--clean">${orders.map(order => { const state = order.status || (order.checked ? 'confirmed' : 'received'); const favorite = favoriteOrders.has(order.id); const editedBadge = order.editedAt ? `<span class="order-edited-badge" role="status">${order.editedBy && order.editedBy === order.customerId ? 'EDITADO POR VOCÊ' : order.editedBy ? 'EDITADO PELA OPERAÇÃO' : 'EDITADO'}</span>` : ''; const canRequestRecurring = Boolean(live && order.source === 'portal' && state !== 'cancelled'); const requested = recurringRequestSubmitted.has(order.id); const recurringForm = canRequestRecurring ? requested ? '<p class="portal-recurring-request__status" role="status">Solicitação enviada. A Shirley precisa aprovar a recorrência.</p>' : `<details class="portal-recurring-request"><summary>Quero repetir este pedido</summary><form data-recurring-request-form data-order-id="${escapeHtml(order.id)}"><fieldset><legend>Escolha os dias da semana</legend><div><label><input type="checkbox" name="weekdays" value="1"> Seg</label><label><input type="checkbox" name="weekdays" value="2"> Ter</label><label><input type="checkbox" name="weekdays" value="3"> Qua</label><label><input type="checkbox" name="weekdays" value="4"> Qui</label><label><input type="checkbox" name="weekdays" value="5"> Sex</label><label><input type="checkbox" name="weekdays" value="6"> Sáb</label></div><button type="submit">Enviar solicitação</button><p>Isso não cria pedidos nem cobranças até a aprovação da Shirley.</p></fieldset></form></details>` : ''; return `<article class="${order.editedAt ? 'has-order-edited' : ''}"><div><span>${formatDate(order.date)}</span><strong>${labels[state] || 'A conferir'}</strong></div>${editedBadge}<h2>${order.items.slice(0, 3).map(item => escapeHtml(window.TrameliOrderMath.itemLabel(item))).join(' · ')}${order.items.length > 3 ? ` +${order.items.length - 3}` : ''}</h2><p>#${escapeHtml(orderCode(order))} · ${escapeHtml(paymentLabels[order.paymentMethod] || paymentLabels.unspecified)}</p><footer><strong>${money(orderValue(order))}</strong><button type="button" data-favorite-order="${escapeHtml(order.id)}" aria-pressed="${favorite}">${favorite ? '♥ Favorito' : '♡ Favoritar'}</button>${shopping() ? `<button type="button" data-reorder="${escapeHtml(order.id)}">Pedir novamente</button>` : ''}${editable(order) ? `<span><button type="button" data-edit-order="${escapeHtml(order.id)}">Alterar</button><button type="button" data-cancel-order="${escapeHtml(order.id)}">Cancelar</button></span>` : ''}</footer>${recurringForm}</article>`; }).join('')}</div>` : `<div class="portal-empty"><h2>Nenhum pedido por aqui</h2><p>Quando você confirmar um pedido, ele aparecerá nesta lista.</p><button type="button" data-view="catalog">Escolher produtos</button></div>`}</section>`;
+    return `<section class="portal-page portal-orders-page"><button class="portal-back" type="button" data-view="catalog">← Voltar aos produtos</button><span class="portal-eyebrow">SEUS PEDIDOS</span><h1>Meus pedidos</h1>${error ? `<p class="portal-error" role="alert">${escapeHtml(error)}</p>` : ''}${reviewNotice()}${orders.length ? `<div class="portal-history portal-history--clean">${orders.map(order => { const state = order.status || (order.checked ? 'confirmed' : 'received'); const favorite = favoriteOrders.has(order.id); const editedBadge = order.editedAt ? `<span class="order-edited-badge" role="status">${order.editedBy && order.editedBy === order.customerId ? 'EDITADO POR VOCÊ' : order.editedBy ? 'EDITADO PELA OPERAÇÃO' : 'EDITADO'}</span>` : ''; const canRequestRecurring = Boolean(live && order.source === 'portal' && state !== 'cancelled'); const requested = recurringRequestSubmitted.has(order.id); const recurringForm = canRequestRecurring ? requested ? '<p class="portal-recurring-request__status" role="status">Solicitação enviada. A Shirley precisa aprovar a recorrência.</p>' : `<details class="portal-recurring-request"><summary>Quero repetir este pedido</summary><form data-recurring-request-form data-order-id="${escapeHtml(order.id)}"><fieldset><legend>Escolha os dias da semana</legend><div><label><input type="checkbox" name="weekdays" value="1"> Seg</label><label><input type="checkbox" name="weekdays" value="2"> Ter</label><label><input type="checkbox" name="weekdays" value="3"> Qua</label><label><input type="checkbox" name="weekdays" value="4"> Qui</label><label><input type="checkbox" name="weekdays" value="5"> Sex</label><label><input type="checkbox" name="weekdays" value="6"> Sáb</label></div><button type="submit" ${recurringRequestsPending.has(order.id) ? 'disabled aria-busy="true"' : ''}>${recurringRequestsPending.has(order.id) ? 'Enviando solicitação...' : 'Enviar solicitação'}</button><p>Isso não cria pedidos nem cobranças até a aprovação da Shirley.</p></fieldset></form></details>` : ''; return `<article class="${order.editedAt ? 'has-order-edited' : ''}"><div><span>${formatDate(order.date)}</span><strong>${labels[state] || 'A conferir'}</strong></div>${editedBadge}<h2>${order.items.slice(0, 3).map(item => escapeHtml(window.TrameliOrderMath.itemLabel(item))).join(' · ')}${order.items.length > 3 ? ` +${order.items.length - 3}` : ''}</h2><p>#${escapeHtml(orderCode(order))} · ${escapeHtml(paymentLabels[order.paymentMethod] || paymentLabels.unspecified)}</p><footer><strong>${money(orderValue(order))}</strong><button type="button" data-favorite-order="${escapeHtml(order.id)}" aria-pressed="${favorite}">${favorite ? '♥ Favorito' : '♡ Favoritar'}</button>${shopping() ? `<button type="button" data-reorder="${escapeHtml(order.id)}">Pedir novamente</button>` : ''}${editable(order) ? `<span><button type="button" data-edit-order="${escapeHtml(order.id)}">Alterar</button><button type="button" data-cancel-order="${escapeHtml(order.id)}">Cancelar</button></span>` : ''}</footer>${recurringForm}</article>`; }).join('')}</div>` : `<div class="portal-empty"><h2>Nenhum pedido por aqui</h2><p>Quando você confirmar um pedido, ele aparecerá nesta lista.</p><button type="button" data-view="catalog">Escolher produtos</button></div>`}</section>`;
   }
   function weekView() {
     const days = rollingWeek();
@@ -1017,20 +1019,33 @@ import '../src/featured-products.css';
     if (event.target.matches('[data-recurring-request-form]')) {
       event.preventDefault();
       const form = event.target;
-      if (!live || form.dataset.submitting === 'true') return;
+      const orderId = form.dataset.orderId;
+      if (!live || !orderId || recurringRequestsPending.has(orderId) || recurringRequestSubmitted.has(orderId)) return;
       const weekdays = [...form.querySelectorAll('input[name="weekdays"]:checked')].map(input => Number(input.value));
       if (!weekdays.length) { error = 'Selecione pelo menos um dia da semana.'; render(true); return; }
-      form.dataset.submitting = 'true';
+      recurringRequestsPending.add(orderId);
       const button = form.querySelector('[type="submit"]');
-      if (button) button.disabled = true;
+      if (button) {
+        button.disabled = true;
+        button.textContent = 'Enviando solicitação...';
+        button.setAttribute('aria-busy', 'true');
+      }
       try {
-        await live.requestRecurringOrder(form.dataset.orderId, weekdays);
-        recurringRequestSubmitted.add(form.dataset.orderId);
+        await live.requestRecurringOrder(orderId, weekdays);
+        recurringRequestSubmitted.add(orderId);
         error = '';
         render(true);
       } catch (cause) {
         error = 'Não foi possível enviar a solicitação: ' + cause.message;
         render(true);
+      } finally {
+        recurringRequestsPending.delete(orderId);
+        // Reabilita o botão apenas se o formulário ainda estiver montado e houve falha.
+        if (button?.isConnected && !recurringRequestSubmitted.has(orderId)) {
+          button.disabled = false;
+          button.textContent = 'Enviar solicitação';
+          button.removeAttribute('aria-busy');
+        }
       }
       return;
     }
