@@ -55,7 +55,13 @@ async function getRegistration() {
   if (!registrationPromise) {
     registrationPromise = navigator.serviceWorker
       .register(SERVICE_WORKER_URL, { scope: '/' })
-      .then(() => navigator.serviceWorker.ready);
+      .then(() => navigator.serviceWorker.ready)
+      .catch(error => {
+        // Safari iOS e Chrome Android podem falhar temporariamente ao voltar
+        // do segundo plano. Nao manter uma Promise rejeitada para sempre.
+        registrationPromise = null;
+        throw error;
+      });
   }
   return registrationPromise;
 }
@@ -143,13 +149,14 @@ function createPilotPanel() {
     ].join(' · ');
 
     installButton.disabled = standalone || (!deferredInstallPrompt && !isIOS());
-    permissionButton.disabled = permission === 'granted' || permission === 'unsupported' || !workerReady;
+    // No iOS, notificacoes Web Push so podem ser solicitadas no app instalado.
+    permissionButton.disabled = permission === 'granted' || permission === 'unsupported' || !workerReady || (isIOS() && !standalone);
     testButton.disabled = permission !== 'granted' || !workerReady;
 
     if (standalone) {
       hint.textContent = 'Piloto ativo somente neste endereço de teste. Nenhum dado do sistema é armazenado pelo PWA.';
     } else if (isIOS()) {
-      hint.textContent = 'No iPhone: Safari → Compartilhar → Adicionar à Tela de Início. Depois abra o Pão Doce pelo ícone.';
+      hint.textContent = 'No iPhone: Safari → Compartilhar → Adicionar à Tela de Início. Abra pelo ícone para liberar as notificações.';
     } else if (!deferredInstallPrompt) {
       hint.textContent = 'Se o botão Instalar ainda estiver bloqueado, atualize a página após o serviço PWA ficar pronto.';
     } else {
