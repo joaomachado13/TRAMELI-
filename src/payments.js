@@ -154,10 +154,17 @@ export function initPayments(live) {
     document.querySelectorAll('[data-day-close],[data-day-preview]').forEach(button=>button.disabled=!!warning());
     updateCustomerSelection();
   }
+  let refreshPromise = null;
   async function refresh() {
-    if(api) await api.load();
-    if(live && !live.operator) await live.refreshPurchaseStatus?.();
-    refreshContent();
+    // Uma só consulta por vez: renderizações simultâneas não criam uma fila de requisições.
+    if (refreshPromise) return refreshPromise;
+    refreshPromise = (async () => {
+      if (api) await api.load();
+      if (live && !live.operator) await live.refreshPurchaseStatus?.();
+      refreshContent();
+    })();
+    try { await refreshPromise; }
+    finally { refreshPromise = null; }
   }
   async function openReceipt(receiptId) {
     if(!api || !live?.operator){notify('Comprovante disponível somente para a operação.');return;}
