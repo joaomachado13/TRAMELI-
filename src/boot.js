@@ -10,6 +10,7 @@ import * as orderMath from './order-math.js';
 import * as financeMath from './finance-math.js';
 import { init as initMotion } from './motion.js';
 import { initPwaFoundation } from './pwa.js';
+import { installMobileDiagnostics } from './mobile-diagnostics.js';
 import { initNotifications } from './notifications.js';
 import { initInstallationCampaign } from './installation-campaign.js';
 import clientCatalog from '../data/client-products.json';
@@ -19,6 +20,9 @@ window.TrameliOrderMath = orderMath;
 window.TrameliFinanceMath = financeMath;
 window.TrameliSourceCatalog = clientCatalog.products.map(withOfficialProductPhoto);
 window.TrameliProductPhoto = withOfficialProductPhoto;
+
+// Diagnostico opt-in, somente memoria local; nao transmite dados.
+const mobileDiagnostics = installMobileDiagnostics();
 
 // PWA real: manifesto, service worker, instalação e push ficam ativos no fluxo normal.
 initPwaFoundation();
@@ -236,6 +240,7 @@ await import('../assets/shirley-portal.js');
 initMotion();
 // Só revela a aplicação depois que a rota correta e seus componentes estão prontos.
 document.body.classList.remove('app-booting');
+mobileDiagnostics?.bootReady();
 // Enquete de instalacao: somente clientes, campanha de hoje; nao bloqueia a loja.
 initInstallationCampaign(window.TrameliLive);
 
