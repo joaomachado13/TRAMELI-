@@ -13,8 +13,8 @@ export function featuredProductsMarkup(products, { headingId, renderPhoto, rende
   return `<section class="featured-products" aria-labelledby="${escapeHtml(headingId)}" ${hidden ? 'hidden' : ''}>
     <header class="featured-products__heading"><div><span>ESCOLHA RÁPIDA</span><h2 id="${escapeHtml(headingId)}">Destaques</h2></div></header>
     <div class="featured-products__rail" role="list" aria-label="Produtos em destaque">
-      ${selected.map(product => `<article class="featured-product" role="listitem" data-featured-id="${escapeHtml(product.id)}">
-        <div class="featured-product__photo">${renderPhoto(product)}<span class="featured-product__badge">Em destaque</span></div>
+      ${selected.map((product, index) => `<article class="featured-product" role="listitem" data-featured-id="${escapeHtml(product.id)}">
+        <div class="featured-product__photo">${renderPhoto(product, index)}<span class="featured-product__badge">Em destaque</span></div>
         <div class="featured-product__body"><p class="featured-product__price">${money(product.priceCents)} <small>/ ${escapeHtml(product.unit)}</small></p><h3>${escapeHtml(product.name)}</h3><div class="featured-product__controls">${renderControls(product)}</div></div>
       </article>`).join('')}
     </div>

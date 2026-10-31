@@ -10,18 +10,20 @@ if (!baseUrl?.startsWith('http://127.0.0.1:')) throw new Error('Provide a local 
 const profile = await mkdtemp(join(tmpdir(), 'trameli-landing-'));
 const port = 9392;
 const browser = spawn(browserPath(), [...headlessFlags, `--remote-debugging-port=${port}`,
-  `--user-data-dir=${profile}`, baseUrl], { windowsHide: true, stdio: 'ignore' });
+  `--user-data-dir=${profile}`, baseUrl], { windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'] });
+let browserDiagnostics = '';
+browser.stderr.on('data', data => { browserDiagnostics = (browserDiagnostics + data.toString()).slice(-4000); });
 const pause = ms => new Promise(done => setTimeout(done, ms));
 let socket;
 
 try {
   let page;
-  for (let attempt = 0; attempt < 80; attempt++) {
+  for (let attempt = 0; attempt < 200; attempt++) {
     try { page = (await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()).find(tab => tab.type === 'page'); } catch { /* Starting. */ }
-    if (page) break;
+    if (page || browser.exitCode !== null) break;
     await pause(100);
   }
-  assert.ok(page, 'Browser did not start');
+  assert.ok(page, `Browser did not start (exit code: ${browser.exitCode ?? 'still running'}). ${browserDiagnostics.slice(-2000)}`);
   socket = new WebSocket(page.webSocketDebuggerUrl);
   await new Promise((resolveOpen, rejectOpen) => {
     socket.addEventListener('open', resolveOpen, { once: true });

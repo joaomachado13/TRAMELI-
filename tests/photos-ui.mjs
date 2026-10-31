@@ -43,6 +43,12 @@ try {
   for (let i = 0; i < 60 && !await evaluate('!!window.photosReady'); i++) await pause(100);
   assert.equal(await evaluate('!!window.photosReady'), true);
   assert.equal(await evaluate('document.querySelector(".featured-product").dataset.featuredId'), '20260924-0000-4000-8000-000000000002');
+  // Só a primeira foto visível de destaque recebe prioridade de rede; as demais são preguiçosas.
+  assert.equal(await evaluate('document.querySelector(".featured-product img")?.loading'), 'eager');
+  assert.equal(await evaluate('document.querySelector(".featured-product img")?.fetchPriority'), 'high');
+  assert.equal(await evaluate('document.querySelector(".portal-product__photo img")?.loading'), 'lazy');
+  assert.equal(await evaluate('document.querySelector(".portal-product__photo img")?.decoding'), 'async');
+  assert.equal(await evaluate('[...document.querySelectorAll(".featured-product img")].slice(1).every(img => img.loading === "lazy")'), true);
   assert.ok(await evaluate('!!(document.querySelector(".featured-products").compareDocumentPosition(document.querySelector(".portal-quick-actions")) & Node.DOCUMENT_POSITION_FOLLOWING)'), 'Destaques devem aparecer antes das ações secundárias e do catálogo completo.');
   await evaluate(`(() => {
     const button = document.querySelector('.featured-product [data-qty="1"]'); button.focus(); button.click();
