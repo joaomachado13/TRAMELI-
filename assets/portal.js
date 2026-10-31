@@ -926,6 +926,11 @@ import '../src/featured-products.css';
       if (reordering || submitting) return;
       const id = reorder.dataset.reorder;
       reordering = true;
+      // O retorno visual precisa acontecer antes da consulta à rede (Android e iPhone).
+      const previousLabel = reorder.textContent;
+      reorder.disabled = true;
+      reorder.textContent = 'Preparando sacola...';
+      reorder.setAttribute('aria-busy', 'true');
       try {
         if (live) await live.load(true);
         const order = readOrders().find(item => item.id === id && owns(item));
@@ -944,7 +949,15 @@ import '../src/featured-products.css';
         }
         persistCart(); view = 'cart'; render();
       } catch (cause) { error = `Não foi possível preparar a recompra: ${cause.message}`; view = 'orders'; render(true); }
-      finally { reordering = false; }
+      finally {
+        reordering = false;
+        // Se a lista ainda estiver visível (erro/cancelamento), restaura o botão.
+        if (reorder.isConnected) {
+          reorder.disabled = false;
+          reorder.textContent = previousLabel;
+          reorder.removeAttribute('aria-busy');
+        }
+      }
       return;
     }
     const catalogJump = event.target.closest('a[href="#portal-products"]');
