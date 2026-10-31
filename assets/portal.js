@@ -430,7 +430,8 @@ import '../src/featured-products.css';
 
   let catalogTransitionSerial = 0;
   let catalogSearchTimer = 0;
-  const reducedCatalogMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches
+  // Em telas de toque, priorize resposta imediata em vez da animação de troca do catálogo.
+  const reducedCatalogMotion = () => matchMedia('(prefers-reduced-motion: reduce), (pointer: coarse)').matches
     || localStorage.getItem('trameli-reduced-motion') === 'true';
 
   function syncCatalogFilterChrome() {
@@ -659,7 +660,11 @@ import '../src/featured-products.css';
     if (days.some(day => !isDeliveryDate(day.date))) { error='Domingo não tem entregas. Volte à semana e escolha os dias disponíveis.'; render(true); return; }
     if (days.some(day => !beforeCustomerCutoff(day.date))) { error='Um dos dias planejados já passou do horário de corte. Volte à semana para atualizar as datas.'; render(true); return; }
     const notes=form.elements.notes.value.trim(), paymentMethod=form.elements.paymentMethod.value;
-    submitting=true; form.querySelector('[type="submit"]').disabled=true;
+    submitting=true;
+    const submitButton = form.querySelector('[type="submit"]');
+    submitButton.disabled=true;
+    submitButton.textContent='Enviando pedidos...';
+    submitButton.setAttribute('aria-busy', 'true');
     try {
       const created=[];
       for (const day of days) {
@@ -741,7 +746,8 @@ import '../src/featured-products.css';
     if (featuredScroll != null && host.querySelector('.featured-products__rail')) host.querySelector('.featured-products__rail').scrollLeft = featuredScroll;
     if (view === 'orders' && window.TrameliPayments) {
       host.querySelector('.portal-page').insertAdjacentHTML('beforeend', window.TrameliPayments.customerRender());
-      window.TrameliPayments.refresh();
+      // Consultar ao entrar em Meus pedidos, não a cada repaint provocado pelos próprios pagamentos.
+      if (changedView) void window.TrameliPayments.refresh();
     }
     if (draft && view === 'checkout') for (const [name, value] of Object.entries(draft)) {
       if (host.querySelector('#portal-checkout-form')?.elements[name]) host.querySelector('#portal-checkout-form').elements[name].value = value;
@@ -816,7 +822,10 @@ import '../src/featured-products.css';
     };
     if (live) {
       submitting = true;
-      form.querySelector('[type="submit"]').disabled = true;
+      const submitButton = form.querySelector('[type="submit"]');
+      submitButton.disabled = true;
+      submitButton.textContent = 'Enviando pedido...';
+      submitButton.setAttribute('aria-busy', 'true');
       try {
         const saved = await live.saveCustomerOrder({ ...nextOrder, id: previous?.id || null, version: previous?.version || null }, lines.map(({ product, quantity }) => weighted(product) ? { product_id: product.id, grams: quantity * 50 } : { product_id: product.id, quantity }), checkoutRequestId);
         Object.assign(profile, { name: customer, phone: nextOrder.phone, address });

@@ -82,6 +82,10 @@ try {
   assert(await evaluate('document.querySelector(".client-row").textContent.includes("Cliente Teste")'), 'Cliente não apareceu no cadastro.');
   await evaluate('location.hash = "#operacao"');
   await waitTransition();
+  // Transições e carregamento do painel variam conforme o runner/CPU.
+  // Aguarde o botão existir antes de clicar para não mascarar o erro com TypeError.
+  for (let attempt = 0; attempt < 60 && !(await evaluate('!!document.querySelector("#new-order")')); attempt++) await pause(100);
+  assert(await evaluate('!!document.querySelector("#new-order")'), 'Botão Novo pedido não apareceu na Operação.');
   await evaluate('document.querySelector("#new-order").click()');
   await waitTransition();
   assert(await evaluate('location.hash === "#portal-shirley" && !document.querySelector("#shirley-portal-view").hidden && !document.querySelector(".app-shell").hidden'), 'Novo pedido deve abrir o Portal da Shirley dentro do painel.');
@@ -89,9 +93,13 @@ try {
   for (let i = 0; i < 60 && !(await evaluate('document.querySelector("#operation-dialog").open')); i++) await pause(100);
   assert(await evaluate('document.querySelector("#operation-dialog").open'), 'Formulário não abriu.');
   assert(await evaluate('[...document.querySelectorAll("#form-catalog .admin-product-card")].some(card => card.textContent.includes("Pão"))'), 'Produto não ficou disponível no catálogo do pedido.');
-  await evaluate(`(() => { const f = document.querySelector('#order-form'); const d = new Date(); d.setDate(d.getDate() + 1); f.elements.date.value = [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('-'); const option = [...f.elements.customerId.options].find(item => item.textContent === 'Cliente Teste'); f.elements.customerId.value = option?.value || ''; f.elements.customerId.dispatchEvent(new Event('change', { bubbles: true })); for (let i = 0; i < 3; i++) { const card = [...document.querySelectorAll('#form-catalog .admin-product-card')].find(item => item.querySelector('.admin-product-card__body > strong')?.textContent.trim() === 'Pão'); card.querySelector('[data-product-step="1"]').click(); } f.requestSubmit(); })()`);
+  await evaluate(`(() => { const f = document.querySelector('#order-form'); const d = new Date(); d.setDate(d.getDate() + 1); if (d.getDay() === 0) d.setDate(d.getDate() + 1); f.elements.date.value = [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('-'); const option = [...f.elements.customerId.options].find(item => item.textContent === 'Cliente Teste'); f.elements.customerId.value = option?.value || ''; f.elements.customerId.dispatchEvent(new Event('change', { bubbles: true })); for (let i = 0; i < 3; i++) { const card = [...document.querySelectorAll('#form-catalog .admin-product-card')].find(item => item.querySelector('.admin-product-card__body > strong')?.textContent.trim() === 'Pão'); card.querySelector('[data-product-step="1"]').click(); } f.requestSubmit(); })()`);
   const createdOrderDate = await evaluate('document.querySelector("#delivery-date").value');
   assert(await evaluate('document.querySelectorAll(".kanban-column").length === 3'), 'Kanban deve mostrar Novo, Conferido e Entregue.');
+  // Aguarde o pedido aparecer; em falha, registre o estado real da interface.
+  for (let attempt = 0; attempt < 80 && !(await evaluate('!!document.querySelector(".order-card")')); attempt++) await pause(100);
+  const orderReady = await evaluate('({count:document.querySelectorAll(".order-card").length,route:location.hash,dialogOpen:!!document.querySelector("#operation-dialog")?.open,formError:document.querySelector("#operation-dialog [role=alert],#operation-dialog .form-error")?.textContent?.trim()||"",total:document.querySelector("#total-orders")?.textContent})');
+  assert(orderReady.count > 0, `Pedido não apareceu após salvar: ${JSON.stringify(orderReady)}`);
   await evaluate('document.querySelector(".order-card").click()');
   assert(await evaluate('document.querySelector("#order-detail-drawer").open && document.querySelector("#order-detail-content").textContent.includes("Bloco A, ap. 10")'), 'Detalhe lateral não mostrou o endereço reaproveitado.');
   assert(await evaluate('document.querySelector("#total-orders").textContent === "1"'), 'Pedido não foi salvo.');
