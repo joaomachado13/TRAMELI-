@@ -82,6 +82,10 @@ try {
   assert(await evaluate('document.querySelector(".client-row").textContent.includes("Cliente Teste")'), 'Cliente não apareceu no cadastro.');
   await evaluate('location.hash = "#operacao"');
   await waitTransition();
+  // Transições e carregamento do painel variam conforme o runner/CPU.
+  // Aguarde o botão existir antes de clicar para não mascarar o erro com TypeError.
+  for (let attempt = 0; attempt < 60 && !(await evaluate('!!document.querySelector("#new-order")')); attempt++) await pause(100);
+  assert(await evaluate('!!document.querySelector("#new-order")'), 'Botão Novo pedido não apareceu na Operação.');
   await evaluate('document.querySelector("#new-order").click()');
   await waitTransition();
   assert(await evaluate('location.hash === "#portal-shirley" && !document.querySelector("#shirley-portal-view").hidden && !document.querySelector(".app-shell").hidden'), 'Novo pedido deve abrir o Portal da Shirley dentro do painel.');
