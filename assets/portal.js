@@ -1037,14 +1037,16 @@ import '../src/featured-products.css';
         render(true);
       } catch (cause) {
         error = 'Não foi possível enviar a solicitação: ' + cause.message;
-        render(true);
       } finally {
         recurringRequestsPending.delete(orderId);
-        // Reabilita o botão apenas se o formulário ainda estiver montado e houve falha.
-        if (button?.isConnected && !recurringRequestSubmitted.has(orderId)) {
-          button.disabled = false;
-          button.textContent = 'Enviar solicitação';
-          button.removeAttribute('aria-busy');
+        // A tela pode ter sido reconstruída durante a chamada; restaura também o novo botão.
+        if (!recurringRequestSubmitted.has(orderId)) {
+          if (button?.isConnected) {
+            button.disabled = false;
+            button.textContent = 'Enviar solicitação';
+            button.removeAttribute('aria-busy');
+          }
+          render(true);
         }
       }
       return;
