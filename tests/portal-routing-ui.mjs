@@ -105,7 +105,7 @@ try {
       await safeFrame(`${context} server rejected duplicate`);
       await evaluate('portalFixture.mode="network-error"');
       await click('#portal-checkout-form [type=submit]');
-      await until('!!document.querySelector("#portal-checkout-form .portal-error:not([hidden])")?.textContent.includes("Falha de conexão")');
+      await until('!!document.querySelector("#portal-checkout-form .portal-error:not([hidden])")?.textContent.includes("O pedido pode ter sido registrado")');
       await safeFrame(`${context} network failure`);
       await click('#portal-cart-link');
       await until('!!document.querySelector(".portal-cart-line")');
