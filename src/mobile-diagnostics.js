@@ -3,7 +3,7 @@ const MAX_EVENTS = 30;
 const ALLOWED = new Set(['script-error', 'promise-rejection', 'long-task', 'offline', 'online', 'boot-ready']);
 const clamp = value => Math.max(0, Math.min(60000, Math.round(Number(value) || 0)));
 
-export function createMobileDiagnostics({ win = window, doc = document, perf = performance } = {}) {
+export function createMobileDiagnostics({ win = globalThis.window, doc = globalThis.document, perf = globalThis.performance } = {}) {
   const events = [];
   const counters = Object.create(null);
   let started = false;
@@ -54,7 +54,7 @@ export function createMobileDiagnostics({ win = window, doc = document, perf = p
   return Object.freeze({ start, bootReady, snapshot, stop });
 }
 
-export function installMobileDiagnostics({ win = window, doc = document, perf = performance } = {}) {
+export function installMobileDiagnostics({ win = globalThis.window, doc = globalThis.document, perf = globalThis.performance } = {}) {
   // Ativacao explicita, somente no aparelho atual. Nao usa cookies ou storage.
   const params = new URLSearchParams(win.location.search);
   if (params.get('mobile-diagnostics') !== '1') return null;
