@@ -3,6 +3,7 @@ import { isDeliveryDate, nextAvailableDeliveryDate, rollingDeliveryWeek } from '
 import { billingReminder, daysUntil, nextBillingDeadline } from '../src/billing-cycle.js';
 import { featuredProductsMarkup } from '../src/featured-products.js';
 import { productMatchesCatalogSearch } from '../src/catalog-search.js';
+import { checkoutConnectionMessage, checkoutIsOffline } from '../src/checkout-network.js';
 import '../src/featured-products.css';
 
 (() => {
@@ -667,6 +668,10 @@ import '../src/featured-products.css';
     if (purchaseBlocked()) { error=purchaseBlockMessage(); render(true); return; }
     if (days.some(day => !isDeliveryDate(day.date))) { error='Domingo não tem entregas. Volte à semana e escolha os dias disponíveis.'; render(true); return; }
     if (days.some(day => !beforeCustomerCutoff(day.date))) { error='Um dos dias planejados já passou do horário de corte. Volte à semana para atualizar as datas.'; render(true); return; }
+    if (live && checkoutIsOffline(navigator)) {
+      error=checkoutConnectionMessage(null, { offline: true, weekly: true });
+      render(true); return;
+    }
     const notes=form.elements.notes.value.trim(), paymentMethod=form.elements.paymentMethod.value;
     submitting=true;
     const submitButton = form.querySelector('[type="submit"]');
@@ -701,7 +706,7 @@ import '../src/featured-products.css';
       // Keep the weekly confirmation isolated from the portal host, just like single-order success.
       render();
     } catch (cause) {
-      error=`Não foi possível concluir a semana: ${cause.message}`;
+      error=checkoutConnectionMessage(cause, { offline: checkoutIsOffline(navigator), weekly: true });
       render(true);
     } finally { submitting=false; }
   }
@@ -857,6 +862,10 @@ import '../src/featured-products.css';
       source: previous?.source || 'portal', customerToken: token,
     };
     if (live) {
+      if (checkoutIsOffline(navigator)) {
+        error=checkoutConnectionMessage(null, { offline: true });
+        render(true); return;
+      }
       submitting = true;
       const submitButton = form.querySelector('[type="submit"]');
       submitButton.disabled = true;
@@ -882,7 +891,7 @@ import '../src/featured-products.css';
       } catch (cause) {
         // Não deixar um erro do checkout expor a tela da Operação.
         if (location.hash !== '#loja') location.hash = '#loja';
-        error = `Não foi possível registrar: ${cause.message}`;
+        error = checkoutConnectionMessage(cause, { offline: checkoutIsOffline(navigator) });
         render(true);
       }
       finally { submitting = false; }
