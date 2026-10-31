@@ -5,7 +5,7 @@ import { compareByStreet } from '../src/address-sort.js';
 import { supplierGroups, supplierTotals, supplierText, supplierCustomerText, supplierDayCost, downloadSupplierPdf, downloadSeparationPdf, itemCheckKey, filterSupplierGroups, bakerySupplierForItem, bakeryLabelOrders } from '../src/supplier-checklist.js';
 import { closingPeriod } from '../src/billing-cycle.js';
 import { costMapFromRows, supplierPeriodReport, supplierPeriodText, supplierPeriodCustomerText, periodLabel, formatMoney as formatCost } from '../src/supplier-costs.js';
-import { downloadSupplierPeriodPdf } from '../src/supplier-period-pdf.js';
+// O gerador de PDF e suas fontes só são carregados ao solicitar um relatório.
 
 (() => {
 const live = window.TrameliLive;
@@ -1115,6 +1115,7 @@ supplierPdf?.addEventListener('click', async () => {
     } else {
       const { period, report } = await buildPeriodReport();
       const isSandra = selectedSupplier() === 'sandra';
+      const { downloadSupplierPeriodPdf } = await import('../src/supplier-period-pdf.js');
       await downloadSupplierPeriodPdf(report, periodKinds[period.kind], businessLabel(), {
         includeCustomers: selectedSupplier() !== 'divano',
         supplierName: supplierDisplayName(),
