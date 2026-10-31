@@ -30,7 +30,8 @@ function mockLive(operator, requests, gate) {
   return {
     operator,
     client: {
-      rpc(name) { return request(name); },
+      // rpc() devolve um builder encadeavel (order/range), como o PostgREST real.
+      rpc(name) { return query(name); },
       from(name) { return query(name); },
     },
   };
