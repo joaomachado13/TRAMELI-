@@ -1,4 +1,4 @@
-import QRCode from 'qrcode';
+// QR Code é carregado somente quando o cliente solicita o Pix.
 import { validatePixTemplate, pixForAmount } from './pix-code.js';
 import { escapeHtml as esc } from './auth-utils.js';
 import './manual-pix.css';
@@ -62,6 +62,7 @@ export function initManualPix(live) {
       shownAmount=amount;
       intentRequestId=crypto.randomUUID();
       const payload=pixForAmount(config.payload,amount);
+      const { default: QRCode } = await import('qrcode');
       const dataUrl=await QRCode.toDataURL(payload,{errorCorrectionLevel:'M',width:320,margin:4});
       const phone=whatsappNumber(live.settings?.contact);
       const orderCodes=rows.map(row=>live.orders.find(order=>order.id===row.order_id)?.publicCode || '');
@@ -112,6 +113,7 @@ export function initManualPix(live) {
       // Nunca usa trameli_signal_pix_payment: essa RPC aceita apenas pedidos reais.
       shownOrderIds=[];shownAmount=amount;shownOrderText='Histórico financeiro';intentRequestId=null;
       const payload=pixForAmount(config.payload,amount);
+      const { default: QRCode } = await import('qrcode');
       const dataUrl=await QRCode.toDataURL(payload,{errorCorrectionLevel:'M',width:320,margin:4});
       const phone=whatsappNumber(live.settings?.contact);
       const dates=[...new Set(pending.map(e=>e.entry_date))].sort();
