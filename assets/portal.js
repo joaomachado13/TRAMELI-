@@ -790,6 +790,34 @@ import '../src/featured-products.css';
         return;
       }
     }
+    if (view === 'cart') {
+      // Atualize apenas a linha alterada: reconstruir a sacola inteira a cada toque
+      // interrompe o foco e causa engasgos perceptíveis em celulares.
+      const row = source?.closest('.portal-cart-line');
+      const control = row?.querySelector('.portal-stepper, .portal-add-slot');
+      const price = row?.querySelector(':scope > strong');
+      const subtotalLabel = host.querySelector('.portal-totals__final > strong');
+      // Quando a última unidade sai, a tela precisa exibir o estado de sacola vazia.
+      if (row && control && price && subtotalLabel && (next > 0 || count() > 0)) {
+        if (next > 0) {
+          const container = document.createElement('div');
+          container.innerHTML = stepper(product);
+          const nextControl = container.firstElementChild;
+          control.replaceWith(nextControl);
+          price.textContent = money(linePrice(product, next));
+          (nextControl.querySelector(`[data-qty="${delta}"]`) || nextControl.querySelector('[data-qty]'))?.focus({ preventScroll: true });
+        } else {
+          const nextFocus = row.nextElementSibling?.querySelector('[data-qty]')
+            || row.previousElementSibling?.querySelector('[data-qty]');
+          row.remove();
+          nextFocus?.focus({ preventScroll: true });
+        }
+        subtotalLabel.textContent = money(subtotal());
+        updateCounters();
+        motion()?.refresh();
+        return;
+      }
+    }
     render(true);
   }
   async function placeOrder(form) {
